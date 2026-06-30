@@ -1,5 +1,10 @@
 # Evals
 
+This is a repo-local eval port. It can hold local suites, reports, and intake
+pressure for `aoa-course-connector`, but it is not the central proof owner.
+`aoa-evals` owns central verdicts, scoring, regression meaning, proof doctrine,
+promotion, and central bundle adoption.
+
 Local evals prove the starter retrieval loop:
 
 `fixture -> normalize -> index -> graph -> answer packet with evidence`
@@ -10,3 +15,7 @@ browser course-tree crawls. The browser progress/comments suite proves visible
 course status and discussion notes become source-backed answer packets. Sync
 suites prove that registered browser sources produce checkpoints and rebuildable
 per-source artifacts.
+
+The answer-quality suite raises the bar above term presence: it checks top
+result shape, source id, platform, path, snippets, freshness, and evidence
+fields for fixture-safe runs.

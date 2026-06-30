@@ -400,6 +400,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser = sub.add_parser("eval")
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
+    eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
@@ -1095,6 +1096,94 @@ def cmd_eval_answer_packets(_args: argparse.Namespace) -> int:
             failures.append({"query": query, "missing_terms": missing_terms, "has_evidence": bool(packet.get("evidence_chain"))})
     _emit({"schema": "aoa_course_eval_answer_packets_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
+
+
+def cmd_eval_answer_quality(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    suite_path = find_repo_root() / "evals" / "suites" / "answer_quality_packets.json"
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    failures = []
+    case_results = []
+    for case in suite.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        packet = render_answer_packet(
+            roots,
+            str(case.get("query") or ""),
+            str(case.get("run") or DEFAULT_RUN),
+            int(case.get("limit") or 5),
+            str(case.get("mode") or "keyword"),
+        )
+        case_failures = _answer_quality_failures(packet, case)
+        case_results.append(
+            {
+                "query": case.get("query"),
+                "run": case.get("run") or DEFAULT_RUN,
+                "mode": case.get("mode") or "keyword",
+                "result_count": packet.get("result_count"),
+                "top_doc_id": packet.get("results", [{}])[0].get("doc_id") if packet.get("results") else "",
+                "failure_count": len(case_failures),
+            }
+        )
+        failures.extend(case_failures)
+    _emit(
+        {
+            "schema": "aoa_course_eval_answer_quality_v1",
+            "suite_id": suite.get("suite_id"),
+            "status": "ok" if not failures else "error",
+            "case_results": case_results,
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _answer_quality_failures(packet: dict[str, object], case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    context = {"run": case.get("run") or DEFAULT_RUN, "query": case.get("query"), "mode": case.get("mode") or "keyword"}
+    results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+    evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
+    min_results = int(case.get("min_results") or 1)
+    if len(results) < min_results:
+        failures.append({**context, "missing": "minimum results", "expected": min_results, "actual": len(results)})
+        return failures
+    top = results[0]
+    for key, field in [
+        ("expected_top_kind", "kind"),
+        ("expected_top_platform", "platform"),
+        ("expected_top_source_id", "source_id"),
+    ]:
+        expected = case.get(key)
+        if expected is not None and str(top.get(field) or "") != str(expected):
+            failures.append({**context, "field": field, "expected": expected, "actual": top.get(field)})
+    for term in _list_of_strings(case.get("expected_top_path_terms")):
+        if term.casefold() not in " / ".join(str(item) for item in top.get("path", []) if item).casefold():
+            failures.append({**context, "missing_top_path_term": term, "top_path": top.get("path")})
+    for term in _list_of_strings(case.get("expected_top_snippet_terms")):
+        if term.casefold() not in str(top.get("snippet") or "").casefold():
+            failures.append({**context, "missing_top_snippet_term": term, "top_doc_id": top.get("doc_id")})
+    required_kind = case.get("must_include_kind")
+    if required_kind and not any(result.get("kind") == required_kind for result in results):
+        failures.append({**context, "missing_result_kind": required_kind})
+    freshness_report = packet.get("freshness_report") if isinstance(packet.get("freshness_report"), dict) else {}
+    freshness_states = {str(item) for item in freshness_report.get("states", [])} if isinstance(freshness_report.get("states"), list) else set()
+    for state in _list_of_strings(case.get("expected_freshness_states")):
+        if state not in freshness_states:
+            failures.append({**context, "missing_freshness_state": state, "actual_states": sorted(freshness_states)})
+    if not freshness_report.get("has_source_timestamps"):
+        failures.append({**context, "missing": "source timestamps"})
+    required_fields = _list_of_strings(case.get("required_evidence_fields"))
+    if not evidence_chain:
+        failures.append({**context, "missing": "evidence_chain"})
+    for index, evidence in enumerate(evidence_chain):
+        for field in required_fields:
+            if not evidence.get(field):
+                failures.append({**context, "evidence_index": index, "missing_evidence_field": field})
+    return failures
+
+
+def _list_of_strings(value: object) -> list[str]:
+    return [str(item) for item in value] if isinstance(value, list) else []
 
 
 def cmd_eval_clean_api(_args: argparse.Namespace) -> int:

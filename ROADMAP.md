@@ -25,6 +25,9 @@
 - Prove read-only live preflight reports so agents can verify Stepik token
   presence, browser auth-state usability, registered source readiness, and next
   commands through CLI and MCP before touching live sources.
+- Prove connector-local answer-quality evals that validate source identity,
+  evidence fields, lesson path, snippets, freshness, and platform nuance beyond
+  simple term presence.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -53,6 +56,8 @@
   and source readiness where official scopes expose enough catalog data.
 - Add optional external embedding providers behind the stable semantic index
   contract.
+- Broaden answer-quality evals against live-calibrated GetCourse, Skillspace,
+  and Stepik runs once operator credentials are connected.
 
 ## Later
 

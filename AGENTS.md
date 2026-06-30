@@ -61,6 +61,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_r
 PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval answer-quality
 PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture

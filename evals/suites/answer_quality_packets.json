@@ -1,0 +1,45 @@
+{
+  "schema": "aoa_course_answer_quality_eval_suite_v1",
+  "suite_id": "answer-quality-packets",
+  "cases": [
+    {
+      "query": "answer packet source evidence",
+      "run": "starter-fixture",
+      "mode": "hybrid",
+      "min_results": 1,
+      "expected_top_kind": "step",
+      "expected_top_platform": "offline_export",
+      "expected_top_source_id": "source:offline:starter-course",
+      "expected_top_path_terms": ["Android Firmware Recovery", "Course Knowledge Indexing", "Evidence-Backed Search"],
+      "expected_top_snippet_terms": ["lesson path", "source URL", "fetched timestamp", "evidence identifiers"],
+      "expected_freshness_states": ["current"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    },
+    {
+      "query": "mentor anti-rollback vendor boot",
+      "run": "getcourse-browser-fixture",
+      "mode": "keyword",
+      "min_results": 2,
+      "expected_top_platform": "getcourse",
+      "expected_top_source_id": "source:getcourse:fixture",
+      "expected_top_path_terms": ["GetCourse Browser Fixture", "Firmware Recovery", "Bootloader recovery lesson"],
+      "expected_top_snippet_terms": ["connected account", "rollback", "vendor boot"],
+      "must_include_kind": "comment",
+      "expected_freshness_states": ["current"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    },
+    {
+      "query": "Stepik public API evidence",
+      "run": "stepik-fixture",
+      "mode": "hybrid",
+      "min_results": 1,
+      "expected_top_kind": "step",
+      "expected_top_platform": "stepik",
+      "expected_top_source_id": "source:stepik:fixture-67",
+      "expected_top_path_terms": ["Stepik Public API Fixture", "Clean API Section", "Stepik Lesson From API"],
+      "expected_top_snippet_terms": ["Stepik", "public API", "source evidence", "lesson path"],
+      "expected_freshness_states": ["current"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    }
+  ]
+}

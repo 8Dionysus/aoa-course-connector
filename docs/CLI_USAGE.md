@@ -45,6 +45,7 @@ aoa-course query "rollback" --run starter-fixture
 aoa-course query "rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
+aoa-course eval answer-quality
 aoa-course eval browser-progress-comments
 aoa-course eval semantic-index
 aoa-course mcp tools

@@ -116,6 +116,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")
     run_cli(tmp_path, "build-index", "--run", "stepik-fixture")
+    run_cli(tmp_path, "build-semantic-index", "--run", "stepik-fixture")
     run_cli(tmp_path, "build-graph", "--run", "stepik-fixture")
     answer = run_cli(tmp_path, "answer", "Stepik public API evidence", "--run", "stepik-fixture")
     assert answer["result_count"] >= 1
@@ -163,6 +164,23 @@ def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
     assert smoke["status"] == "ok"
     assert smoke["course"]["comment_count"] >= 1
     assert smoke["artifacts"]["answer"]["result_count"] >= 1
+
+
+def test_cli_answer_quality_eval_proves_source_path_freshness_and_evidence(tmp_path: Path) -> None:
+    run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
+    run_cli(tmp_path, "build-index", "--run", "starter-fixture")
+    run_cli(tmp_path, "build-semantic-index", "--run", "starter-fixture")
+    run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")
+    run_cli(tmp_path, "build-index", "--run", "stepik-fixture")
+    run_cli(tmp_path, "build-semantic-index", "--run", "stepik-fixture")
+    run_cli(tmp_path, "materialize", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-fixture")
+    run_cli(tmp_path, "build-index", "--run", "getcourse-browser-fixture")
+
+    result = run_cli(tmp_path, "eval", "answer-quality")
+
+    assert result["status"] == "ok"
+    assert result["suite_id"] == "answer-quality-packets"
+    assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

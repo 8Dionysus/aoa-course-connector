@@ -60,6 +60,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "getcourse-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "getcourse-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "GetCourse bootloader rollback evidence", "--run", "getcourse-browser-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "eval", "answer-quality"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "browser-fixture", "--platform", "skillspace", "--run", "skillspace-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "skillspace-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "skillspace-browser-fixture"],

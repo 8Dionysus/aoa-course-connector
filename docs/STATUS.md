@@ -59,6 +59,9 @@ This proves:
   local raw API path reporting.
 - Semantic and hybrid query routes through CLI and MCP, backed by a portable
   local semantic index artifact and collision guardrails.
+- Answer-quality eval coverage that checks top-result source id, platform,
+  lesson path, snippet terms, freshness timestamps, evidence fields, and
+  connector-local eval-port boundaries instead of only JSON term presence.
 
 ## Remaining Goal Work
 

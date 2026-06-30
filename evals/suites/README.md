@@ -9,3 +9,8 @@ Fixture-safe suites for local course connector behavior:
 - `browser_discovery_sources.json`
 - `browser_sync_checkpoints.json`
 - `browser_crawl_answer_packets.json`
+- `answer_quality_packets.json`
+
+`answer-quality.suite.md` records the local suite note for the answer-quality
+contract. It is connector-local support evidence only; central proof doctrine,
+verdicts, scoring, regression meaning, and adoption stay with `aoa-evals`.

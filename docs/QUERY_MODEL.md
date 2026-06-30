@@ -5,6 +5,7 @@ A useful result must include:
 - matched snippet;
 - course/module/lesson/step path;
 - source URL;
+- source id;
 - fetched timestamp;
 - platform;
 - evidence IDs;
@@ -26,7 +27,11 @@ Answers should be built from query results rather than free-floating summaries.
 The local semantic index is a portable baseline, not a claim that the repo has
 external model embeddings configured. Future embedding providers must keep this
 contract stable: source-backed snippets, path, URL, fetched timestamp, evidence
-IDs, freshness, and score components remain visible.
+IDs, source id, freshness, and score components remain visible.
+
+`aoa-course eval answer-quality` checks this shape for fixture-safe starter,
+Stepik, and GetCourse runs: top-result source identity, path, snippet terms,
+freshness timestamps, and evidence fields must all survive retrieval.
 
 Commands:
 

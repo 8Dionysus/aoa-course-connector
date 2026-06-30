@@ -29,6 +29,7 @@ The starter path creates:
 - a deterministic local semantic/vector index (`local_hashing_v1`);
 - a course graph;
 - an answer packet with source-backed evidence.
+- answer packets with source-backed evidence.
 
 ## Stepik Clean API Proof
 
@@ -146,6 +147,19 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-crawl-fixture
 ```
+
+## Answer Quality Eval
+
+After the starter, Stepik fixture, and GetCourse browser fixture artifacts have
+been built, run:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli eval answer-quality
+```
+
+This local suite checks source id, platform, lesson path, snippets, freshness,
+and evidence fields rather than only term presence. It is repo-local support
+evidence; central proof verdicts and scoring stay with `aoa-evals`.
 
 ## Priority Platforms
 

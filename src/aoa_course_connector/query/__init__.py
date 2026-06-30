@@ -143,6 +143,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
             evidence_chain.append(
                 {
                     "evidence_id": evidence_id,
+                    "source_id": result.get("source_id"),
                     "source_url": result.get("source_url"),
                     "fetched_at": result.get("fetched_at"),
                     "platform": result.get("platform"),
