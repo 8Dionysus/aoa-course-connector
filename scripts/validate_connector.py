@@ -368,7 +368,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -459,6 +459,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "source_selection",
         "execution_options",
         "query_handoff",
+        "mcp_commands",
+        "lesson_context",
+        "evidence_report",
         "connected_run_handoff",
         "link-pattern",
         "account.storage-state.json",

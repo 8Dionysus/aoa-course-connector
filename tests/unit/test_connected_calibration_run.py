@@ -50,9 +50,14 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all(entry["answer_ready"] is True for entry in smoke_entries)
     assert all(entry["commands"]["answer"].startswith("aoa-course answer ") for entry in smoke_entries)
     assert all("--mode hybrid" in entry["commands"]["answer"] for entry in smoke_entries)
+    assert all(entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ") for entry in smoke_entries)
+    assert all("lesson_context" in entry["mcp_commands"] for entry in smoke_entries)
+    assert all("evidence_report" in entry["mcp_commands"] for entry in smoke_entries)
+    assert all('"mode":"hybrid"' in entry["mcp_commands"]["lesson_context"] for entry in smoke_entries)
     assert sync_entries
     assert all(entry["semantic_query_ready"] is False for entry in sync_entries)
     assert all("--mode keyword" in entry["commands"]["answer"] for entry in sync_entries)
+    assert all('"mode":"keyword"' in entry["mcp_commands"]["search"] for entry in sync_entries)
     assert Path(str(receipt["artifacts"]["packet_path"])).is_file()
     assert Path(str(receipt["artifacts"]["intake_path"])).is_file()
     assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
@@ -70,6 +75,7 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["execution_options"] == receipt["execution_options"]
     assert status["query_handoff"]["entry_count"] == receipt["query_handoff"]["entry_count"]
     assert status["query_handoff"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
+    assert status["query_handoff"]["entries"][0]["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert status["privacy"]["contains_secret_values"] is False
 
 
@@ -255,6 +261,9 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     assert live_smoke_stage["actions"][0]["source_id"] == source["source_id"]
     assert receipt["query_handoff"]["ready"] is True
     assert any(entry["kind"] == "smoke" and entry["platform"] == "getcourse" for entry in receipt["query_handoff"]["entries"])
+    smoke_entry = next(entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "smoke" and entry["platform"] == "getcourse")
+    assert "aoa-course mcp call lesson_context" in smoke_entry["mcp_commands"]["lesson_context"]
+    assert f'"run":"{smoke_entry["run_id"]}"' in smoke_entry["mcp_commands"]["lesson_context"]
     assert status["source_selection"]["ready_source_ids"] == [source["source_id"]]
     assert status["execution_options"] == receipt["execution_options"]
     assert status["query_handoff"]["ready"] is True

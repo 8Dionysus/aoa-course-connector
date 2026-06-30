@@ -166,7 +166,10 @@ packet quality, privacy flags, failures, and next steps from
 `execution_options` records the query, browser `link_pattern`, source limit,
 and traversal bounds used by the connected run without exposing token values.
 `query_handoff` gives agents the run ids, local index/graph/answer paths, and
-ready CLI `query`/`answer` commands produced by sync and smoke actions. It never
-executes network work; missing receipts return `status: "missing"` so agents can
-ask for the fixture or live connected-run command instead of guessing from the
+ready CLI `query`/`answer` commands produced by sync and smoke actions. Each
+entry also includes `mcp_commands` for `search`, `lesson_context`, and
+`evidence_report`, so an MCP-side agent can query the connected run without
+switching back to shell planning or reparsing artifact paths. It never executes
+network work; missing receipts return `status: "missing"` so agents can ask for
+the fixture or live connected-run command instead of guessing from the
 filesystem.
