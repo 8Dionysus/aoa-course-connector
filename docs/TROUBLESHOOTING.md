@@ -4,9 +4,14 @@ Run:
 
 ```bash
 aoa-course doctor
+aoa-course readiness --run starter-fixture
 aoa-course storage status --measure
 python scripts/validate_connector.py
 ```
+
+`readiness` is read-only and does not touch the network. Check
+`operational_ready`, `connected_live_ready`, `lanes`, and `next_commands` before
+rerunning lower-level sync, index, graph, or MCP commands.
 
 If query returns no results, rebuild:
 

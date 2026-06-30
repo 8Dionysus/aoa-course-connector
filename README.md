@@ -14,6 +14,7 @@ evidence.
 python scripts/validate_connector.py
 PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m aoa_course_connector.cli doctor
+PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture
@@ -32,6 +33,12 @@ The starter path creates:
 - a course graph;
 - an answer packet with source-backed evidence.
 - answer packets with source-backed evidence.
+
+`readiness` is the read-only agent handoff for the whole connector surface. It
+returns `aoa_course_connector_readiness_v1` with storage roots, source registry
+counts, run/index/graph readiness, connected-source handoff status, MCP tool
+coverage, `operational_ready`, `connected_live_ready`, and concrete next
+commands without touching the network.
 
 To build the same semantic index contract through an external embedding
 endpoint, keep the token in the environment and pass only the env var name:

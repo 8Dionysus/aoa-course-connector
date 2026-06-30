@@ -153,6 +153,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
     monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
     monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+    assert any(tool["name"] == "connector_readiness" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
@@ -221,6 +222,15 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert connected_run["connected_run"]["schema"] == "aoa_course_connected_calibration_run_status_v1"
     assert connected_run["connected_run"]["status"] == "ok"
     assert connected_run["connected_run"]["network_touched"] is False
+    readiness = call_tool("connector_readiness", {"runs": ["starter-fixture"], "connected_run": "mcp-connected-fixture"})
+    assert readiness["schema"] == "aoa_course_connector_readiness_v1"
+    assert readiness["network_touched"] is False
+    assert readiness["operational_ready"] is True
+    assert readiness["lanes"]["agent_query_ready"] is True
+    assert readiness["lanes"]["mcp_tools_ready"] is True
+    assert readiness["connected_run"]["status"] == "ok"
+    assert readiness["mcp"]["missing_tools"] == []
+    assert readiness["runs"][0]["readiness"]["agent_query_ready"] is True
     refresh = call_tool("refresh_plan", {"query": "rollback", "run": "starter-fixture", "mode": "keyword"})
     assert refresh["tool"] == "refresh_plan"
     assert refresh["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
@@ -290,6 +300,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     )
     materialize_fixture(storage, run_id="starter-fixture")
     build_keyword_index(storage, run_id="starter-fixture")
+    build_graph(storage, run_id="starter-fixture")
     monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
     monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
     monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
@@ -314,12 +325,14 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert handle_jsonrpc_message({"jsonrpc": "2.0", "method": "notifications/initialized"}) is None
 
     listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+    readiness_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connector_readiness")
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
+    assert "runs" in readiness_tool["inputSchema"]["properties"]
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
@@ -387,3 +400,14 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     })
     assert connected_status["result"]["structuredContent"]["tool"] == "connected_run_status"
     assert connected_status["result"]["structuredContent"]["connected_run"]["status"] == "missing"
+    readiness = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 43,
+        "method": "tools/call",
+        "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}},
+    })
+    readiness_content = readiness["result"]["structuredContent"]
+    assert readiness_content["tool"] == "connector_readiness"
+    assert readiness_content["schema"] == "aoa_course_connector_readiness_v1"
+    assert readiness_content["runs"][0]["readiness"]["agent_query_ready"] is True
+    assert readiness_content["mcp"]["ready"] is True

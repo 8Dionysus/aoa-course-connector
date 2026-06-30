@@ -102,6 +102,7 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/mcp/server.py",
     "src/aoa_course_connector/refresh.py",
     "src/aoa_course_connector/readiness.py",
+    "src/aoa_course_connector/status.py",
     "src/aoa_course_connector/smoke/__init__.py",
     "src/aoa_course_connector/smoke/browser_session.py",
     "src/aoa_course_connector/smoke/stepik.py",
@@ -264,6 +265,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     cli_usage_raw = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8")
     agent_install_raw = (repo_root / "docs" / "AGENT_INSTALL_ROUTE.md").read_text(encoding="utf-8")
     readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
+    status_raw = (repo_root / "src" / "aoa_course_connector" / "status.py").read_text(encoding="utf-8")
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
@@ -294,6 +296,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Connected-source plan code missing runs/<run> calibration artifact path")
     if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
+    if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
+        errors.append("AGENTS route missing connector readiness validation")
+    if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
+        errors.append("Agent install route missing connector readiness audit handoff")
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
     if "eval browser-transcripts" not in agents:
@@ -315,7 +321,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "connected_source_plan", "connected_run_status", "source_selection", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
@@ -355,9 +361,21 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
+    for token in [
+        "def connector_readiness",
+        "aoa_course_connector_readiness_v1",
+        "operational_ready",
+        "connected_live_ready",
+        "REQUIRED_MCP_TOOLS",
+        "load_connected_calibration_status",
+        "connected_source_plan",
+        "network_touched",
+    ]:
+        if token not in status_raw:
+            errors.append(f"Connector status code missing readiness token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
     for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration", "browser-transcripts"]:
         if token not in eval_readme:

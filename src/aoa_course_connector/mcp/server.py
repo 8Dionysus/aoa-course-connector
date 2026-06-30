@@ -19,6 +19,7 @@ from aoa_course_connector.query import freshness_report, graph_neighbors, query_
 from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import load_registry
+from aoa_course_connector.status import connector_readiness, ingest_status
 from aoa_course_connector.sync import load_sync_status
 
 
@@ -42,6 +43,29 @@ def _query_schema(*, mode: bool = False) -> dict[str, object]:
 
 def _run_schema() -> dict[str, object]:
     return _object_schema({"run": _string_schema("Connector run id.")})
+
+
+def _connector_readiness_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "runs": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Optional run ids to audit.",
+            },
+            "platforms": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
+                "description": "Optional connected platforms to audit.",
+            },
+            "connected_run": _string_schema("Connected calibration run id to inspect."),
+            "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
+            "state_file": _string_schema("Optional browser storage-state file."),
+            "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
+            "include_disabled": {"type": "boolean", "description": "Include disabled sources in readiness checks."},
+            "query": _string_schema("Optional course-specific smoke query for connected planning."),
+        }
+    )
 
 
 def _live_preflight_schema() -> dict[str, object]:
@@ -110,6 +134,7 @@ def _integer_schema(description: str, minimum: int) -> dict[str, Any]:
 
 TOOLS = [
     {"name": "list_sources", "description": "List configured course sources.", "inputSchema": _object_schema({})},
+    {"name": "connector_readiness", "description": "Inspect install, storage, source, run, connected-run, and MCP readiness without touching the network.", "inputSchema": _connector_readiness_schema()},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
@@ -137,8 +162,10 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     run_id = str(args.get("run") or DEFAULT_RUN)
     if name == "list_sources":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "registry": load_registry(roots.data)}
+    if name == "connector_readiness":
+        return _call_connector_readiness(roots, args)
     if name == "ingest_status":
-        return _ingest_status(roots, run_id)
+        return ingest_status(roots, run_id)
     if name == "sync_status":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sync": load_sync_status(roots, sync_run_id=str(args.get("sync_run") or ""), platform=str(args.get("platform") or ""))}
     if name == "live_preflight":
@@ -236,6 +263,33 @@ def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[s
     )
 
 
+def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    run_values = args.get("runs")
+    if run_values is None:
+        runs = None
+    elif isinstance(run_values, list) and all(isinstance(item, str) for item in run_values):
+        runs = run_values
+    else:
+        raise ValueError("connector_readiness runs must be an array of strings")
+    platforms = _platform_arg(args.get("platforms"), tool_name="connector_readiness")
+    state_file = args.get("state_file")
+    if state_file is not None and not isinstance(state_file, str):
+        raise ValueError("connector_readiness state_file must be a string")
+    return connector_readiness(
+        find_repo_root(),
+        roots,
+        runs=runs,
+        platforms=platforms,
+        connected_run=str(args.get("connected_run") or DEFAULT_CONNECTED_RUN),
+        stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
+        browser_state_file=Path(state_file) if state_file else None,
+        expect_origin_contains=str(args.get("expect_origin") or "") or None,
+        include_disabled=bool(args.get("include_disabled", False)),
+        query=str(args.get("query") or "") or None,
+        mcp_tool_names=TOOL_NAMES,
+    )
+
+
 def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
     platforms = _platform_arg(args.get("platforms"), tool_name="connected_source_plan")
     state_file = args.get("state_file")
@@ -316,220 +370,6 @@ def main() -> int:
         print(json.dumps(tools_manifest(), indent=2, sort_keys=True))
         return 0
     return run_stdio()
-
-
-def _ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
-    data_dir = roots.data / "runs" / run_id
-    artifact_dir = roots.artifact / "runs" / run_id
-    normalized_path = data_dir / "normalized" / "course_bundle.json"
-    keyword_path = artifact_dir / "indexes" / "keyword_index.json"
-    semantic_path = artifact_dir / "indexes" / "semantic_index.json"
-    graph_path = artifact_dir / "graphs" / "course_graph.json"
-    normalized = _normalized_bundle_status(normalized_path)
-    keyword = _artifact_json_status(
-        keyword_path,
-        keys=["schema", "built_at", "doc_count", "term_count", "unit"],
-    )
-    semantic = _artifact_json_status(
-        semantic_path,
-        keys=["schema", "built_at", "doc_count", "provider", "dimensions", "unit", "feature_contract"],
-    )
-    graph = _artifact_json_status(
-        graph_path,
-        keys=["schema", "built_at", "node_count", "edge_count"],
-    )
-    ready = bool(normalized.get("exists")) and bool(keyword.get("exists")) and bool(graph.get("exists"))
-    partial = data_dir.exists() or artifact_dir.exists()
-    return {
-        "schema": "aoa_course_ingest_status_v1",
-        "tool": "ingest_status",
-        "run_id": run_id,
-        "status": "ready" if ready else "partial" if partial else "missing",
-        "network_touched": False,
-        "read_only": True,
-        "storage": {
-            "data_dir": str(data_dir),
-            "artifact_dir": str(artifact_dir),
-        },
-        "normalized": normalized,
-        "receipts": _run_receipt_summaries(data_dir),
-        "indexes": {
-            "keyword": keyword,
-            "semantic": semantic,
-        },
-        "graph": graph,
-        "readiness": {
-            "normalized_ready": bool(normalized.get("exists")),
-            "query_ready": bool(keyword.get("exists")),
-            "semantic_query_ready": bool(semantic.get("exists")),
-            "graph_ready": bool(graph.get("exists")),
-            "agent_query_ready": ready,
-        },
-        "next_commands": _ingest_status_next_commands(
-            run_id,
-            normalized_exists=bool(normalized.get("exists")),
-            keyword_exists=bool(keyword.get("exists")),
-            semantic_exists=bool(semantic.get("exists")),
-            graph_exists=bool(graph.get("exists")),
-        ),
-    }
-
-
-def _normalized_bundle_status(path: Path) -> dict[str, object]:
-    if not path.exists():
-        return {"exists": False, "path": str(path)}
-    payload = _load_json_file(path)
-    if _json_load_error(payload):
-        return {"exists": True, "path": str(path), "status": "error", "error": payload.get("_load_error")}
-    if not isinstance(payload, dict):
-        return {"exists": True, "path": str(path), "status": "error", "error": "normalized bundle is not a JSON object"}
-    counts = _bundle_counts(payload)
-    source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
-    return {
-        "exists": True,
-        "path": str(path),
-        "schema": payload.get("schema"),
-        "source": {
-            "source_id": source.get("source_id"),
-            "platform": source.get("platform"),
-            "access_mode": source.get("access_mode"),
-            "source_ref": source.get("source_ref"),
-            "title": source.get("title"),
-        },
-        "counts": counts,
-        "fetched_at": _bundle_fetched_at(payload),
-    }
-
-
-def _artifact_json_status(path: Path, *, keys: list[str]) -> dict[str, object]:
-    if not path.exists():
-        return {"exists": False, "path": str(path)}
-    payload = _load_json_file(path)
-    if _json_load_error(payload):
-        return {"exists": True, "path": str(path), "status": "error", "error": payload.get("_load_error")}
-    if not isinstance(payload, dict):
-        return {"exists": True, "path": str(path), "status": "error", "error": "artifact is not a JSON object"}
-    summary = {"exists": True, "path": str(path), "status": "ok"}
-    for key in keys:
-        if key in payload:
-            summary[key] = payload.get(key)
-    return summary
-
-
-def _run_receipt_summaries(data_dir: Path) -> list[dict[str, object]]:
-    if not data_dir.exists():
-        return []
-    summaries: list[dict[str, object]] = []
-    for path in sorted(data_dir.glob("*receipt*.json")):
-        payload = _load_json_file(path)
-        if _json_load_error(payload):
-            summaries.append({"path": str(path), "status": "error", "error": payload.get("_load_error")})
-            continue
-        if not isinstance(payload, dict):
-            summaries.append({"path": str(path), "status": "error", "error": "receipt is not a JSON object"})
-            continue
-        summaries.append(
-            {
-                "path": str(path),
-                "schema": payload.get("schema"),
-                "status": payload.get("status"),
-                "source_mode": payload.get("source_mode"),
-                "network_touched": bool(payload.get("network_touched")),
-                "completed_at": payload.get("completed_at"),
-                "course_count": payload.get("course_count"),
-                "evidence_count": payload.get("evidence_count"),
-                "raw_path": payload.get("raw_path"),
-                "normalized_path": payload.get("normalized_path"),
-            }
-        )
-    return summaries
-
-
-def _bundle_counts(bundle: dict[str, object]) -> dict[str, int]:
-    counts = {
-        "courses": 0,
-        "modules": 0,
-        "lessons": 0,
-        "steps": 0,
-        "assets": 0,
-        "transcripts": 0,
-        "assignments": 0,
-        "comment_threads": 0,
-        "comments": 0,
-        "evidence": len(bundle.get("evidence", [])) if isinstance(bundle.get("evidence"), list) else 0,
-    }
-    for course in _dict_items(bundle.get("courses")):
-        counts["courses"] += 1
-        for module in _dict_items(course.get("modules")):
-            counts["modules"] += 1
-            for lesson in _dict_items(module.get("lessons")):
-                counts["lessons"] += 1
-                counts["steps"] += len(_dict_items(lesson.get("steps")))
-                counts["assets"] += len(_dict_items(lesson.get("assets")))
-                counts["transcripts"] += len(_dict_items(lesson.get("transcripts")))
-                counts["assignments"] += len(_dict_items(lesson.get("assignments")))
-                threads = _dict_items(lesson.get("comment_threads"))
-                counts["comment_threads"] += len(threads)
-                counts["comments"] += sum(len(_dict_items(thread.get("comments"))) for thread in threads)
-    return counts
-
-
-def _bundle_fetched_at(bundle: dict[str, object]) -> dict[str, object]:
-    timestamps = sorted(
-        {
-            str(evidence.get("fetched_at"))
-            for evidence in _dict_items(bundle.get("evidence"))
-            if evidence.get("fetched_at")
-        }
-    )
-    return {
-        "count": len(timestamps),
-        "earliest": timestamps[0] if timestamps else None,
-        "latest": timestamps[-1] if timestamps else None,
-    }
-
-
-def _dict_items(value: object) -> list[dict[str, object]]:
-    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
-
-
-def _ingest_status_next_commands(
-    run_id: str,
-    *,
-    normalized_exists: bool,
-    keyword_exists: bool,
-    semantic_exists: bool,
-    graph_exists: bool,
-) -> list[str]:
-    if not normalized_exists:
-        if run_id == "starter-fixture":
-            return [f"aoa-course materialize fixture --run {run_id}"]
-        return [
-            "aoa-course sources list",
-            "aoa-course sync status",
-            f"run an ingest, materialize, crawl, or source sync command that writes data/runs/{run_id}/normalized/course_bundle.json",
-        ]
-    commands: list[str] = []
-    if not keyword_exists:
-        commands.append(f"aoa-course build-index --run {run_id}")
-    if not semantic_exists:
-        commands.append(f"aoa-course build-semantic-index --run {run_id}")
-    if not graph_exists:
-        commands.append(f"aoa-course build-graph --run {run_id}")
-    if keyword_exists:
-        commands.append(f"aoa-course answer \"course-specific question\" --run {run_id}")
-    return commands
-
-
-def _load_json_file(path: Path) -> object:
-    try:
-        return json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError) as exc:
-        return {"_load_error": str(exc)}
-
-
-def _json_load_error(payload: object) -> bool:
-    return isinstance(payload, dict) and "_load_error" in payload
 
 
 def _handle_jsonrpc_request(message: object) -> dict[str, object] | None:

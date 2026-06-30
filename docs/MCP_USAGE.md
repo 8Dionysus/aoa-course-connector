@@ -5,6 +5,7 @@ The server package name is `aoa-course-connector-mcp`.
 Initial tools:
 
 - `list_sources`
+- `connector_readiness`
 - `ingest_status`
 - `sync_status`
 - `live_preflight`
@@ -27,6 +28,7 @@ aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call connector_readiness '{"runs":["starter-fixture"],"platforms":["getcourse","stepik"]}'
 aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
@@ -50,6 +52,14 @@ artifact or tool result.
 bundle counts, materialization receipt summaries, keyword/semantic index
 metadata, graph node/edge counts, `agent_query_ready`, and next build/query
 commands without reading private raw payloads into `structuredContent`.
+
+`connector_readiness` is the read-only whole-connector route audit. It returns
+`aoa_course_connector_readiness_v1` with install route files, storage roots,
+source registry counts, selected run readiness, connected-source plan summary,
+connected-run receipt status, MCP tool coverage, `operational_ready`,
+`connected_live_ready`, and next commands. It is the first MCP packet an agent
+should inspect when deciding whether to install, build starter artifacts,
+connect sources, run fixture calibration, or move into gated live work.
 
 ## JSON-RPC Stdio
 
@@ -78,6 +88,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"platforms":["stepik"]}}}' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
+  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"],"platforms":["stepik"]}}}' \
   | aoa-course-connector-mcp
 ```
 

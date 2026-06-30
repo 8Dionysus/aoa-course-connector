@@ -50,6 +50,7 @@ from aoa_course_connector.smoke import (
     smoke_stepik_live as smoke_stepik_live_route,
 )
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
+from aoa_course_connector.status import connector_readiness
 from aoa_course_connector.storage import create_storage_roots, run_data_dir, storage_status
 from aoa_course_connector.sync import (
     load_sync_status,
@@ -75,6 +76,18 @@ def build_parser() -> argparse.ArgumentParser:
 
     doctor = sub.add_parser("doctor")
     doctor.set_defaults(func=cmd_doctor)
+
+    readiness = sub.add_parser("readiness")
+    readiness.add_argument("--run", action="append")
+    readiness.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    readiness.add_argument("--connected-run", default="connected-calibration")
+    readiness.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
+    readiness.add_argument("--state-file", type=Path)
+    readiness.add_argument("--expect-origin")
+    readiness.add_argument("--include-disabled", action="store_true")
+    readiness.add_argument("--query")
+    readiness.add_argument("--require-ready", action="store_true")
+    readiness.set_defaults(func=cmd_readiness)
 
     init = sub.add_parser("init")
     init.set_defaults(func=cmd_init)
@@ -544,6 +557,29 @@ def cmd_doctor(_args: argparse.Namespace) -> int:
         }
     )
     return 0 if not missing else 1
+
+
+def cmd_readiness(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
+    report = connector_readiness(
+        repo_root,
+        roots,
+        runs=args.run,
+        platforms=args.platform,
+        connected_run=args.connected_run,
+        stepik_token_env=args.stepik_token_env,
+        browser_state_file=args.state_file,
+        expect_origin_contains=args.expect_origin,
+        include_disabled=args.include_disabled,
+        query=args.query,
+        mcp_tool_names=tools,
+    )
+    _emit(report)
+    if args.require_ready and not bool(report.get("operational_ready")):
+        return 1
+    return 0 if report.get("status") != "error" else 1
 
 
 def cmd_init(_args: argparse.Namespace) -> int:

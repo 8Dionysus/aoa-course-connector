@@ -29,6 +29,11 @@ This proves:
 - MCP `ingest_status` returns a read-only run readiness packet with normalized
   counts, materialization receipts, index/semantic/graph metadata, next
   commands, and `agent_query_ready`;
+- CLI `readiness` and MCP `connector_readiness` return one read-only
+  `aoa_course_connector_readiness_v1` route audit with install-route files,
+  storage roots, source registry counts, selected run/index/graph readiness,
+  connected-source handoff status, connected-run receipt status, MCP tool
+  coverage, `operational_ready`, `connected_live_ready`, and next commands;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh
