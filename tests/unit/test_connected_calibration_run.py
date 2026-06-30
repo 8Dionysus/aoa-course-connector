@@ -35,6 +35,16 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert receipt["privacy"]["contains_secret_values"] is False
     assert receipt["privacy"]["contains_raw_payloads"] is False
     assert len(receipt["artifacts"]["smoke_report_paths"]) == 3
+    assert receipt["query_handoff"]["schema"] == "aoa_course_connected_query_handoff_v1"
+    assert receipt["query_handoff"]["ready"] is True
+    assert receipt["query_handoff"]["entry_count"] >= 3
+    smoke_entries = [entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "smoke"]
+    assert {entry["platform"] for entry in smoke_entries} == {"getcourse", "skillspace", "stepik"}
+    assert all(entry["query_ready"] is True for entry in smoke_entries)
+    assert all(entry["semantic_query_ready"] is True for entry in smoke_entries)
+    assert all(entry["graph_ready"] is True for entry in smoke_entries)
+    assert all(entry["answer_ready"] is True for entry in smoke_entries)
+    assert all(entry["commands"]["answer"].startswith("aoa-course answer ") for entry in smoke_entries)
     assert Path(str(receipt["artifacts"]["packet_path"])).is_file()
     assert Path(str(receipt["artifacts"]["intake_path"])).is_file()
     assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
@@ -49,6 +59,8 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["receipt_schema"] == "aoa_course_connected_calibration_run_receipt_v1"
     assert status["network_touched"] is False
     assert status["artifacts"]["packet_path"] == receipt["artifacts"]["packet_path"]
+    assert status["query_handoff"]["entry_count"] == receipt["query_handoff"]["entry_count"]
+    assert status["query_handoff"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
     assert status["privacy"]["contains_secret_values"] is False
 
 
@@ -213,7 +225,10 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     assert live_sync_stage["actions"][0]["source_ids"] == [source["source_id"]]
     assert live_sync_stage["actions"][0]["state_file"] == str(state_file.resolve())
     assert live_smoke_stage["actions"][0]["source_id"] == source["source_id"]
+    assert receipt["query_handoff"]["ready"] is True
+    assert any(entry["kind"] == "smoke" and entry["platform"] == "getcourse" for entry in receipt["query_handoff"]["entries"])
     assert status["source_selection"]["ready_source_ids"] == [source["source_id"]]
+    assert status["query_handoff"]["ready"] is True
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
