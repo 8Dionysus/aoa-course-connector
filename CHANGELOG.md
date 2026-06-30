@@ -102,3 +102,9 @@
   connected-plan` and MCP `connected_source_plan` so agents can inspect
   readiness and get exact preflight, sync, smoke, and calibration commands
   before touching live sources.
+- Hardened connected-source launch plans so Stepik live commands default to a
+  bounded smoke/sync scope, with `full-course` and step-source enrichment only
+  emitted after an explicit operator/agent option.
+- Verified the bounded public Stepik live calibration route through preflight,
+  live smoke, answer evidence, timestamp checks, and live calibration packet
+  privacy guards.

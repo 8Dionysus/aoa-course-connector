@@ -35,7 +35,8 @@
   commands through CLI and MCP before touching live sources.
 - Prove read-only connected-source launch plans so agents can convert preflight
   readiness into exact preflight-report, source sync, per-source smoke, and
-  calibration packet commands before touching live sources.
+  calibration packet commands before touching live sources, with bounded
+  Stepik commands by default and explicit full-course escalation.
 - Prove connector-local answer-quality evals that validate source identity,
   evidence fields, lesson path, snippets, freshness, and platform nuance beyond
   simple term presence.

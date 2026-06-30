@@ -232,6 +232,7 @@ sources, use the read-only connected plan:
 ```bash
 aoa-course preflight connected-plan \
   --platform getcourse \
+  --live-scope bounded \
   --query "your course-specific question"
 ```
 

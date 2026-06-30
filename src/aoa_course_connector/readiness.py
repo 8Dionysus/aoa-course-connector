@@ -15,6 +15,7 @@ from aoa_course_connector.sources import load_registry, registry_path
 
 BROWSER_PLATFORMS = {"getcourse", "skillspace"}
 CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
+LIVE_SCOPES = {"bounded", "full-course"}
 
 
 def live_preflight(
@@ -105,10 +106,13 @@ def connected_source_plan(
     max_pages: int = 5,
     max_sources: int = 50,
     calibration_run: str = "connected-live-calibration",
+    live_scope: str = "bounded",
+    include_step_sources: bool = False,
 ) -> dict[str, object]:
     """Build a read-only launch plan for connected-source calibration."""
 
     selected_platforms = _selected_platforms(platforms)
+    selected_live_scope = _selected_live_scope(live_scope)
     preflight = live_preflight(
         roots,
         platforms=selected_platforms,
@@ -141,6 +145,8 @@ def connected_source_plan(
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
         max_lessons=max_lessons,
+        live_scope=selected_live_scope,
+        include_step_sources=include_step_sources,
     )
     smoke_actions = _smoke_actions(
         source_checks,
@@ -150,6 +156,8 @@ def connected_source_plan(
         max_lessons=max_lessons,
         max_pages=max_pages,
         max_sources=max_sources,
+        live_scope=selected_live_scope,
+        include_step_sources=include_step_sources,
     )
     calibration_actions = _calibration_actions(
         preflight_actions,
@@ -178,6 +186,8 @@ def connected_source_plan(
         "storage": preflight.get("storage"),
         "source_registry": preflight.get("source_registry"),
         "platforms": selected_platforms,
+        "live_scope": selected_live_scope,
+        "include_step_sources": include_step_sources,
         "platform_plans": platform_plans,
         "source_plans": source_plans,
         "stages": stages,
@@ -198,6 +208,13 @@ def _selected_platforms(platforms: list[str] | None) -> list[str]:
     unsupported = [platform for platform in selected if platform not in CONNECTED_PLATFORMS]
     if unsupported:
         raise ValueError(f"unsupported preflight platform: {', '.join(unsupported)}")
+    return selected
+
+
+def _selected_live_scope(live_scope: str) -> str:
+    selected = str(live_scope or "bounded")
+    if selected not in LIVE_SCOPES:
+        raise ValueError(f"unsupported live scope: {selected}")
     return selected
 
 
@@ -267,6 +284,8 @@ def _sync_actions(
     stepik_token_env: str,
     browser_state_file: Path | None,
     max_lessons: int,
+    live_scope: str,
+    include_step_sources: bool,
 ) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for platform in [item for item in platforms if item in BROWSER_PLATFORMS]:
@@ -281,10 +300,10 @@ def _sync_actions(
     if "stepik" in platforms:
         workflow = workflow_by_key.get(("stepik_source_sync", "stepik"), {})
         if workflow.get("ready"):
-            command = (
-                "aoa-course sync stepik-live --run stepik-live-sync "
-                f"--token-env {shlex.quote(stepik_token_env)} --full-course --batch-size 20 "
-                "--include-step-sources --build-artifacts"
+            command = _stepik_sync_command(
+                stepik_token_env=stepik_token_env,
+                live_scope=live_scope,
+                include_step_sources=include_step_sources,
             )
             actions.append({"kind": "sync", "platform": "stepik", "ready": True, "network_touched": True, "command": command})
     return actions
@@ -299,6 +318,8 @@ def _smoke_actions(
     max_lessons: int,
     max_pages: int,
     max_sources: int,
+    live_scope: str,
+    include_step_sources: bool,
 ) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for source in source_checks:
@@ -329,9 +350,12 @@ def _smoke_actions(
                     }
                 )
                 continue
-            command = (
-                f"aoa-course smoke stepik-live {course_id} --run stepik-live-smoke-{slug} "
-                f"--token-env {shlex.quote(stepik_token_env)} --full-course --batch-size 20 --include-step-sources"
+            command = _stepik_smoke_command(
+                course_id,
+                slug=slug,
+                stepik_token_env=stepik_token_env,
+                live_scope=live_scope,
+                include_step_sources=include_step_sources,
             )
         else:
             continue
@@ -420,6 +444,46 @@ def _platform_plans(
     return plans
 
 
+def _stepik_sync_command(
+    *,
+    stepik_token_env: str,
+    live_scope: str,
+    include_step_sources: bool,
+) -> str:
+    command = (
+        "aoa-course sync stepik-live --run stepik-live-sync "
+        f"--token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
+    )
+    if live_scope == "full-course":
+        command += "--full-course "
+    else:
+        command += "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
+    if include_step_sources:
+        command += "--include-step-sources "
+    return command + "--build-artifacts"
+
+
+def _stepik_smoke_command(
+    course_id: int,
+    *,
+    slug: str,
+    stepik_token_env: str,
+    live_scope: str,
+    include_step_sources: bool,
+) -> str:
+    command = (
+        f"aoa-course smoke stepik-live {course_id} --run stepik-live-smoke-{slug} "
+        f"--token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
+    )
+    if live_scope == "full-course":
+        command += "--full-course "
+    else:
+        command += "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
+    if include_step_sources:
+        command += "--include-step-sources "
+    return command.rstrip()
+
+
 def _append_stepik_preflight(
     checks: list[dict[str, object]],
     workflows: list[dict[str, object]],
@@ -474,7 +538,8 @@ def _append_stepik_preflight(
             "source_count": len(sources),
             "next_command": (
                 "aoa-course sync stepik-live --run stepik-live-sync "
-                "--full-course --batch-size 20 --include-step-sources --build-artifacts"
+                "--batch-size 20 --max-sections 1 --max-units-per-section 2 "
+                "--max-steps-per-lesson 5 --build-artifacts"
             ),
         }
     )
@@ -488,7 +553,11 @@ def _append_stepik_preflight(
     if not sources:
         next_commands.append(f"aoa-course discover stepik-account --token-env {token_env} --register --max-pages 5")
     else:
-        next_commands.append("aoa-course sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts")
+        next_commands.append(
+            "aoa-course sync stepik-live --run stepik-live-sync --batch-size 20 "
+            "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
+            "--build-artifacts"
+        )
 
 
 def _append_browser_preflight(

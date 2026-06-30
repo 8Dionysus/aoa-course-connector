@@ -73,6 +73,8 @@ def _connected_source_plan_schema() -> dict[str, object]:
             "max_pages": _integer_schema("Maximum catalog pages for browser live smoke commands.", 1),
             "max_sources": _integer_schema("Maximum discovered sources for browser live smoke commands.", 1),
             "calibration_run": _string_schema("Calibration run id for the handoff packet."),
+            "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
+            "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to planned commands."},
         }
     )
 
@@ -225,6 +227,8 @@ def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) ->
         max_pages=int(args.get("max_pages") or 5),
         max_sources=int(args.get("max_sources") or 50),
         calibration_run=str(args.get("calibration_run") or "connected-live-calibration"),
+        live_scope=str(args.get("live_scope") or "bounded"),
+        include_step_sources=bool(args.get("include_step_sources", False)),
     )
 
 

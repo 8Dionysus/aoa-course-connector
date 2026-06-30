@@ -183,6 +183,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     plan = call_tool("connected_source_plan", {"platforms": ["getcourse"], "query": "rollback"})
     assert plan["tool"] == "connected_source_plan"
     assert plan["plan"]["network_touched"] is False
+    assert plan["plan"]["live_scope"] == "bounded"
     assert plan["plan"]["source_plans"]
 
 
@@ -275,6 +276,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
+    assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
+    assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
 
     called = handle_jsonrpc_message({
@@ -312,7 +315,9 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
         "jsonrpc": "2.0",
         "id": 41,
         "method": "tools/call",
-        "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}},
+        "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"], "live_scope": "full-course", "include_step_sources": True}},
     })
     assert connected_plan["result"]["structuredContent"]["tool"] == "connected_source_plan"
     assert connected_plan["result"]["structuredContent"]["plan"]["network_touched"] is False
+    assert connected_plan["result"]["structuredContent"]["plan"]["live_scope"] == "full-course"
+    assert connected_plan["result"]["structuredContent"]["plan"]["include_step_sources"] is True

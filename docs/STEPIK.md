@@ -108,13 +108,16 @@ For agent handoff, use the combined read-only connected plan:
 aoa-course preflight connected-plan \
   --platform stepik \
   --stepik-token-env STEPIK_API_TOKEN \
+  --live-scope bounded \
   --query "course-specific question"
 ```
 
 The plan emits `sync stepik-live`, per-source `smoke stepik-live`, and
 `calibration build` commands when registered Stepik sources are ready. It keeps
 token values out of output and still marks `public_api` sources ready without a
-token.
+token. The default `bounded` scope keeps live sync/smoke under smoke limits;
+use `--live-scope full-course --include-step-sources` only for an explicit
+operator-selected full-course/source-enrichment run.
 
 Account discovery filters inactive or deleted enrollments before registering
 course sources, so stale account records do not become live sync targets.

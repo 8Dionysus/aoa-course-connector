@@ -32,7 +32,7 @@ aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
-aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"query":"course-specific question"}'
+aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
 ```
 
 ## JSON-RPC Stdio
@@ -85,3 +85,6 @@ preflight-report, source sync, per-source smoke, and `calibration build`
 commands. Agents should use it before connected live work so blocked sources,
 missing auth state, missing Stepik token env, runtime report paths, and
 calibration packet inputs are explicit before network-touching commands run.
+The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
+`include_step_sources: true` only when the operator intentionally wants the
+larger Stepik full-course/source-enrichment route.
