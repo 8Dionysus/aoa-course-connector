@@ -142,6 +142,24 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                 "evidence": asset_evidence,
             }
         )
+    for transcript_index, transcript in enumerate(snapshot.transcripts, start=1):
+        transcript_source_url = str(transcript.get("source_url") or url)
+        transcript_evidence = _evidence(evidence, platform, transcript_source_url, captured_at, f"transcript:{lesson_id}:{transcript_index}", raw_ref)
+        transcript_id = f"{lesson_id}:transcript:{_slug(transcript.get('transcript_id') or transcript.get('language') or transcript_index)}"
+        lesson["transcripts"].append(
+            {
+                "transcript_id": transcript_id,
+                "lesson_id": lesson_id,
+                "language": transcript.get("language") or "",
+                "kind": transcript.get("kind") or "transcript",
+                "text": transcript.get("text") or "",
+                "source_url": transcript_source_url,
+                "authority_tier": "transcript",
+                "authority_label": f"{platform} visible transcript/caption",
+                "source_authority": "browser_visible_transcript",
+                "evidence": transcript_evidence,
+            }
+        )
     for link in snapshot.links:
         if link.get("kind") == "assignment" or "homework" in link.get("href", "") or "task" in link.get("href", ""):
             lesson["assignments"].append(
@@ -191,14 +209,15 @@ def _comment_threads_from_snapshot(
         comment_evidence = _evidence(evidence, platform, url, captured_at, f"comment:{comment_id}", raw_ref)
         author_label = comment.get("author") or "visible user"
         role = _comment_role(comment, author_label)
+        authority_label = comment.get("authority_label") or role or author_label
         thread["comments"].append(
             {
                 "comment_id": comment_id,
                 "thread_id": thread_id,
                 "author_label": author_label,
                 "role": role,
-                "authority_tier": _comment_authority_tier(role or author_label),
-                "authority_label": comment.get("authority_label") or role or author_label,
+                "authority_tier": _comment_authority_tier(authority_label),
+                "authority_label": authority_label,
                 "source_authority": "browser_visible_comment",
                 "posted_at": comment.get("created_at") or captured_at,
                 "text": comment.get("text") or "",

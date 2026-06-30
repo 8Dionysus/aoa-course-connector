@@ -67,3 +67,23 @@ def test_live_calibration_packet_rejects_raw_payload_fields(tmp_path: Path) -> N
     assert packet["status"] == "partial"
     assert packet["privacy"]["contains_raw_payloads"] is True
     assert any(failure["surface"] == "privacy" and "raw_html" in failure["keys"] for failure in packet["failures"])
+
+
+def test_live_calibration_packet_rejects_generic_token_keys(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    report = smoke_browser_fixture(storage, platform="getcourse", run_id="getcourse-token-check")
+    report["auth"] = {
+        "token": "opaque-runtime-token",
+        "api_key": "opaque-runtime-api-key",
+    }
+
+    packet = build_live_calibration_packet(run_id="token-check", smoke_reports=[report])
+
+    assert packet["status"] == "partial"
+    assert packet["privacy"]["contains_raw_payloads"] is True
+    assert packet["privacy"]["contains_secret_values"] is True
+    assert any(
+        failure["surface"] == "privacy"
+        and {"token", "api_key"} <= set(failure["keys"])
+        for failure in packet["failures"]
+    )

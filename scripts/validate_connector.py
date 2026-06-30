@@ -75,6 +75,8 @@ REQUIRED_FILES = [
     "evals/suites/adapter_authority_metadata.json",
     "evals/suites/live-calibration.suite.md",
     "evals/suites/live_calibration_packet.json",
+    "evals/suites/browser-transcripts.suite.md",
+    "evals/suites/browser_transcripts_answer_packets.json",
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/browser_progress_comments_answer_packets.json",
@@ -261,6 +263,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if "eval live-calibration" not in agents or "calibration build" not in agents:
         errors.append("AGENTS route missing live calibration packet validation")
+    if "eval browser-transcripts" not in agents:
+        errors.append("AGENTS route missing browser transcript/caption eval")
     for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report"]:
         if token not in agents:
             errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
@@ -306,7 +310,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
-    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration"]:
+    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration", "browser-transcripts"]:
         if token not in eval_readme:
             errors.append(f"Eval README missing token: {token}")
     live_calibration_doc = (repo_root / "docs" / "LIVE_CALIBRATION.md").read_text(encoding="utf-8").casefold()
@@ -365,6 +369,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "smoke browser-fixture",
         "smoke browser-snapshot",
         "smoke browser-live",
+        "browser-transcripts",
+        "transcript/caption",
         "preflight live",
         "sync status",
         "--register",

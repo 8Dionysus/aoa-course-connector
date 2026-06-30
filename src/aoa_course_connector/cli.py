@@ -420,6 +420,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
     eval_sub.add_parser("browser-progress-comments").set_defaults(func=cmd_eval_browser_progress_comments)
+    eval_sub.add_parser("browser-transcripts").set_defaults(func=cmd_eval_browser_transcripts)
     eval_sub.add_parser("browser-discovery").set_defaults(func=cmd_eval_browser_discovery)
     eval_sub.add_parser("browser-sync").set_defaults(func=cmd_eval_browser_sync)
     eval_sub.add_parser("stepik-sync").set_defaults(func=cmd_eval_stepik_sync)
@@ -1665,6 +1666,33 @@ def cmd_eval_browser_progress_comments(_args: argparse.Namespace) -> int:
                 }
             )
     _emit({"schema": "aoa_course_eval_browser_progress_comments_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_browser_transcripts(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    failures = []
+    cases = [
+        ("getcourse-browser-fixture", "transcript excerpt vendor boot recovery plan", ["transcript", "vendor", "recovery"], "transcript"),
+        ("skillspace-browser-fixture", "caption bugreport timeline", ["caption", "bugreport", "timeline"], "transcript"),
+    ]
+    for run_id, query, terms, expected_kind in cases:
+        packet = render_answer_packet(roots, query, run_id, 5)
+        text = json.dumps(packet).casefold()
+        missing_terms = [term for term in terms if term.casefold() not in text]
+        has_kind = any(isinstance(result, dict) and result.get("kind") == expected_kind for result in packet.get("results", []))
+        if missing_terms or not has_kind or not packet.get("evidence_chain"):
+            failures.append(
+                {
+                    "run_id": run_id,
+                    "query": query,
+                    "expected_kind": expected_kind,
+                    "missing_terms": missing_terms,
+                    "has_expected_kind": has_kind,
+                    "has_evidence": bool(packet.get("evidence_chain")),
+                }
+            )
+    _emit({"schema": "aoa_course_eval_browser_transcripts_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 

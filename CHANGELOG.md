@@ -86,3 +86,8 @@
 - Added MCP `evidence_report` and strengthened graph/freshness/evidence MCP
   validation so agents can inspect source-backed results, freshness, authority,
   and graph context through structured tool output.
+- Added browser-session visible transcript/caption extraction for GetCourse and
+  Skillspace fixtures plus `eval browser-transcripts` coverage through
+  normalized transcript objects, index docs, graph edges, and answer packets.
+- Tightened live calibration privacy checks so generic token/API-key fields are
+  rejected as secret-bearing source-report payloads.

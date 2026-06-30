@@ -277,6 +277,7 @@ def _doc(
         "freshness_state": lesson.get("freshness_state", "unknown"),
         "authority_tier": _authority_tier(kind, item),
         "authority_label": str(item.get("authority_label") or item.get("author_label") or item.get("role") or ""),
+        "source_authority": str(item.get("source_authority") or ""),
         "source_url": evidence_dict.get("source_url") or lesson.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),
@@ -298,7 +299,7 @@ def _authority_tier(kind: str, item: dict[str, object]) -> str:
     if kind == "progress":
         return "progress_metadata"
     if kind == "comment":
-        label = str(item.get("author_label") or item.get("role") or "").casefold()
+        label = str(item.get("authority_label") or item.get("author_label") or item.get("role") or "").casefold()
         if any(token in label for token in ["instructor", "teacher", "coach", "admin", "staff"]):
             return "instructor_comment"
         if any(token in label for token in ["mentor", "tutor"]):

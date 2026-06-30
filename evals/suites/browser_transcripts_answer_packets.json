@@ -1,0 +1,20 @@
+{
+  "schema": "aoa_course_answer_eval_suite_v1",
+  "suite_id": "browser-transcripts-answer-packets",
+  "cases": [
+    {
+      "query": "transcript excerpt vendor boot recovery plan",
+      "run": "getcourse-browser-fixture",
+      "must_contain_terms": ["transcript", "vendor", "recovery"],
+      "must_have_kind": "transcript",
+      "must_have_evidence": true
+    },
+    {
+      "query": "caption bugreport timeline",
+      "run": "skillspace-browser-fixture",
+      "must_contain_terms": ["caption", "bugreport", "timeline"],
+      "must_have_kind": "transcript",
+      "must_have_evidence": true
+    }
+  ]
+}

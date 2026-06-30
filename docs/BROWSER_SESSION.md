@@ -92,34 +92,42 @@ link metadata, matches already captured lesson pages by URL, and creates
 `discovered_not_fetched` placeholders only when a linked lesson page is absent
 from the snapshot.
 
-## Progress And Comments Proof
+## Progress, Comments, And Transcripts Proof
 
 Browser snapshots extract visible progress/status blocks and visible discussion
-comments when the page exposes them in accessible HTML. Extraction is
-data/aria-first and also handles compact unannotated blocks with progress,
-comment, reply, or discussion class/id hints. The normalized bundle keeps
-progress evidence at the course level and discussion evidence under the lesson.
+comments when the page exposes them in accessible HTML. They also extract
+visible transcript/caption blocks when the page exposes them as HTML text or
+caption/transcript-marked blocks. Extraction is data/aria-first and also handles
+compact unannotated blocks with progress, comment, reply, discussion,
+transcript, caption, or subtitle class/id hints. The normalized bundle keeps
+progress evidence at the course level and discussion/transcript evidence under
+the lesson.
 When comment blocks expose author-role metadata such as
 `data-aoa-author-role`, the adapter preserves it as `role`, `authority_tier`,
 `authority_label`, and `source_authority` so ranking can distinguish mentor,
 instructor, learner, and generic discussion notes.
-The keyword index includes both as searchable knowledge items, and the graph
-includes `course_has_progress`, `lesson_has_comment_thread`, and
-`thread_has_comment` edges.
+Transcript/caption text is normalized as canonical `Transcript` objects with
+`authority_tier: transcript`. The keyword index includes these surfaces as
+searchable knowledge items, and the graph includes `course_has_progress`,
+`lesson_has_transcript`, `lesson_has_comment_thread`, and `thread_has_comment`
+edges.
 
 ```bash
 aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
 aoa-course build-index --run getcourse-browser-fixture
 aoa-course build-graph --run getcourse-browser-fixture
 aoa-course answer "mentor anti-rollback vendor boot" --run getcourse-browser-fixture
+aoa-course answer "transcript excerpt vendor boot recovery plan" --run getcourse-browser-fixture
 
 aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
 aoa-course build-index --run skillspace-browser-fixture
 aoa-course build-graph --run skillspace-browser-fixture
 aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
+aoa-course answer "caption bugreport timeline" --run skillspace-browser-fixture
 
 aoa-course eval adapter-authority
 aoa-course eval browser-progress-comments
+aoa-course eval browser-transcripts
 ```
 
 ## Smoke Route
