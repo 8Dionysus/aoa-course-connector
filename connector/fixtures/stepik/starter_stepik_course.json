@@ -1,0 +1,88 @@
+{
+  "schema": "aoa_course_stepik_raw_v1",
+  "fetched_at": "2026-06-29T12:30:00Z",
+  "source": {
+    "source_id": "source:stepik:fixture-67",
+    "platform": "stepik",
+    "source_ref": "67",
+    "access_mode": "public_api",
+    "title": "Stepik API Fixture"
+  },
+  "course": {
+    "id": 67,
+    "title": "Stepik Public API Fixture",
+    "summary": "Synthetic Stepik-shaped public API snapshot for connector tests.",
+    "description": "<p>This fixture follows the Stepik course to sections to units to lessons to steps shape.</p>",
+    "sections": [141],
+    "update_date": "2025-05-16T11:06:56Z"
+  },
+  "sections": [
+    {
+      "section": {
+        "id": 141,
+        "course": 67,
+        "units": [1240],
+        "position": 1,
+        "title": "Clean API Section",
+        "update_date": "2025-05-16T11:06:56Z"
+      },
+      "units": [
+        {
+          "unit": {
+            "id": 1240,
+            "section": 141,
+            "lesson": 6433,
+            "position": 1,
+            "update_date": "2025-05-16T11:06:56Z"
+          },
+          "lesson": {
+            "id": 6433,
+            "steps": [13889, 13890],
+            "canonical_url": "https://stepik.org/lesson/6433/",
+            "title": "Stepik Lesson From API",
+            "language": "en",
+            "is_public": true,
+            "update_date": "2025-05-16T11:06:56Z"
+          },
+          "steps": [
+            {
+              "id": 13889,
+              "lesson": 6433,
+              "position": 1,
+              "status": "ready",
+              "block": {
+                "name": "text",
+                "text": "<h2>Welcome</h2><p>Stepik exposes lesson text through the public API. The connector should keep source evidence and lesson path.</p>",
+                "video": null,
+                "options": {},
+                "subtitle_files": []
+              },
+              "instruction": null,
+              "update_date": "2025-05-16T11:06:56Z"
+            },
+            {
+              "id": 13890,
+              "lesson": 6433,
+              "position": 2,
+              "status": "ready",
+              "block": {
+                "name": "choice",
+                "text": "<p>Which connector layer turns platform data into canonical course objects?</p>",
+                "video": null,
+                "options": {"title": "Normalization question"},
+                "subtitle_files": []
+              },
+              "instruction": "Select the normalizer.",
+              "update_date": "2025-05-16T11:06:56Z"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "limits": {
+    "max_sections": 1,
+    "max_units_per_section": 1,
+    "max_steps_per_lesson": 2
+  }
+}

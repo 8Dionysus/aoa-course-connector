@@ -20,10 +20,10 @@ ADAPTERS: dict[str, dict[str, object]] = {
     },
     "stepik": {
         "platform": "stepik",
-        "status": "clean_api_reference_target",
+        "status": "working_clean_api_adapter",
         "auth_modes": ["public_api", "api_token", "oauth"],
         "coverage": ["course", "sections", "units", "lessons", "steps"],
-        "notes": "Reference API adapter target for proving the model is not scraper-shaped.",
+        "notes": "Working reference API adapter with fixture and bounded live materialization.",
     },
     "moodle": {
         "platform": "moodle",

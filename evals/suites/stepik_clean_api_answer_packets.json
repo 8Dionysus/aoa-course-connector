@@ -1,0 +1,12 @@
+{
+  "schema": "aoa_course_answer_eval_suite_v1",
+  "suite_id": "stepik-clean-api-answer-packets",
+  "cases": [
+    {
+      "query": "Stepik public API evidence",
+      "run": "stepik-fixture",
+      "must_contain_terms": ["stepik", "api", "evidence"],
+      "must_have_evidence": true
+    }
+  ]
+}
