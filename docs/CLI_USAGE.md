@@ -25,5 +25,6 @@ aoa-course build-index --run starter-fixture
 aoa-course build-graph --run starter-fixture
 aoa-course query "rollback" --run starter-fixture
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
+aoa-course eval browser-progress-comments
 aoa-course mcp tools
 ```

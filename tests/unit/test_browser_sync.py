@@ -6,6 +6,7 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.discover import discover_browser_fixture
 from aoa_course_connector.query import render_answer_packet
 from aoa_course_connector.sync import load_sync_status, sync_browser_fixture_sources
+from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
 
 def roots(tmp_path: Path) -> StorageRoots:
@@ -40,3 +41,40 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=checkpoint["run_id"])
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+
+
+def test_sync_checkpoints_keep_per_run_source_history(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source = {
+        "source_id": "source:getcourse:test",
+        "platform": "getcourse",
+        "source_ref": "https://school.example",
+        "access_mode": "browser_session",
+    }
+    first = make_checkpoint(source=source, sync_run_id="sync-a", run_id="sync-a-source", status="ok")
+    second = make_checkpoint(source=source, sync_run_id="sync-b", run_id="sync-b-source", status="ok")
+    retry = make_checkpoint(
+        source=source,
+        sync_run_id="sync-a",
+        run_id="sync-a-source-retry",
+        status="error",
+        error="temporary fixture miss",
+    )
+
+    upsert_checkpoint(storage, first)
+    upsert_checkpoint(storage, second)
+    upsert_checkpoint(storage, retry)
+
+    sync_a = load_sync_status(storage, sync_run_id="sync-a")
+    sync_b = load_sync_status(storage, sync_run_id="sync-b")
+    all_status = load_sync_status(storage)
+
+    assert first["checkpoint_id"] == "checkpoint:sync-a:source:getcourse:test"
+    assert second["checkpoint_id"] == "checkpoint:sync-b:source:getcourse:test"
+    assert sync_a["checkpoint_count"] == 1
+    assert sync_a["error_count"] == 1
+    assert sync_a["checkpoints"][0]["run_id"] == "sync-a-source-retry"
+    assert sync_b["checkpoint_count"] == 1
+    assert sync_b["ok_count"] == 1
+    assert sync_b["checkpoints"][0]["run_id"] == "sync-b-source"
+    assert all_status["checkpoint_count"] == 2

@@ -51,6 +51,13 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
         if not isinstance(course, dict):
             continue
         course_path = [str(course.get("title") or course.get("course_id"))]
+        progress = course.get("progress")
+        if isinstance(progress, dict):
+            progress_text = " ".join(
+                str(progress.get(key) or "")
+                for key in ["state", "percent", "label", "updated_at"]
+            )
+            docs.append(_course_doc("progress", progress.get("progress_id"), progress_text, course, course_path, progress.get("evidence")))
         for module in course.get("modules", []):
             if not isinstance(module, dict):
                 continue
@@ -80,6 +87,30 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
                         text = f"{asset.get('title', '')} {asset.get('kind', '')} {asset.get('download_state', '')}"
                         docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, lesson_path, asset.get("evidence") or lesson_evidence))
     return docs
+
+
+def _course_doc(kind: str, item_id: object, text: object, course: dict[str, object], path: list[str], evidence: object) -> dict[str, object]:
+    evidence_dict = evidence if isinstance(evidence, dict) else {}
+    doc_id = f"{kind}:{item_id}"
+    return {
+        "doc_id": doc_id,
+        "kind": kind,
+        "course_id": course.get("course_id"),
+        "course_title": course.get("title"),
+        "module_id": "",
+        "module_title": "",
+        "lesson_id": "",
+        "lesson_title": "",
+        "lesson_url": course.get("url"),
+        "path": path,
+        "text": str(text or ""),
+        "tokens": len(tokenize(str(text or ""))),
+        "platform": course.get("platform"),
+        "freshness_state": "current",
+        "source_url": evidence_dict.get("source_url") or course.get("url"),
+        "fetched_at": evidence_dict.get("fetched_at"),
+        "evidence_id": evidence_dict.get("evidence_id"),
+    }
 
 
 def _doc(kind: str, item_id: object, text: object, course: dict[str, object], module: dict[str, object], lesson: dict[str, object], path: list[str], evidence: object) -> dict[str, object]:

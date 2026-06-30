@@ -16,7 +16,9 @@ the first live route should be browser-session discovery.
 ## Current Working Route
 
 `aoa-course-connector` supports Skillspace through the shared browser-session
-discovery, snapshot, and course-tree crawl adapters:
+discovery, snapshot, and course-tree crawl adapters. Fixture proofs cover
+paginated catalog receipts, visible course progress, and visible discussion
+comments:
 
 ```bash
 aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register --max-sources 50
@@ -28,6 +30,8 @@ aoa-course materialize browser-fixture --platform skillspace --run skillspace-br
 aoa-course build-index --run skillspace-browser-fixture
 aoa-course build-graph --run skillspace-browser-fixture
 aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
+aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
+aoa-course eval browser-progress-comments
 
 aoa-course crawl browser-fixture --platform skillspace --run skillspace-browser-crawl-fixture --max-lessons 20
 aoa-course build-index --run skillspace-browser-crawl-fixture

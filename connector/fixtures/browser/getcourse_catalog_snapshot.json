@@ -15,7 +15,14 @@
       "kind": "account_catalog",
       "url": "https://school.example/teach/control/stream",
       "title": "GetCourse Account Catalog Fixture",
-      "html": "<html><head><title>GetCourse Account Catalog Fixture</title></head><body><main><h1>My trainings</h1><a data-aoa-kind=\"training\" href=\"/teach/control/stream/view/id/201\">Firmware Recovery 2026</a><a data-aoa-kind=\"training\" href=\"/teach/control/stream/view/id/202\">Android Diagnostics Lab</a><a href=\"/teach/control/lesson/view/id/101\">Do not register lesson as source</a></main></body></html>"
+      "html": "<html><head><title>GetCourse Account Catalog Fixture</title></head><body><main><h1>My trainings</h1><a data-aoa-kind=\"training\" href=\"/teach/control/stream/view/id/201\">Firmware Recovery 2026</a><a data-aoa-kind=\"training\" href=\"/teach/control/stream/view/id/202\">Android Diagnostics Lab</a><a href=\"/teach/control/lesson/view/id/101\">Do not register lesson as source</a><a data-aoa-kind=\"pagination-next\" rel=\"next\" href=\"/teach/control/stream?page=2\">Next page</a></main></body></html>"
+    },
+    {
+      "page_id": "getcourse-account-catalog-page-2",
+      "kind": "account_catalog",
+      "url": "https://school.example/teach/control/stream?page=2",
+      "title": "GetCourse Account Catalog Fixture Page 2",
+      "html": "<html><head><title>GetCourse Account Catalog Fixture Page 2</title></head><body><main><h1>More trainings</h1><a data-aoa-kind=\"training\" href=\"/teach/control/stream/view/id/203\">Kernel Evidence Workshop</a></main></body></html>"
     }
   ]
 }

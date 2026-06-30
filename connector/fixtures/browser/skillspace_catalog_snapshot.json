@@ -15,7 +15,14 @@
       "kind": "account_catalog",
       "url": "https://academy.example/courses",
       "title": "Skillspace Account Catalog Fixture",
-      "html": "<html><head><title>Skillspace Account Catalog Fixture</title></head><body><main><h1>My courses</h1><a data-aoa-kind=\"course\" href=\"/course/mobile-debugging\">Mobile Debugging</a><a data-aoa-kind=\"course\" href=\"/course/firmware-audit\">Firmware Audit</a><a href=\"/course/mobile-debugging/lesson/logcat\">Do not register lesson as source</a></main></body></html>"
+      "html": "<html><head><title>Skillspace Account Catalog Fixture</title></head><body><main><h1>My courses</h1><a data-aoa-kind=\"course\" href=\"/course/mobile-debugging\">Mobile Debugging</a><a data-aoa-kind=\"course\" href=\"/course/firmware-audit\">Firmware Audit</a><a href=\"/course/mobile-debugging/lesson/logcat\">Do not register lesson as source</a><a data-aoa-kind=\"pagination-next\" rel=\"next\" href=\"/courses?page=2\">Next page</a></main></body></html>"
+    },
+    {
+      "page_id": "skillspace-account-catalog-page-2",
+      "kind": "account_catalog",
+      "url": "https://academy.example/courses?page=2",
+      "title": "Skillspace Account Catalog Fixture Page 2",
+      "html": "<html><head><title>Skillspace Account Catalog Fixture Page 2</title></head><body><main><h1>More courses</h1><a data-aoa-kind=\"course\" href=\"/course/radio-diagnostics\">Radio Diagnostics</a></main></body></html>"
     }
   ]
 }

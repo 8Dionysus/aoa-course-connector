@@ -46,6 +46,9 @@ class HtmlSnapshot:
     headings: list[dict[str, str]]
     links: list[dict[str, str]]
     assets: list[dict[str, str]]
+    progress: dict[str, str] = field(default_factory=dict)
+    comments: list[dict[str, str]] = field(default_factory=list)
+    pagination_links: list[dict[str, str]] = field(default_factory=list)
 
 
 class _SnapshotParser(HTMLParser):
@@ -59,6 +62,9 @@ class _SnapshotParser(HTMLParser):
         self.headings: list[dict[str, str]] = []
         self.links: list[dict[str, str]] = []
         self.assets: list[dict[str, str]] = []
+        self.progress: dict[str, str] = {}
+        self.comments: list[dict[str, str]] = []
+        self.pagination_links: list[dict[str, str]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr = {key: value or "" for key, value in attrs}
@@ -71,6 +77,7 @@ class _SnapshotParser(HTMLParser):
                 "kind": attr.get("data-aoa-kind", ""),
                 "module": attr.get("data-aoa-module", ""),
                 "title": attr.get("title", ""),
+                "rel": attr.get("rel", ""),
             }
             self._link_stack.append(link)
         if tag in ASSET_TAGS:
@@ -94,12 +101,15 @@ class _SnapshotParser(HTMLParser):
             link = self._link_stack.pop()
             link["text"] = _clean(link.get("text") or link.get("title") or link.get("href") or "")
             self.links.append(link)
+            if _is_pagination_link(link):
+                self.pagination_links.append(link)
         if self._stack and self._stack[-1].get("tag") == tag:
             item = self._stack.pop()
             text = _clean(" ".join(str(part) for part in item.get("text", [])))
             if not text:
                 return
             attrs = item.get("attrs") if isinstance(item.get("attrs"), dict) else {}
+            self._capture_semantic_block(attrs, text)
             if tag == "title":
                 self.title_parts.append(text)
             elif tag in {"h1", "h2", "h3", "h4"}:
@@ -115,13 +125,42 @@ class _SnapshotParser(HTMLParser):
         if self._link_stack:
             self._link_stack[-1]["text"] = f"{self._link_stack[-1].get('text', '')} {text}".strip()
 
+    def _capture_semantic_block(self, attrs: dict[object, object], text: str) -> None:
+        kind = str(attrs.get("data-aoa-kind") or "").casefold()
+        if kind == "progress" or attrs.get("data-aoa-progress-state") or attrs.get("data-aoa-progress-percent"):
+            self.progress = {
+                "state": str(attrs.get("data-aoa-progress-state") or attrs.get("aria-valuetext") or "visible"),
+                "percent": str(attrs.get("data-aoa-progress-percent") or attrs.get("aria-valuenow") or ""),
+                "updated_at": str(attrs.get("data-aoa-updated-at") or ""),
+                "label": text,
+            }
+        if kind == "comment" or attrs.get("data-aoa-comment-id"):
+            self.comments.append(
+                {
+                    "comment_id": str(attrs.get("data-aoa-comment-id") or f"comment-{len(self.comments) + 1}"),
+                    "thread_id": str(attrs.get("data-aoa-thread-id") or attrs.get("data-aoa-comment-thread") or "visible-thread"),
+                    "author": str(attrs.get("data-aoa-author") or attrs.get("data-aoa-comment-author") or ""),
+                    "created_at": str(attrs.get("data-aoa-created-at") or attrs.get("datetime") or ""),
+                    "text": text,
+                }
+            )
+
 
 def parse_html_snapshot(html: str, base_url: str) -> HtmlSnapshot:
     parser = _SnapshotParser(base_url)
     parser.feed(html)
     title = parser.headings[0]["text"] if parser.headings else _clean(" ".join(parser.title_parts))
     text = _clean(" ".join(parser.blocks))
-    return HtmlSnapshot(title=title, text=text, headings=parser.headings, links=parser.links, assets=parser.assets)
+    return HtmlSnapshot(
+        title=title,
+        text=text,
+        headings=parser.headings,
+        links=parser.links,
+        assets=parser.assets,
+        progress=parser.progress,
+        comments=parser.comments,
+        pagination_links=parser.pagination_links,
+    )
 
 
 def _clean(value: str) -> str:
@@ -133,3 +172,10 @@ def _looks_like_asset_link(attrs: dict[str, str], href: str) -> bool:
         return True
     path = urlparse(href).path.lower()
     return any(path.endswith(extension) for extension in ASSET_LINK_EXTENSIONS)
+
+
+def _is_pagination_link(link: dict[str, str]) -> bool:
+    kind = str(link.get("kind") or "").casefold()
+    rel = str(link.get("rel") or "").casefold().split()
+    text = str(link.get("text") or "").casefold()
+    return kind in {"next", "next-page", "pagination", "pagination-next"} or "next" in rel or text in {"next", "next page", "more"}

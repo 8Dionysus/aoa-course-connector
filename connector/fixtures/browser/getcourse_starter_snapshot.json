@@ -16,7 +16,7 @@
       "kind": "course_index",
       "url": "https://school.example/teach/control/stream",
       "title": "GetCourse Browser Fixture",
-      "html": "<html><head><title>GetCourse Browser Fixture</title></head><body><main><h1>GetCourse Browser Fixture</h1><h2 data-aoa-module=\"Firmware Recovery\">Firmware Recovery</h2><a data-aoa-kind=\"lesson\" data-aoa-module=\"Firmware Recovery\" href=\"/teach/control/lesson/view/id/101\">Bootloader recovery lesson</a><a data-aoa-kind=\"lesson\" data-aoa-module=\"Firmware Recovery\" href=\"/teach/control/lesson/view/id/102\">OTA evidence lesson</a></main></body></html>"
+      "html": "<html><head><title>GetCourse Browser Fixture</title></head><body><main><h1>GetCourse Browser Fixture</h1><div data-aoa-kind=\"progress\" data-aoa-progress-state=\"in_progress\" data-aoa-progress-percent=\"50\">2 of 4 lessons completed</div><h2 data-aoa-module=\"Firmware Recovery\">Firmware Recovery</h2><a data-aoa-kind=\"lesson\" data-aoa-module=\"Firmware Recovery\" href=\"/teach/control/lesson/view/id/101\">Bootloader recovery lesson</a><a data-aoa-kind=\"lesson\" data-aoa-module=\"Firmware Recovery\" href=\"/teach/control/lesson/view/id/102\">OTA evidence lesson</a></main></body></html>"
     },
     {
       "page_id": "gc-lesson-101",
@@ -25,7 +25,7 @@
       "url": "https://school.example/teach/control/lesson/view/id/101",
       "title": "Bootloader recovery lesson",
       "order": 1,
-      "html": "<article><h1>Bootloader recovery lesson</h1><p>Inside GetCourse the connected account can read lesson text after browser login. Before unlocking the bootloader, keep rollback index, region, boot image, and vendor boot evidence together.</p><a data-aoa-kind=\"asset\" href=\"https://school.example/files/recovery-checklist.pdf\" title=\"Recovery checklist\">Recovery checklist</a><a data-aoa-kind=\"assignment\" href=\"https://school.example/pl/tasks/mission\">Submit baseline evidence</a></article>"
+      "html": "<article><h1>Bootloader recovery lesson</h1><p>Inside GetCourse the connected account can read lesson text after browser login. Before unlocking the bootloader, keep rollback index, region, boot image, and vendor boot evidence together.</p><a data-aoa-kind=\"asset\" href=\"https://school.example/files/recovery-checklist.pdf\" title=\"Recovery checklist\">Recovery checklist</a><a data-aoa-kind=\"assignment\" href=\"https://school.example/pl/tasks/mission\">Submit baseline evidence</a><section data-aoa-kind=\"comment-thread\" data-aoa-thread-id=\"recovery-discussion\"><p data-aoa-kind=\"comment\" data-aoa-thread-id=\"recovery-discussion\" data-aoa-comment-id=\"gc-comment-1\" data-aoa-author=\"mentor\">Mentor note: verify anti-rollback level before flashing vendor boot.</p><p data-aoa-kind=\"comment\" data-aoa-thread-id=\"recovery-discussion\" data-aoa-comment-id=\"gc-comment-2\" data-aoa-author=\"student\">Student note: keep patched boot image and rollback index evidence together.</p></section></article>"
     },
     {
       "page_id": "gc-lesson-102",
