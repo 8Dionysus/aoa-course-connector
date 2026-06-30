@@ -169,7 +169,9 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     evidence = call_tool("evidence_report", {"query": "rollback", "run": "starter-fixture"})
     assert evidence["evidence_chain"]
     assert evidence["freshness_report"]["has_source_timestamps"] is True
+    assert evidence["refresh_report"]["local_rebuild_commands"]
     assert evidence["result_refs"][0]["evidence_id"]
+    assert evidence["result_refs"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
     checkpoint = make_checkpoint(
         source={"source_id": "source:getcourse:test", "platform": "getcourse", "source_ref": "https://school.example", "access_mode": "browser_session"},
         sync_run_id="browser-sync-fixture",

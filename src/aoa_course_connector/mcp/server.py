@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from aoa_course_connector.config import StorageRoots, find_repo_root
-from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, query_semantic_index, render_answer_packet
+from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.sync import load_sync_status
@@ -134,7 +134,7 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
             "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), str(args.get("mode") or "keyword")),
         }
     if name == "semantic_search":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "semantic", "results": query_semantic_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5))}
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "semantic", "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), "semantic")}
     if name == "hybrid_search":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "hybrid", "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), "hybrid")}
     if name == "lesson_context":
@@ -161,6 +161,7 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
             "evidence_chain": packet.get("evidence_chain"),
             "freshness_report": packet.get("freshness_report"),
             "authority_report": packet.get("authority_report"),
+            "refresh_report": packet.get("refresh_report"),
             "result_refs": _evidence_result_refs(packet),
         }
     raise ValueError(f"unknown MCP tool: {name}")
@@ -184,6 +185,7 @@ def _evidence_result_refs(packet: dict[str, object]) -> list[dict[str, object]]:
                 "authority_tier": result.get("authority_tier"),
                 "score": result.get("score"),
                 "rank_score": result.get("rank_score"),
+                "refresh_hint": result.get("refresh_hint"),
             }
         )
     return refs

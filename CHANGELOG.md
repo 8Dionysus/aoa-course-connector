@@ -126,3 +126,6 @@
 - Verified the bounded public Stepik live calibration route through preflight,
   live smoke, answer evidence, timestamp checks, and live calibration packet
   privacy guards.
+- Added per-result `refresh_hint` and answer/MCP `refresh_report` metadata so
+  agents can rebuild local artifacts, run bounded connected-source preflight,
+  and identify registry-matched live sync routes for source freshness handoff.

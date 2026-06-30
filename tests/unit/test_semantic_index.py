@@ -105,6 +105,11 @@ def test_semantic_and_hybrid_queries_return_evidence(tmp_path: Path) -> None:
     assert packet["mode"] == "hybrid"
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+    assert packet["refresh_report"]["schema"] == "aoa_course_refresh_report_v1"
+    assert packet["refresh_report"]["local_rebuild_commands"]
+    assert packet["results"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
+    assert "build-semantic-index" in " ".join(packet["results"][0]["refresh_hint"]["local_rebuild_commands"])
+    assert packet["evidence_chain"][0]["refresh_hint"]["local_rebuild_commands"]
 
 
 def test_semantic_query_rejects_hash_collision_only_matches(tmp_path: Path) -> None:
@@ -152,6 +157,7 @@ def test_mcp_semantic_search(tmp_path: Path, monkeypatch) -> None:
 
     assert result["mode"] == "semantic"
     assert result["results"]
+    assert result["results"][0]["refresh_hint"]["local_rebuild_commands"]
 
 
 class _EmbeddingServer:
