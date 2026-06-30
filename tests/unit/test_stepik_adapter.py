@@ -38,6 +38,7 @@ def test_stepik_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert results
     assert results[0]["platform"] == "stepik"
     assert results[0]["authority_tier"] == "official_lesson"
+    assert results[0]["source_authority"] == "stepik_step_api"
     packet = render_answer_packet(storage, "Stepik public API evidence", run_id="stepik-fixture")
     assert packet["evidence_chain"]
 

@@ -168,6 +168,8 @@ def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
     assert eval_result["status"] == "ok"
     progress_comments_eval = run_cli(tmp_path, "eval", "browser-progress-comments")
     assert progress_comments_eval["status"] == "ok"
+    transcripts_eval = run_cli(tmp_path, "eval", "browser-transcripts")
+    assert transcripts_eval["status"] == "ok"
     mcp_context = run_cli(tmp_path, "mcp", "call", "lesson_context", '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}')
     assert mcp_context["result"]["answer_packet"]["result_count"] >= 1
     assert mcp_context["result"]["answer_packet"]["evidence_chain"]

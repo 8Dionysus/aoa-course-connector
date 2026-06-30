@@ -32,7 +32,9 @@ aoa-course build-index --run getcourse-browser-fixture
 aoa-course build-graph --run getcourse-browser-fixture
 aoa-course answer "GetCourse bootloader rollback evidence" --run getcourse-browser-fixture
 aoa-course answer "mentor anti-rollback vendor boot" --run getcourse-browser-fixture
+aoa-course answer "transcript excerpt vendor boot recovery plan" --run getcourse-browser-fixture
 aoa-course eval browser-progress-comments
+aoa-course eval browser-transcripts
 
 aoa-course crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture --max-lessons 20
 aoa-course build-index --run getcourse-browser-crawl-fixture

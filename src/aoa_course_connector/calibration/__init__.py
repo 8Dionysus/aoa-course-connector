@@ -25,9 +25,17 @@ SECRET_MARKERS = [
 ]
 
 RAW_PAYLOAD_KEYS = {
+    "apikey",
+    "apisecret",
     "accesstoken",
+    "authkey",
+    "authtoken",
     "apitoken",
     "authorization",
+    "bearertoken",
+    "clientsecret",
+    "credential",
+    "credentials",
     "cookie",
     "cookies",
     "html",
@@ -36,7 +44,32 @@ RAW_PAYLOAD_KEYS = {
     "password",
     "rawhtml",
     "refreshtoken",
+    "secret",
+    "secretkey",
+    "sessionkey",
     "storagestate",
+    "token",
+    "tokenvalue",
+}
+
+SECRET_PAYLOAD_KEYS = {
+    "apikey",
+    "apisecret",
+    "accesstoken",
+    "authkey",
+    "authtoken",
+    "apitoken",
+    "authorization",
+    "bearertoken",
+    "clientsecret",
+    "credential",
+    "credentials",
+    "password",
+    "refreshtoken",
+    "secret",
+    "secretkey",
+    "sessionkey",
+    "token",
     "tokenvalue",
 }
 
@@ -189,7 +222,17 @@ def _preflight_failures(summary: dict[str, object]) -> list[dict[str, object]]:
 def _secret_failures(reports: list[dict[str, object]]) -> list[dict[str, object]]:
     rendered = json.dumps(reports, sort_keys=True)
     markers = [marker for marker in SECRET_MARKERS if marker in rendered]
-    return [{"surface": "privacy", "reason": "secret-like marker present in source reports", "markers": markers}] if markers else []
+    keys = sorted(_payload_key_hits(reports, SECRET_PAYLOAD_KEYS))
+    if markers or keys:
+        return [
+            {
+                "surface": "privacy",
+                "reason": "secret-like marker or key present in source reports",
+                "markers": markers,
+                "keys": keys,
+            }
+        ]
+    return []
 
 
 def _raw_payload_failures(reports: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -198,18 +241,22 @@ def _raw_payload_failures(reports: list[dict[str, object]]) -> list[dict[str, ob
 
 
 def _raw_payload_key_hits(value: Any) -> set[str]:
+    return _payload_key_hits(value, RAW_PAYLOAD_KEYS)
+
+
+def _payload_key_hits(value: Any, key_set: set[str]) -> set[str]:
     if isinstance(value, dict):
         hits: set[str] = set()
         for key, child in value.items():
             normalized_key = "".join(character for character in str(key).casefold() if character.isalnum())
-            if normalized_key in RAW_PAYLOAD_KEYS:
+            if normalized_key in key_set:
                 hits.add(str(key))
-            hits.update(_raw_payload_key_hits(child))
+            hits.update(_payload_key_hits(child, key_set))
         return hits
     if isinstance(value, list):
         hits: set[str] = set()
         for child in value:
-            hits.update(_raw_payload_key_hits(child))
+            hits.update(_payload_key_hits(child, key_set))
         return hits
     return set()
 

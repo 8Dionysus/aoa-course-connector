@@ -12,9 +12,11 @@ Local evals prove the starter retrieval loop:
 Additional suites prove Stepik clean API fixtures, browser-session hard adapter
 snapshots, browser account discovery into the source registry, and bounded
 browser course-tree crawls. The browser progress/comments suite proves visible
-course status and discussion notes become source-backed answer packets. Sync
-suites prove that registered browser sources produce checkpoints and rebuildable
-per-source artifacts.
+course status and discussion notes become source-backed answer packets. The
+browser-transcripts suite proves visible transcript/caption text becomes
+canonical transcript objects and answer evidence. Sync suites prove that
+registered browser sources produce checkpoints and rebuildable per-source
+artifacts.
 
 The answer-quality suite raises the bar above term presence: it checks top
 result shape, source id, platform, path, snippets, freshness, and evidence

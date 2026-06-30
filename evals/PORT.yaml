@@ -16,6 +16,7 @@ suites:
   - evals/suites/stepik_clean_api_answer_packets.json
   - evals/suites/browser_hard_adapter_answer_packets.json
   - evals/suites/browser_progress_comments_answer_packets.json
+  - evals/suites/browser_transcripts_answer_packets.json
   - evals/suites/browser_discovery_sources.json
   - evals/suites/browser_sync_checkpoints.json
   - evals/suites/browser_crawl_answer_packets.json

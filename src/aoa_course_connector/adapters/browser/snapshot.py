@@ -9,8 +9,8 @@ from html.parser import HTMLParser
 from urllib.parse import urljoin, urlparse
 
 
-BLOCK_TAGS = {"title", "h1", "h2", "h3", "h4", "p", "li", "div", "section", "article", "main"}
-ASSET_TAGS = {"video", "audio", "source", "iframe", "img", "a"}
+BLOCK_TAGS = {"title", "h1", "h2", "h3", "h4", "p", "li", "div", "section", "article", "main", "pre"}
+ASSET_TAGS = {"video", "audio", "source", "track", "iframe", "img", "a"}
 ASSET_LINK_EXTENSIONS = {
     ".avi",
     ".csv",
@@ -66,6 +66,18 @@ PROGRESS_HINTS = {
     "прогресс",
     "пройден",
 }
+TRANSCRIPT_HINTS = {
+    "caption",
+    "captions",
+    "subtitle",
+    "subtitles",
+    "transcript",
+    "transcription",
+    "расшифров",
+    "субтитр",
+    "транскрипт",
+}
+TRANSCRIPT_KINDS = {"caption", "captions", "subtitle", "subtitles", "transcript", "transcription"}
 PERCENT_RE = re.compile(r"(?<!\d)(100|\d{1,2})(?:\s*(?:%|percent|процент))", re.IGNORECASE)
 
 
@@ -78,6 +90,7 @@ class HtmlSnapshot:
     assets: list[dict[str, str]]
     progress: dict[str, str] = field(default_factory=dict)
     comments: list[dict[str, str]] = field(default_factory=list)
+    transcripts: list[dict[str, str]] = field(default_factory=list)
     pagination_links: list[dict[str, str]] = field(default_factory=list)
 
 
@@ -94,6 +107,7 @@ class _SnapshotParser(HTMLParser):
         self.assets: list[dict[str, str]] = []
         self.progress: dict[str, str] = {}
         self.comments: list[dict[str, str]] = []
+        self.transcripts: list[dict[str, str]] = []
         self.pagination_links: list[dict[str, str]] = []
 
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
@@ -113,7 +127,7 @@ class _SnapshotParser(HTMLParser):
         if tag in ASSET_TAGS:
             src = attr.get("src") or attr.get("href")
             if src:
-                kind = attr.get("data-aoa-kind") or tag
+                kind = attr.get("data-aoa-kind") or attr.get("kind") or tag
                 if tag == "a" and kind != "asset" and not _looks_like_asset_link(attr, src):
                     return
                 if tag == "a" and kind != "asset":
@@ -180,6 +194,16 @@ class _SnapshotParser(HTMLParser):
                     "text": text,
                 }
             )
+        if _looks_like_transcript_block(tag, attrs, text):
+            self.transcripts.append(
+                {
+                    "transcript_id": str(attrs.get("data-aoa-transcript-id") or attrs.get("data-transcript-id") or attrs.get("id") or f"visible-transcript-{len(self.transcripts) + 1}"),
+                    "language": _transcript_language(attrs),
+                    "kind": kind or "transcript",
+                    "source_url": _transcript_source_url(self.base_url, attrs),
+                    "text": text,
+                }
+            )
 
 
 def parse_html_snapshot(html: str, base_url: str) -> HtmlSnapshot:
@@ -195,6 +219,7 @@ def parse_html_snapshot(html: str, base_url: str) -> HtmlSnapshot:
         assets=parser.assets,
         progress=parser.progress,
         comments=parser.comments,
+        transcripts=parser.transcripts,
         pagination_links=parser.pagination_links,
     )
 
@@ -236,6 +261,33 @@ def _looks_like_comment_block(tag: str, attrs: dict[object, object], text: str) 
     if not any(hint in attr_text for hint in COMMENT_HINTS):
         return False
     return tag in {"article", "div", "li", "p", "section"}
+
+
+def _looks_like_transcript_block(tag: str, attrs: dict[object, object], text: str) -> bool:
+    cleaned = _clean(text)
+    if len(cleaned) < 12:
+        return False
+    kind = str(attrs.get("data-aoa-kind") or "").casefold()
+    if kind in TRANSCRIPT_KINDS or attrs.get("data-aoa-transcript-id") or attrs.get("data-transcript-id"):
+        return True
+    haystack = _attribute_haystack(attrs, "")
+    return tag in {"article", "div", "li", "p", "pre", "section"} and any(hint in haystack for hint in TRANSCRIPT_HINTS)
+
+
+def _transcript_language(attrs: dict[object, object]) -> str:
+    for key in ["data-aoa-language", "data-language", "data-lang", "srclang", "lang"]:
+        value = attrs.get(key)
+        if value:
+            return str(value)
+    return ""
+
+
+def _transcript_source_url(base_url: str, attrs: dict[object, object]) -> str:
+    for key in ["data-aoa-src", "data-transcript-src", "data-caption-src", "src", "href"]:
+        value = attrs.get(key)
+        if value:
+            return urljoin(base_url, str(value))
+    return ""
 
 
 def _comment_role(attrs: dict[object, object]) -> str:

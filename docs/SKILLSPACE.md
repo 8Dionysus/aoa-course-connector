@@ -31,7 +31,9 @@ aoa-course build-index --run skillspace-browser-fixture
 aoa-course build-graph --run skillspace-browser-fixture
 aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
 aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
+aoa-course answer "caption bugreport timeline" --run skillspace-browser-fixture
 aoa-course eval browser-progress-comments
+aoa-course eval browser-transcripts
 
 aoa-course crawl browser-fixture --platform skillspace --run skillspace-browser-crawl-fixture --max-lessons 20
 aoa-course build-index --run skillspace-browser-crawl-fixture

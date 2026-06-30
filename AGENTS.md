@@ -77,6 +77,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-hard-adapters
 PYTHONPATH=src python -m aoa_course_connector.cli eval adapter-authority
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
+PYTHONPATH=src python -m aoa_course_connector.cli eval browser-transcripts
 PYTHONPATH=src python -m aoa_course_connector.cli eval semantic-index
 PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build --help

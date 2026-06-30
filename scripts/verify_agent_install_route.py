@@ -75,6 +75,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "Skillspace logcat bugreport evidence", "--run", "skillspace-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-hard-adapters"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-progress-comments"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-transcripts"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "adapter-authority"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "live-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "live", "--platform", "getcourse"],

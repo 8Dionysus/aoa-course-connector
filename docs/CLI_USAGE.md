@@ -60,6 +60,7 @@ aoa-course build-semantic-index --run authority-ranking-fixture
 aoa-course eval authority-ranking
 aoa-course eval adapter-authority
 aoa-course eval browser-progress-comments
+aoa-course eval browser-transcripts
 aoa-course eval semantic-index
 aoa-course mcp tools
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'

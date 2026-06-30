@@ -6,6 +6,7 @@ Fixture-safe suites for local course connector behavior:
 - `stepik_clean_api_answer_packets.json`
 - `browser_hard_adapter_answer_packets.json`
 - `browser_progress_comments_answer_packets.json`
+- `browser_transcripts_answer_packets.json`
 - `browser_discovery_sources.json`
 - `browser_sync_checkpoints.json`
 - `browser_crawl_answer_packets.json`
@@ -27,6 +28,9 @@ ordering when base relevance is tied.
 
 `adapter-authority.suite.md` records the local suite note for adapter-derived
 authority metadata preservation across normalized bundles and query packets.
+
+`browser-transcripts.suite.md` records the local suite note for visible
+browser-session transcript/caption extraction and retrieval.
 
 `live-calibration.suite.md` records the local suite note for fixture-safe live
 calibration packet construction from smoke and preflight reports.

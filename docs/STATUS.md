@@ -43,6 +43,9 @@ This proves:
   snapshot input, optional Playwright live traversal, and answer evals.
 - GetCourse and Skillspace visible progress/status and comments through browser
   fixtures, answer packets, index docs, graph edges, MCP context, and evals.
+- GetCourse and Skillspace visible transcript/caption extraction into
+  canonical Transcript objects, keyword-index documents, `lesson_has_transcript`
+  graph edges, answer packets, and `browser-transcripts` eval coverage.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
 - Browser catalog discovery rejects pagination links even when a broad
@@ -96,7 +99,7 @@ The next layer is live connected-source work:
   calibrate real login redirects, theme selectors, and pagination behavior
   after `preflight live` reports ready local auth/source state;
 - broader live selector coverage for real GetCourse and Skillspace themes where
-  progress and comment blocks use unusual markup;
+  progress, comment, transcript, and caption blocks use unusual markup;
 - gated live full-course Stepik runs against operator-selected authenticated
   courses to calibrate real course size, permissions, and source enrichment;
 - broader Stepik live smoke calibration against operator-selected authenticated
