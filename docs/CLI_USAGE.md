@@ -50,6 +50,10 @@ aoa-course materialize fixture --run freshness-ranking-fixture --fixture connect
 aoa-course build-index --run freshness-ranking-fixture
 aoa-course build-semantic-index --run freshness-ranking-fixture
 aoa-course eval freshness-ranking
+aoa-course materialize fixture --run authority-ranking-fixture --fixture connector/fixtures/course/authority_conflict_course.json
+aoa-course build-index --run authority-ranking-fixture
+aoa-course build-semantic-index --run authority-ranking-fixture
+aoa-course eval authority-ranking
 aoa-course eval browser-progress-comments
 aoa-course eval semantic-index
 aoa-course mcp tools

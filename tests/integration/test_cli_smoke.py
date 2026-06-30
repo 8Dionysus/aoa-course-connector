@@ -196,6 +196,19 @@ def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Pat
     assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 
+def test_cli_authority_ranking_eval_proves_higher_authority_beats_lower_tie(tmp_path: Path) -> None:
+    fixture = Path("connector/fixtures/course/authority_conflict_course.json")
+    run_cli(tmp_path, "materialize", "fixture", "--run", "authority-ranking-fixture", "--fixture", str(fixture))
+    run_cli(tmp_path, "build-index", "--run", "authority-ranking-fixture")
+    run_cli(tmp_path, "build-semantic-index", "--run", "authority-ranking-fixture")
+
+    result = run_cli(tmp_path, "eval", "authority-ranking")
+
+    assert result["status"] == "ok"
+    assert result["suite_id"] == "authority-ranking"
+    assert {case["failure_count"] for case in result["case_results"]} == {0}
+
+
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [
         ("getcourse", "GetCourse bootloader rollback evidence"),

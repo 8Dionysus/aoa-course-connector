@@ -30,6 +30,19 @@ FRESHNESS_RANK_WEIGHTS = {
     "archived": -0.08,
 }
 
+AUTHORITY_RANK_WEIGHTS = {
+    "official_lesson": 0.10,
+    "official_assignment": 0.08,
+    "instructor_comment": 0.07,
+    "mentor_comment": 0.06,
+    "transcript": 0.03,
+    "discussion_comment": 0.0,
+    "unknown": 0.0,
+    "progress_metadata": -0.02,
+    "learner_comment": -0.03,
+    "asset_metadata": -0.04,
+}
+
 
 def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
     index_path = run_artifact_dir(roots, run_id) / "indexes" / "keyword_index.json"
@@ -125,6 +138,7 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
         score = (0.45 * keyword_score) + (0.55 * semantic_score)
         rank_features = _rank_features(entry)
         components["freshness"] = round(float(rank_features.get("freshness_boost") or 0.0), 6)
+        components["authority"] = round(float(rank_features.get("authority_boost") or 0.0), 6)
         components["provenance"] = round(float(rank_features.get("provenance_boost") or 0.0), 6)
         ranked.append(
             {
@@ -200,6 +214,9 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
             "states": sorted({str(result.get("freshness_state") or "unknown") for result in results}),
             "has_source_timestamps": all(result.get("fetched_at") for result in results),
         },
+        "authority_report": {
+            "tiers": sorted({str(result.get("authority_tier") or "unknown") for result in results}),
+        },
     }
 
 
@@ -234,18 +251,26 @@ def _snippet(text: str, terms: list[str]) -> str:
 
 def _rank_features(doc: dict[str, object]) -> dict[str, object]:
     state = str(doc.get("freshness_state") or "unknown").casefold()
+    authority_tier = str(doc.get("authority_tier") or "unknown").casefold()
     evidence_fields = ["source_id", "source_url", "fetched_at", "evidence_id"]
     provenance_complete = all(doc.get(field) for field in evidence_fields)
     return {
         "freshness_state": state,
         "freshness_boost": FRESHNESS_RANK_WEIGHTS.get(state, 0.0),
+        "authority_tier": authority_tier,
+        "authority_boost": AUTHORITY_RANK_WEIGHTS.get(authority_tier, 0.0),
         "provenance_boost": 0.03 if provenance_complete else 0.0,
         "provenance_complete": provenance_complete,
     }
 
 
 def _rank_score(score: float, features: dict[str, object]) -> float:
-    multiplier = 1.0 + float(features.get("freshness_boost") or 0.0) + float(features.get("provenance_boost") or 0.0)
+    multiplier = (
+        1.0
+        + float(features.get("freshness_boost") or 0.0)
+        + float(features.get("authority_boost") or 0.0)
+        + float(features.get("provenance_boost") or 0.0)
+    )
     return round(max(0.0, score * multiplier), 6)
 
 

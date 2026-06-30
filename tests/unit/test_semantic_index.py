@@ -33,6 +33,7 @@ def test_semantic_index_builds_local_vector_artifact(tmp_path: Path) -> None:
     assert payload["schema"] == "aoa_course_semantic_index_v1"
     assert payload["provider"] == "local_hashing_v1"
     assert payload["dimensions"] == 64
+    assert payload["feature_contract"]["authority_tier_features"] is True
     assert payload["doc_count"] >= 1
     assert payload["docs"][0]["vector"]
 

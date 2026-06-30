@@ -66,6 +66,9 @@
 - Added freshness-aware `rank_score`/`rank_features` for keyword, semantic, and
   hybrid results plus `eval freshness-ranking` with a current-vs-stale conflict
   fixture.
+- Added authority-aware `authority_tier` and `authority_boost` ranking signals
+  plus `eval authority-ranking` with official-vs-learner and mentor-vs-learner
+  conflict fixtures.
 - Hardened live readiness and discovery edges: Stepik public API sources can
   preflight as sync-ready without an account token, inactive/deleted Stepik
   enrollments are ignored, browser storage state is checked per registered

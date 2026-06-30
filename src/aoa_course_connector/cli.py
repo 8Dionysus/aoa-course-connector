@@ -402,6 +402,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
+    eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
@@ -1268,6 +1269,103 @@ def _freshness_ranking_failures(packet: dict[str, object], case: dict[str, objec
                 )
     if case.get("expect_equal_relevance_score") and current and stale and float(current.get("score") or 0.0) != float(stale.get("score") or 0.0):
         failures.append({**context, "expected": "equal base relevance score", "current_score": current.get("score"), "stale_score": stale.get("score")})
+    required_fields = _list_of_strings(case.get("required_evidence_fields"))
+    evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
+    if not evidence_chain:
+        failures.append({**context, "missing": "evidence_chain"})
+    for index, evidence in enumerate(evidence_chain):
+        for field in required_fields:
+            if not evidence.get(field):
+                failures.append({**context, "evidence_index": index, "missing_evidence_field": field})
+    return failures
+
+
+def cmd_eval_authority_ranking(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    suite_path = find_repo_root() / "evals" / "suites" / "authority_ranking.json"
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    failures = []
+    case_results = []
+    for case in suite.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        packet = render_answer_packet(
+            roots,
+            str(case.get("query") or ""),
+            str(case.get("run") or DEFAULT_RUN),
+            int(case.get("limit") or 5),
+            str(case.get("mode") or "keyword"),
+        )
+        case_failures = _authority_ranking_failures(packet, case)
+        results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+        top = results[0] if results else {}
+        case_results.append(
+            {
+                "query": case.get("query"),
+                "run": case.get("run") or DEFAULT_RUN,
+                "mode": case.get("mode") or "keyword",
+                "result_count": packet.get("result_count"),
+                "top_doc_id": top.get("doc_id"),
+                "top_authority_tier": top.get("authority_tier"),
+                "top_rank_score": top.get("rank_score"),
+                "failure_count": len(case_failures),
+            }
+        )
+        failures.extend(case_failures)
+    _emit(
+        {
+            "schema": "aoa_course_eval_authority_ranking_v1",
+            "suite_id": suite.get("suite_id"),
+            "status": "ok" if not failures else "error",
+            "case_results": case_results,
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _authority_ranking_failures(packet: dict[str, object], case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    context = {"run": case.get("run") or DEFAULT_RUN, "query": case.get("query"), "mode": case.get("mode") or "keyword"}
+    results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+    min_results = int(case.get("min_results") or 1)
+    if len(results) < min_results:
+        return [{**context, "missing": "minimum results", "expected": min_results, "actual": len(results)}]
+    by_doc = {str(result.get("doc_id")): result for result in results}
+    top = results[0]
+    expected_top_doc_id = case.get("expected_top_doc_id")
+    if expected_top_doc_id is not None and str(top.get("doc_id") or "") != str(expected_top_doc_id):
+        failures.append({**context, "field": "top_doc_id", "expected": expected_top_doc_id, "actual": top.get("doc_id")})
+    expected_top_tier = case.get("expected_top_authority_tier")
+    if expected_top_tier is not None and str(top.get("authority_tier") or "") != str(expected_top_tier):
+        failures.append({**context, "field": "top_authority_tier", "expected": expected_top_tier, "actual": top.get("authority_tier")})
+
+    preferred = by_doc.get(str(case.get("preferred_doc_id") or ""))
+    lower = by_doc.get(str(case.get("lower_authority_doc_id") or ""))
+    if case.get("expect_preferred_ranked_above_lower"):
+        if not preferred or not lower:
+            failures.append({**context, "missing": "preferred/lower-authority comparison docs", "available_doc_ids": list(by_doc)})
+        else:
+            preferred_index = results.index(preferred)
+            lower_index = results.index(lower)
+            if preferred_index >= lower_index:
+                failures.append({**context, "expected_order": "preferred before lower authority", "actual_order": [item.get("doc_id") for item in results]})
+            if float(preferred.get("rank_score") or 0.0) <= float(lower.get("rank_score") or 0.0):
+                failures.append(
+                    {
+                        **context,
+                        "expected": "preferred rank_score above lower authority",
+                        "preferred_rank_score": preferred.get("rank_score"),
+                        "lower_rank_score": lower.get("rank_score"),
+                    }
+                )
+    if case.get("expect_equal_relevance_score") and preferred and lower and float(preferred.get("score") or 0.0) != float(lower.get("score") or 0.0):
+        failures.append({**context, "expected": "equal base relevance score", "preferred_score": preferred.get("score"), "lower_score": lower.get("score")})
+    for result in results:
+        rank_features = result.get("rank_features") if isinstance(result.get("rank_features"), dict) else {}
+        for field in _list_of_strings(case.get("required_rank_features")):
+            if field not in rank_features:
+                failures.append({**context, "doc_id": result.get("doc_id"), "missing_rank_feature": field})
     required_fields = _list_of_strings(case.get("required_evidence_fields"))
     evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
     if not evidence_chain:

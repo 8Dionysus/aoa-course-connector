@@ -1,0 +1,101 @@
+{
+  "schema": "aoa_course_raw_fixture_v1",
+  "captured_at": "2026-06-29T12:00:00Z",
+  "source": {
+    "source_id": "source:offline:authority-conflict-course",
+    "platform": "offline_export",
+    "source_ref": "authority-conflict-course",
+    "access_mode": "offline_export",
+    "title": "Authority Conflict Fixture"
+  },
+  "courses": [
+    {
+      "course_id": "course:authority:ranking",
+      "title": "Authority Ranking Fixture",
+      "description": "Safe synthetic fixture for proving authority-aware ranking when relevance is tied.",
+      "url": "https://example.invalid/courses/authority-ranking",
+      "progress": {
+        "state": "in_progress",
+        "updated_at": "2026-06-29T12:00:00Z"
+      },
+      "modules": [
+        {
+          "module_id": "module:authority:policy",
+          "title": "Authority Conflict",
+          "order": 1,
+          "lessons": [
+            {
+              "lesson_id": "lesson:authority:official-policy",
+              "title": "Driver Signing Policy",
+              "url": "https://example.invalid/courses/authority-ranking/lessons/official-policy",
+              "order": 1,
+              "freshness_state": "current",
+              "steps": [
+                {
+                  "step_id": "step:authority:official-policy",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Driver signing rollback policy: keep verified signed packages only."
+                }
+              ],
+              "assets": [],
+              "transcripts": [],
+              "assignments": [],
+              "comment_threads": [
+                {
+                  "thread_id": "thread:authority:official-policy",
+                  "comments": [
+                    {
+                      "comment_id": "comment:authority:learner-policy",
+                      "author_label": "learner",
+                      "posted_at": "2026-06-29T12:15:00Z",
+                      "text": "Driver signing rollback policy: keep verified signed packages only."
+                    }
+                  ]
+                }
+              ],
+              "topics": ["authority", "driver signing", "rollback"],
+              "entities": [
+                {"kind": "concept", "value": "authority ranking"}
+              ]
+            },
+            {
+              "lesson_id": "lesson:authority:mentor-diagnostics",
+              "title": "Diagnostic Capture Advice",
+              "url": "https://example.invalid/courses/authority-ranking/lessons/mentor-diagnostics",
+              "order": 2,
+              "freshness_state": "current",
+              "steps": [],
+              "assets": [],
+              "transcripts": [],
+              "assignments": [],
+              "comment_threads": [
+                {
+                  "thread_id": "thread:authority:mentor-diagnostics",
+                  "comments": [
+                    {
+                      "comment_id": "comment:authority:learner-diagnostics",
+                      "author_label": "learner",
+                      "posted_at": "2026-06-29T12:20:00Z",
+                      "text": "Diagnostic logcat capture sequence: record timestamp window first."
+                    },
+                    {
+                      "comment_id": "comment:authority:mentor-diagnostics",
+                      "author_label": "mentor",
+                      "posted_at": "2026-06-29T12:25:00Z",
+                      "text": "Diagnostic logcat capture sequence: record timestamp window first."
+                    }
+                  ]
+                }
+              ],
+              "topics": ["authority", "diagnostics", "logcat"],
+              "entities": [
+                {"kind": "concept", "value": "mentor authority"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
