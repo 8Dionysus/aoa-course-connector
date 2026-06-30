@@ -96,6 +96,7 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "failures": receipt.get("failures", []),
         "next_steps": receipt.get("next_steps", []),
         "source_selection": receipt.get("source_selection", {}),
+        "execution_options": receipt.get("execution_options") if isinstance(receipt.get("execution_options"), dict) else {},
         "query_handoff": receipt.get("query_handoff", {}),
         "artifacts": {
             "plan_path": artifacts.get("plan_path"),
@@ -333,6 +334,16 @@ def _run_fixture(
         plan_path=plan_path,
         runbook_path=Path(str(runbook.get("path"))),
         sync_receipts=sync_receipts,
+        execution_options=_execution_options(
+            query=query,
+            max_lessons=max_lessons,
+            max_pages=None,
+            max_sources=None,
+            link_pattern=None,
+            source_limit=source_limit,
+            stepik_token_env=None,
+            browser_state_file=None,
+        ),
     )
 
 
@@ -446,6 +457,16 @@ def _run_live(
             runbook_path=Path(str(runbook.get("path"))),
             sync_receipts=[],
             source_selection=source_selection,
+            execution_options=_execution_options(
+                query=query,
+                max_lessons=max_lessons,
+                max_pages=max_pages,
+                max_sources=max_sources,
+                link_pattern=link_pattern,
+                source_limit=source_limit,
+                stepik_token_env=stepik_token_env,
+                browser_state_file=browser_state_file,
+            ),
         )
 
     for source in blocked_sources:
@@ -618,6 +639,16 @@ def _run_live(
         runbook_path=Path(str(runbook.get("path"))),
         sync_receipts=sync_receipts,
         source_selection=source_selection,
+        execution_options=_execution_options(
+            query=query,
+            max_lessons=max_lessons,
+            max_pages=max_pages,
+            max_sources=max_sources,
+            link_pattern=link_pattern,
+            source_limit=source_limit,
+            stepik_token_env=stepik_token_env,
+            browser_state_file=browser_state_file,
+        ),
     )
 
 
@@ -659,6 +690,29 @@ def _packet_stage(packet: dict[str, object], packet_path: Path, intake: dict[str
     }
 
 
+def _execution_options(
+    *,
+    query: str | None,
+    max_lessons: int | None,
+    max_pages: int | None,
+    max_sources: int | None,
+    link_pattern: str | None,
+    source_limit: int | None,
+    stepik_token_env: str | None,
+    browser_state_file: Path | None,
+) -> dict[str, object]:
+    return {
+        "query": query or "",
+        "max_lessons": max_lessons,
+        "max_pages": max_pages,
+        "max_sources": max_sources,
+        "link_pattern": link_pattern or "",
+        "source_limit": source_limit,
+        "stepik_token_env": stepik_token_env or "",
+        "browser_state_file": str(browser_state_file.expanduser()) if browser_state_file else "",
+    }
+
+
 def _receipt(
     roots: StorageRoots,
     *,
@@ -682,6 +736,7 @@ def _receipt(
     runbook_path: Path | None,
     sync_receipts: list[dict[str, object]],
     source_selection: dict[str, object] | None = None,
+    execution_options: dict[str, object] | None = None,
 ) -> dict[str, object]:
     status = _receipt_status(failures, packet=packet, stages=stages)
     query_handoff = _query_handoff(stages)
@@ -721,6 +776,7 @@ def _receipt(
             "source_limit": None,
             "sources": [],
         },
+        "execution_options": execution_options or {},
         "stage_count": len(stages),
         "stages": [_stage_without_full_payload(stage) for stage in stages],
         "artifacts": {

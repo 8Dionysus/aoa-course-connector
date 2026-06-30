@@ -159,7 +159,9 @@ This proves:
   connected plan/runbook, calibration packet, and intake without network access;
   live browser runs reuse the same default account storage-state path that
   preflight checked and record `source_selection` plus per-stage source ids in
-  receipts/status packets;
+  receipts/status packets; connected-run receipts/status packets also include
+  `execution_options` with query, browser `link_pattern`, source limit, and
+  traversal bounds so later calibration work knows how broad the run was;
   live mode is gated by explicit `--allow-network`.
 - Bounded public Stepik live connected-run has been exercised end to end through
   `calibration connected-run --mode live --allow-network`: the runtime receipt
@@ -168,8 +170,9 @@ This proves:
   raw/secret privacy guards.
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
-  packet quality, privacy flags, failures, next steps, artifact paths, and
-  `query_handoff` entries after fixture or gated live runs.
+  packet quality, privacy flags, failures, next steps, artifact paths,
+  `execution_options`, and `query_handoff` entries after fixture or gated live
+  runs.
 
 ## Remaining Goal Work
 
