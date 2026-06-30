@@ -56,6 +56,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-hard-adapters
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
+PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-crawl-fixture

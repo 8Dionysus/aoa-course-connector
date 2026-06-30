@@ -65,4 +65,12 @@ aoa-course sync browser-live \
   --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
   --max-lessons 50 \
   --build-artifacts
+
+aoa-course smoke browser-live \
+  --platform skillspace \
+  --run skillspace-live-smoke \
+  --catalog-url "https://academy.example/courses" \
+  --course-url "https://academy.example/course/mobile-debugging" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
+  --query "course-specific question"
 ```

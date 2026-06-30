@@ -39,13 +39,15 @@ This proves:
   and next-link evidence in discovery output.
 - Browser-session parser heuristics for unannotated progress/status and compact
   visible comment/reply/discussion blocks.
+- Browser-session smoke route for fixture, operator snapshot, and gated live
+  calibration reports without printing private raw HTML.
 
 ## Remaining Goal Work
 
 The next layer is live connected-source work:
 
-- gated live smoke with connected GetCourse and Skillspace accounts to calibrate
-  real theme selectors and pagination behavior;
+- run gated live smoke with connected GetCourse and Skillspace accounts to
+  calibrate real theme selectors and pagination behavior;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress and comment blocks use unusual markup;
 - broader Stepik sync coverage beyond bounded smoke slices;

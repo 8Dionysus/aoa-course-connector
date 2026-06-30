@@ -60,6 +60,10 @@ def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
     mcp_context = run_cli(tmp_path, "mcp", "call", "lesson_context", '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}')
     assert mcp_context["result"]["answer_packet"]["result_count"] >= 1
     assert mcp_context["result"]["answer_packet"]["evidence_chain"]
+    smoke = run_cli(tmp_path, "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture")
+    assert smoke["status"] == "ok"
+    assert smoke["course"]["comment_count"] >= 1
+    assert smoke["artifacts"]["answer"]["result_count"] >= 1
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

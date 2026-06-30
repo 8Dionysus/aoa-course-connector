@@ -29,6 +29,11 @@ from aoa_course_connector.ingest import (
 )
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet, write_answer_packet
+from aoa_course_connector.smoke import (
+    smoke_browser_fixture as smoke_browser_fixture_route,
+    smoke_browser_live as smoke_browser_live_route,
+    smoke_browser_snapshot as smoke_browser_snapshot_route,
+)
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
 from aoa_course_connector.storage import create_storage_roots, storage_status
 from aoa_course_connector.sync import load_sync_status, sync_browser_fixture_sources, sync_browser_live_sources
@@ -220,6 +225,40 @@ def build_parser() -> argparse.ArgumentParser:
     sync_status.add_argument("--run")
     sync_status.add_argument("--platform", choices=["getcourse", "skillspace"])
     sync_status.set_defaults(func=cmd_sync_status)
+
+    smoke = sub.add_parser("smoke")
+    smoke_sub = smoke.add_subparsers(dest="smoke_command", required=True)
+    smoke_fixture = smoke_sub.add_parser("browser-fixture")
+    smoke_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    smoke_fixture.add_argument("--run")
+    smoke_fixture.add_argument("--query")
+    smoke_fixture.add_argument("--register", action="store_true")
+    smoke_fixture.add_argument("--skip-artifacts", action="store_true")
+    smoke_fixture.set_defaults(func=cmd_smoke_browser_fixture)
+    smoke_snapshot = smoke_sub.add_parser("browser-snapshot")
+    smoke_snapshot.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    smoke_snapshot.add_argument("--run")
+    smoke_snapshot.add_argument("--catalog-snapshot", type=Path)
+    smoke_snapshot.add_argument("--course-snapshot", type=Path)
+    smoke_snapshot.add_argument("--query")
+    smoke_snapshot.add_argument("--register", action="store_true")
+    smoke_snapshot.add_argument("--skip-artifacts", action="store_true")
+    smoke_snapshot.set_defaults(func=cmd_smoke_browser_snapshot)
+    smoke_live = smoke_sub.add_parser("browser-live")
+    smoke_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    smoke_live.add_argument("--run")
+    smoke_live.add_argument("--catalog-url")
+    smoke_live.add_argument("--course-url")
+    smoke_live.add_argument("--state-file", type=Path)
+    smoke_live.add_argument("--wait-until", default="networkidle")
+    smoke_live.add_argument("--max-sources", type=int, default=50)
+    smoke_live.add_argument("--max-pages", type=int, default=5)
+    smoke_live.add_argument("--max-lessons", type=int, default=20)
+    smoke_live.add_argument("--link-pattern")
+    smoke_live.add_argument("--query")
+    smoke_live.add_argument("--register", action="store_true")
+    smoke_live.add_argument("--skip-artifacts", action="store_true")
+    smoke_live.set_defaults(func=cmd_smoke_browser_live)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -577,6 +616,66 @@ def cmd_sync_status(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     _emit(load_sync_status(roots, sync_run_id=args.run, platform=args.platform))
     return 0
+
+
+def cmd_smoke_browser_fixture(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    report = smoke_browser_fixture_route(
+        roots,
+        platform=args.platform,
+        run_id=args.run or f"{args.platform}-browser-smoke-fixture",
+        query=args.query,
+        register=args.register,
+        build_artifacts=not args.skip_artifacts,
+    )
+    _emit(report)
+    return 0 if report.get("status") == "ok" else 1
+
+
+def cmd_smoke_browser_snapshot(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    try:
+        report = smoke_browser_snapshot_route(
+            roots,
+            platform=args.platform,
+            run_id=args.run or f"{args.platform}-browser-smoke-snapshot",
+            catalog_snapshot=args.catalog_snapshot,
+            course_snapshot=args.course_snapshot,
+            query=args.query,
+            register=args.register,
+            build_artifacts=not args.skip_artifacts,
+        )
+    except ValueError as exc:
+        _emit({"schema": "aoa_course_browser_smoke_report_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    _emit(report)
+    return 0 if report.get("status") == "ok" else 1
+
+
+def cmd_smoke_browser_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    try:
+        report = smoke_browser_live_route(
+            roots,
+            platform=args.platform,
+            run_id=args.run or f"{args.platform}-browser-smoke-live",
+            catalog_url=args.catalog_url,
+            course_url=args.course_url,
+            state_file=args.state_file,
+            wait_until=args.wait_until,
+            max_sources=args.max_sources,
+            max_pages=args.max_pages,
+            max_lessons=args.max_lessons,
+            link_pattern=args.link_pattern,
+            query=args.query,
+            register=args.register,
+            build_artifacts=not args.skip_artifacts,
+        )
+    except (RuntimeError, ValueError) as exc:
+        _emit({"schema": "aoa_course_browser_smoke_report_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    _emit(report)
+    return 0 if report.get("status") == "ok" else 1
 
 
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:

@@ -21,6 +21,9 @@ aoa-course materialize browser-live "https://school.example/lesson" --platform g
 aoa-course crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture --max-lessons 20
 aoa-course crawl browser-snapshot /path/to/snapshot.json --platform getcourse --run getcourse-crawl --max-lessons 50
 aoa-course crawl browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-crawl --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --max-lessons 50
+aoa-course smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
+aoa-course smoke browser-snapshot --platform getcourse --catalog-snapshot /path/to/catalog.json --course-snapshot /path/to/course.json --query "course-specific question"
+aoa-course smoke browser-live --platform getcourse --catalog-url "https://school.example/teach/control/stream" --course-url "https://school.example/teach/control/stream/view/id/201" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --query "course-specific question"
 aoa-course build-index --run starter-fixture
 aoa-course build-graph --run starter-fixture
 aoa-course query "rollback" --run starter-fixture

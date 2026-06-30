@@ -14,6 +14,8 @@ The connector supports six browser-session routes:
    and can register them as local sources.
 6. `sync`: source-registry driven refresh that writes checkpoints and optional
    index/graph artifacts.
+7. `smoke`: gated operator check that combines discovery, course materialization,
+   index/graph build, and optional answer verification into one report.
 
 ## Fixture Proof
 
@@ -114,6 +116,46 @@ aoa-course answer "timestamp window reproduction step" --run skillspace-browser-
 
 aoa-course eval browser-progress-comments
 ```
+
+## Smoke Route
+
+Use `smoke browser-fixture` to prove the full operator-facing route without
+private data:
+
+```bash
+aoa-course smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
+```
+
+Use `smoke browser-snapshot` when an operator has exported safe local snapshots
+outside Git:
+
+```bash
+aoa-course smoke browser-snapshot \
+  --platform getcourse \
+  --run getcourse-snapshot-smoke \
+  --catalog-snapshot "$AOA_COURSE_DATA_ROOT/private/getcourse-catalog.json" \
+  --course-snapshot "$AOA_COURSE_DATA_ROOT/private/getcourse-course.json" \
+  --query "your course-specific question"
+```
+
+Use `smoke browser-live` only with a connected account and a local Playwright
+storage-state file:
+
+```bash
+aoa-course smoke browser-live \
+  --platform getcourse \
+  --run getcourse-live-smoke \
+  --catalog-url "https://school.example/teach/control/stream" \
+  --course-url "https://school.example/teach/control/stream/view/id/201" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --max-pages 5 \
+  --max-lessons 20 \
+  --query "your course-specific question"
+```
+
+Smoke reports include counts, local artifact paths, answer/evidence health, and
+privacy reminders. They do not print raw private HTML; raw snapshots remain
+runtime state under `AOA_COURSE_DATA_ROOT`.
 
 ## Snapshot Route
 
