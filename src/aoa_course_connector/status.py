@@ -161,7 +161,11 @@ def ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
         graph_path,
         keys=["schema", "built_at", "node_count", "edge_count"],
     )
-    ready = bool(normalized.get("exists")) and bool(keyword.get("exists")) and bool(graph.get("exists"))
+    normalized_ready = _artifact_status_ok(normalized)
+    keyword_ready = _artifact_status_ok(keyword)
+    semantic_ready = _artifact_status_ok(semantic)
+    graph_ready = _artifact_status_ok(graph)
+    ready = normalized_ready and keyword_ready and graph_ready
     partial = data_dir.exists() or artifact_dir.exists()
     return {
         "schema": "aoa_course_ingest_status_v1",
@@ -182,18 +186,18 @@ def ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
         },
         "graph": graph,
         "readiness": {
-            "normalized_ready": bool(normalized.get("exists")),
-            "query_ready": bool(keyword.get("exists")),
-            "semantic_query_ready": bool(semantic.get("exists")),
-            "graph_ready": bool(graph.get("exists")),
+            "normalized_ready": normalized_ready,
+            "query_ready": keyword_ready,
+            "semantic_query_ready": semantic_ready,
+            "graph_ready": graph_ready,
             "agent_query_ready": ready,
         },
         "next_commands": _ingest_status_next_commands(
             run_id,
-            normalized_exists=bool(normalized.get("exists")),
-            keyword_exists=bool(keyword.get("exists")),
-            semantic_exists=bool(semantic.get("exists")),
-            graph_exists=bool(graph.get("exists")),
+            normalized_ready=normalized_ready,
+            keyword_ready=keyword_ready,
+            semantic_ready=semantic_ready,
+            graph_ready=graph_ready,
         ),
     }
 
@@ -279,10 +283,11 @@ def _next_commands(
     mcp: dict[str, object],
 ) -> list[str]:
     commands: list[str] = []
+    connected_run_id = str(connected_run.get("run_id") or DEFAULT_CONNECTED_RUN)
     if not all(bool(storage_exists.get(name)) for name in ["data", "cache", "auth", "artifact"]):
         commands.append("aoa-course init")
     if any(run_status.get("status") != "ready" for run_status in run_statuses) or connected_run.get("status") != "ok":
-        commands.append(f"aoa-course bootstrap fixture --connected-run {DEFAULT_CONNECTED_RUN}")
+        commands.append(f"aoa-course bootstrap fixture --connected-run {connected_run_id}")
     for run_status in run_statuses:
         commands.extend([str(command) for command in run_status.get("next_commands", []) if str(command)])
     if int(source_summary.get("enabled_source_count", 0)) == 0:
@@ -300,7 +305,10 @@ def _next_commands(
         commands.extend([str(command) for command in connected_plan.get("next_commands", []) if str(command)])
     if not bool(mcp.get("ready")):
         commands.append("aoa-course mcp tools")
-    commands.append("aoa-course readiness --run starter-fixture")
+    readiness_command = "aoa-course readiness --run starter-fixture"
+    if connected_run_id != DEFAULT_CONNECTED_RUN:
+        readiness_command = f"{readiness_command} --connected-run {connected_run_id}"
+    commands.append(readiness_command)
     return _dedupe(commands)
 
 
@@ -317,6 +325,7 @@ def _normalized_bundle_status(path: Path) -> dict[str, object]:
     return {
         "exists": True,
         "path": str(path),
+        "status": "ok",
         "schema": payload.get("schema"),
         "source": {
             "source_id": source.get("source_id"),
@@ -425,12 +434,12 @@ def _dict_items(value: object) -> list[dict[str, object]]:
 def _ingest_status_next_commands(
     run_id: str,
     *,
-    normalized_exists: bool,
-    keyword_exists: bool,
-    semantic_exists: bool,
-    graph_exists: bool,
+    normalized_ready: bool,
+    keyword_ready: bool,
+    semantic_ready: bool,
+    graph_ready: bool,
 ) -> list[str]:
-    if not normalized_exists:
+    if not normalized_ready:
         if run_id == "starter-fixture":
             return [f"aoa-course materialize fixture --run {run_id}"]
         return [
@@ -439,15 +448,19 @@ def _ingest_status_next_commands(
             f"run an ingest, materialize, crawl, or source sync command that writes data/runs/{run_id}/normalized/course_bundle.json",
         ]
     commands: list[str] = []
-    if not keyword_exists:
+    if not keyword_ready:
         commands.append(f"aoa-course build-index --run {run_id}")
-    if not semantic_exists:
+    if not semantic_ready:
         commands.append(f"aoa-course build-semantic-index --run {run_id}")
-    if not graph_exists:
+    if not graph_ready:
         commands.append(f"aoa-course build-graph --run {run_id}")
-    if keyword_exists:
+    if keyword_ready:
         commands.append(f'aoa-course answer "course-specific question" --run {run_id}')
     return commands
+
+
+def _artifact_status_ok(status: dict[str, object]) -> bool:
+    return bool(status.get("exists")) and status.get("status") == "ok"
 
 
 def _load_json_file(path: Path) -> object:

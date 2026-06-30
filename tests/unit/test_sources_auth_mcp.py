@@ -238,6 +238,60 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert refresh["refresh"]["network_touched"] is False
 
 
+def test_ingest_status_treats_corrupt_artifacts_as_not_ready(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    materialize_fixture(storage, run_id="starter-fixture")
+    build_keyword_index(storage, run_id="starter-fixture")
+    build_graph(storage, run_id="starter-fixture")
+    keyword_path = storage.artifact / "runs" / "starter-fixture" / "indexes" / "keyword_index.json"
+    keyword_path.write_text("{not valid json", encoding="utf-8")
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    ingest = call_tool("ingest_status", {"run": "starter-fixture"})
+
+    assert ingest["status"] == "partial"
+    assert ingest["indexes"]["keyword"]["status"] == "error"
+    assert ingest["readiness"]["query_ready"] is False
+    assert ingest["readiness"]["agent_query_ready"] is False
+    assert any(command == "aoa-course build-index --run starter-fixture" for command in ingest["next_commands"])
+
+
+def test_connector_readiness_uses_selected_connected_run_in_remediation(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    materialize_fixture(storage, run_id="starter-fixture")
+    build_keyword_index(storage, run_id="starter-fixture")
+    build_graph(storage, run_id="starter-fixture")
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    readiness = call_tool("connector_readiness", {"runs": ["starter-fixture"], "connected_run": "custom-connected-run"})
+
+    assert readiness["connected_run"]["status"] == "missing"
+    assert readiness["connected_run"]["run_id"] == "custom-connected-run"
+    assert any(
+        command == "aoa-course bootstrap fixture --connected-run custom-connected-run"
+        for command in readiness["next_commands"]
+    )
+    assert not any("--connected-run connected-calibration" in command for command in readiness["next_commands"])
+
+
 def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
