@@ -42,6 +42,12 @@ the safest first handoff when connected-source state is unknown. Its default
 `--live-scope full-course --include-step-sources` only for an explicit
 operator-selected full-course calibration.
 
+For GetCourse and Skillspace, inspect `browser_auth_handoffs` before running
+any live browser command. The handoff packet groups source readiness by host,
+shows the storage-state file, and gives the auth capture, redacted inspect, and
+recheck commands required before the plan will emit browser live sync/smoke
+commands.
+
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
 aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN > "$AOA_COURSE_ARTIFACT_ROOT/stepik-preflight.json"

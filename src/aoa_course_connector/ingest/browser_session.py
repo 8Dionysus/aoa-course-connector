@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aoa_course_connector.adapters.browser import build_crawled_snapshot, caption_resource_key, discover_lesson_links, is_caption_asset, parse_html_snapshot, placeholder_lesson_page, resource_looks_like_caption
+from aoa_course_connector.adapters.browser import build_crawled_snapshot, caption_resource_key, caption_text_from_resource, discover_lesson_links, is_caption_asset, parse_html_snapshot, placeholder_lesson_page, resource_looks_like_caption
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
@@ -307,12 +307,15 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
         receipt["crawl"] = raw["crawl"]
     resources = raw.get("resources") if isinstance(raw.get("resources"), list) else []
     caption_errors = raw.get("caption_resource_errors") if isinstance(raw.get("caption_resource_errors"), list) else []
+    parse_errors = _caption_resource_parse_errors(resources)
+    all_caption_errors = [*caption_errors, *parse_errors]
     receipt["caption_resource_count"] = len(resources)
-    receipt["caption_resource_error_count"] = len(caption_errors)
+    receipt["caption_resource_error_count"] = len(all_caption_errors)
+    receipt["caption_resource_parse_error_count"] = len(parse_errors)
     receipt["caption_resource_error_reasons"] = sorted(
         {
             str(error.get("reason") or "unknown")
-            for error in caption_errors
+            for error in all_caption_errors
             if isinstance(error, dict)
         }
     )
@@ -320,6 +323,27 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
     receipt["receipt_path"] = str(receipt_path)
     return receipt
+
+
+def _caption_resource_parse_errors(resources: list[object]) -> list[dict[str, object]]:
+    errors: list[dict[str, object]] = []
+    for resource in resources:
+        if not isinstance(resource, dict):
+            continue
+        url = str(resource.get("url") or resource.get("source_url") or "")
+        content_type = str(resource.get("content_type") or "")
+        if not resource_looks_like_caption(url, content_type):
+            continue
+        if caption_text_from_resource(resource):
+            continue
+        errors.append(
+            {
+                "url": url,
+                "content_type": content_type,
+                "reason": "caption resource parsed without transcript text",
+            }
+        )
+    return errors
 
 
 def _collect_caption_resources(context: Any, html: str, page_url: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:

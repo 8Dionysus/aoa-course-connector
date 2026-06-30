@@ -212,6 +212,13 @@ keeps Stepik live sync/smoke commands under smoke limits; use
 `--live-scope full-course --include-step-sources` only for an explicit
 operator-selected full-course run.
 
+For GetCourse and Skillspace, the plan also includes
+`browser_auth_handoffs`: one per browser-session platform. Each handoff groups
+registered sources by host, reports whether the saved storage-state matches
+those hosts, and gives the exact `auth plan-browser-state`,
+`auth capture-browser-state`, `auth inspect-browser-state`, and recheck
+commands needed before live sync can start.
+
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build \
   --run connected-live-calibration \

@@ -184,6 +184,18 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert any("smoke browser-live" in action["command"] for action in stage_actions["live_smoke"])
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
     assert plan["source_plans"][0]["smoke_report_path"].startswith("$AOA_COURSE_ARTIFACT_ROOT/")
+    handoff = plan["browser_auth_handoffs"][0]
+    assert handoff["platform"] == "getcourse"
+    assert handoff["ready"] is True
+    assert handoff["source_hosts"] == ["school.example"]
+    assert handoff["blocked_source_count"] == 0
+    assert handoff["host_readiness"][0]["ready_source_count"] == 1
+    assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
+    assert "inspect-browser-state" in handoff["commands"]["inspect"]
+    assert handoff["commands"]["inspect_source_hosts"] == [
+        'aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains school.example'
+    ]
+    assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
     rendered = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
@@ -198,7 +210,28 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     assert plan["status"] == "warning"
     assert plan["ready"] is False
     assert plan["platform_plans"][0]["blocked_source_count"] == 1
+    assert plan["platform_plans"][0]["blockers"] == ["browser storage state is missing"]
     assert plan["source_plans"][0]["smoke_command"] is None
+    handoff = plan["browser_auth_handoffs"][0]
+    assert handoff["platform"] == "skillspace"
+    assert handoff["ready"] is False
+    assert handoff["source_count"] == 1
+    assert handoff["blocked_source_count"] == 1
+    assert handoff["source_hosts"] == ["school.skillspace.example"]
+    assert handoff["blocked_source_hosts"] == ["school.skillspace.example"]
+    assert handoff["host_readiness"] == [
+        {
+            "host": "school.skillspace.example",
+            "source_count": 1,
+            "ready_source_count": 0,
+            "blocked_source_count": 1,
+            "blockers": ["browser storage state is missing"],
+        }
+    ]
+    assert handoff["blockers"] == ["browser storage state is missing"]
+    assert "capture-browser-state skillspace account" in handoff["commands"]["capture"]
+    assert "--state-file" in handoff["commands"]["capture"]
+    assert "--expect-origin school.skillspace.example" in handoff["commands"]["recheck"]
     assert not any("sync browser-live" in command for command in plan["next_commands"])
     assert any("capture-browser-state" in command for command in plan["next_commands"])
 
@@ -217,11 +250,41 @@ def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path
     assert plan["platform_plans"][0]["ready_source_count"] == 1
     assert any("sync stepik-live" in command for command in plan["next_commands"])
     assert any("smoke stepik-live 67" in command for command in plan["next_commands"])
+    assert any("--access-mode public_api" in command for command in plan["next_commands"])
     assert not any("--full-course" in command for command in plan["next_commands"])
     assert not any("--include-step-sources" in command for command in plan["next_commands"])
     assert any("--max-sections 1" in command for command in plan["next_commands"])
     assert any("calibration build" in command for command in plan["next_commands"])
     assert not any(command.startswith("export STEPIK_API_TOKEN") for command in plan["next_commands"])
+
+
+def test_connected_source_plan_blocks_unparseable_ready_stepik_smoke(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "stepik", "https://stepik.org/learn/broken", "Broken Stepik", access_mode="public_api")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    plan = connected_source_plan(storage, platforms=["stepik"])
+
+    assert plan["status"] == "partial"
+    assert plan["ready"] is False
+    assert plan["platform_plans"][0]["ready"] is True
+    smoke_stage = next(stage for stage in plan["stages"] if stage["name"] == "live_smoke")
+    assert smoke_stage["ready"] is False
+    assert smoke_stage["actions"][0]["ready"] is False
+    assert "cannot parse Stepik course id" in " ".join(smoke_stage["actions"][0]["blocked_by"])
+    assert plan["source_plans"][0]["smoke_command"] is None
+
+
+def test_connected_source_plan_stepik_smoke_preserves_registered_access_mode(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "stepik", "67", "Stepik API", access_mode="api_token")
+    monkeypatch.setenv("STEPIK_API_TOKEN", "SUPER_SECRET_STEPIK_TOKEN")
+
+    plan = connected_source_plan(storage, platforms=["stepik"])
+
+    command = plan["source_plans"][0]["smoke_command"]
+    assert "--access-mode api_token" in command
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in json.dumps(plan)
 
 
 def test_connected_source_plan_stepik_full_course_scope_is_explicit(tmp_path: Path, monkeypatch) -> None:
