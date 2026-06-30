@@ -52,11 +52,12 @@ PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run st
 GetCourse and Skillspace now have a shared browser-session snapshot route. CI
 uses safe synthetic snapshots; live operator-owned pages can be captured with
 the optional Playwright browser extra. The `discover` route finds visible course
-entrypoints and can register them as local sources. The `crawl` route starts
-from a course index and expands visible lesson links into a course-tree
-snapshot. The `sync` route runs configured sources and records checkpoints.
-Browser fixtures also prove visible progress/status, discussion comments, and
-paginated catalog receipts flow into answer packets, indexes, and graphs.
+entrypoints, follows bounded live pagination, and can register results as local
+sources. The `crawl` route starts from a course index and expands visible lesson
+links into a course-tree snapshot. The `sync` route runs configured sources and
+records checkpoints. Browser fixtures also prove visible progress/status,
+discussion comments, and paginated catalog receipts flow into answer packets,
+indexes, and graphs.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
@@ -92,8 +93,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugr
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Working browser-session discovery with paginated fixture receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Skillspace | Working browser-session discovery with paginated fixture receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Stepik | Working clean API reference adapter |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |

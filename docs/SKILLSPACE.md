@@ -50,7 +50,8 @@ aoa-course discover browser-live "https://academy.example/courses" \
   --run skillspace-live-discovery \
   --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
   --register \
-  --max-sources 50
+  --max-sources 50 \
+  --max-pages 5
 
 aoa-course crawl browser-live "https://academy.example/course/mobile-debugging" \
   --platform skillspace \

@@ -46,11 +46,11 @@ aoa-course eval browser-discovery
 under `AOA_COURSE_DATA_ROOT`. Without `--register`, discovery is read-only and
 emits a receipt only.
 
-Fixture and snapshot discovery receipts include `page_count` plus pagination
-metadata such as `pagination.next_link_count`. This proves paginated catalog
-captures can be represented without committing private account pages. Live
-discovery currently captures the visible starting page; automatic next-page
-following is still a later live robustness layer.
+Fixture, snapshot, and live discovery receipts include `page_count` plus
+pagination metadata such as `pagination.next_link_count`. This proves paginated
+catalog captures can be represented without committing private account pages.
+Live discovery follows visible next-page links up to `--max-pages` and stops on
+seen URLs to avoid loops.
 
 ## Source Sync Proof
 
@@ -93,10 +93,12 @@ from the snapshot.
 ## Progress And Comments Proof
 
 Browser snapshots extract visible progress/status blocks and visible discussion
-comments when the page exposes them in accessible HTML. The normalized bundle
-keeps progress evidence at the course level and discussion evidence under the
-lesson. The keyword index includes both as searchable knowledge items, and the
-graph includes `course_has_progress`, `lesson_has_comment_thread`, and
+comments when the page exposes them in accessible HTML. Extraction is
+data/aria-first and also handles compact unannotated blocks with progress,
+comment, reply, or discussion class/id hints. The normalized bundle keeps
+progress evidence at the course level and discussion evidence under the lesson.
+The keyword index includes both as searchable knowledge items, and the graph
+includes `course_has_progress`, `lesson_has_comment_thread`, and
 `thread_has_comment` edges.
 
 ```bash
@@ -167,12 +169,14 @@ aoa-course discover browser-live "https://school.example/teach/control/stream" \
   --run getcourse-live-discovery \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --register \
-  --max-sources 50
+  --max-sources 50 \
+  --max-pages 5
 ```
 
 `--max-lessons` bounds the live traversal. `--link-pattern` can narrow discovery
 when a platform or school theme emits noisy navigation links.
-`--max-sources` bounds account-level source discovery.
+`--max-sources` bounds account-level source discovery. `--max-pages` bounds live
+catalog pagination while preserving next-link evidence in the discovery receipt.
 
 To sync all registered live browser sources:
 

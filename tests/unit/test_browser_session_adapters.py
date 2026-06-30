@@ -121,3 +121,47 @@ def test_browser_snapshot_extracts_progress_comments_and_pagination() -> None:
         }
     ]
     assert snapshot.pagination_links[0]["href"] == "https://academy.example/courses?page=2"
+
+
+def test_browser_snapshot_uses_unannotated_progress_and_comment_hints() -> None:
+    snapshot = parse_html_snapshot(
+        """
+        <main>
+          <div class="course-progress progress-bar" role="progressbar" aria-valuenow="75">75% complete</div>
+          <article class="lesson-comment reply" id="comment-42">
+            Mentor says keep the radio logs and bugreport together.
+          </article>
+        </main>
+        """,
+        "https://academy.example/course/mobile-debugging",
+    )
+
+    assert snapshot.progress == {
+        "state": "in_progress",
+        "percent": "75",
+        "updated_at": "",
+        "label": "75% complete",
+    }
+    assert snapshot.comments == [
+        {
+            "comment_id": "comment-42",
+            "thread_id": "visible-thread",
+            "author": "",
+            "created_at": "",
+            "text": "Mentor says keep the radio logs and bugreport together.",
+        }
+    ]
+
+
+def test_browser_snapshot_reads_aria_only_progressbar() -> None:
+    snapshot = parse_html_snapshot(
+        '<main><div class="progressbar" role="progressbar" aria-valuenow="60" aria-valuetext="60 percent reviewed"></div></main>',
+        "https://academy.example/course/mobile-debugging",
+    )
+
+    assert snapshot.progress == {
+        "state": "visible",
+        "percent": "60",
+        "updated_at": "",
+        "label": "60 percent reviewed",
+    }

@@ -24,3 +24,5 @@
 - Added browser-session progress/status extraction, visible comment indexing,
   comment/progress graph edges, paginated catalog receipts, MCP context smoke,
   and `browser-progress-comments` eval coverage.
+- Added bounded live discovery next-page following with `--max-pages` and
+  unannotated DOM heuristics for visible progress/status and compact comments.

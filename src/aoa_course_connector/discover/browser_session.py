@@ -6,8 +6,10 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from aoa_course_connector.adapters.browser import build_browser_catalog_discovery
+from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.storage import create_storage_roots
@@ -102,6 +104,7 @@ def discover_browser_live(
     state_file: Path | None = None,
     wait_until: str = "networkidle",
     max_sources: int = 50,
+    max_pages: int = 5,
     link_pattern: str | None = None,
     register: bool = False,
 ) -> dict[str, object]:
@@ -117,7 +120,8 @@ def discover_browser_live(
             context_kwargs["storage_state"] = str(state_file)
         context = browser.new_context(**context_kwargs)
         page = context.new_page()
-        page.goto(url, wait_until=wait_until)
+        pages = collect_live_catalog_pages(page, url, wait_until=wait_until, max_pages=max_pages)
+        title = str(pages[0].get("title") or url) if pages else url
         raw = {
             "schema": "aoa_course_browser_snapshot_v1",
             "platform": platform,
@@ -127,17 +131,9 @@ def discover_browser_live(
                 "platform": platform,
                 "source_ref": url,
                 "access_mode": "browser_session",
-                "title": page.title() or url,
+                "title": title,
             },
-            "pages": [
-                {
-                    "page_id": "account-catalog",
-                    "kind": "account_catalog",
-                    "url": page.url,
-                    "title": page.title() or url,
-                    "html": page.content(),
-                }
-            ],
+            "pages": pages,
         }
         browser.close()
     data_dir = roots.data / "discovery" / run_id
@@ -157,6 +153,44 @@ def discover_browser_live(
         register=register,
         network_touched=True,
     )
+
+
+def collect_live_catalog_pages(page: Any, start_url: str, *, wait_until: str = "networkidle", max_pages: int = 5) -> list[dict[str, object]]:
+    pages: list[dict[str, object]] = []
+    seen: set[str] = set()
+    next_url = start_url
+    page_limit = max(1, max_pages)
+    for index in range(1, page_limit + 1):
+        page.goto(next_url, wait_until=wait_until)
+        current_url = str(getattr(page, "url", "") or next_url)
+        if current_url in seen:
+            break
+        seen.add(current_url)
+        html = str(page.content())
+        title = str(page.title() or current_url)
+        pages.append(
+            {
+                "page_id": f"account-catalog-page-{index}",
+                "kind": "account_catalog",
+                "url": current_url,
+                "title": title,
+                "html": html,
+            }
+        )
+        candidate = _first_unseen_pagination_url(html, current_url, seen)
+        if not candidate:
+            break
+        next_url = candidate
+    return pages
+
+
+def _first_unseen_pagination_url(html: str, current_url: str, seen: set[str]) -> str | None:
+    snapshot = parse_html_snapshot(html, current_url)
+    for link in snapshot.pagination_links:
+        href = str(link.get("href") or "")
+        if href and href not in seen:
+            return href
+    return None
 
 
 def _receipt_from_raw(

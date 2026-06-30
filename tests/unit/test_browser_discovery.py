@@ -6,6 +6,7 @@ from pathlib import Path
 from aoa_course_connector.adapters.browser.discovery import build_browser_catalog_discovery, discover_course_links
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import discover_browser_fixture
+from aoa_course_connector.discover.browser_session import collect_live_catalog_pages
 from aoa_course_connector.sources import load_registry
 
 
@@ -82,3 +83,51 @@ def test_skillspace_catalog_discovery_registers_sources(tmp_path: Path) -> None:
     sources = registry["sources"]
     assert {source["title"] for source in sources} == {"Firmware Audit", "Mobile Debugging", "Radio Diagnostics"}
     assert all(source["access_mode"] == "browser_session" for source in sources)
+
+
+def test_live_catalog_page_collector_follows_bounded_next_links() -> None:
+    page = FakePage(
+        {
+            "https://academy.example/courses": (
+                "Catalog 1",
+                '<main><a data-aoa-kind="course" href="/course/a">A</a><a rel="next" href="/courses?page=2">Next page</a></main>',
+            ),
+            "https://academy.example/courses?page=2": (
+                "Catalog 2",
+                '<main><a data-aoa-kind="course" href="/course/b">B</a><a rel="next" href="/courses?page=3">Next page</a></main>',
+            ),
+            "https://academy.example/courses?page=3": (
+                "Catalog 3",
+                '<main><a data-aoa-kind="course" href="/course/c">C</a></main>',
+            ),
+        }
+    )
+
+    pages = collect_live_catalog_pages(page, "https://academy.example/courses", wait_until="load", max_pages=2)
+
+    assert [item["url"] for item in pages] == [
+        "https://academy.example/courses",
+        "https://academy.example/courses?page=2",
+    ]
+    assert page.visited == ["https://academy.example/courses", "https://academy.example/courses?page=2"]
+    discovery = build_browser_catalog_discovery({"platform": "skillspace", "pages": pages}, platform="skillspace")
+    assert discovery["course_count"] == 2
+    assert discovery["pagination"]["next_link_count"] == 2
+
+
+class FakePage:
+    def __init__(self, pages: dict[str, tuple[str, str]]) -> None:
+        self.pages = pages
+        self.url = ""
+        self.visited: list[str] = []
+
+    def goto(self, url: str, wait_until: str = "networkidle") -> None:
+        del wait_until
+        self.url = url
+        self.visited.append(url)
+
+    def content(self) -> str:
+        return self.pages[self.url][1]
+
+    def title(self) -> str:
+        return self.pages[self.url][0]
