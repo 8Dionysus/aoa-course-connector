@@ -162,6 +162,23 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "evidence_report" for tool in tools_manifest()["tools"])
+    ingest = call_tool("ingest_status", {"run": "starter-fixture"})
+    assert ingest["schema"] == "aoa_course_ingest_status_v1"
+    assert ingest["status"] == "ready"
+    assert ingest["network_touched"] is False
+    assert ingest["readiness"]["agent_query_ready"] is True
+    assert ingest["normalized"]["counts"]["courses"] == 1
+    assert ingest["normalized"]["counts"]["lessons"] >= 1
+    assert ingest["normalized"]["fetched_at"]["latest"] == "2026-06-29T12:00:00Z"
+    assert ingest["indexes"]["keyword"]["doc_count"] >= 1
+    assert ingest["indexes"]["semantic"]["exists"] is False
+    assert ingest["graph"]["node_count"] >= 1
+    assert ingest["receipts"][0]["schema"] == "aoa_course_materialize_receipt_v1"
+    assert any(command == "aoa-course build-semantic-index --run starter-fixture" for command in ingest["next_commands"])
+    missing_ingest = call_tool("ingest_status", {"run": "missing-run"})
+    assert missing_ingest["status"] == "missing"
+    assert missing_ingest["readiness"]["agent_query_ready"] is False
+    assert missing_ingest["next_commands"]
     result = call_tool("search", {"query": "rollback", "run": "starter-fixture"})
     assert result["results"]
     graph = call_tool("graph_neighbors", {"node_id": "lesson:starter:unlock-risk", "run": "starter-fixture"})
@@ -193,6 +210,12 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
     assert missing_connected_run["tool"] == "connected_run_status"
     assert missing_connected_run["connected_run"]["status"] == "missing"
+    run_connected_calibration(storage, mode="fixture", platforms=["stepik"])
+    default_connected_run = call_tool("connected_run_status", {})
+    assert default_connected_run["tool"] == "connected_run_status"
+    assert default_connected_run["connected_run"]["status"] == "ok"
+    assert default_connected_run["connected_run"]["run_id"] == "connected-calibration"
+    assert default_connected_run["connected_run"]["network_touched"] is False
     run_connected_calibration(storage, run_id="mcp-connected-fixture", mode="fixture", platforms=["stepik"])
     connected_run = call_tool("connected_run_status", {"run": "mcp-connected-fixture"})
     assert connected_run["connected_run"]["schema"] == "aoa_course_connected_calibration_run_status_v1"

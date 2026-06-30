@@ -352,6 +352,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"platforms":["getcourse","stepik"]}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
 ```
 
 Runtime deployment in the full Abyss stack belongs in `abyss-stack`; this repo
