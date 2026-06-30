@@ -13,6 +13,7 @@ Fixture-safe suites for local course connector behavior:
 - `freshness_ranking.json`
 - `authority_ranking.json`
 - `adapter_authority_metadata.json`
+- `live_calibration_packet.json`
 
 `answer-quality.suite.md` records the local suite note for the answer-quality
 contract. It is connector-local support evidence only; central proof doctrine,
@@ -26,3 +27,6 @@ ordering when base relevance is tied.
 
 `adapter-authority.suite.md` records the local suite note for adapter-derived
 authority metadata preservation across normalized bundles and query packets.
+
+`live-calibration.suite.md` records the local suite note for fixture-safe live
+calibration packet construction from smoke and preflight reports.

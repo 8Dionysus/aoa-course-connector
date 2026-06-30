@@ -9,6 +9,7 @@ from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.calibration import build_live_calibration_packet, load_json_report, write_live_calibration_packet
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
@@ -355,6 +356,14 @@ def build_parser() -> argparse.ArgumentParser:
     smoke_stepik_live.add_argument("--skip-artifacts", action="store_true")
     smoke_stepik_live.set_defaults(func=cmd_smoke_stepik_live)
 
+    calibration = sub.add_parser("calibration")
+    calibration_sub = calibration.add_subparsers(dest="calibration_command", required=True)
+    calibration_build = calibration_sub.add_parser("build")
+    calibration_build.add_argument("--run", default="live-calibration")
+    calibration_build.add_argument("--report", action="append", type=Path, required=True)
+    calibration_build.add_argument("--preflight-report", action="append", type=Path)
+    calibration_build.set_defaults(func=cmd_calibration_build)
+
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
     build_index.set_defaults(func=cmd_build_index)
@@ -404,6 +413,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
     eval_sub.add_parser("adapter-authority").set_defaults(func=cmd_eval_adapter_authority)
+    eval_sub.add_parser("live-calibration").set_defaults(func=cmd_eval_live_calibration)
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
@@ -1001,6 +1011,16 @@ def cmd_smoke_stepik_live(args: argparse.Namespace) -> int:
     return 0 if report.get("status") == "ok" else 1
 
 
+def cmd_calibration_build(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    smoke_reports = [load_json_report(path) for path in args.report]
+    preflight_reports = [load_json_report(path) for path in args.preflight_report or []]
+    packet = build_live_calibration_packet(run_id=args.run, smoke_reports=smoke_reports, preflight_reports=preflight_reports)
+    packet_path = write_live_calibration_packet(roots, packet, run_id=args.run)
+    _emit({**packet, "packet_path": str(packet_path)})
+    return 0 if packet.get("status") == "ok" else 1
+
+
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     receipt = materialize_stepik_fixture(roots, run_id=args.run, fixture=args.fixture)
@@ -1489,6 +1509,73 @@ def _value_at_path(root: object, path: list[object]) -> object:
 
 def _list_of_strings(value: object) -> list[str]:
     return [str(item) for item in value] if isinstance(value, list) else []
+
+
+def cmd_eval_live_calibration(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    suite_path = find_repo_root() / "evals" / "suites" / "live_calibration_packet.json"
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    browser_getcourse = smoke_browser_fixture_route(roots, platform="getcourse", run_id="getcourse-live-calibration-fixture", register=True)
+    browser_skillspace = smoke_browser_fixture_route(roots, platform="skillspace", run_id="skillspace-live-calibration-fixture", register=True)
+    stepik = smoke_stepik_fixture_route(
+        roots,
+        course_id=67,
+        run_id="stepik-live-calibration-fixture",
+        title="Stepik live calibration fixture",
+        query="Stepik public API evidence",
+    )
+    preflight = live_preflight(roots, platforms=["stepik"])
+    packet = build_live_calibration_packet(
+        run_id="live-calibration-fixture",
+        smoke_reports=[browser_getcourse, browser_skillspace, stepik],
+        preflight_reports=[preflight],
+    )
+    packet_path = write_live_calibration_packet(roots, packet, run_id="live-calibration-fixture")
+    failures = _live_calibration_failures(packet, suite)
+    _emit(
+        {
+            "schema": "aoa_course_eval_live_calibration_v1",
+            "suite_id": suite.get("suite_id"),
+            "status": "ok" if not failures else "error",
+            "packet_path": str(packet_path),
+            "packet_status": packet.get("status"),
+            "report_count": packet.get("report_count"),
+            "platforms": packet.get("platforms"),
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _live_calibration_failures(packet: dict[str, object], suite: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    if packet.get("status") != "ok":
+        failures.append({"field": "packet_status", "expected": "ok", "actual": packet.get("status"), "packet_failures": packet.get("failures")})
+    expected_report_count = int(suite.get("expected_report_count") or 0)
+    if expected_report_count and int(packet.get("report_count") or 0) != expected_report_count:
+        failures.append({"field": "report_count", "expected": expected_report_count, "actual": packet.get("report_count")})
+    expected_platforms = sorted(_list_of_strings(suite.get("expected_platforms")))
+    actual_platforms = sorted(_list_of_strings(packet.get("platforms")))
+    if expected_platforms and actual_platforms != expected_platforms:
+        failures.append({"field": "platforms", "expected": expected_platforms, "actual": actual_platforms})
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    privacy = packet.get("privacy") if isinstance(packet.get("privacy"), dict) else {}
+    min_result_count = int(suite.get("min_answer_result_count_total") or 0)
+    if int(quality.get("answer_result_count_total") or 0) < min_result_count:
+        failures.append({"field": "quality.answer_result_count_total", "expected_min": min_result_count, "actual": quality.get("answer_result_count_total")})
+    min_evidence_count = int(suite.get("min_answer_evidence_count_total") or 0)
+    if int(quality.get("answer_evidence_count_total") or 0) < min_evidence_count:
+        failures.append({"field": "quality.answer_evidence_count_total", "expected_min": min_evidence_count, "actual": quality.get("answer_evidence_count_total")})
+    for field in _list_of_strings(suite.get("required_privacy_true_fields")):
+        if privacy.get(field) is not True:
+            failures.append({"field": f"privacy.{field}", "expected": True, "actual": privacy.get(field)})
+    for field in _list_of_strings(suite.get("required_privacy_false_fields")):
+        if privacy.get(field) is not False:
+            failures.append({"field": f"privacy.{field}", "expected": False, "actual": privacy.get(field)})
+    for field in _list_of_strings(suite.get("required_quality_true_fields")):
+        if quality.get(field) is not True:
+            failures.append({"field": f"quality.{field}", "expected": True, "actual": quality.get(field)})
+    return failures
 
 
 def cmd_eval_clean_api(_args: argparse.Namespace) -> int:

@@ -33,13 +33,16 @@
 16. After Stepik, GetCourse, and Skillspace fixture indexes are built, run
     `eval adapter-authority` to prove adapter-derived authority metadata reaches
     normalized objects and query packets.
-17. Before live browser sources, run `auth plan-browser-state`, capture the
+17. Run `eval live-calibration` to prove the fixture-safe calibration packet for
+    GetCourse, Skillspace, and Stepik smoke reports before collecting connected
+    account reports.
+18. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-18. Run `preflight live --platform getcourse` or
+19. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-19. Confirm browser preflight marks only sources whose host matches the saved
+20. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-20. Add live sources only after auth-state and storage roots are local and
+21. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

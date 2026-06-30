@@ -23,3 +23,4 @@ suites:
   - evals/suites/freshness_ranking.json
   - evals/suites/authority_ranking.json
   - evals/suites/adapter_authority_metadata.json
+  - evals/suites/live_calibration_packet.json

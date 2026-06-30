@@ -34,6 +34,8 @@
   over learner comments when base relevance is tied or close.
 - Prove adapter-derived authority metadata so browser-session roles and Stepik
   official API/source signals survive normalization, indexing, and query.
+- Prove live calibration packets that summarize GetCourse, Skillspace, and
+  Stepik smoke/preflight reports without committing private payloads.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -51,7 +53,8 @@
 
 - Run the gated live smoke route on connected GetCourse and Skillspace accounts
   after `preflight live` reports ready local state, then calibrate login
-  redirects, pagination, and DOM heuristics against real themes.
+  redirects, pagination, DOM heuristics, and live calibration packet failures
+  against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
   status, comments, and discussion markup found by live smoke.
 - Run gated live full-course Stepik sync on an operator-selected authenticated

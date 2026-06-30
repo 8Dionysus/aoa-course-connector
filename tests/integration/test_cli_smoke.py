@@ -224,6 +224,48 @@ def test_cli_adapter_authority_eval_proves_adapter_metadata_reaches_query(tmp_pa
     assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 
+def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
+    eval_result = run_cli(tmp_path, "eval", "live-calibration")
+
+    assert eval_result["status"] == "ok"
+    assert eval_result["suite_id"] == "live-calibration"
+    assert eval_result["report_count"] == 3
+    assert eval_result["platforms"] == ["getcourse", "skillspace", "stepik"]
+    assert Path(str(eval_result["packet_path"])).is_file()
+
+    getcourse = run_cli(tmp_path, "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-calibration-cli", "--register")
+    skillspace = run_cli(tmp_path, "smoke", "browser-fixture", "--platform", "skillspace", "--run", "skillspace-calibration-cli", "--register")
+    stepik = run_cli(tmp_path, "smoke", "stepik-fixture", "67", "--run", "stepik-calibration-cli", "--query", "Stepik public API evidence")
+    preflight = run_cli(tmp_path, "preflight", "live", "--platform", "stepik")
+    report_paths = []
+    for name, payload in [("getcourse", getcourse), ("skillspace", skillspace), ("stepik", stepik)]:
+        path = tmp_path / f"{name}-smoke.json"
+        path.write_text(json.dumps(payload), encoding="utf-8")
+        report_paths.append(path)
+    preflight_path = tmp_path / "stepik-preflight.json"
+    preflight_path.write_text(json.dumps(preflight), encoding="utf-8")
+
+    build_result = run_cli(
+        tmp_path,
+        "calibration",
+        "build",
+        "--run",
+        "manual-calibration-cli",
+        "--report",
+        str(report_paths[0]),
+        "--report",
+        str(report_paths[1]),
+        "--report",
+        str(report_paths[2]),
+        "--preflight-report",
+        str(preflight_path),
+    )
+
+    assert build_result["status"] == "ok"
+    assert build_result["report_count"] == 3
+    assert Path(str(build_result["packet_path"])).is_file()
+
+
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [
         ("getcourse", "GetCourse bootloader rollback evidence"),

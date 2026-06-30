@@ -48,6 +48,7 @@ REQUIRED_FILES = [
     "docs/CLEAN_API_ADAPTERS.md",
     "docs/STEPIK.md",
     "docs/CLI_USAGE.md",
+    "docs/LIVE_CALIBRATION.md",
     "docs/MCP_USAGE.md",
     "docs/QUERY_MODEL.md",
     "docs/GRAPH_MODEL.md",
@@ -72,6 +73,8 @@ REQUIRED_FILES = [
     "evals/suites/authority_ranking.json",
     "evals/suites/adapter-authority.suite.md",
     "evals/suites/adapter_authority_metadata.json",
+    "evals/suites/live-calibration.suite.md",
+    "evals/suites/live_calibration_packet.json",
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/browser_progress_comments_answer_packets.json",
@@ -83,6 +86,7 @@ REQUIRED_FILES = [
     "kag/README.md",
     "kag/manifest.json",
     "src/aoa_course_connector/cli.py",
+    "src/aoa_course_connector/calibration/__init__.py",
     "src/aoa_course_connector/adapters/browser/crawl.py",
     "src/aoa_course_connector/adapters/browser/discovery.py",
     "src/aoa_course_connector/adapters/browser/snapshot.py",
@@ -117,6 +121,7 @@ REQUIRED_DIRS = [
     "src/aoa_course_connector/adapters/browser",
     "src/aoa_course_connector/adapters/stepik",
     "src/aoa_course_connector/auth",
+    "src/aoa_course_connector/calibration",
     "src/aoa_course_connector/core",
     "src/aoa_course_connector/discover",
     "src/aoa_course_connector/evidence",
@@ -254,6 +259,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
+    if "eval live-calibration" not in agents or "calibration build" not in agents:
+        errors.append("AGENTS route missing live calibration packet validation")
     for token in ["getcourse", "skillspace", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
         if token not in source_policy:
             errors.append(f"source policy missing boundary token: {token}")
@@ -293,9 +300,24 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
-    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority"]:
+    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration"]:
         if token not in eval_readme:
             errors.append(f"Eval README missing token: {token}")
+    live_calibration_doc = (repo_root / "docs" / "LIVE_CALIBRATION.md").read_text(encoding="utf-8").casefold()
+    for token in [
+        "aoa_course_live_calibration_packet_v1",
+        "calibration build",
+        "eval live-calibration",
+        "smoke browser-live",
+        "smoke stepik-live",
+        "preflight live",
+        "do not commit",
+        "raw_paths_are_local_runtime_state",
+        "contains_secret_values",
+        "aoa-evals",
+    ]:
+        if token not in live_calibration_doc:
+            errors.append(f"Live calibration doc missing token: {token}")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()
     for token in [
         "stepik-live",

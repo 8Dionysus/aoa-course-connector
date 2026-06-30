@@ -80,3 +80,6 @@
   enrollments are ignored, browser storage state is checked per registered
   source host, pagination links cannot pass catalog `link_pattern`, and MCP
   initialize falls back to the supported protocol version.
+- Added live calibration packets plus `eval live-calibration` and
+  `calibration build` so GetCourse, Skillspace, and Stepik smoke/preflight
+  reports can be summarized without committing private payloads.

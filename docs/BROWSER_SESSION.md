@@ -2,7 +2,7 @@
 
 GetCourse and Skillspace are hard browser-session adapters.
 
-The connector supports six browser-session routes:
+The connector supports seven browser-session routes:
 
 1. `browser-fixture`: safe synthetic snapshots used by CI.
 2. `browser-snapshot`: operator-provided JSON snapshot captured outside Git.
@@ -161,6 +161,11 @@ aoa-course smoke browser-live \
 Smoke reports include counts, local artifact paths, answer/evidence health, and
 privacy reminders. They do not print raw private HTML; raw snapshots remain
 runtime state under `AOA_COURSE_DATA_ROOT`.
+
+Use `eval live-calibration` for fixture-safe packet proof, then use
+`calibration build` with saved `smoke browser-live` and `preflight live` JSON
+reports when calibrating connected GetCourse or Skillspace accounts. See
+`docs/LIVE_CALIBRATION.md`.
 
 ## Snapshot Route
 

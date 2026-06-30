@@ -33,3 +33,8 @@ evidence chain remain visible.
 The adapter-authority suite checks that authority metadata produced by
 browser-session and Stepik adapters survives normalization, indexing, and
 source-backed query packets.
+
+The live-calibration suite builds a fixture-safe
+`aoa_course_live_calibration_packet_v1` from GetCourse, Skillspace, and Stepik
+smoke/preflight reports. It proves the connected-source handoff contract without
+requiring credentials or storing private course payloads.
