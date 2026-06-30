@@ -59,6 +59,8 @@ def upsert_source(data_root: Path, platform: str, source_ref: str, title: str | 
 def _default_access(platform: str) -> str:
     if platform in {"getcourse", "skillspace", "teachable", "thinkific", "kajabi"}:
         return "browser_session"
+    if platform == "stepik":
+        return "public_api"
     if platform == "offline_export":
         return "offline_export"
     return "api_token"

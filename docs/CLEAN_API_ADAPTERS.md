@@ -9,6 +9,6 @@ maps naturally to:
 Moodle and Canvas are strong follow-up adapters because their course module APIs
 can return course contents and files through official LMS routes.
 
-See `docs/STEPIK.md` for the fixture route, bounded live API smoke, and
-operator-selected full-course route with Stepik `ids[]` batching and optional
-authenticated step-source enrichment.
+See `docs/STEPIK.md` for the fixture route, bounded live API smoke,
+source-registry sync route, and operator-selected full-course route with Stepik
+`ids[]` batching and optional authenticated step-source enrichment.

@@ -84,6 +84,7 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/smoke/browser_session.py",
     "src/aoa_course_connector/sync/browser_session.py",
     "src/aoa_course_connector/sync/checkpoints.py",
+    "src/aoa_course_connector/sync/stepik.py",
     "scripts/validate_connector.py",
     "scripts/verify_agent_install_route.py",
 ]
@@ -254,6 +255,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "--include-step-sources",
         "ids[]",
         "meta.has_next",
+        "discover stepik",
+        "sync stepik-fixture",
+        "sync stepik-live",
+        "sync status --run stepik-sync-fixture --platform stepik",
+        "public_api",
     ]:
         if token not in stepik_doc:
             errors.append(f"Stepik doc missing token: {token}")

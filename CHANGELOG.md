@@ -32,3 +32,6 @@
 - Added Stepik `ids[]` batched course traversal, `--full-course` live
   materialization, `--batch-size`, optional `--include-step-sources`
   enrichment, and `meta.has_next` pagination helpers.
+- Added Stepik source-registry discovery/registration, fixture/live sync
+  commands, sync checkpoints, MCP-visible status, and `stepik-sync` eval
+  coverage.

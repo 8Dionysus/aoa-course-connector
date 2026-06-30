@@ -61,6 +61,21 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "course-specific questi
 multi-ID API reads, and `--include-step-sources` performs best-effort source
 enrichment when the connected account is allowed to read it.
 
+Stepik also participates in the source registry and sync checkpoint route:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli discover stepik 67 --register --title "Stepik course 67"
+PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run stepik-sync-fixture --build-artifacts
+PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-fixture --platform stepik
+PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
+```
+
+For live source-registry sync, register the course once and run:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
+```
+
 ## Browser-Session Hard Adapter Proof
 
 GetCourse and Skillspace now have a shared browser-session snapshot route. CI
@@ -112,7 +127,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugr
 | --- | --- |
 | GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Stepik | Working clean API reference adapter with fixture, bounded live smoke, batched full-course materialization, and optional authenticated step-source enrichment |
+| Stepik | Working clean API reference adapter with fixture, bounded live smoke, source-registry sync checkpoints, batched full-course materialization, and optional authenticated step-source enrichment |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
 

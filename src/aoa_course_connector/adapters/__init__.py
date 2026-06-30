@@ -28,6 +28,7 @@ ADAPTERS: dict[str, dict[str, object]] = {
             "units",
             "lessons",
             "steps",
+            "source_registry_sync",
             "batched_full_course",
             "step_sources_when_authorized",
             "paginated_collections",

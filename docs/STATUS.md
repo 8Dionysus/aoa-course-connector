@@ -23,8 +23,8 @@ This proves:
 - initial MCP tool surface;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
-  batched full-course materialization route, optional authenticated
-  step-source enrichment, and client pagination helpers.
+  source-registry sync checkpoints, batched full-course materialization route,
+  optional authenticated step-source enrichment, and client pagination helpers.
 - GetCourse and Skillspace browser-session snapshot adapters through fixtures
   and optional Playwright live capture route.
 - GetCourse and Skillspace account-level browser discovery into the local source
@@ -43,6 +43,8 @@ This proves:
   visible comment/reply/discussion blocks.
 - Browser-session smoke route for fixture, operator snapshot, and gated live
   calibration reports without printing private raw HTML.
+- Stepik source-registry sync route with fixture checkpoint proof, optional
+  index/graph builds, CLI status, MCP status, and eval coverage.
 
 ## Remaining Goal Work
 
@@ -54,4 +56,5 @@ The next layer is live connected-source work:
   progress and comment blocks use unusual markup;
 - gated live full-course Stepik runs against operator-selected authenticated
   courses to calibrate real course size, permissions, and source enrichment;
+- Stepik live sync from source registry against operator-selected real courses;
 - richer live smoke routes gated away from CI secrets.

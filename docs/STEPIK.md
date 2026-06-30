@@ -46,6 +46,36 @@ source block text during normalization. Some accounts or courses may not expose
 step source data; those failures are stored as `step_source_error` on the raw
 step object instead of failing the whole course sync.
 
+## Source Registry Sync Route
+
+Register a Stepik course source once:
+
+```bash
+aoa-course discover stepik 67 --register --title "Stepik course 67"
+aoa-course sources list
+```
+
+Stepik source refs may be plain course IDs such as `67` or course URLs such as
+`https://stepik.org/course/67/syllabus`. Public course sources default to
+`public_api`; use `--access-mode api_token` when the connected account is
+required.
+
+Safe fixture sync proves the same registry/checkpoint/artifact route without
+touching the network:
+
+```bash
+aoa-course sync stepik-fixture --run stepik-sync-fixture --build-artifacts
+aoa-course sync status --run stepik-sync-fixture --platform stepik
+aoa-course eval stepik-sync
+```
+
+Live source-registry sync uses the registered course refs:
+
+```bash
+aoa-course sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
+aoa-course mcp call sync_status '{"sync_run":"stepik-live-sync","platform":"stepik"}'
+```
+
 Live materialization stores raw API responses and normalized bundles under
 `AOA_COURSE_DATA_ROOT`; generated indexes and graphs go under
 `AOA_COURSE_ARTIFACT_ROOT`.
