@@ -4,6 +4,8 @@ import json
 import os
 import subprocess
 import sys
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
 
@@ -48,6 +50,37 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert preflight["result"]["preflight"]["network_touched"] is False
     plan = run_cli(tmp_path, "mcp", "call", "connected_source_plan", '{"platforms":["stepik"]}')
     assert plan["result"]["plan"]["network_touched"] is False
+
+
+def test_cli_http_json_semantic_provider_flow(tmp_path: Path, monkeypatch) -> None:
+    server = _EmbeddingServer()
+    monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    try:
+        run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
+        receipt = run_cli(
+            tmp_path,
+            "build-semantic-index",
+            "--run",
+            "starter-fixture",
+            "--provider",
+            "http_json_v1",
+            "--embedding-endpoint",
+            server.url,
+            "--embedding-model",
+            "fixture-embedding",
+            "--embedding-token-env",
+            "AOA_COURSE_TEST_EMBEDDING_TOKEN",
+        )
+        assert receipt["provider"] == "http_json_v1"
+        assert receipt["provider_config"]["token_env"] == "AOA_COURSE_TEST_EMBEDDING_TOKEN"
+        assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(receipt)
+
+        result = run_cli(tmp_path, "query", "bootloader rollback", "--run", "starter-fixture", "--mode", "semantic")
+        assert result["results"]
+        assert result["results"][0]["semantic_provider"] == "http_json_v1"
+        assert all(request["authorization"] == "Bearer SUPER_SECRET_EMBEDDING_TOKEN" for request in server.requests)
+    finally:
+        server.close()
 
 
 def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
@@ -410,3 +443,60 @@ def test_cli_browser_source_sync_checkpoint_flow(tmp_path: Path) -> None:
     assert eval_result["status"] == "ok"
     mcp_status = run_cli(tmp_path, "mcp", "call", "sync_status", '{"sync_run":"browser-sync-fixture"}')
     assert mcp_status["result"]["sync"]["ok_count"] == 6
+
+
+class _EmbeddingServer:
+    def __init__(self) -> None:
+        self.requests: list[dict[str, object]] = []
+        self._server = HTTPServer(("127.0.0.1", 0), self._handler())
+        self.url = f"http://127.0.0.1:{self._server.server_port}/embeddings"
+        self._thread = threading.Thread(target=self._server.serve_forever, daemon=True)
+        self._thread.start()
+
+    def close(self) -> None:
+        self._server.shutdown()
+        self._thread.join(timeout=5)
+        self._server.server_close()
+
+    def _handler(self) -> type[BaseHTTPRequestHandler]:
+        owner = self
+
+        class Handler(BaseHTTPRequestHandler):
+            def do_POST(self) -> None:  # noqa: N802 - stdlib handler API.
+                length = int(self.headers.get("Content-Length") or "0")
+                body = json.loads(self.rfile.read(length).decode("utf-8"))
+                inputs = body.get("input")
+                if not isinstance(inputs, list):
+                    self.send_response(400)
+                    self.end_headers()
+                    return
+                owner.requests.append(
+                    {
+                        "authorization": self.headers.get("Authorization"),
+                        "model": body.get("model"),
+                        "count": len(inputs),
+                    }
+                )
+                encoded = json.dumps({"data": [{"embedding": _fixture_embedding(str(text))} for text in inputs]}).encode("utf-8")
+                self.send_response(200)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(encoded)))
+                self.end_headers()
+                self.wfile.write(encoded)
+
+            def log_message(self, _format: str, *_args: object) -> None:
+                return
+
+        return Handler
+
+
+def _fixture_embedding(text: str) -> list[float]:
+    lowered = text.casefold()
+    return [
+        1.0 if "bootloader" in lowered else 0.0,
+        1.0 if "rollback" in lowered else 0.0,
+        0.8 if "unlock" in lowered else 0.0,
+        0.7 if "vendor" in lowered else 0.0,
+        0.6 if "mentor" in lowered else 0.0,
+        min(len(lowered.split()) / 40.0, 1.0),
+    ]

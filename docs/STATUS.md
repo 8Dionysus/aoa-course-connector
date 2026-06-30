@@ -19,6 +19,9 @@ This proves:
 - canonical course fixture normalization;
 - source-backed keyword search;
 - deterministic local semantic/vector search with `local_hashing_v1`;
+- optional `http_json_v1` semantic provider contract for operator-configured
+  embedding endpoints, with provider metadata in the index artifact, query/MCP
+  reuse of the same vector provider, and token-value redaction;
 - graph construction for course/module/lesson/step/asset/topic/entity;
 - answer packets with evidence chains and freshness timestamps;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
@@ -138,8 +141,8 @@ The next layer is live connected-source work:
   Skillspace, and Stepik accounts and run `calibration intake` against partial
   packets to drive selector, sync, retrieval, privacy, and eval-intake follow-up
   work;
-- external embedding provider integration behind the existing semantic index
-  contract;
+- live calibration of operator-selected external embedding endpoints beyond the
+  local CI `http_json_v1` contract proof;
 - live-calibrated authority tiers from adapter/source metadata beyond current
   fixture-proven browser-role and Stepik official API signals;
 - richer live smoke routes gated away from CI secrets.

@@ -35,6 +35,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli doctor
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --help
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
