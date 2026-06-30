@@ -45,6 +45,8 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert readiness["schema"] == "aoa_course_connector_readiness_v1"
     assert readiness["network_touched"] is False
     assert readiness["operational_ready"] is True
+    assert readiness["connected_live_ready"] is False
+    assert readiness["connected_live_ready"] == readiness["lanes"]["connected_live_ready"]
     assert readiness["lanes"]["agent_query_ready"] is True
     assert readiness["mcp"]["ready"] is True
     mcp_readiness = run_cli(tmp_path, "mcp", "call", "connector_readiness", '{"runs":["starter-fixture"],"platforms":["stepik"]}')
@@ -96,6 +98,8 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert Path(str(receipt["artifacts"]["semantic_index_path"])).is_file()
     assert Path(str(receipt["artifacts"]["graph_path"])).is_file()
     assert receipt["readiness"]["operational_ready"] is True
+    assert receipt["readiness"]["connected_live_ready"] is False
+    assert receipt["readiness"]["connected_live_ready"] == receipt["readiness"]["lanes"]["connected_live_ready"]
     assert receipt["readiness"]["lanes"]["agent_query_ready"] is True
     assert receipt["readiness"]["lanes"]["connected_run_receipt_ready"] is True
     assert receipt["readiness"]["sources"]["platform_counts"]["getcourse"] >= 1

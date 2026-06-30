@@ -226,6 +226,8 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert readiness["schema"] == "aoa_course_connector_readiness_v1"
     assert readiness["network_touched"] is False
     assert readiness["operational_ready"] is True
+    assert readiness["connected_live_ready"] is False
+    assert readiness["connected_live_ready"] == readiness["lanes"]["connected_live_ready"]
     assert readiness["lanes"]["agent_query_ready"] is True
     assert readiness["lanes"]["mcp_tools_ready"] is True
     assert readiness["connected_run"]["status"] == "ok"
@@ -342,6 +344,13 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     rendered_plan = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered_plan
     assert "SUPER_SECRET_TOKEN" not in rendered_plan
+
+    readiness = call_tool(
+        "connector_readiness",
+        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.example"},
+    )
+    assert readiness["connected_live_ready"] is True
+    assert readiness["connected_live_ready"] == readiness["lanes"]["connected_live_ready"]
 
 
 def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> None:

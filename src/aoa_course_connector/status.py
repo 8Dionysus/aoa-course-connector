@@ -111,6 +111,7 @@ def connector_readiness(
         "tool": "connector_readiness",
         "status": status,
         "operational_ready": operational_ready,
+        "connected_live_ready": bool(lanes["connected_live_ready"]),
         "network_touched": False,
         "read_only": True,
         "repo": {
