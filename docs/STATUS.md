@@ -37,8 +37,8 @@ This proves:
 - CLI `bootstrap fixture` returns `aoa_course_fixture_bootstrap_receipt_v1` and
   turns a fresh local state into a query-ready starter proof: storage roots,
   normalized starter bundle, keyword index, semantic index, graph, default
-  fixture connected-run receipt, and embedded readiness without touching the
-  network;
+  GetCourse/Skillspace/Stepik fixture connected-run receipt, and embedded
+  readiness without touching the network;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh

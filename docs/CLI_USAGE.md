@@ -2,7 +2,7 @@
 
 ```bash
 aoa-course doctor
-aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik
+aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
 aoa-course init
 aoa-course adapters list
@@ -91,8 +91,10 @@ behavior available for batch refreshes.
 Use `bootstrap fixture` as the one-command fresh-install starter route. It
 creates storage roots, materializes the starter fixture, builds the keyword
 index, semantic index, graph, and default fixture connected-run receipt, then
-returns `aoa_course_fixture_bootstrap_receipt_v1` with embedded readiness. It is
-fixture-only and reports `network_touched: false`.
+returns `aoa_course_fixture_bootstrap_receipt_v1` with embedded readiness. By
+default it proves GetCourse, Skillspace, and Stepik fixture routes; pass
+`--platform` only to narrow a diagnostic run. It is fixture-only and reports
+`network_touched: false`.
 
 Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the

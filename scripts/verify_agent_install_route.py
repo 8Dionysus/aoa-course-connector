@@ -28,7 +28,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "scripts/validate_connector.py"],
             [sys.executable, "-m", "compileall", "-q", "src", "scripts"],
             [sys.executable, "-m", "aoa_course_connector.cli", "doctor"],
-            [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--platform", "stepik"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "readiness", "--run", "starter-fixture", "--platform", "stepik", "--connected-run", "connected-calibration", "--require-ready"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "fixture", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "starter-fixture"],

@@ -5,9 +5,10 @@
 3. Install `.[dev]` for tests and CLI smoke checks.
 4. Configure `AOA_COURSE_*` roots or `AOA_COURSE_INSTANCE_ROOT`.
 5. Run `aoa-course doctor`.
-6. Run `aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik`
+6. Run `aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration`
    to create the local starter bundle, keyword/semantic indexes, graph, and
-   default fixture connected-run receipt without network access.
+   default GetCourse/Skillspace/Stepik fixture connected-run receipt without
+   network access.
 7. Run `aoa-course readiness --run starter-fixture` to get the read-only
    install/source/run/MCP audit and its next commands.
 8. Run the offline starter proof.

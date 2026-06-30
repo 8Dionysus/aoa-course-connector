@@ -82,8 +82,6 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
         "starter-fixture",
         "--connected-run",
         "connected-calibration",
-        "--platform",
-        "stepik",
     )
 
     assert receipt["schema"] == "aoa_course_fixture_bootstrap_receipt_v1"
@@ -91,13 +89,18 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert receipt["network_touched"] is False
     assert receipt["materialize"]["status"] == "ok"
     assert receipt["connected_receipt"]["status"] == "ok"
+    assert receipt["connected_receipt"]["platforms"] == ["getcourse", "skillspace", "stepik"]
     assert receipt["connected_receipt"]["network_touched"] is False
+    assert receipt["connected_receipt"]["stage_count"] == 9
     assert Path(str(receipt["artifacts"]["keyword_index_path"])).is_file()
     assert Path(str(receipt["artifacts"]["semantic_index_path"])).is_file()
     assert Path(str(receipt["artifacts"]["graph_path"])).is_file()
     assert receipt["readiness"]["operational_ready"] is True
     assert receipt["readiness"]["lanes"]["agent_query_ready"] is True
     assert receipt["readiness"]["lanes"]["connected_run_receipt_ready"] is True
+    assert receipt["readiness"]["sources"]["platform_counts"]["getcourse"] >= 1
+    assert receipt["readiness"]["sources"]["platform_counts"]["skillspace"] >= 1
+    assert receipt["readiness"]["sources"]["platform_counts"]["stepik"] >= 1
 
     readiness = run_cli(
         tmp_path,

@@ -32,7 +32,7 @@ Run from the repository root:
 python scripts/validate_connector.py
 PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m aoa_course_connector.cli doctor
-PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik
+PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starter-fixture --connected-run connected-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
