@@ -26,6 +26,8 @@
   index/graph builds, MCP status, and eval coverage.
 - Prove Stepik fixture/live smoke reports that combine registration, sync,
   artifacts, answer evidence, and privacy-safe local raw API path reporting.
+- Prove a deterministic semantic/vector index baseline behind the stable keyword
+  contract.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 
@@ -40,7 +42,8 @@
 - Broaden Stepik live smoke calibration beyond public bounded course checks.
 - Expand Stepik from registered course-id sync into account-level discovery
   where official account scopes expose enough course catalog data.
-- Add semantic/vector index behind the stable keyword index contract.
+- Add optional external embedding providers behind the stable semantic index
+  contract.
 
 ## Later
 

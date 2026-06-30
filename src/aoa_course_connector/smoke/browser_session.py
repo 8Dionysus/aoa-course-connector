@@ -9,7 +9,7 @@ from typing import Any
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.discover import discover_browser_fixture, discover_browser_live, discover_browser_snapshot
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import crawl_browser_live, materialize_browser_fixture, materialize_browser_snapshot
 from aoa_course_connector.query import render_answer_packet, write_answer_packet
 
@@ -252,6 +252,7 @@ def _artifact_summary(roots: StorageRoots, run_id: str, query: str | None, build
     if not build_artifacts:
         return {"enabled": False}
     index_path = build_keyword_index(roots, run_id=run_id)
+    semantic_index_path = build_semantic_index(roots, run_id=run_id)
     graph_path = build_graph(roots, run_id=run_id)
     answer: dict[str, object] = {"enabled": False}
     if query:
@@ -267,7 +268,13 @@ def _artifact_summary(roots: StorageRoots, run_id: str, query: str | None, build
             if isinstance(packet.get("freshness_report"), dict)
             else False,
         }
-    return {"enabled": True, "index_path": str(index_path), "graph_path": str(graph_path), "answer": answer}
+    return {
+        "enabled": True,
+        "index_path": str(index_path),
+        "semantic_index_path": str(semantic_index_path),
+        "graph_path": str(graph_path),
+        "answer": answer,
+    }
 
 
 def _failures(

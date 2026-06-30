@@ -16,14 +16,17 @@ PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m aoa_course_connector.cli doctor
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
+PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
 ```
 
 The starter path creates:
 
 - normalized course objects from a safe fixture;
 - a local keyword index;
+- a deterministic local semantic/vector index (`local_hashing_v1`);
 - a course graph;
 - an answer packet with source-backed evidence.
 
@@ -34,6 +37,7 @@ The first clean API adapter is Stepik. CI uses a safe Stepik-shaped fixture:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Stepik public API evidence" --run stepik-fixture
 ```
@@ -43,8 +47,9 @@ For a bounded live public API smoke:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live 67 --run stepik-live-smoke --max-sections 1 --max-units-per-section 1 --max-steps-per-lesson 2
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-live-smoke
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run stepik-live-smoke
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-live-smoke
-PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run stepik-live-smoke
+PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run stepik-live-smoke --mode hybrid
 ```
 
 For an operator-selected full-course Stepik sync:
@@ -53,8 +58,9 @@ For an operator-selected full-course Stepik sync:
 export STEPIK_API_TOKEN=...
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-full-course
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run stepik-full-course
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-full-course
-PYTHONPATH=src python -m aoa_course_connector.cli answer "course-specific question" --run stepik-full-course
+PYTHONPATH=src python -m aoa_course_connector.cli answer "course-specific question" --run stepik-full-course --mode hybrid
 ```
 
 `--full-course` removes the smoke limits, `--batch-size` uses Stepik `ids[]`
@@ -165,6 +171,8 @@ local artifacts used by the CLI:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 ```

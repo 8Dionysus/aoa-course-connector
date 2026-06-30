@@ -32,9 +32,13 @@ aoa-course smoke browser-fixture --platform getcourse --run getcourse-browser-sm
 aoa-course smoke browser-snapshot --platform getcourse --catalog-snapshot /path/to/catalog.json --course-snapshot /path/to/course.json --query "course-specific question"
 aoa-course smoke browser-live --platform getcourse --catalog-url "https://school.example/teach/control/stream" --course-url "https://school.example/teach/control/stream/view/id/201" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --query "course-specific question"
 aoa-course build-index --run starter-fixture
+aoa-course build-semantic-index --run starter-fixture
 aoa-course build-graph --run starter-fixture
 aoa-course query "rollback" --run starter-fixture
+aoa-course query "rollback" --run starter-fixture --mode semantic
+aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
 aoa-course eval browser-progress-comments
+aoa-course eval semantic-index
 aoa-course mcp tools
 ```

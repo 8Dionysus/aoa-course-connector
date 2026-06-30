@@ -245,6 +245,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
             warnings.append(f"README weakly covers token: {token}")
     if "aoa-course-connector-mcp" not in mcp:
         errors.append("MCP usage missing server package name")
+    query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
+    for token in ["build-semantic-index", "semantic", "hybrid", "local_hashing_v1", "semantic_search", "hybrid_search"]:
+        if token not in query_doc:
+            errors.append(f"Query model doc missing token: {token}")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()
     for token in [
         "stepik-live",
