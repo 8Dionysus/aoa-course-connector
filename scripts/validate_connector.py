@@ -45,6 +45,7 @@ REQUIRED_FILES = [
     "docs/PRIVACY_SECURITY.md",
     "docs/TROUBLESHOOTING.md",
     "docs/STARTER_PROOF.md",
+    "docs/STATUS.md",
     "docs/decisions/README.md",
     "docs/decisions/AOA-COURSE-D-0001-course-knowledge-not-downloader.md",
     "evals/AGENTS.md",
