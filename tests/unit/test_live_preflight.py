@@ -194,7 +194,12 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
         encoding="utf-8",
     )
 
-    plan = connected_source_plan(storage, platforms=["getcourse"], query="course-specific question")
+    plan = connected_source_plan(
+        storage,
+        platforms=["getcourse"],
+        query="course-specific question",
+        link_pattern="*/lessons/*",
+    )
 
     assert plan["schema"] == "aoa_course_connected_source_plan_v1"
     assert plan["status"] == "ok"
@@ -208,6 +213,9 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert any("preflight live --platform getcourse" in action["command"] for action in stage_actions["preflight_reports"])
     assert any("sync browser-live" in action["command"] and "--source-id" in action["command"] for action in stage_actions["live_sync"])
     assert any("smoke browser-live" in action["command"] for action in stage_actions["live_smoke"])
+    assert any("--link-pattern '*/lessons/*'" in action["command"] for action in stage_actions["live_sync"])
+    assert any("--link-pattern '*/lessons/*'" in action["command"] for action in stage_actions["live_smoke"])
+    assert plan["link_pattern"] == "*/lessons/*"
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
     assert plan["source_plans"][0]["smoke_report_path"].startswith("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/")
     assert "--source-id" in plan["source_plans"][0]["sync_command"]

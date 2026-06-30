@@ -254,6 +254,7 @@ def connected_source_plan(
     max_lessons: int = 50,
     max_pages: int = 5,
     max_sources: int = 50,
+    link_pattern: str | None = None,
     calibration_run: str = "connected-live-calibration",
     live_scope: str = "bounded",
     include_step_sources: bool = False,
@@ -295,6 +296,7 @@ def connected_source_plan(
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
         max_lessons=max_lessons,
+        link_pattern=link_pattern,
         live_scope=selected_live_scope,
         include_step_sources=include_step_sources,
     )
@@ -306,6 +308,7 @@ def connected_source_plan(
         max_lessons=max_lessons,
         max_pages=max_pages,
         max_sources=max_sources,
+        link_pattern=link_pattern,
         live_scope=selected_live_scope,
         include_step_sources=include_step_sources,
     )
@@ -346,6 +349,7 @@ def connected_source_plan(
         "platforms": selected_platforms,
         "live_scope": selected_live_scope,
         "include_step_sources": include_step_sources,
+        "link_pattern": link_pattern or "",
         "platform_plans": platform_plans,
         "browser_auth_handoffs": browser_auth_handoffs,
         "source_plans": source_plans,
@@ -444,6 +448,7 @@ def _sync_actions(
     stepik_token_env: str,
     browser_state_file: Path | None,
     max_lessons: int,
+    link_pattern: str | None,
     live_scope: str,
     include_step_sources: bool,
 ) -> list[dict[str, object]]:
@@ -457,6 +462,8 @@ def _sync_actions(
                 f"--source-id {shlex.quote(source_id)} --state-file {_state_file_arg(platform, browser_state_file)} "
                 f"--max-lessons {max_lessons} --build-artifacts"
             )
+            if link_pattern:
+                command += f" --link-pattern {shlex.quote(link_pattern)}"
             actions.append(
                 {
                     "kind": "sync",
@@ -501,6 +508,7 @@ def _smoke_actions(
     max_lessons: int,
     max_pages: int,
     max_sources: int,
+    link_pattern: str | None,
     live_scope: str,
     include_step_sources: bool,
 ) -> list[dict[str, object]]:
@@ -518,6 +526,8 @@ def _smoke_actions(
                 f"--course-url {shlex.quote(source_ref)} --state-file {_state_file_arg(platform, browser_state_file)} "
                 f"--max-sources {max_sources} --max-pages {max_pages} --max-lessons {max_lessons}"
             )
+            if link_pattern:
+                command += f" --link-pattern {shlex.quote(link_pattern)}"
         elif platform == "stepik":
             course_id = _stepik_course_id(source_ref)
             if course_id is None:
