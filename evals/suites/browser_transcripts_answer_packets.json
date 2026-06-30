@@ -5,15 +5,49 @@
     {
       "query": "transcript excerpt vendor boot recovery plan",
       "run": "getcourse-browser-fixture",
-      "must_contain_terms": ["transcript", "vendor", "recovery"],
+      "must_contain_terms": [
+        "transcript",
+        "vendor",
+        "recovery"
+      ],
       "must_have_kind": "transcript",
+      "must_have_source_authority": "browser_visible_transcript",
+      "must_have_evidence": true
+    },
+    {
+      "query": "sidecar caption safe mode recovery logs",
+      "run": "getcourse-browser-fixture",
+      "must_contain_terms": [
+        "sidecar",
+        "safe",
+        "recovery"
+      ],
+      "must_have_kind": "transcript",
+      "must_have_source_authority": "browser_caption_sidecar",
       "must_have_evidence": true
     },
     {
       "query": "caption bugreport timeline",
       "run": "skillspace-browser-fixture",
-      "must_contain_terms": ["caption", "bugreport", "timeline"],
+      "must_contain_terms": [
+        "caption",
+        "bugreport",
+        "timeline"
+      ],
       "must_have_kind": "transcript",
+      "must_have_source_authority": "browser_visible_transcript",
+      "must_have_evidence": true
+    },
+    {
+      "query": "sidecar subtitle ANR tombstone evidence",
+      "run": "skillspace-browser-fixture",
+      "must_contain_terms": [
+        "sidecar",
+        "anr",
+        "tombstone"
+      ],
+      "must_have_kind": "transcript",
+      "must_have_source_authority": "browser_caption_sidecar",
       "must_have_evidence": true
     }
   ]

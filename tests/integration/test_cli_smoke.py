@@ -176,6 +176,7 @@ def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
     smoke = run_cli(tmp_path, "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture")
     assert smoke["status"] == "ok"
     assert smoke["course"]["comment_count"] >= 1
+    assert smoke["course"]["transcript_count"] >= 2
     assert smoke["artifacts"]["answer"]["result_count"] >= 1
 
 

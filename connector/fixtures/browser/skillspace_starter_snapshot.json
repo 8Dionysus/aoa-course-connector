@@ -34,7 +34,16 @@
       "url": "https://academy.example/course/mobile-debugging/lesson/bugreport",
       "title": "Bugreport lesson",
       "order": 2,
-      "html": "<article><h1>Bugreport lesson</h1><p>Bugreport evidence becomes useful only when the connector keeps source links, capture time, and the lesson context around every extracted note.</p><a data-aoa-kind=\"assignment\" href=\"https://academy.example/course/mobile-debugging/tasks/bugreport\">Upload anonymized bugreport summary</a></article>"
+      "html": "<article><h1>Bugreport lesson</h1><p>Bugreport evidence becomes useful only when the connector keeps source links, capture time, and the lesson context around every extracted note.</p><video controls><track kind=\"subtitles\" src=\"https://academy.example/captions/bugreport-triage.srt\" srclang=\"en\" label=\"English subtitles\"></video><a data-aoa-kind=\"assignment\" href=\"https://academy.example/course/mobile-debugging/tasks/bugreport\">Upload anonymized bugreport summary</a></article>"
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://academy.example/captions/bugreport-triage.srt",
+      "kind": "subtitles",
+      "language": "en",
+      "content_type": "application/x-subrip",
+      "text": "1\n00:00:01,000 --> 00:00:03,000\nSidecar subtitle: attach ANR traces and tombstone evidence to bugreport triage.\n\n2\n00:00:03,000 --> 00:00:05,000\nKeep thread context next to every crash reproduction note."
     }
   ]
 }

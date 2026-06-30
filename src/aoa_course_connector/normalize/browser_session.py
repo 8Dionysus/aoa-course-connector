@@ -5,7 +5,7 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from typing import Any
 
-from aoa_course_connector.adapters.browser import parse_html_snapshot
+from aoa_course_connector.adapters.browser import caption_resource_index, caption_resource_key, caption_text_from_resource, is_caption_asset, parse_html_snapshot
 from aoa_course_connector.evidence import make_evidence
 
 
@@ -64,7 +64,7 @@ def normalize_browser_snapshot(raw: dict[str, Any], run_id: str, raw_ref: str | 
         lesson_pages = _lessons_from_index(course_page, course_snapshot)
     module_map: dict[str, dict[str, object]] = {}
     for index, page in enumerate(lesson_pages, start=1):
-        lesson = _lesson_from_page(page, course, platform, captured_at, raw_ref, evidence, index)
+        lesson = _lesson_from_page(raw, page, course, platform, captured_at, raw_ref, evidence, index)
         module_title = str(page.get("module_title") or page.get("module") or "Browser Session Lessons")
         module_id = f"{platform}:module:{_slug(module_title)}"
         module = module_map.setdefault(
@@ -90,9 +90,10 @@ def normalize_browser_snapshot(raw: dict[str, Any], run_id: str, raw_ref: str | 
     }
 
 
-def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform: str, captured_at: str, raw_ref: str | None, evidence: dict[str, dict[str, object]], order: int) -> dict[str, object]:
+def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[str, object], platform: str, captured_at: str, raw_ref: str | None, evidence: dict[str, dict[str, object]], order: int) -> dict[str, object]:
     url = str(page.get("url") or course.get("url") or "")
     snapshot = parse_html_snapshot(str(page.get("html") or ""), url)
+    resources = caption_resource_index(raw, page)
     lesson_id = f"{platform}:lesson:{_slug(page.get('page_id') or url or order)}"
     lesson_evidence = _evidence(evidence, platform, url, captured_at, f"lesson:{lesson_id}", raw_ref)
     step_text = snapshot.text or str(page.get("title") or snapshot.title or lesson_id)
@@ -135,6 +136,7 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                 "kind": asset.get("kind") or "asset",
                 "title": asset.get("title") or f"Asset {asset_index}",
                 "url": asset.get("url") or url,
+                "language": asset.get("language") or "",
                 "download_state": "metadata_only",
                 "authority_tier": "asset_metadata",
                 "authority_label": f"{platform} visible asset metadata",
@@ -160,6 +162,8 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                 "evidence": transcript_evidence,
             }
         )
+    for transcript in _sidecar_transcripts(snapshot.assets, resources, lesson_id, platform, url, captured_at, raw_ref, evidence):
+        lesson["transcripts"].append(transcript)
     for link in snapshot.links:
         if link.get("kind") == "assignment" or "homework" in link.get("href", "") or "task" in link.get("href", ""):
             lesson["assignments"].append(
@@ -177,6 +181,48 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
     for thread in _comment_threads_from_snapshot(snapshot.comments, lesson_id, lesson_evidence, evidence, platform, url, captured_at, raw_ref):
         lesson["comment_threads"].append(thread)
     return lesson
+
+
+def _sidecar_transcripts(
+    assets: list[dict[str, str]],
+    resources: dict[str, dict[str, Any]],
+    lesson_id: str,
+    platform: str,
+    lesson_url: str,
+    captured_at: str,
+    raw_ref: str | None,
+    evidence: dict[str, dict[str, object]],
+) -> list[dict[str, object]]:
+    transcripts: list[dict[str, object]] = []
+    for asset_index, asset in enumerate(assets, start=1):
+        if not is_caption_asset(asset):
+            continue
+        source_url = str(asset.get("url") or "")
+        resource = resources.get(caption_resource_key(source_url))
+        if not resource:
+            continue
+        text = caption_text_from_resource(resource)
+        if not text:
+            continue
+        selector = f"transcript-sidecar:{lesson_id}:{asset_index}"
+        transcript_evidence = _evidence(evidence, platform, source_url or lesson_url, captured_at, selector, raw_ref)
+        language = str(resource.get("language") or resource.get("lang") or asset.get("language") or "")
+        kind = str(asset.get("kind") or resource.get("kind") or "caption")
+        transcripts.append(
+            {
+                "transcript_id": f"{lesson_id}:transcript:{_slug(source_url or asset.get('title') or asset_index)}",
+                "lesson_id": lesson_id,
+                "language": language,
+                "kind": kind,
+                "text": text,
+                "source_url": source_url or lesson_url,
+                "authority_tier": "transcript",
+                "authority_label": f"{platform} caption sidecar",
+                "source_authority": "browser_caption_sidecar",
+                "evidence": transcript_evidence,
+            }
+        )
+    return transcripts
 
 
 def _comment_threads_from_snapshot(

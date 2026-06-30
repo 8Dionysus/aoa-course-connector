@@ -21,6 +21,9 @@
 - Prove visible browser-session transcript/caption extraction from safe
   GetCourse and Skillspace fixtures into canonical transcripts, index docs, and
   graph edges.
+- Prove browser-session caption sidecar extraction from `<track>` resources and
+  local snapshot `resources[]` into canonical transcripts, index docs, graph
+  edges, smoke counts, and answer evals.
 - Prove bounded GetCourse and Skillspace live discovery pagination route and
   unannotated DOM heuristics for progress/status/comments.
 - Prove fixture/snapshot/live browser smoke reports that combine discovery,
@@ -61,8 +64,8 @@
   redirects, pagination, DOM heuristics, and live calibration packet failures
   against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
-  status, comments, transcript/caption, and discussion markup found by live
-  smoke.
+  status, comments, transcript/caption, sidecar resources, and discussion
+  markup found by live smoke.
 - Run gated live full-course Stepik sync on an operator-selected authenticated
   course and calibrate permission/source-enrichment behavior.
 - Broaden Stepik live smoke calibration beyond public bounded course checks.
@@ -79,5 +82,6 @@
 ## Later
 
 - Add Moodle, Canvas, Teachable, Thinkific, Kajabi, and Coursera adapters.
-- Broaden transcript/caption extraction beyond visible browser-session blocks.
+- Broaden transcript/caption extraction beyond WebVTT/SRT sidecars and visible
+  browser-session blocks.
 - Add richer eval suites for answer quality, freshness, and evidence coverage.

@@ -11,6 +11,7 @@ suite_ref: evals/suites/browser_transcripts_answer_packets.json
 
 # Browser Transcripts Suite
 
-This local suite checks that visible browser-session transcript and caption text
-from GetCourse and Skillspace fixtures becomes canonical transcript objects,
-indexed answer results, and source-backed evidence chains.
+This local suite checks that visible browser-session transcript/caption text and
+caption sidecar text from GetCourse and Skillspace fixtures become canonical
+transcript objects, indexed answer results, source-authority-bearing packets,
+and source-backed evidence chains.

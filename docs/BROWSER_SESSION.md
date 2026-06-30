@@ -97,20 +97,24 @@ from the snapshot.
 Browser snapshots extract visible progress/status blocks and visible discussion
 comments when the page exposes them in accessible HTML. They also extract
 visible transcript/caption blocks when the page exposes them as HTML text or
-caption/transcript-marked blocks. Extraction is data/aria-first and also handles
-compact unannotated blocks with progress, comment, reply, discussion,
-transcript, caption, or subtitle class/id hints. The normalized bundle keeps
-progress evidence at the course level and discussion/transcript evidence under
-the lesson.
+caption/transcript-marked blocks. They also resolve caption sidecar resources
+when a page exposes `<track>` metadata and the raw snapshot carries matching
+`resources[]` text, such as WebVTT or SRT payloads captured outside Git.
+Extraction is data/aria-first and also handles compact unannotated blocks with
+progress, comment, reply, discussion, transcript, caption, or subtitle class/id
+hints. The normalized bundle keeps progress evidence at the course level and
+discussion/transcript evidence under the lesson.
 When comment blocks expose author-role metadata such as
 `data-aoa-author-role`, the adapter preserves it as `role`, `authority_tier`,
 `authority_label`, and `source_authority` so ranking can distinguish mentor,
 instructor, learner, and generic discussion notes.
 Transcript/caption text is normalized as canonical `Transcript` objects with
-`authority_tier: transcript`. The keyword index includes these surfaces as
-searchable knowledge items, and the graph includes `course_has_progress`,
-`lesson_has_transcript`, `lesson_has_comment_thread`, and `thread_has_comment`
-edges.
+`authority_tier: transcript`. Visible blocks use
+`source_authority: browser_visible_transcript`; sidecar captions use
+`source_authority: browser_caption_sidecar`. The keyword index includes these
+surfaces as searchable knowledge items, and the graph includes
+`course_has_progress`, `lesson_has_transcript`, `lesson_has_comment_thread`, and
+`thread_has_comment` edges.
 
 ```bash
 aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
@@ -118,12 +122,14 @@ aoa-course build-index --run getcourse-browser-fixture
 aoa-course build-graph --run getcourse-browser-fixture
 aoa-course answer "mentor anti-rollback vendor boot" --run getcourse-browser-fixture
 aoa-course answer "transcript excerpt vendor boot recovery plan" --run getcourse-browser-fixture
+aoa-course answer "sidecar caption safe mode recovery logs" --run getcourse-browser-fixture
 
 aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
 aoa-course build-index --run skillspace-browser-fixture
 aoa-course build-graph --run skillspace-browser-fixture
 aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
 aoa-course answer "caption bugreport timeline" --run skillspace-browser-fixture
+aoa-course answer "sidecar subtitle ANR tombstone evidence" --run skillspace-browser-fixture
 
 aoa-course eval adapter-authority
 aoa-course eval browser-progress-comments
@@ -166,9 +172,10 @@ aoa-course smoke browser-live \
   --query "your course-specific question"
 ```
 
-Smoke reports include counts, local artifact paths, answer/evidence health, and
-privacy reminders. They do not print raw private HTML; raw snapshots remain
-runtime state under `AOA_COURSE_DATA_ROOT`.
+Smoke reports include counts, including `transcript_count`, local artifact
+paths, answer/evidence health, and privacy reminders. They do not print raw
+private HTML or caption text; raw snapshots remain runtime state under
+`AOA_COURSE_DATA_ROOT`.
 
 Use `eval live-calibration` for fixture-safe packet proof, then use
 `calibration build` with saved `smoke browser-live` and `preflight live` JSON
@@ -188,6 +195,12 @@ Git. They contain page URLs, titles, captured timestamps, and HTML from pages th
 connected account can legitimately view. Operator snapshots may include multiple
 catalog pages when the account has paginated course lists; the connector records
 pagination evidence in the discovery receipt.
+
+When a snapshot includes caption sidecars, store them as `resources[]` entries
+with `url`, optional `kind`, optional `language`, optional `content_type`, and
+`text`. The URL should match a visible `<track src="...">` URL in the lesson
+HTML. The connector parses WebVTT/SRT cue text into canonical transcripts while
+preserving the source URL as evidence.
 
 ## Live Route
 
@@ -224,6 +237,12 @@ aoa-course materialize browser-live "https://school.example/teach/control/lesson
 
 The `state-file` is a local Playwright storage-state file produced after the
 operator logs in. Do not commit it.
+
+Live materialization and live crawls attempt to fetch text-like caption
+resources referenced by visible `<track>` tags through the same browser context.
+Only small caption-like resources are stored, errors are recorded as metadata,
+and private caption text stays in the local raw snapshot under
+`AOA_COURSE_DATA_ROOT`.
 
 To start from a course index and visit visible lesson pages in the same
 authorized session, use `crawl browser-live`:

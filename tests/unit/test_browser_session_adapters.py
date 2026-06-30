@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aoa_course_connector.adapters.browser import parse_html_snapshot
+from aoa_course_connector.adapters.browser import parse_caption_sidecar_text, parse_html_snapshot
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
@@ -32,6 +32,7 @@ def test_getcourse_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert course["progress"]["percent"] == "50"
     assert course["progress"]["label"] == "2 of 4 lessons completed"
     bootloader_lesson = course["modules"][0]["lessons"][0]
+    ota_lesson = course["modules"][0]["lessons"][1]
     mentor_comment = bootloader_lesson["comment_threads"][0]["comments"][0]
     learner_comment = bootloader_lesson["comment_threads"][0]["comments"][1]
     assert mentor_comment["author_label"] == "mentor"
@@ -45,6 +46,9 @@ def test_getcourse_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert bootloader_lesson["transcripts"][0]["authority_tier"] == "transcript"
     assert bootloader_lesson["transcripts"][0]["source_authority"] == "browser_visible_transcript"
     assert "vendor boot image" in bootloader_lesson["transcripts"][0]["text"]
+    assert ota_lesson["transcripts"][0]["source_authority"] == "browser_caption_sidecar"
+    assert ota_lesson["transcripts"][0]["source_url"] == "https://school.example/captions/bootloop-rescue.vtt"
+    assert "safe mode and recovery logs" in ota_lesson["transcripts"][0]["text"]
     assert "anti-rollback level" in mentor_comment["text"]
     build_keyword_index(storage, run_id="getcourse-browser-fixture")
     graph_path = build_graph(storage, run_id="getcourse-browser-fixture")
@@ -56,6 +60,8 @@ def test_getcourse_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert any(result["kind"] == "comment" and result["source_authority"] == "browser_visible_comment" for result in comment_results)
     transcript_results = query_keyword_index(storage, "transcript excerpt vendor boot recovery plan", run_id="getcourse-browser-fixture")
     assert any(result["kind"] == "transcript" and result["authority_tier"] == "transcript" and result["source_authority"] == "browser_visible_transcript" for result in transcript_results)
+    sidecar_results = query_keyword_index(storage, "sidecar caption safe mode recovery logs", run_id="getcourse-browser-fixture")
+    assert any(result["kind"] == "transcript" and result["source_authority"] == "browser_caption_sidecar" for result in sidecar_results)
     progress_results = query_keyword_index(storage, "2 of 4 lessons completed in_progress", run_id="getcourse-browser-fixture")
     assert any(result["kind"] == "progress" for result in progress_results)
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
@@ -75,11 +81,15 @@ def test_skillspace_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     bundle = json.loads((storage.data / "runs/skillspace-browser-fixture/normalized/course_bundle.json").read_text(encoding="utf-8"))
     comment = bundle["courses"][0]["modules"][0]["lessons"][0]["comment_threads"][0]["comments"][0]
     transcript = bundle["courses"][0]["modules"][0]["lessons"][0]["transcripts"][0]
+    sidecar_transcript = bundle["courses"][0]["modules"][0]["lessons"][1]["transcripts"][0]
     assert comment["role"] == "mentor"
     assert comment["authority_tier"] == "mentor_comment"
     assert transcript["kind"] == "caption"
     assert transcript["authority_tier"] == "transcript"
     assert "bugreport timeline" in transcript["text"]
+    assert sidecar_transcript["kind"] == "subtitles"
+    assert sidecar_transcript["source_authority"] == "browser_caption_sidecar"
+    assert "ANR traces and tombstone evidence" in sidecar_transcript["text"]
     build_keyword_index(storage, run_id="skillspace-browser-fixture")
     build_graph(storage, run_id="skillspace-browser-fixture")
     results = query_keyword_index(storage, "Skillspace logcat bugreport evidence", run_id="skillspace-browser-fixture")
@@ -89,6 +99,8 @@ def test_skillspace_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert any(result["kind"] == "comment" and "timestamp window" in result["text"] for result in comment_results)
     transcript_results = query_keyword_index(storage, "caption bugreport timeline", run_id="skillspace-browser-fixture")
     assert any(result["kind"] == "transcript" and "bugreport timeline" in result["text"] for result in transcript_results)
+    sidecar_results = query_keyword_index(storage, "sidecar subtitle ANR tombstone evidence", run_id="skillspace-browser-fixture")
+    assert any(result["kind"] == "transcript" and result["source_authority"] == "browser_caption_sidecar" for result in sidecar_results)
     progress_results = query_keyword_index(storage, "75 percent reviewed", run_id="skillspace-browser-fixture")
     assert any(result["kind"] == "progress" for result in progress_results)
     packet = render_answer_packet(storage, "Skillspace logcat bugreport evidence", run_id="skillspace-browser-fixture")
@@ -116,6 +128,54 @@ def test_browser_snapshot_preserves_unannotated_asset_links() -> None:
         "https://school.example/files/intro.pdf",
         "https://school.example/files/archive.zip",
     }
+
+
+def test_browser_snapshot_preserves_track_caption_metadata() -> None:
+    snapshot = parse_html_snapshot(
+        """
+        <main>
+          <video controls>
+            <track kind="captions" src="/captions/recovery.vtt" srclang="en" label="English captions">
+          </video>
+        </main>
+        """,
+        "https://school.example/course/lesson",
+    )
+
+    assert snapshot.assets == [
+        {
+            "kind": "captions",
+            "url": "https://school.example/captions/recovery.vtt",
+            "title": "recovery.vtt",
+            "language": "en",
+        }
+    ]
+
+
+def test_caption_sidecar_parser_removes_vtt_and_srt_cue_noise() -> None:
+    assert parse_caption_sidecar_text(
+        """WEBVTT
+
+00:00:01.000 --> 00:00:04.000 align:start
+Sidecar caption: keep safe mode logs.
+
+NOTE internal cue note
+not retained
+
+00:00:04.000 --> 00:00:06.000
+<v Mentor>Recovery evidence stays attached.</v>
+"""
+    ) == "Sidecar caption: keep safe mode logs. Recovery evidence stays attached."
+    assert parse_caption_sidecar_text(
+        """1
+00:00:01,000 --> 00:00:03,000
+Attach ANR traces.
+
+2
+00:00:03,000 --> 00:00:05,000
+Attach tombstone evidence.
+"""
+    ) == "Attach ANR traces. Attach tombstone evidence."
 
 
 def test_browser_snapshot_extracts_progress_comments_and_pagination() -> None:
@@ -182,6 +242,30 @@ def test_browser_snapshot_extracts_visible_transcripts_and_captions() -> None:
             "source_url": "",
             "text": "Caption cue: attach the logcat timestamp window to reproduction steps.",
         },
+    ]
+
+
+def test_browser_snapshot_extracts_nested_transcript_container_text_once() -> None:
+    snapshot = parse_html_snapshot(
+        """
+        <main>
+          <section data-aoa-kind="transcript" data-aoa-transcript-id="nested-t1" lang="en">
+            <p>Nested transcript cue text stays canonical.</p>
+          </section>
+        </main>
+        """,
+        "https://academy.example/course/mobile-debugging",
+    )
+
+    assert snapshot.text == "Nested transcript cue text stays canonical."
+    assert snapshot.transcripts == [
+        {
+            "transcript_id": "nested-t1",
+            "language": "en",
+            "kind": "transcript",
+            "source_url": "",
+            "text": "Nested transcript cue text stays canonical.",
+        }
     ]
 
 

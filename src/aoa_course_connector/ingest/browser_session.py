@@ -6,8 +6,9 @@ import json
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
-from aoa_course_connector.adapters.browser import build_crawled_snapshot, discover_lesson_links, placeholder_lesson_page
+from aoa_course_connector.adapters.browser import build_crawled_snapshot, caption_resource_key, discover_lesson_links, is_caption_asset, parse_html_snapshot, placeholder_lesson_page, resource_looks_like_caption
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
@@ -18,6 +19,7 @@ FIXTURES = {
     "getcourse": Path("connector/fixtures/browser/getcourse_starter_snapshot.json"),
     "skillspace": Path("connector/fixtures/browser/skillspace_starter_snapshot.json"),
 }
+CAPTION_RESOURCE_MAX_BYTES = 512_000
 
 
 def materialize_browser_fixture(roots: StorageRoots, platform: str, run_id: str | None = None, fixture: Path | None = None) -> dict[str, object]:
@@ -135,6 +137,7 @@ def capture_browser_live(roots: StorageRoots, url: str, platform: str, run_id: s
         html = page.content()
         title = page.title()
         current_url = page.url
+        caption_resources, caption_resource_errors = _collect_caption_resources(context, html, current_url)
         browser.close()
     captured_at = _now()
     raw = {
@@ -150,6 +153,10 @@ def capture_browser_live(roots: StorageRoots, url: str, platform: str, run_id: s
         },
         "pages": [{"page_id": "live-page", "kind": "lesson", "url": current_url, "title": title, "html": html}],
     }
+    if caption_resources:
+        raw["resources"] = caption_resources
+    if caption_resource_errors:
+        raw["caption_resource_errors"] = caption_resource_errors
     raw_path = raw_dir / f"{platform}_browser_live_snapshot.json"
     raw_path.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
     bundle = normalize_browser_snapshot(raw, run_id=run_id, raw_ref=str(raw_path))
@@ -174,6 +181,8 @@ def crawl_browser_live(
         raise RuntimeError("Install the browser extra first: python -m pip install -e '.[browser]'") from exc
     create_storage_roots(roots)
     pages: list[dict[str, object]] = []
+    caption_resources: list[dict[str, object]] = []
+    caption_resource_errors: list[dict[str, object]] = []
     fetch_errors: list[dict[str, object]] = []
     with sync_playwright() as playwright:
         browser = playwright.chromium.launch(headless=True)
@@ -186,11 +195,18 @@ def crawl_browser_live(
         index_html = page.content()
         index_title = page.title()
         index_url = page.url
+        index_caption_resources, index_caption_errors = _collect_caption_resources(context, index_html, index_url)
+        _extend_caption_resources(caption_resources, index_caption_resources)
+        caption_resource_errors.extend(index_caption_errors)
         pages.append({"page_id": "course-index", "kind": "course_index", "url": index_url, "title": index_title, "html": index_html})
         links = discover_lesson_links(index_html, index_url, max_lessons=max_lessons, link_pattern=link_pattern)
         for order, link in enumerate(links, start=1):
             try:
                 page.goto(str(link["href"]), wait_until=wait_until)
+                lesson_html = page.content()
+                lesson_resources, lesson_resource_errors = _collect_caption_resources(context, lesson_html, page.url)
+                _extend_caption_resources(caption_resources, lesson_resources)
+                caption_resource_errors.extend(lesson_resource_errors)
                 pages.append(
                     {
                         "page_id": f"lesson-{order}",
@@ -199,7 +215,7 @@ def crawl_browser_live(
                         "url": page.url,
                         "title": page.title() or link.get("text") or link.get("href"),
                         "order": order,
-                        "html": page.content(),
+                        "html": lesson_html,
                     }
                 )
             except PlaywrightError as exc:
@@ -234,8 +250,14 @@ def crawl_browser_live(
             "missing_lesson_page_count": len(fetch_errors),
             "link_pattern": link_pattern or "",
             "fetch_errors": fetch_errors,
+            "caption_resource_count": len(caption_resources),
+            "caption_resource_error_count": len(caption_resource_errors),
         },
     }
+    if caption_resources:
+        raw["resources"] = caption_resources
+    if caption_resource_errors:
+        raw["caption_resource_errors"] = caption_resource_errors
     return _materialize_browser_raw(
         roots,
         run_id=run_id,
@@ -287,6 +309,53 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
     receipt["receipt_path"] = str(receipt_path)
     return receipt
+
+
+def _collect_caption_resources(context: Any, html: str, page_url: str) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    resources: list[dict[str, object]] = []
+    errors: list[dict[str, object]] = []
+    snapshot = parse_html_snapshot(html, page_url)
+    for asset in snapshot.assets:
+        if not is_caption_asset(asset):
+            continue
+        url = str(asset.get("url") or "")
+        if not url:
+            continue
+        try:
+            response = context.request.get(url, timeout=10_000)
+            content_type = str(response.headers.get("content-type", ""))
+            if not response.ok:
+                errors.append({"url": url, "status": response.status, "reason": "caption resource request failed"})
+                continue
+            if not resource_looks_like_caption(url, content_type):
+                errors.append({"url": url, "content_type": content_type, "reason": "caption resource content type was not text-like"})
+                continue
+            body = response.body()
+        except Exception as exc:  # pragma: no cover - depends on live Playwright/network behavior
+            errors.append({"url": url, "reason": "caption resource request raised", "error": str(exc)})
+            continue
+        if len(body) > CAPTION_RESOURCE_MAX_BYTES:
+            errors.append({"url": url, "bytes": len(body), "reason": "caption resource exceeded size limit"})
+            continue
+        resources.append(
+            {
+                "url": url,
+                "kind": asset.get("kind") or "caption",
+                "language": asset.get("language") or "",
+                "content_type": content_type,
+                "text": body.decode("utf-8", errors="replace"),
+            }
+        )
+    return resources, errors
+
+
+def _extend_caption_resources(target: list[dict[str, object]], resources: list[dict[str, object]]) -> None:
+    seen = {caption_resource_key(str(item.get("url") or "")) for item in target}
+    for resource in resources:
+        key = caption_resource_key(str(resource.get("url") or ""))
+        if key and key not in seen:
+            target.append(resource)
+            seen.add(key)
 
 
 def _now() -> str:
