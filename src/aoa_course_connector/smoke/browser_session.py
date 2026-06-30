@@ -159,7 +159,11 @@ def _report(
 ) -> dict[str, object]:
     run_for_artifacts = str(materialized.get("run_id")) if materialized else ""
     course_summary = _course_summary(materialized)
-    artifact_summary = _artifact_summary(roots, run_for_artifacts, query, build_artifacts) if materialized else {}
+    artifact_summary = (
+        _artifact_summary(roots, run_for_artifacts, query, build_artifacts)
+        if materialized
+        else _artifact_not_run_summary(query, build_artifacts)
+    )
     failures = _failures(discovery, materialized, course_summary, artifact_summary, build_artifacts)
     raw_paths = _raw_paths(discovery, materialized)
     return {
@@ -277,6 +281,25 @@ def _artifact_summary(roots: StorageRoots, run_id: str, query: str | None, build
     }
 
 
+def _artifact_not_run_summary(query: str | None, build_artifacts: bool) -> dict[str, object]:
+    if not build_artifacts:
+        return {"enabled": False}
+    answer: dict[str, object] = {"enabled": False}
+    if query:
+        answer = {
+            "enabled": True,
+            "status": "blocked_no_course_materialized",
+            "query": query,
+            "result_count": 0,
+            "evidence_count": 0,
+        }
+    return {
+        "enabled": False,
+        "status": "not_run_no_course_materialized",
+        "answer": answer,
+    }
+
+
 def _failures(
     discovery: dict[str, object] | None,
     materialized: dict[str, object] | None,
@@ -292,6 +315,12 @@ def _failures(
     if materialized and not course_summary.get("bundle_loaded"):
         failures.append({"surface": "course", "reason": "normalized bundle was not loaded"})
     answer = artifact_summary.get("answer") if isinstance(artifact_summary.get("answer"), dict) else {}
+    if build_artifacts and not materialized and answer.get("enabled"):
+        failures.append({
+            "surface": "answer",
+            "reason": "query requested without course materialization",
+            "query": answer.get("query"),
+        })
     if build_artifacts and materialized and answer.get("enabled") and int(answer.get("result_count") or 0) < 1:
         failures.append({"surface": "answer", "reason": "query returned no results", "query": answer.get("query")})
     return failures

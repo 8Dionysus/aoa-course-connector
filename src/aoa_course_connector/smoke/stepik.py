@@ -12,10 +12,10 @@ from aoa_course_connector.query import render_answer_packet, write_answer_packet
 from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.storage import create_storage_roots
 from aoa_course_connector.sync import sync_stepik_fixture_sources, sync_stepik_live_sources
+from aoa_course_connector.sync.stepik import STEPIK_FIXTURE_COURSE_ID
 
 
 DEFAULT_QUERY = "Python course"
-STEPIK_FIXTURE_COURSE_ID = 67
 
 
 def smoke_stepik_fixture(

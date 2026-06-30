@@ -51,6 +51,28 @@ def test_browser_snapshot_smoke_accepts_catalog_and_course_snapshots(tmp_path: P
     assert report["artifacts"]["answer"]["evidence_count"] >= 1
 
 
+def test_browser_snapshot_smoke_flags_catalog_only_query_without_course_materialization(tmp_path: Path) -> None:
+    repo = find_repo_root()
+    report = smoke_browser_snapshot(
+        roots(tmp_path),
+        platform="skillspace",
+        run_id="skillspace-catalog-only-query",
+        catalog_snapshot=repo / "connector/fixtures/browser/skillspace_catalog_snapshot.json",
+        query="timestamp window reproduction step",
+    )
+
+    assert report["status"] == "partial"
+    assert report["course"] == {"enabled": False}
+    assert report["artifacts"]["status"] == "not_run_no_course_materialized"
+    assert report["artifacts"]["answer"]["status"] == "blocked_no_course_materialized"
+    assert report["artifacts"]["answer"]["result_count"] == 0
+    assert {
+        "surface": "answer",
+        "reason": "query requested without course materialization",
+        "query": "timestamp window reproduction step",
+    } in report["failures"]
+
+
 def test_browser_snapshot_smoke_requires_input(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="provide --catalog-snapshot"):
         smoke_browser_snapshot(roots(tmp_path), platform="getcourse", run_id="empty-smoke")

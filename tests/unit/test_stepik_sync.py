@@ -71,3 +71,25 @@ def test_stepik_fixture_sync_records_bad_source_ref(tmp_path: Path) -> None:
     checkpoint = receipt["failed_sources"][0]
     assert checkpoint["platform"] == "stepik"
     assert "cannot parse Stepik course id" in checkpoint["error"]
+
+
+def test_stepik_fixture_sync_rejects_parseable_non_fixture_course(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(
+        storage.data,
+        "stepik",
+        "https://stepik.org/course/100/syllabus",
+        "Different Stepik Source",
+        access_mode="public_api",
+    )
+
+    receipt = sync_stepik_fixture_sources(storage, sync_run_id="stepik-wrong-fixture")
+
+    assert receipt["status"] == "error"
+    assert receipt["synced_count"] == 0
+    assert receipt["failed_count"] == 1
+    checkpoint = receipt["failed_sources"][0]
+    assert checkpoint["source_id"] == source["source_id"]
+    assert checkpoint["platform"] == "stepik"
+    assert "stepik-fixture sync only supports fixture course 67" in checkpoint["error"]
+    assert "stepik-live sync for course 100" in checkpoint["error"]
