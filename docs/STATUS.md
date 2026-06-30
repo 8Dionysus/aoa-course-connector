@@ -139,6 +139,11 @@ This proves:
   connected-run`: fixture mode proves source-registry sync, smoke reports,
   connected plan/runbook, calibration packet, and intake without network access;
   live mode is gated by explicit `--allow-network`.
+- Bounded public Stepik live connected-run has been exercised end to end through
+  `calibration connected-run --mode live --allow-network`: the runtime receipt
+  produced an `ok` connected-source plan, live sync, live smoke, calibration
+  packet, and intake with source-backed answer evidence, timestamps, and clean
+  raw/secret privacy guards.
 
 ## Remaining Goal Work
 
