@@ -155,6 +155,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "evidence_report" for tool in tools_manifest()["tools"])
@@ -178,6 +179,11 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     upsert_checkpoint(storage, checkpoint)
     sync_status = call_tool("sync_status", {"sync_run": "browser-sync-fixture"})
     assert sync_status["sync"]["ok_count"] == 1
+    upsert_source(storage.data, "getcourse", "https://school.example", "School")
+    plan = call_tool("connected_source_plan", {"platforms": ["getcourse"], "query": "rollback"})
+    assert plan["tool"] == "connected_source_plan"
+    assert plan["plan"]["network_touched"] is False
+    assert plan["plan"]["source_plans"]
 
 
 def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Path, monkeypatch) -> None:
@@ -214,6 +220,18 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     rendered = json.dumps(result)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
+
+    plan = call_tool(
+        "connected_source_plan",
+        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.example"},
+    )
+
+    assert plan["tool"] == "connected_source_plan"
+    assert plan["plan"]["ready"] is True
+    assert any("smoke browser-live" in command for command in plan["plan"]["next_commands"])
+    rendered_plan = json.dumps(plan)
+    assert "SUPER_SECRET_COOKIE" not in rendered_plan
+    assert "SUPER_SECRET_TOKEN" not in rendered_plan
 
 
 def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> None:
@@ -252,9 +270,11 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
+    connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
+    assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
 
     called = handle_jsonrpc_message({
@@ -287,3 +307,12 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert preflight_result["isError"] is False
     assert preflight_result["structuredContent"]["tool"] == "live_preflight"
     assert preflight_result["structuredContent"]["preflight"]["network_touched"] is False
+
+    connected_plan = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 41,
+        "method": "tools/call",
+        "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}},
+    })
+    assert connected_plan["result"]["structuredContent"]["tool"] == "connected_source_plan"
+    assert connected_plan["result"]["structuredContent"]["plan"]["network_touched"] is False

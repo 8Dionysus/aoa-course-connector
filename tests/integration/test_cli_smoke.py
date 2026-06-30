@@ -46,6 +46,8 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert evidence["result"]["evidence_chain"]
     preflight = run_cli(tmp_path, "mcp", "call", "live_preflight", '{"platforms":["stepik"]}')
     assert preflight["result"]["preflight"]["network_touched"] is False
+    plan = run_cli(tmp_path, "mcp", "call", "connected_source_plan", '{"platforms":["stepik"]}')
+    assert plan["result"]["plan"]["network_touched"] is False
 
 
 def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
@@ -58,6 +60,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "evidence_report", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -72,12 +75,13 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
     assert responses[3]["result"]["structuredContent"]["evidence_chain"]
     assert responses[4]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[5]["result"]["structuredContent"]["plan"]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -122,6 +126,27 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     rendered = json.dumps(report)
     assert "SUPER_PRIVATE_COOKIE" not in rendered
     assert "SUPER_PRIVATE_TOKEN" not in rendered
+
+    plan = run_cli(
+        tmp_path,
+        "preflight",
+        "connected-plan",
+        "--platform",
+        "getcourse",
+        "--expect-origin",
+        "school.example",
+        "--query",
+        "course-specific question",
+    )
+
+    assert plan["schema"] == "aoa_course_connected_source_plan_v1"
+    assert plan["ready"] is True
+    assert any("sync browser-live" in command for command in plan["next_commands"])
+    assert any("smoke browser-live" in command for command in plan["next_commands"])
+    assert any("calibration build" in command for command in plan["next_commands"])
+    rendered_plan = json.dumps(plan)
+    assert "SUPER_PRIVATE_COOKIE" not in rendered_plan
+    assert "SUPER_PRIVATE_TOKEN" not in rendered_plan
 
 
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:

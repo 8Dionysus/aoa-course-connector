@@ -22,6 +22,7 @@ aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
+aoa-course preflight connected-plan --platform getcourse --platform stepik --query "course-specific question"
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5
@@ -67,4 +68,5 @@ aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","ru
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
+aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"query":"course-specific question"}'
 ```

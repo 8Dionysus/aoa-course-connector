@@ -98,3 +98,7 @@
 - Added transcript/caption health diagnostics to live calibration packets,
   including transcript source-authority counts, caption sidecar totals, browser
   reports with transcripts, and caption-resource error failures.
+- Added read-only connected-source launch plans through CLI `preflight
+  connected-plan` and MCP `connected_source_plan` so agents can inspect
+  readiness and get exact preflight, sync, smoke, and calibration commands
+  before touching live sources.

@@ -64,6 +64,10 @@ This proves:
 - Read-only live preflight reports for Stepik tokens, browser storage-state
   usability, source-registry readiness, next commands, secret redaction, and
   MCP `live_preflight` structuredContent.
+- Read-only connected-source launch plans through CLI `preflight
+  connected-plan` and MCP `connected_source_plan`, turning source readiness into
+  exact preflight, sync, smoke, and calibration commands without touching the
+  network or printing secrets.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.
@@ -101,7 +105,8 @@ The next layer is live connected-source work:
 
 - run gated live smoke with connected GetCourse and Skillspace accounts to
   calibrate real login redirects, theme selectors, and pagination behavior
-  after `preflight live` reports ready local auth/source state;
+  after `preflight connected-plan` reports ready local auth/source state and
+  emits the runtime smoke/calibration commands;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress, comment, transcript, caption, and caption-sidecar resources use
   unusual markup or protected text-resource behavior;

@@ -263,6 +263,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if "eval live-calibration" not in agents or "calibration build" not in agents:
         errors.append("AGENTS route missing live calibration packet validation")
+    if "preflight connected-plan" not in agents or "connected_source_plan" not in agents:
+        errors.append("AGENTS route missing connected-source launch plan validation")
     if "eval browser-transcripts" not in agents:
         errors.append("AGENTS route missing browser transcript/caption eval")
     for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report"]:
@@ -285,7 +287,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "source url", "authority report"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "network_touched", "secret values", "structuredcontent"]:
+    for token in ["live_preflight", "connected_source_plan", "network_touched", "secret values", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -316,11 +318,14 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     live_calibration_doc = (repo_root / "docs" / "LIVE_CALIBRATION.md").read_text(encoding="utf-8").casefold()
     for token in [
         "aoa_course_live_calibration_packet_v1",
+        "aoa_course_connected_source_plan_v1",
+        "preflight connected-plan",
         "calibration build",
         "eval live-calibration",
         "smoke browser-live",
         "smoke stepik-live",
         "preflight live",
+        "connected_source_plan",
         "do not commit",
         "raw_paths_are_local_runtime_state",
         "contains_secret_values",
@@ -347,6 +352,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "discover stepik-account",
         "account discovery",
         "preflight live",
+        "preflight connected-plan",
         "sync stepik-fixture",
         "sync stepik-live",
         "sync status --run stepik-sync-fixture --platform stepik",
@@ -379,6 +385,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "resources[]",
         "transcript_count",
         "preflight live",
+        "preflight connected-plan",
         "sync status",
         "--register",
         "checkpoint",

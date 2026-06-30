@@ -24,6 +24,20 @@ scoring, regression, and proof-doctrine authority.
 Run `preflight live` before any connected smoke. Preflight is read-only and does
 not touch the network.
 
+For agents, start with the combined read-only plan:
+
+```bash
+aoa-course preflight connected-plan \
+  --platform getcourse \
+  --platform stepik \
+  --query "course-specific question"
+```
+
+The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
+result and lists exact commands for preflight report capture, auth/source
+unblocking, live sync, per-source smoke reports, and `calibration build`. It is
+the safest first handoff when connected-source state is unknown.
+
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
 aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN > "$AOA_COURSE_ARTIFACT_ROOT/stepik-preflight.json"

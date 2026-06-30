@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
-from aoa_course_connector.readiness import live_preflight
+from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.sources import upsert_source
 
 
@@ -150,3 +150,67 @@ def test_live_preflight_reports_missing_browser_state_as_warning(tmp_path: Path)
     assert report["ready"] is False
     assert any(check["kind"] == "browser_state" and check["status"] == "missing" for check in report["checks"])
     assert any("capture-browser-state" in command for command in report["next_commands"])
+
+
+def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    plan = connected_source_plan(storage, platforms=["getcourse"], query="course-specific question")
+
+    assert plan["schema"] == "aoa_course_connected_source_plan_v1"
+    assert plan["status"] == "ok"
+    assert plan["ready"] is True
+    assert plan["network_touched"] is False
+    assert plan["platform_plans"][0]["ready"] is True
+    stage_actions = {
+        stage["name"]: stage["actions"]
+        for stage in plan["stages"]
+    }
+    assert any("preflight live --platform getcourse" in action["command"] for action in stage_actions["preflight_reports"])
+    assert any("sync browser-live" in action["command"] for action in stage_actions["live_sync"])
+    assert any("smoke browser-live" in action["command"] for action in stage_actions["live_smoke"])
+    assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
+    assert plan["source_plans"][0]["smoke_report_path"].startswith("$AOA_COURSE_ARTIFACT_ROOT/")
+    rendered = json.dumps(plan)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
+
+
+def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "skillspace", "https://school.skillspace.example/courses", "School")
+
+    plan = connected_source_plan(storage, platforms=["skillspace"])
+
+    assert plan["status"] == "warning"
+    assert plan["ready"] is False
+    assert plan["platform_plans"][0]["blocked_source_count"] == 1
+    assert plan["source_plans"][0]["smoke_command"] is None
+    assert not any("sync browser-live" in command for command in plan["next_commands"])
+    assert any("capture-browser-state" in command for command in plan["next_commands"])
+
+
+def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "stepik", "https://stepik.org/course/67/syllabus", "Stepik Public", access_mode="public_api")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    plan = connected_source_plan(storage, platforms=["stepik"], query="Stepik public API evidence")
+
+    assert plan["status"] == "ok"
+    assert plan["ready"] is True
+    assert plan["platform_plans"][0]["ready_source_count"] == 1
+    assert any("sync stepik-live" in command for command in plan["next_commands"])
+    assert any("smoke stepik-live 67" in command for command in plan["next_commands"])
+    assert any("calibration build" in command for command in plan["next_commands"])
+    assert not any(command.startswith("export STEPIK_API_TOKEN") for command in plan["next_commands"])
