@@ -356,10 +356,22 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
 
     readiness = call_tool(
         "connector_readiness",
-        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.example"},
+        {
+            "platforms": ["getcourse"],
+            "state_file": str(state_file),
+            "expect_origin": "school.example",
+            "query": "course-specific question",
+            "link_pattern": "*/lessons/*",
+        },
     )
     assert readiness["connected_live_ready"] is True
     assert readiness["connected_live_ready"] == readiness["lanes"]["connected_live_ready"]
+    compact_plan = readiness["connected_source_plan"]
+    assert compact_plan["link_pattern"] == "*/lessons/*"
+    assert compact_plan["connected_run_handoff"]["ready"] is True
+    assert "--link-pattern '*/lessons/*'" in compact_plan["connected_run_handoff"]["command"]
+    assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["next_commands"])
+    assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
 
 
 def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> None:
@@ -405,6 +417,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
     assert "runs" in readiness_tool["inputSchema"]["properties"]
+    assert "link_pattern" in readiness_tool["inputSchema"]["properties"]
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]

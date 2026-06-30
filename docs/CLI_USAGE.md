@@ -117,6 +117,8 @@ Use `readiness` when an agent or operator needs one read-only route audit before
 continuing. It emits `aoa_course_connector_readiness_v1` with install route
 files, storage roots, source registry counts, per-run `agent_query_ready`,
 connected-source `connected_live_ready`, connected-run receipt status, MCP tool
-coverage, and next commands. `--require-ready` exits non-zero only when
-`operational_ready` is false; live source execution remains gated behind the
-separate `--allow-network` commands.
+coverage, embedded `connected_run_handoff`, and next commands. For
+browser-session sources, `--link-pattern` flows into the embedded connected
+plan and its ready connected-run handoff. `--require-ready` exits non-zero only
+when `operational_ready` is false; live source execution remains gated behind
+the separate `--allow-network` commands.

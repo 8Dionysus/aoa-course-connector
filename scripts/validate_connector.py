@@ -401,6 +401,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "REQUIRED_MCP_TOOLS",
         "load_connected_calibration_status",
         "connected_source_plan",
+        "connected_run_handoff",
+        "link_pattern",
         "network_touched",
     ]:
         if token not in status_raw:
