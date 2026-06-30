@@ -109,7 +109,7 @@ Stepik also participates in the source registry and sync checkpoint route:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik 67 --register --title "Stepik course 67"
-PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run stepik-sync-fixture --build-artifacts
+PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run stepik-sync-fixture --source-id "source:stepik:..." --build-artifacts
 PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-fixture --platform stepik
 PYTHONPATH=src python -m aoa_course_connector.cli refresh query "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid --strategy fixture --execute --sync-run stepik-refresh-cycle
 PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
@@ -121,7 +121,7 @@ For live source-registry sync, register the course once and run:
 export STEPIK_API_TOKEN=...
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --run stepik-account-discovery-live --token-env STEPIK_API_TOKEN --register --max-pages 5
-PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
+PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
 ```
 
 `preflight live --platform stepik` treats registered `public_api` sources as

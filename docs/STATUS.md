@@ -38,6 +38,9 @@ This proves:
   a read-only plan by default, a fixture-executable sync/checkpoint/rebuild
   loop for registered safe sources, and a live execution route gated behind
   explicit `--allow-network`; MCP exposes the read-only `refresh_plan` tool;
+- source-registry sync routes and connected-source handoff commands support
+  `--source-id` scoped refreshes, so an agent can refresh one selected source
+  without forcing a full platform sync;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,

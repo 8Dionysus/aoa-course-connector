@@ -84,7 +84,9 @@ authority tier, rank score, and `refresh_hint`. The hint always gives local
 `build-index`, `build-semantic-index`, and `build-graph` rebuild commands. For
 GetCourse, Skillspace, and Stepik it also points agents to
 `preflight connected-plan` first, and only exposes live sync commands when the
-result source matches the local source registry.
+result source matches the local source registry. Those sync commands are
+`--source-id` scoped so refreshing one result does not accidentally refresh an
+entire platform registry.
 
 `refresh_plan` is the read-only MCP handoff for the full refresh loop. It
 returns an `aoa_course_refresh_cycle_v1` packet with the current answer packet,

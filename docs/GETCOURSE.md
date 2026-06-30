@@ -24,7 +24,7 @@ comments, visible transcripts, and caption sidecars from `<track>` resources:
 ```bash
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course sources list
-aoa-course sync browser-fixture --run browser-sync-fixture --platform getcourse --build-artifacts
+aoa-course sync browser-fixture --run browser-sync-fixture --platform getcourse --source-id "source:getcourse:..." --build-artifacts
 aoa-course sync status --run browser-sync-fixture --platform getcourse
 
 aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
@@ -73,6 +73,7 @@ aoa-course crawl browser-live "https://school.example/teach/control/stream" \
 aoa-course sync browser-live \
   --run getcourse-live-sync \
   --platform getcourse \
+  --source-id "source:getcourse:..." \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --max-lessons 50 \
   --build-artifacts

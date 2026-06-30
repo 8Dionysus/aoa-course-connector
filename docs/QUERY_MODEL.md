@@ -50,10 +50,10 @@ a network action. It always includes `local_rebuild_commands` for
 run. For connected platforms (`getcourse`, `skillspace`, `stepik`) it also
 includes a bounded `preflight connected-plan` command. When the result's
 `source_id` matches the local source registry, `source_refresh.registry_match`
-is true and the hint can include the registry-driven live `sync` command plus
-sync-status guidance. When the source is an `offline_export` or a registry match
-is missing, the hint says what is blocked instead of pretending a live refresh
-can safely run.
+is true and the hint includes a registry-driven live `sync` command scoped with
+`--source-id`, plus sync-status guidance. When the source is an `offline_export`
+or a registry match is missing, the hint says what is blocked instead of
+pretending a live refresh can safely run.
 
 Answer packets summarize these per-result hints in `refresh_report` with
 unique source counts, registry-match counts, local rebuild commands, source

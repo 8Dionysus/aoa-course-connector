@@ -301,13 +301,16 @@ To sync all registered live browser sources:
 ```bash
 aoa-course sync browser-live \
   --run browser-live-sync \
+  --source-id "source:getcourse:..." \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --max-lessons 50 \
   --build-artifacts
 ```
 
-Use `--platform` more than once to narrow the source set. Use `sync status` to
-inspect checkpoints before choosing which child run to query.
+Use `--source-id` when refreshing one selected source from an answer or
+`refresh_plan`. Use `--platform` more than once only for intentional batch
+refresh. Use `sync status` to inspect checkpoints before choosing which child
+run to query.
 
 `preflight live` is the safe handoff check before these live routes. It reads
 the local source registry and redacted browser storage-state status, reports

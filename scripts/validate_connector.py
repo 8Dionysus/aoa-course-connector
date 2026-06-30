@@ -345,9 +345,14 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "local_rebuild_commands",
         "preflight connected-plan",
         "registry_match",
+        "--source-id",
     ]:
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
+    cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry"]:
+        if token not in cli_usage_doc:
+            errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
     for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration", "browser-transcripts"]:
         if token not in eval_readme:
