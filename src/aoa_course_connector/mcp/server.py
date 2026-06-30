@@ -10,10 +10,12 @@ from __future__ import annotations
 import json
 import sys
 from collections.abc import Iterable
+from pathlib import Path
 from typing import Any, TextIO
 
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, query_semantic_index, render_answer_packet
+from aoa_course_connector.readiness import live_preflight
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.sync import load_sync_status
 
@@ -38,6 +40,22 @@ def _run_schema() -> dict[str, object]:
     return _object_schema({"run": _string_schema("Connector run id.")})
 
 
+def _live_preflight_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "platforms": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
+                "description": "Optional connected platforms to inspect.",
+            },
+            "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
+            "state_file": _string_schema("Optional browser storage-state file."),
+            "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
+            "include_disabled": {"type": "boolean", "description": "Include disabled sources in readiness checks."},
+        }
+    )
+
+
 def _object_schema(properties: dict[str, object], *, required: Iterable[str] = ()) -> dict[str, object]:
     return {"type": "object", "properties": properties, "required": list(required), "additionalProperties": False}
 
@@ -54,6 +72,7 @@ TOOLS = [
     {"name": "list_sources", "description": "List configured course sources.", "inputSchema": _object_schema({})},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
+    {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
     {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined.", "inputSchema": _query_schema()},
@@ -78,6 +97,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return _ingest_status(roots, run_id)
     if name == "sync_status":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sync": load_sync_status(roots, sync_run_id=str(args.get("sync_run") or ""), platform=str(args.get("platform") or ""))}
+    if name == "live_preflight":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_live_preflight(roots, args)}
     if name == "search":
         return {
             "schema": "aoa_course_mcp_result_v1",
@@ -96,6 +117,27 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "freshness_report":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "freshness": freshness_report(roots, run_id)}
     raise ValueError(f"unknown MCP tool: {name}")
+
+
+def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    platforms = args.get("platforms")
+    if platforms is None:
+        platform_list = None
+    elif isinstance(platforms, list) and all(isinstance(item, str) for item in platforms):
+        platform_list = platforms
+    else:
+        raise ValueError("live_preflight platforms must be an array of strings")
+    state_file = args.get("state_file")
+    if state_file is not None and not isinstance(state_file, str):
+        raise ValueError("live_preflight state_file must be a string")
+    return live_preflight(
+        roots,
+        platforms=platform_list,
+        stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
+        browser_state_file=Path(state_file) if state_file else None,
+        expect_origin_contains=str(args.get("expect_origin") or "") or None,
+        include_disabled=bool(args.get("include_disabled", False)),
+    )
 
 
 def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:

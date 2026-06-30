@@ -69,6 +69,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
 PYTHONPATH=src python -m aoa_course_connector.cli eval semantic-index
 PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcourse https://school.example
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture

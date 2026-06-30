@@ -7,6 +7,7 @@ Initial tools:
 - `list_sources`
 - `ingest_status`
 - `sync_status`
+- `live_preflight`
 - `search`
 - `semantic_search`
 - `hybrid_search`
@@ -25,6 +26,7 @@ aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
+aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 ```
 
 ## JSON-RPC Stdio
@@ -46,9 +48,16 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"rollback","run":"starter-fixture"}}}' \
+  '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
   | aoa-course-connector-mcp
 ```
 
 Tool calls return both text content and `structuredContent` so agents can keep
 source-backed result objects, evidence chains, freshness data, and graph packets
 without reparsing prose.
+
+`live_preflight` is read-only and returns `network_touched: false`. It lets an
+agent inspect Stepik token presence, browser storage-state readiness, registered
+source readiness, and next commands before attempting live discovery or sync.
+It reports token/cookie/localStorage presence and counts only; secret values are
+not included in `structuredContent`.

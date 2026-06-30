@@ -251,6 +251,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
+    for token in ["live_preflight", "network_touched", "secret values", "structuredcontent"]:
+        if token not in mcp.casefold():
+            errors.append(f"MCP usage missing live preflight token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
     for token in ["build-semantic-index", "semantic", "hybrid", "local_hashing_v1", "semantic_search", "hybrid_search"]:
         if token not in query_doc:

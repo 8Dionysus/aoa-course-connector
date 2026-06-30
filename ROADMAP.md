@@ -24,7 +24,7 @@
   so live GetCourse/Skillspace routes have a reproducible onboarding step.
 - Prove read-only live preflight reports so agents can verify Stepik token
   presence, browser auth-state usability, registered source readiness, and next
-  commands before touching live sources.
+  commands through CLI and MCP before touching live sources.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional

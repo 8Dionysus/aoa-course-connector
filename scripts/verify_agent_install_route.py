@@ -67,6 +67,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-hard-adapters"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-progress-comments"],
             [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "live", "--platform", "getcourse"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "live_preflight", '{"platforms":["getcourse","stepik"]}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "crawl", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-crawl-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "getcourse-browser-crawl-fixture"],
