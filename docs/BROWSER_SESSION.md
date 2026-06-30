@@ -234,7 +234,7 @@ aoa-course preflight connected-plan \
   --platform getcourse \
   --live-scope bounded \
   --query "your course-specific question" \
-  --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/getcourse-connected-runbook.md"
+  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-connected-runbook.md"
 ```
 
 The plan reports which source hosts match the saved storage state and emits the

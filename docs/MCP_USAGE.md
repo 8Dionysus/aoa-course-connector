@@ -90,7 +90,7 @@ GetCourse/Skillspace sources by host, reports missing or mismatched
 storage-state, and provides the exact auth capture, redacted inspect, and
 recheck commands needed to turn blocked sources into sync-ready sources.
 When a shell-side operator handoff is needed, run the CLI equivalent with
-`--write-runbook "$AOA_COURSE_ARTIFACT_ROOT/connected-source-runbook.md"`; MCP
+`--write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`; MCP
 keeps the structured plan in `structuredContent`, while the CLI writes the
 Markdown checklist as runtime-only artifact state.
 The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
