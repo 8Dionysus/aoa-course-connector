@@ -197,7 +197,7 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
     assert "inspect-browser-state" in handoff["commands"]["inspect"]
     assert handoff["commands"]["inspect_source_hosts"] == [
-        'aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains school.example'
+        'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --expect-origin-contains school.example'
     ]
     assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
     rendered = json.dumps(plan)

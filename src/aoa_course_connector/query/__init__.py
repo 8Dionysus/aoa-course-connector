@@ -23,6 +23,7 @@ from aoa_course_connector.storage import run_artifact_dir
 
 BROWSER_REFRESH_PLATFORMS = {"getcourse", "skillspace"}
 LIVE_REFRESH_PLATFORMS = {"getcourse", "skillspace", "stepik"}
+AUTH_ROOT_EXPR = "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}"
 
 FRESHNESS_RANK_WEIGHTS = {
     "current": 0.08,
@@ -366,7 +367,13 @@ def _source_refresh_hint(
     if registry_match:
         payload["sync_command"] = _sync_command(platform, access_mode, source_id=source_id)
         payload["commands_touch_network"] = True
-        payload["post_sync_guidance"] = "read sync status, pick the synced checkpoint run_id, then rerun answer/evidence_report against that run"
+        payload["post_sync_rebuild_commands"] = [
+            "aoa-course build-semantic-index --run <checkpoint-run-id>",
+        ]
+        payload["post_sync_guidance"] = (
+            "read sync status, pick the synced checkpoint run_id, rebuild the semantic index for semantic/hybrid queries, "
+            "then rerun answer/evidence_report against that run"
+        )
     elif platform in BROWSER_REFRESH_PLATFORMS and source_ref:
         payload["register_command"] = f"aoa-course sources add {shlex.quote(source_ref)} --platform {platform}"
     elif platform == "stepik":
@@ -377,7 +384,8 @@ def _source_refresh_hint(
 def _sync_command(platform: str, access_mode: str, *, source_id: str) -> str:
     source_arg = f" --source-id {shlex.quote(source_id)}" if source_id else ""
     if platform in BROWSER_REFRESH_PLATFORMS:
-        return f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform}{source_arg} --build-artifacts"
+        state_file = f'"{AUTH_ROOT_EXPR}/{platform}/account.storage-state.json"'
+        return f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform}{source_arg} --state-file {state_file} --build-artifacts"
     if platform == "stepik":
         command = f"aoa-course sync stepik-live --run stepik-live-sync{source_arg} --build-artifacts"
         if access_mode in {"api_token", "oauth"}:

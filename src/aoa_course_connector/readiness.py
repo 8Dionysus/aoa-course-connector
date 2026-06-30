@@ -17,6 +17,7 @@ BROWSER_PLATFORMS = {"getcourse", "skillspace"}
 CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 LIVE_SCOPES = {"bounded", "full-course"}
 ARTIFACT_ROOT_EXPR = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
+AUTH_ROOT_EXPR = "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}"
 
 
 def render_connected_source_runbook(plan: dict[str, object]) -> str:
@@ -448,9 +449,6 @@ def _sync_actions(
 ) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for platform in [item for item in platforms if item in BROWSER_PLATFORMS]:
-        workflow = workflow_by_key.get(("browser_live_sync", platform), {})
-        if not workflow.get("ready"):
-            continue
         for source in [item for item in source_checks if item.get("platform") == platform and item.get("ready")]:
             slug = _source_slug(source)
             source_id = str(source.get("source_id") or "")
@@ -471,28 +469,26 @@ def _sync_actions(
                 }
             )
     if "stepik" in platforms:
-        workflow = workflow_by_key.get(("stepik_source_sync", "stepik"), {})
-        if workflow.get("ready"):
-            for source in [item for item in source_checks if item.get("platform") == "stepik" and item.get("ready")]:
-                source_id = str(source.get("source_id") or "")
-                command = _stepik_sync_command(
-                    stepik_token_env=stepik_token_env,
-                    live_scope=live_scope,
-                    include_step_sources=include_step_sources,
-                    source_id=source_id,
-                    run_suffix=_source_slug(source),
-                )
-                actions.append(
-                    {
-                        "kind": "sync",
-                        "platform": "stepik",
-                        "source_id": source_id,
-                        "source_ref": source.get("source_ref"),
-                        "ready": True,
-                        "network_touched": True,
-                        "command": command,
-                    }
-                )
+        for source in [item for item in source_checks if item.get("platform") == "stepik" and item.get("ready")]:
+            source_id = str(source.get("source_id") or "")
+            command = _stepik_sync_command(
+                stepik_token_env=stepik_token_env,
+                live_scope=live_scope,
+                include_step_sources=include_step_sources,
+                source_id=source_id,
+                run_suffix=_source_slug(source),
+            )
+            actions.append(
+                {
+                    "kind": "sync",
+                    "platform": "stepik",
+                    "source_id": source_id,
+                    "source_ref": source.get("source_ref"),
+                    "ready": True,
+                    "network_touched": True,
+                    "command": command,
+                }
+            )
     return actions
 
 
@@ -1027,7 +1023,7 @@ def _host(value: str) -> str:
 def _state_file_arg(platform: str, state_file: Path | None) -> str:
     if state_file:
         return shlex.quote(str(state_file.expanduser()))
-    return f'"$AOA_COURSE_AUTH_ROOT/{platform}/account.storage-state.json"'
+    return f'"{AUTH_ROOT_EXPR}/{platform}/account.storage-state.json"'
 
 
 def _command_touches_network(command: str) -> bool:
