@@ -17,6 +17,7 @@ def normalize_browser_snapshot(raw: dict[str, Any], run_id: str, raw_ref: str | 
     course_page = _first_page(pages, "course_index") or (pages[0] if pages else {})
     course_url = str(course_page.get("url") or source.get("source_ref") or "")
     course_snapshot = parse_html_snapshot(str(course_page.get("html") or ""), course_url)
+    progress_info = course_snapshot.progress
     evidence: dict[str, dict[str, object]] = {}
     course_evidence = _evidence(evidence, platform, course_url, captured_at, "course_index", raw_ref)
     course_id = f"{platform}:course:{_slug(source.get('source_ref') or course_url or 'browser-course')}"
@@ -30,8 +31,10 @@ def normalize_browser_snapshot(raw: dict[str, Any], run_id: str, raw_ref: str | 
         "progress": {
             "progress_id": f"progress:{course_id}",
             "course_id": course_id,
-            "state": str(raw.get("progress_state") or "unknown"),
-            "updated_at": captured_at,
+            "state": str(raw.get("progress_state") or progress_info.get("state") or "unknown"),
+            "percent": str(progress_info.get("percent") or raw.get("progress_percent") or ""),
+            "label": str(progress_info.get("label") or ""),
+            "updated_at": str(progress_info.get("updated_at") or captured_at),
             "evidence": course_evidence,
         },
         "modules": [],
@@ -130,7 +133,50 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                     "evidence": lesson_evidence,
                 }
             )
+    for thread in _comment_threads_from_snapshot(snapshot.comments, lesson_id, lesson_evidence, evidence, platform, url, captured_at, raw_ref):
+        lesson["comment_threads"].append(thread)
     return lesson
+
+
+def _comment_threads_from_snapshot(
+    comments: list[dict[str, str]],
+    lesson_id: str,
+    lesson_evidence: dict[str, object],
+    evidence: dict[str, dict[str, object]],
+    platform: str,
+    url: str,
+    captured_at: str,
+    raw_ref: str | None,
+) -> list[dict[str, object]]:
+    threads: dict[str, dict[str, object]] = {}
+    for index, comment in enumerate(comments, start=1):
+        raw_thread_id = str(comment.get("thread_id") or "visible-thread")
+        thread_id = f"{lesson_id}:thread:{_slug(raw_thread_id)}"
+        thread_evidence = _evidence(evidence, platform, url, captured_at, f"thread:{thread_id}", raw_ref)
+        thread = threads.setdefault(
+            thread_id,
+            {
+                "thread_id": thread_id,
+                "lesson_id": lesson_id,
+                "title": raw_thread_id,
+                "status": "visible",
+                "comments": [],
+                "evidence": thread_evidence,
+            },
+        )
+        comment_id = f"{thread_id}:comment:{_slug(comment.get('comment_id') or index)}"
+        comment_evidence = _evidence(evidence, platform, url, captured_at, f"comment:{comment_id}", raw_ref)
+        thread["comments"].append(
+            {
+                "comment_id": comment_id,
+                "thread_id": thread_id,
+                "author_label": comment.get("author") or "visible user",
+                "posted_at": comment.get("created_at") or captured_at,
+                "text": comment.get("text") or "",
+                "evidence": comment_evidence,
+            }
+        )
+    return list(threads.values())
 
 
 def _lessons_from_index(course_page: dict[str, Any], snapshot: object) -> list[dict[str, object]]:

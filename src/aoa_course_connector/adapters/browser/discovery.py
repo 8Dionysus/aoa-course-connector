@@ -10,6 +10,7 @@ from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
 
 
 COURSE_KINDS = {"course", "course_index", "training", "program", "catalog_course"}
+PAGINATION_KINDS = {"next", "next-page", "pagination", "pagination-next"}
 COURSE_URL_HINTS = (
     "teach/control/stream",
     "/pl/teach/control",
@@ -43,9 +44,13 @@ def build_browser_catalog_discovery(
     source = dict(raw.get("source") or {})
     pages = [page for page in raw.get("pages", []) if isinstance(page, dict)]
     discovered: list[dict[str, object]] = []
+    pagination_links: list[dict[str, object]] = []
     seen: set[str] = set()
     for page in pages:
         page_url = str(page.get("url") or source.get("source_ref") or "")
+        snapshot = parse_html_snapshot(str(page.get("html") or ""), page_url)
+        for link in snapshot.pagination_links:
+            pagination_links.append({"page_url": page_url, "href": link.get("href"), "text": link.get("text")})
         links = discover_course_links(
             str(page.get("html") or ""),
             page_url,
@@ -82,6 +87,11 @@ def build_browser_catalog_discovery(
         "platform": resolved_platform,
         "source_ref": source.get("source_ref") or "",
         "captured_at": captured_at,
+        "page_count": len(pages),
+        "pagination": {
+            "next_link_count": len(pagination_links),
+            "next_links": pagination_links,
+        },
         "course_count": len(discovered),
         "courses": discovered,
     }
@@ -128,6 +138,10 @@ def is_course_link(link: dict[str, str], *, platform: str | None = None, link_pa
     if link_pattern:
         return fnmatch(href, link_pattern)
     kind = str(link.get("kind") or "").casefold()
+    rel = str(link.get("rel") or "").casefold().split()
+    text = str(link.get("text") or "").casefold()
+    if kind in PAGINATION_KINDS or "next" in rel or text in {"next", "next page", "more"}:
+        return False
     if kind in COURSE_KINDS:
         return True
     lowered = href.casefold()

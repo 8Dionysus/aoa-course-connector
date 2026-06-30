@@ -55,6 +55,8 @@ the optional Playwright browser extra. The `discover` route finds visible course
 entrypoints and can register them as local sources. The `crawl` route starts
 from a course index and expands visible lesson links into a course-tree
 snapshot. The `sync` route runs configured sources and records checkpoints.
+Browser fixtures also prove visible progress/status, discussion comments, and
+paginated catalog receipts flow into answer packets, indexes, and graphs.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
@@ -73,6 +75,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
 
 PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture
@@ -89,8 +92,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugr
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Working browser-session discovery, source sync checkpoints, snapshot, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Skillspace | Working browser-session discovery, source sync checkpoints, snapshot, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| GetCourse | Working browser-session discovery with paginated fixture receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| Skillspace | Working browser-session discovery with paginated fixture receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Stepik | Working clean API reference adapter |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
@@ -122,6 +125,7 @@ local artifacts used by the CLI:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 ```
 

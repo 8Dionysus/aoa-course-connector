@@ -33,14 +33,18 @@ This proves:
   MCP status, and evals.
 - GetCourse and Skillspace bounded course-tree crawlers through fixtures,
   snapshot input, optional Playwright live traversal, and answer evals.
+- GetCourse and Skillspace visible progress/status and comments through browser
+  fixtures, answer packets, index docs, graph edges, MCP context, and evals.
+- GetCourse and Skillspace paginated catalog fixture receipts with page-count
+  and next-link evidence in discovery output.
 
 ## Remaining Goal Work
 
 The next layer is live connected-source work:
 
-- GetCourse pagination, progress, and visible comment extraction
-  beyond bounded account catalog and course-index crawl;
-- Skillspace pagination, progress, and visible comment extraction
-  beyond bounded account catalog and course-index crawl;
+- automatic GetCourse/Skillspace live next-page following beyond fixture and
+  operator-snapshot pagination receipts;
+- broader live selector coverage for real GetCourse and Skillspace themes where
+  progress and comment blocks are not annotated like fixtures;
 - broader Stepik sync coverage beyond bounded smoke slices;
 - richer live smoke routes gated away from CI secrets.

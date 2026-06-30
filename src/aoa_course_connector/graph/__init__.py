@@ -24,6 +24,12 @@ def build_graph(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
         course_id = str(course["course_id"])
         nodes[course_id] = _node(course_id, "course", course.get("title"), [str(course.get("url") or "")])
         _edge(edges, "source_contains_course", source_id, course_id, course.get("url"), 1.0)
+        progress = course.get("progress")
+        if isinstance(progress, dict):
+            progress_id = str(progress.get("progress_id") or f"{course_id}:progress")
+            progress_label = " ".join(str(progress.get(key) or "") for key in ["state", "percent", "label"]).strip()
+            nodes[progress_id] = _node(progress_id, "progress", progress_label or progress_id, [str(course.get("url") or "")])
+            _edge(edges, "course_has_progress", course_id, progress_id, course.get("url"), 0.9)
         for module in course.get("modules", []):
             if not isinstance(module, dict):
                 continue
@@ -52,6 +58,16 @@ def build_graph(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
                         transcript_id = str(transcript["transcript_id"])
                         nodes[transcript_id] = _node(transcript_id, "transcript", transcript.get("language") or transcript_id, [lesson_url])
                         _edge(edges, "lesson_has_transcript", lesson_id, transcript_id, lesson_url, 0.9)
+                for thread in lesson.get("comment_threads", []):
+                    if isinstance(thread, dict):
+                        thread_id = str(thread["thread_id"])
+                        nodes[thread_id] = _node(thread_id, "comment_thread", thread.get("title") or thread_id, [lesson_url])
+                        _edge(edges, "lesson_has_comment_thread", lesson_id, thread_id, lesson_url, 0.8)
+                        for comment in thread.get("comments", []):
+                            if isinstance(comment, dict):
+                                comment_id = str(comment["comment_id"])
+                                nodes[comment_id] = _node(comment_id, "comment", str(comment.get("text") or "")[:80], [lesson_url])
+                                _edge(edges, "thread_has_comment", thread_id, comment_id, lesson_url, 0.8)
                 for topic in lesson.get("topics", []):
                     topic_id = f"topic:{str(topic).casefold()}"
                     nodes.setdefault(topic_id, _node(topic_id, "topic", topic, [lesson_url]))

@@ -55,6 +55,11 @@ def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
         assert answer["evidence_chain"]
     eval_result = run_cli(tmp_path, "eval", "browser-hard-adapters")
     assert eval_result["status"] == "ok"
+    progress_comments_eval = run_cli(tmp_path, "eval", "browser-progress-comments")
+    assert progress_comments_eval["status"] == "ok"
+    mcp_context = run_cli(tmp_path, "mcp", "call", "lesson_context", '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}')
+    assert mcp_context["result"]["answer_packet"]["result_count"] >= 1
+    assert mcp_context["result"]["answer_packet"]["evidence_chain"]
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
@@ -86,10 +91,12 @@ def test_cli_browser_account_discovery_registers_sources(tmp_path: Path) -> None
             f"{platform}-browser-discovery-fixture",
             "--register",
         )
-        assert receipt["course_count"] == 2
-        assert len(receipt["registered_sources"]) == 2
+        assert receipt["course_count"] == 3
+        assert receipt["page_count"] == 2
+        assert receipt["pagination"]["next_link_count"] == 1
+        assert len(receipt["registered_sources"]) == 3
     registry = run_cli(tmp_path, "sources", "list")["registry"]
-    assert len(registry["sources"]) == 4
+    assert len(registry["sources"]) == 6
     eval_result = run_cli(tmp_path, "eval", "browser-discovery")
     assert eval_result["status"] == "ok"
 
@@ -108,10 +115,10 @@ def test_cli_browser_source_sync_checkpoint_flow(tmp_path: Path) -> None:
         )
     receipt = run_cli(tmp_path, "sync", "browser-fixture", "--run", "browser-sync-fixture", "--build-artifacts")
     assert receipt["status"] == "ok"
-    assert receipt["synced_count"] == 4
+    assert receipt["synced_count"] == 6
     status = run_cli(tmp_path, "sync", "status", "--run", "browser-sync-fixture")
-    assert status["ok_count"] == 4
+    assert status["ok_count"] == 6
     eval_result = run_cli(tmp_path, "eval", "browser-sync")
     assert eval_result["status"] == "ok"
     mcp_status = run_cli(tmp_path, "mcp", "call", "sync_status", '{"sync_run":"browser-sync-fixture"}')
-    assert mcp_status["result"]["sync"]["ok_count"] == 4
+    assert mcp_status["result"]["sync"]["ok_count"] == 6

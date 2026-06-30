@@ -1,0 +1,34 @@
+{
+  "schema": "aoa_course_answer_eval_suite_v1",
+  "suite_id": "browser-progress-comments-answer-packets",
+  "cases": [
+    {
+      "query": "mentor anti-rollback vendor boot",
+      "run": "getcourse-browser-fixture",
+      "must_contain_terms": ["mentor", "anti-rollback", "vendor", "boot"],
+      "must_have_kind": "comment",
+      "must_have_evidence": true
+    },
+    {
+      "query": "2 of 4 lessons completed in_progress",
+      "run": "getcourse-browser-fixture",
+      "must_contain_terms": ["2", "completed", "in_progress"],
+      "must_have_kind": "progress",
+      "must_have_evidence": true
+    },
+    {
+      "query": "timestamp window reproduction step",
+      "run": "skillspace-browser-fixture",
+      "must_contain_terms": ["timestamp", "reproduction", "mentor"],
+      "must_have_kind": "comment",
+      "must_have_evidence": true
+    },
+    {
+      "query": "75 percent reviewed",
+      "run": "skillspace-browser-fixture",
+      "must_contain_terms": ["75", "reviewed"],
+      "must_have_kind": "progress",
+      "must_have_evidence": true
+    }
+  ]
+}

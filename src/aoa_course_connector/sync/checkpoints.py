@@ -25,8 +25,15 @@ def upsert_checkpoint(roots: StorageRoots, checkpoint: dict[str, object]) -> dic
     data = load_checkpoint_store(roots)
     checkpoints = [item for item in data.get("checkpoints", []) if isinstance(item, dict)]
     checkpoint_id = str(checkpoint["checkpoint_id"])
+    checkpoint_sync_run_id = str(checkpoint.get("sync_run_id") or "")
+    checkpoint_source_id = str(checkpoint.get("source_id") or "")
     for index, existing in enumerate(checkpoints):
-        if existing.get("checkpoint_id") == checkpoint_id:
+        existing_matches_checkpoint = existing.get("checkpoint_id") == checkpoint_id
+        existing_matches_run_source = (
+            str(existing.get("sync_run_id") or "") == checkpoint_sync_run_id
+            and str(existing.get("source_id") or "") == checkpoint_source_id
+        )
+        if existing_matches_checkpoint or existing_matches_run_source:
             checkpoints[index] = {**existing, **checkpoint}
             break
     else:
@@ -58,7 +65,7 @@ def make_checkpoint(
     source_id = str(source.get("source_id") or "")
     return {
         "schema": "aoa_course_sync_checkpoint_v1",
-        "checkpoint_id": f"checkpoint:{source_id}",
+        "checkpoint_id": f"checkpoint:{sync_run_id}:{source_id}",
         "source_id": source_id,
         "platform": str(source.get("platform") or ""),
         "source_ref": str(source.get("source_ref") or ""),

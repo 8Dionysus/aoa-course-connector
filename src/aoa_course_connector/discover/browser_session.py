@@ -181,6 +181,8 @@ def _receipt_from_raw(
         "platform": platform,
         "source_mode": source_mode,
         "raw_path": str(raw_path),
+        "page_count": discovery.get("page_count", 0),
+        "pagination": discovery.get("pagination", {}),
         "course_count": discovery["course_count"],
         "courses": discovery["courses"],
         "registered_sources": registered,

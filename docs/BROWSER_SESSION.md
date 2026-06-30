@@ -46,6 +46,12 @@ aoa-course eval browser-discovery
 under `AOA_COURSE_DATA_ROOT`. Without `--register`, discovery is read-only and
 emits a receipt only.
 
+Fixture and snapshot discovery receipts include `page_count` plus pagination
+metadata such as `pagination.next_link_count`. This proves paginated catalog
+captures can be represented without committing private account pages. Live
+discovery currently captures the visible starting page; automatic next-page
+following is still a later live robustness layer.
+
 ## Source Sync Proof
 
 After discovery has registered sources, run a source-driven sync:
@@ -84,6 +90,29 @@ link metadata, matches already captured lesson pages by URL, and creates
 `discovered_not_fetched` placeholders only when a linked lesson page is absent
 from the snapshot.
 
+## Progress And Comments Proof
+
+Browser snapshots extract visible progress/status blocks and visible discussion
+comments when the page exposes them in accessible HTML. The normalized bundle
+keeps progress evidence at the course level and discussion evidence under the
+lesson. The keyword index includes both as searchable knowledge items, and the
+graph includes `course_has_progress`, `lesson_has_comment_thread`, and
+`thread_has_comment` edges.
+
+```bash
+aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
+aoa-course build-index --run getcourse-browser-fixture
+aoa-course build-graph --run getcourse-browser-fixture
+aoa-course answer "mentor anti-rollback vendor boot" --run getcourse-browser-fixture
+
+aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
+aoa-course build-index --run skillspace-browser-fixture
+aoa-course build-graph --run skillspace-browser-fixture
+aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
+
+aoa-course eval browser-progress-comments
+```
+
 ## Snapshot Route
 
 ```bash
@@ -94,7 +123,9 @@ aoa-course crawl browser-snapshot /path/to/snapshot.json --platform getcourse --
 
 Snapshot files use `aoa_course_browser_snapshot_v1` and should be stored outside
 Git. They contain page URLs, titles, captured timestamps, and HTML from pages the
-connected account can legitimately view.
+connected account can legitimately view. Operator snapshots may include multiple
+catalog pages when the account has paginated course lists; the connector records
+pagination evidence in the discovery receipt.
 
 ## Live Route
 

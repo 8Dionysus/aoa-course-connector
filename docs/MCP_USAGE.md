@@ -17,5 +17,6 @@ CLI smoke:
 ```bash
 aoa-course mcp tools
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 ```

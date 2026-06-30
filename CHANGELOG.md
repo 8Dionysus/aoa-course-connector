@@ -13,9 +13,14 @@
   source registry with fixture, snapshot, live Playwright CLI routes, and evals.
 - Added source-registry driven browser sync with `SyncCheckpoint` records,
   `sync status`, MCP `sync_status`, and optional per-source index/graph builds.
+- Hardened sync checkpoint identity so repeated sync runs for the same source
+  keep per-run history instead of overwriting each other.
 - Hardened browser catalog discovery so course slugs containing words like
   `lesson` or `task` are not rejected as non-course pages.
 - Added bounded GetCourse/Skillspace course-tree crawl routes with fixture,
   snapshot, live Playwright CLI commands, CI smoke checks, and answer evals.
 - Hardened browser asset metadata extraction for unannotated file links and
   Stepik live step block resolution for richer source-backed text.
+- Added browser-session progress/status extraction, visible comment indexing,
+  comment/progress graph edges, paginated catalog receipts, MCP context smoke,
+  and `browser-progress-comments` eval coverage.

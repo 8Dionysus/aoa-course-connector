@@ -16,7 +16,7 @@
       "kind": "course_index",
       "url": "https://academy.example/course/mobile-debugging",
       "title": "Skillspace Browser Fixture",
-      "html": "<html><head><title>Skillspace Browser Fixture</title></head><body><main><h1>Skillspace Browser Fixture</h1><h2 data-aoa-module=\"Mobile Debugging\">Mobile Debugging</h2><a data-aoa-kind=\"lesson\" data-aoa-module=\"Mobile Debugging\" href=\"/course/mobile-debugging/lesson/logcat\">Logcat lesson</a><a data-aoa-kind=\"lesson\" data-aoa-module=\"Mobile Debugging\" href=\"/course/mobile-debugging/lesson/bugreport\">Bugreport lesson</a></main></body></html>"
+      "html": "<html><head><title>Skillspace Browser Fixture</title></head><body><main><h1>Skillspace Browser Fixture</h1><div data-aoa-kind=\"progress\" data-aoa-progress-state=\"review\" data-aoa-progress-percent=\"75\">Debugging course is 75 percent reviewed</div><h2 data-aoa-module=\"Mobile Debugging\">Mobile Debugging</h2><a data-aoa-kind=\"lesson\" data-aoa-module=\"Mobile Debugging\" href=\"/course/mobile-debugging/lesson/logcat\">Logcat lesson</a><a data-aoa-kind=\"lesson\" data-aoa-module=\"Mobile Debugging\" href=\"/course/mobile-debugging/lesson/bugreport\">Bugreport lesson</a></main></body></html>"
     },
     {
       "page_id": "ss-lesson-logcat",
@@ -25,7 +25,7 @@
       "url": "https://academy.example/course/mobile-debugging/lesson/logcat",
       "title": "Logcat lesson",
       "order": 1,
-      "html": "<article><h1>Logcat lesson</h1><p>Skillspace lesson text should be indexed with the course path. Logcat traces need device model, build fingerprint, timestamp, and reproduction steps.</p><a data-aoa-kind=\"asset\" href=\"https://academy.example/assets/logcat-template.txt\" title=\"Logcat template\">Logcat template</a></article>"
+      "html": "<article><h1>Logcat lesson</h1><p>Skillspace lesson text should be indexed with the course path. Logcat traces need device model, build fingerprint, timestamp, and reproduction steps.</p><a data-aoa-kind=\"asset\" href=\"https://academy.example/assets/logcat-template.txt\" title=\"Logcat template\">Logcat template</a><section data-aoa-kind=\"comment-thread\" data-aoa-thread-id=\"debugging-discussion\"><p data-aoa-kind=\"comment\" data-aoa-thread-id=\"debugging-discussion\" data-aoa-comment-id=\"ss-comment-1\" data-aoa-author=\"mentor\">Mentor note: attach the logcat timestamp window to every reproduction step.</p></section></article>"
     },
     {
       "page_id": "ss-lesson-bugreport",

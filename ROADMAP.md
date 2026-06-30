@@ -14,15 +14,17 @@
   index/graph builds and MCP status.
 - Prove bounded GetCourse and Skillspace course-tree crawling from safe browser
   fixtures and optional live Playwright auth state.
+- Prove visible browser-session progress/status, comments, and paginated catalog
+  receipt metadata from safe GetCourse and Skillspace fixtures.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 
 ## Next
 
-- Expand GetCourse browser-session discovery/crawl/sync from bounded catalog and
-  course-index traversal to pagination, progress, and visible comments.
-- Expand Skillspace browser-session discovery/crawl/sync from bounded catalog
-  and course-index traversal to pagination, progress, and visible comments.
+- Expand GetCourse and Skillspace live discovery from one captured page to
+  bounded next-page following with checkpointed pagination receipts.
+- Broaden GetCourse and Skillspace live DOM selectors for unannotated progress,
+  status, comments, and discussion blocks across real account themes.
 - Expand Stepik adapter from bounded smoke slices to robust pagination and
   authenticated account scopes.
 - Add semantic/vector index behind the stable keyword index contract.
