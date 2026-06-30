@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 
-PLATFORMS = {"getcourse", "skillspace", "stepik", "moodle", "canvas", "teachable", "thinkific", "kajabi", "offline_export"}
+PLATFORMS = {"getcourse", "skillspace", "stepik", "moodle", "canvas", "coursera", "teachable", "thinkific", "kajabi", "offline_export"}
 ACCESS_MODES = {"browser_session", "api_token", "oauth", "offline_export", "public_api"}
 
 
@@ -57,7 +57,7 @@ def upsert_source(data_root: Path, platform: str, source_ref: str, title: str | 
 
 
 def _default_access(platform: str) -> str:
-    if platform in {"getcourse", "skillspace", "teachable", "thinkific", "kajabi"}:
+    if platform in {"getcourse", "skillspace", "coursera", "teachable", "thinkific", "kajabi"}:
         return "browser_session"
     if platform == "stepik":
         return "public_api"

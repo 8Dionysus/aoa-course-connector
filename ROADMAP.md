@@ -99,7 +99,7 @@
 
 ## Later
 
-- Add Moodle, Canvas, Teachable, Thinkific, Kajabi, and Coursera adapters.
+- Add Moodle, Canvas, Coursera, Teachable, Thinkific, and Kajabi adapters.
 - Broaden transcript/caption extraction beyond WebVTT/SRT sidecars and visible
   browser-session blocks.
 - Add richer eval suites for answer quality, freshness, and evidence coverage.

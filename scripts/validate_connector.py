@@ -307,6 +307,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
     status_raw = (repo_root / "src" / "aoa_course_connector" / "status.py").read_text(encoding="utf-8")
     bootstrap_raw = (repo_root / "src" / "aoa_course_connector" / "bootstrap.py").read_text(encoding="utf-8")
+    adapters_raw = (repo_root / "src" / "aoa_course_connector" / "adapters" / "__init__.py").read_text(encoding="utf-8").casefold()
+    sources_raw = (repo_root / "src" / "aoa_course_connector" / "sources.py").read_text(encoding="utf-8").casefold()
+    manifest_raw = (repo_root / "connector" / "manifests" / "connector_manifest.yaml").read_text(encoding="utf-8").casefold()
+    architecture_doc = (repo_root / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8").casefold()
+    clean_api_doc = (repo_root / "docs" / "CLEAN_API_ADAPTERS.md").read_text(encoding="utf-8").casefold()
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
@@ -351,9 +356,21 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status", "mcp call ingest_status"]:
         if token not in agents:
             errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
-    for token in ["getcourse", "skillspace", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
+    for token in ["getcourse", "skillspace", "coursera", "teachable", "thinkific", "kajabi", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
         if token not in source_policy:
             errors.append(f"source policy missing boundary token: {token}")
+    for token in ["getcourse", "skillspace", "stepik", "moodle", "canvas", "coursera", "teachable", "thinkific", "kajabi"]:
+        if token not in adapters_raw:
+            errors.append(f"adapter registry missing goal platform: {token}")
+        if token not in sources_raw:
+            errors.append(f"source registry platform set missing goal platform: {token}")
+        if token not in manifest_raw:
+            errors.append(f"connector manifest missing goal platform: {token}")
+    for token in ["coursera", "teachable", "thinkific", "kajabi", "future platform"]:
+        if token not in architecture_doc:
+            errors.append(f"Architecture doc missing future platform topology token: {token}")
+        if token not in clean_api_doc:
+            errors.append(f"Clean API adapter doc missing future platform topology token: {token}")
     for var in ["AOA_COURSE_DATA_ROOT", "AOA_COURSE_CACHE_ROOT", "AOA_COURSE_AUTH_ROOT", "AOA_COURSE_ARTIFACT_ROOT"]:
         if var not in storage_policy:
             errors.append(f"storage policy missing variable: {var}")

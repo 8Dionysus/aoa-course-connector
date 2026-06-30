@@ -9,6 +9,12 @@ maps naturally to:
 Moodle and Canvas are strong follow-up adapters because their course module APIs
 can return course contents and files through official LMS routes.
 
+Coursera, Teachable, Thinkific, and Kajabi are tracked as future platform
+adapters in the machine-readable adapter registry. They are not working
+ingestion routes yet; their role is to keep the source/auth/normalization ports
+wide enough for API, OAuth, browser-session, or export-based implementations
+without rewriting the core course model.
+
 See `docs/STEPIK.md` for the fixture route, bounded live API smoke,
 account-level source discovery, source-registry sync route, Stepik smoke
 reports, and operator-selected full-course route with Stepik `ids[]` batching

@@ -15,6 +15,11 @@ reference_adapters:
   - stepik
   - moodle
   - canvas
+future_adapters:
+  - coursera
+  - teachable
+  - thinkific
+  - kajabi
 storage_roots:
   - AOA_COURSE_DATA_ROOT
   - AOA_COURSE_CACHE_ROOT
