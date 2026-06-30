@@ -31,15 +31,25 @@ The starter path creates:
 - an answer packet with source-backed evidence.
 - answer packets with source-backed evidence.
 
-The retrieval loop also exposes a base relevance `score` and a
-freshness/provenance adjusted `rank_score`. To prove current evidence wins over
-stale evidence when relevance is tied:
+The retrieval loop also exposes a base relevance `score`,
+`authority_tier`, and a freshness/authority/provenance adjusted `rank_score`.
+To prove current evidence wins over stale evidence when relevance is tied:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run freshness-ranking-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run freshness-ranking-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval freshness-ranking
+```
+
+To prove higher-authority evidence wins over lower-authority evidence when
+relevance is tied:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run authority-ranking-fixture --fixture connector/fixtures/course/authority_conflict_course.json
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run authority-ranking-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run authority-ranking-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval authority-ranking
 ```
 
 ## Stepik Clean API Proof

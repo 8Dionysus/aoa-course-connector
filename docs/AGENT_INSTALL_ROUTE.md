@@ -27,13 +27,16 @@
     freshness, snippet, and evidence-field quality.
 14. Run the freshness conflict fixture and `eval freshness-ranking` to prove
     current material ranks above stale material when base relevance is tied.
-15. Before live browser sources, run `auth plan-browser-state`, capture the
+15. Run the authority conflict fixture and `eval authority-ranking` to prove
+    official lessons and mentor comments rank above learner comments when base
+    relevance is tied.
+16. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-16. Run `preflight live --platform getcourse` or
+17. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-17. Confirm browser preflight marks only sources whose host matches the saved
+18. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-18. Add live sources only after auth-state and storage roots are local and
+19. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

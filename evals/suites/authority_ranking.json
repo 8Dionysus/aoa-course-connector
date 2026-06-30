@@ -1,0 +1,35 @@
+{
+  "schema": "aoa_course_authority_ranking_eval_suite_v1",
+  "suite_id": "authority-ranking",
+  "cases": [
+    {
+      "query": "driver signing rollback policy",
+      "run": "authority-ranking-fixture",
+      "mode": "keyword",
+      "limit": 2,
+      "min_results": 2,
+      "expected_top_doc_id": "step:step:authority:official-policy",
+      "expected_top_authority_tier": "official_lesson",
+      "preferred_doc_id": "step:step:authority:official-policy",
+      "lower_authority_doc_id": "comment:comment:authority:learner-policy",
+      "expect_equal_relevance_score": true,
+      "expect_preferred_ranked_above_lower": true,
+      "required_rank_features": ["authority_tier", "authority_boost", "freshness_state", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    },
+    {
+      "query": "diagnostic logcat capture sequence",
+      "run": "authority-ranking-fixture",
+      "mode": "hybrid",
+      "limit": 2,
+      "min_results": 2,
+      "expected_top_doc_id": "comment:comment:authority:mentor-diagnostics",
+      "expected_top_authority_tier": "mentor_comment",
+      "preferred_doc_id": "comment:comment:authority:mentor-diagnostics",
+      "lower_authority_doc_id": "comment:comment:authority:learner-diagnostics",
+      "expect_preferred_ranked_above_lower": true,
+      "required_rank_features": ["authority_tier", "authority_boost", "freshness_state", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    }
+  ]
+}

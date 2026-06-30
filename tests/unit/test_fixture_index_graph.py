@@ -69,3 +69,33 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     hybrid = query_hybrid_index(storage, "firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
     assert hybrid[0]["doc_id"] == "step:step:freshness:zzz-current-policy"
     assert hybrid[0]["rank_score"] > hybrid[1]["rank_score"]
+
+
+def test_authority_ranking_prefers_official_and_mentor_sources_when_relevance_ties(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(
+        storage,
+        run_id="authority-ranking-fixture",
+        fixture=REPO_ROOT / "connector" / "fixtures" / "course" / "authority_conflict_course.json",
+    )
+    build_keyword_index(storage, run_id="authority-ranking-fixture")
+    build_semantic_index(storage, run_id="authority-ranking-fixture")
+
+    official = query_keyword_index(storage, "driver signing rollback policy", run_id="authority-ranking-fixture", limit=2)
+    assert [result["doc_id"] for result in official] == [
+        "step:step:authority:official-policy",
+        "comment:comment:authority:learner-policy",
+    ]
+    assert official[0]["score"] == official[1]["score"]
+    assert official[0]["rank_features"]["authority_tier"] == "official_lesson"
+    assert official[1]["rank_features"]["authority_tier"] == "learner_comment"
+    assert official[0]["rank_score"] > official[1]["rank_score"]
+
+    mentor = query_hybrid_index(storage, "diagnostic logcat capture sequence", run_id="authority-ranking-fixture", limit=2)
+    assert [result["doc_id"] for result in mentor] == [
+        "comment:comment:authority:mentor-diagnostics",
+        "comment:comment:authority:learner-diagnostics",
+    ]
+    assert mentor[0]["rank_features"]["authority_tier"] == "mentor_comment"
+    assert mentor[1]["rank_features"]["authority_tier"] == "learner_comment"
+    assert mentor[0]["rank_score"] > mentor[1]["rank_score"]

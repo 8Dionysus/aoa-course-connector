@@ -70,6 +70,10 @@ This proves:
 - Freshness-aware result ranking with visible `rank_score`/`rank_features` and
   a conflict fixture proving current source-backed material beats stale material
   when base relevance is tied.
+- Authority-aware result ranking with visible `authority_tier`,
+  `authority_boost`, `rank_score`, and a conflict fixture proving official
+  lesson text and mentor comments beat learner comments when base relevance is
+  tied.
 
 ## Remaining Goal Work
 
@@ -87,6 +91,6 @@ The next layer is live connected-source work:
   `preflight live --platform stepik` confirms token/source readiness;
 - external embedding provider integration behind the existing semantic index
   contract;
-- richer authority tiers from adapter/source metadata, beyond the current
-  freshness/provenance ranking factors;
+- live-calibrated authority tiers from adapter/source metadata, beyond the
+  current fixture-proven official/mentor/learner/transcript/asset tiers;
 - richer live smoke routes gated away from CI secrets.

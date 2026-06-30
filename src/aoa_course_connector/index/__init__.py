@@ -66,6 +66,7 @@ def build_semantic_index(roots: StorageRoots, run_id: str = "starter-fixture", *
             "title_path_tokens": True,
             "adjacent_bigrams": True,
             "kind_platform_features": True,
+            "authority_tier_features": True,
             "normalized_sparse_vectors": True,
         },
         "doc_count": len(docs),
@@ -132,23 +133,23 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
                 lesson_evidence = lesson.get("evidence", {}) if isinstance(lesson.get("evidence"), dict) else {}
                 for step in lesson.get("steps", []):
                     if isinstance(step, dict):
-                        docs.append(_doc("step", step.get("step_id"), step.get("text"), course, module, lesson, lesson_path, step.get("evidence") or lesson_evidence))
+                        docs.append(_doc("step", step.get("step_id"), step.get("text"), course, module, lesson, lesson_path, step.get("evidence") or lesson_evidence, step))
                 for transcript in lesson.get("transcripts", []):
                     if isinstance(transcript, dict):
-                        docs.append(_doc("transcript", transcript.get("transcript_id"), transcript.get("text"), course, module, lesson, lesson_path, transcript.get("evidence") or lesson_evidence))
+                        docs.append(_doc("transcript", transcript.get("transcript_id"), transcript.get("text"), course, module, lesson, lesson_path, transcript.get("evidence") or lesson_evidence, transcript))
                 for assignment in lesson.get("assignments", []):
                     if isinstance(assignment, dict):
-                        docs.append(_doc("assignment", assignment.get("assignment_id"), assignment.get("prompt"), course, module, lesson, lesson_path, assignment.get("evidence") or lesson_evidence))
+                        docs.append(_doc("assignment", assignment.get("assignment_id"), assignment.get("prompt"), course, module, lesson, lesson_path, assignment.get("evidence") or lesson_evidence, assignment))
                 for thread in lesson.get("comment_threads", []):
                     if not isinstance(thread, dict):
                         continue
                     for comment in thread.get("comments", []):
                         if isinstance(comment, dict):
-                            docs.append(_doc("comment", comment.get("comment_id"), comment.get("text"), course, module, lesson, lesson_path, comment.get("evidence") or lesson_evidence))
+                            docs.append(_doc("comment", comment.get("comment_id"), comment.get("text"), course, module, lesson, lesson_path, comment.get("evidence") or lesson_evidence, comment))
                 for asset in lesson.get("assets", []):
                     if isinstance(asset, dict):
                         text = f"{asset.get('title', '')} {asset.get('kind', '')} {asset.get('download_state', '')}"
-                        docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, lesson_path, asset.get("evidence") or lesson_evidence))
+                        docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, lesson_path, asset.get("evidence") or lesson_evidence, asset))
     return docs
 
 
@@ -165,7 +166,7 @@ def _semantic_features_for_doc(doc: dict[str, object]) -> list[tuple[str, float]
     )
     path_text = " ".join(str(item) for item in doc.get("path", []) if item) if isinstance(doc.get("path"), list) else ""
     features.extend(_weighted_text_features(f"{title_path_text} {path_text}", weight=1.6))
-    for key in ["kind", "platform"]:
+    for key in ["kind", "platform", "authority_tier"]:
         value = str(doc.get(key) or "").casefold()
         if value:
             features.append((f"{key}:{value}", 2.0))
@@ -224,14 +225,27 @@ def _course_doc(kind: str, item_id: object, text: object, course: dict[str, obje
         "tokens": len(tokenize(str(text or ""))),
         "platform": course.get("platform"),
         "freshness_state": "current",
+        "authority_tier": "progress_metadata",
+        "authority_label": "",
         "source_url": evidence_dict.get("source_url") or course.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),
     }
 
 
-def _doc(kind: str, item_id: object, text: object, course: dict[str, object], module: dict[str, object], lesson: dict[str, object], path: list[str], evidence: object) -> dict[str, object]:
+def _doc(
+    kind: str,
+    item_id: object,
+    text: object,
+    course: dict[str, object],
+    module: dict[str, object],
+    lesson: dict[str, object],
+    path: list[str],
+    evidence: object,
+    source_item: dict[str, object] | None = None,
+) -> dict[str, object]:
     evidence_dict = evidence if isinstance(evidence, dict) else {}
+    item = source_item or {}
     doc_id = f"{kind}:{item_id}"
     return {
         "doc_id": doc_id,
@@ -249,10 +263,35 @@ def _doc(kind: str, item_id: object, text: object, course: dict[str, object], mo
         "tokens": len(tokenize(str(text or ""))),
         "platform": course.get("platform"),
         "freshness_state": lesson.get("freshness_state", "unknown"),
+        "authority_tier": _authority_tier(kind, item),
+        "authority_label": str(item.get("author_label") or item.get("role") or ""),
         "source_url": evidence_dict.get("source_url") or lesson.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),
     }
+
+
+def _authority_tier(kind: str, item: dict[str, object]) -> str:
+    if kind == "step":
+        return "official_lesson"
+    if kind == "assignment":
+        return "official_assignment"
+    if kind == "transcript":
+        return "transcript"
+    if kind == "asset":
+        return "asset_metadata"
+    if kind == "progress":
+        return "progress_metadata"
+    if kind == "comment":
+        label = str(item.get("author_label") or item.get("role") or "").casefold()
+        if any(token in label for token in ["instructor", "teacher", "coach", "admin", "staff"]):
+            return "instructor_comment"
+        if any(token in label for token in ["mentor", "tutor"]):
+            return "mentor_comment"
+        if any(token in label for token in ["learner", "student", "member", "user"]):
+            return "learner_comment"
+        return "discussion_comment"
+    return "unknown"
 
 
 def _now() -> str:
