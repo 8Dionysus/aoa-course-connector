@@ -990,6 +990,8 @@ def _query_handoff_entry(
     semantic_ready = bool(paths.get("semantic_index_path"))
     graph_ready = bool(paths.get("graph_path"))
     status_ready = status in {"ok", "ready"}
+    semantic_query_ready = status_ready and semantic_ready
+    answer_mode = "hybrid" if semantic_query_ready else "keyword"
     answer_ready = status_ready and bool(paths.get("answer_path")) and result_count > 0 and evidence_count > 0
     return {
         "kind": kind,
@@ -1001,7 +1003,7 @@ def _query_handoff_entry(
         "title": title,
         "query": query,
         "query_ready": status_ready and index_ready,
-        "semantic_query_ready": status_ready and semantic_ready,
+        "semantic_query_ready": semantic_query_ready,
         "graph_ready": status_ready and graph_ready,
         "answer_ready": answer_ready,
         "answer_result_count": result_count,
@@ -1009,7 +1011,7 @@ def _query_handoff_entry(
         "paths": paths,
         "commands": {
             "query": f"aoa-course query {shlex.quote(query_text)} --run {shlex.quote(run_id)}",
-            "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode hybrid",
+            "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {answer_mode}",
             "graph": f"aoa-course build-graph --run {shlex.quote(run_id)}",
         },
     }

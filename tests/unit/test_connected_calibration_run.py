@@ -39,12 +39,17 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert receipt["query_handoff"]["ready"] is True
     assert receipt["query_handoff"]["entry_count"] >= 3
     smoke_entries = [entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "smoke"]
+    sync_entries = [entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "sync"]
     assert {entry["platform"] for entry in smoke_entries} == {"getcourse", "skillspace", "stepik"}
     assert all(entry["query_ready"] is True for entry in smoke_entries)
     assert all(entry["semantic_query_ready"] is True for entry in smoke_entries)
     assert all(entry["graph_ready"] is True for entry in smoke_entries)
     assert all(entry["answer_ready"] is True for entry in smoke_entries)
     assert all(entry["commands"]["answer"].startswith("aoa-course answer ") for entry in smoke_entries)
+    assert all("--mode hybrid" in entry["commands"]["answer"] for entry in smoke_entries)
+    assert sync_entries
+    assert all(entry["semantic_query_ready"] is False for entry in sync_entries)
+    assert all("--mode keyword" in entry["commands"]["answer"] for entry in sync_entries)
     assert Path(str(receipt["artifacts"]["packet_path"])).is_file()
     assert Path(str(receipt["artifacts"]["intake_path"])).is_file()
     assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
