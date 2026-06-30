@@ -5,11 +5,13 @@ from __future__ import annotations
 
 import json
 import re
+import shlex
 import sys
 from pathlib import Path
 
 
 BOOTSTRAP_FIXTURE_INSTALL_COMMAND = "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration"
+PLATFORM_NARROWED_BOOTSTRAP_ERROR = "Agent install route must not narrow fixture bootstrap handoff with --platform"
 COMMAND_SPAN_RE = re.compile(r"`([^`\n]+)`")
 
 REQUIRED_FILES = [
@@ -208,14 +210,27 @@ def _has_exact_documented_command(text: str, command: str) -> bool:
     return command in _documented_commands(text)
 
 
+def _command_tokens(command: str) -> list[str]:
+    try:
+        return shlex.split(command)
+    except ValueError:
+        return command.split()
+
+
+def _is_fixture_bootstrap_command(command: str) -> bool:
+    tokens = _command_tokens(command)
+    return tokens[:3] == ["aoa-course", "bootstrap", "fixture"]
+
+
 def _check_agent_install_route_commands(agent_install_raw: str, errors: list[str]) -> None:
     if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
         errors.append("Agent install route missing connector readiness audit handoff")
     if not _has_exact_documented_command(agent_install_raw, BOOTSTRAP_FIXTURE_INSTALL_COMMAND):
         errors.append("Agent install route missing exact fixture bootstrap handoff")
     for command in _documented_commands(agent_install_raw):
-        if command.startswith(BOOTSTRAP_FIXTURE_INSTALL_COMMAND) and " --platform" in command:
-            errors.append("Agent install route must not narrow fixture bootstrap handoff with --platform")
+        if _is_fixture_bootstrap_command(command) and "--platform" in _command_tokens(command):
+            if PLATFORM_NARROWED_BOOTSTRAP_ERROR not in errors:
+                errors.append(PLATFORM_NARROWED_BOOTSTRAP_ERROR)
 
 
 def main() -> int:
