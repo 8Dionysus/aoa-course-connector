@@ -7,6 +7,7 @@ import os
 import shutil
 from datetime import UTC, datetime
 from pathlib import Path
+from typing import Any
 
 from aoa_course_connector.adapters.stepik import fetch_stepik_course
 from aoa_course_connector.config import StorageRoots, find_repo_root
@@ -18,7 +19,12 @@ from aoa_course_connector.storage import create_storage_roots, run_data_dir
 DEFAULT_STEPIK_FIXTURE = Path("connector/fixtures/stepik/starter_stepik_course.json")
 
 
-def materialize_stepik_fixture(roots: StorageRoots, run_id: str = "stepik-fixture", fixture: Path | None = None) -> dict[str, object]:
+def materialize_stepik_fixture(
+    roots: StorageRoots,
+    run_id: str = "stepik-fixture",
+    fixture: Path | None = None,
+    source: dict[str, Any] | None = None,
+) -> dict[str, object]:
     repo_root = find_repo_root()
     create_storage_roots(roots)
     fixture_path = fixture or repo_root / DEFAULT_STEPIK_FIXTURE
@@ -29,6 +35,9 @@ def materialize_stepik_fixture(roots: StorageRoots, run_id: str = "stepik-fixtur
     raw_copy = raw_dir / fixture_path.name
     shutil.copyfile(fixture_path, raw_copy)
     raw = json.loads(raw_copy.read_text(encoding="utf-8"))
+    if source:
+        raw["source"] = _source_payload(source)
+        raw_copy.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
     bundle = normalize_stepik_raw(raw, run_id=run_id, raw_ref=str(raw_copy))
     normalized_path = write_normalized_bundle(bundle, normalized_dir)
     return _write_receipt(data_dir, run_id, "stepik_fixture", raw_copy, normalized_path, bundle, network_touched=False)
@@ -45,6 +54,7 @@ def materialize_stepik_live(
     max_steps_per_lesson: int | None = 5,
     batch_size: int = 20,
     include_step_sources: bool = False,
+    source: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     create_storage_roots(roots)
     data_dir = run_data_dir(roots, run_id)
@@ -61,11 +71,23 @@ def materialize_stepik_live(
         batch_size=batch_size,
         include_step_sources=include_step_sources,
     )
+    if source:
+        raw["source"] = _source_payload(source)
     raw_path = raw_dir / f"stepik_course_{course_id}.json"
     raw_path.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
     bundle = normalize_stepik_raw(raw, run_id=run_id, raw_ref=str(raw_path))
     normalized_path = write_normalized_bundle(bundle, normalized_dir)
     return _write_receipt(data_dir, run_id, "stepik_live", raw_path, normalized_path, bundle, network_touched=True)
+
+
+def _source_payload(source: dict[str, Any]) -> dict[str, object]:
+    return {
+        "source_id": source.get("source_id"),
+        "platform": "stepik",
+        "source_ref": source.get("source_ref"),
+        "access_mode": source.get("access_mode"),
+        "title": source.get("title") or source.get("source_ref"),
+    }
 
 
 def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path, normalized_path: Path, bundle: dict[str, object], *, network_touched: bool) -> dict[str, object]:

@@ -36,7 +36,13 @@ from aoa_course_connector.smoke import (
 )
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
 from aoa_course_connector.storage import create_storage_roots, storage_status
-from aoa_course_connector.sync import load_sync_status, sync_browser_fixture_sources, sync_browser_live_sources
+from aoa_course_connector.sync import (
+    load_sync_status,
+    sync_browser_fixture_sources,
+    sync_browser_live_sources,
+    sync_stepik_fixture_sources,
+    sync_stepik_live_sources,
+)
 
 
 DEFAULT_RUN = "starter-fixture"
@@ -94,6 +100,9 @@ def build_parser() -> argparse.ArgumentParser:
     discover_stepik = discover_sub.add_parser("stepik")
     discover_stepik.add_argument("course_id", type=int)
     discover_stepik.add_argument("--from-fixture", action="store_true")
+    discover_stepik.add_argument("--register", action="store_true")
+    discover_stepik.add_argument("--title")
+    discover_stepik.add_argument("--access-mode", choices=["public_api", "api_token", "oauth"], default="public_api")
     discover_stepik.set_defaults(func=cmd_discover_stepik)
     discover_browser = discover_sub.add_parser("browser-fixture")
     discover_browser.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
@@ -224,9 +233,26 @@ def build_parser() -> argparse.ArgumentParser:
     sync_live.add_argument("--source-limit", type=int)
     sync_live.add_argument("--build-artifacts", action="store_true")
     sync_live.set_defaults(func=cmd_sync_browser_live)
+    sync_stepik_fixture = sync_sub.add_parser("stepik-fixture")
+    sync_stepik_fixture.add_argument("--run", default="stepik-sync-fixture")
+    sync_stepik_fixture.add_argument("--source-limit", type=int)
+    sync_stepik_fixture.add_argument("--build-artifacts", action="store_true")
+    sync_stepik_fixture.set_defaults(func=cmd_sync_stepik_fixture)
+    sync_stepik_live = sync_sub.add_parser("stepik-live")
+    sync_stepik_live.add_argument("--run", default="stepik-live-sync")
+    sync_stepik_live.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    sync_stepik_live.add_argument("--max-sections", type=int, default=1)
+    sync_stepik_live.add_argument("--max-units-per-section", type=int, default=2)
+    sync_stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
+    sync_stepik_live.add_argument("--batch-size", type=int, default=20)
+    sync_stepik_live.add_argument("--include-step-sources", action="store_true")
+    sync_stepik_live.add_argument("--full-course", action="store_true")
+    sync_stepik_live.add_argument("--source-limit", type=int)
+    sync_stepik_live.add_argument("--build-artifacts", action="store_true")
+    sync_stepik_live.set_defaults(func=cmd_sync_stepik_live)
     sync_status = sync_sub.add_parser("status")
     sync_status.add_argument("--run")
-    sync_status.add_argument("--platform", choices=["getcourse", "skillspace"])
+    sync_status.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"])
     sync_status.set_defaults(func=cmd_sync_status)
 
     smoke = sub.add_parser("smoke")
@@ -307,6 +333,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("browser-progress-comments").set_defaults(func=cmd_eval_browser_progress_comments)
     eval_sub.add_parser("browser-discovery").set_defaults(func=cmd_eval_browser_discovery)
     eval_sub.add_parser("browser-sync").set_defaults(func=cmd_eval_browser_sync)
+    eval_sub.add_parser("stepik-sync").set_defaults(func=cmd_eval_stepik_sync)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -417,24 +444,52 @@ def cmd_discover_fixture(args: argparse.Namespace) -> int:
 
 def cmd_discover_stepik(args: argparse.Namespace) -> int:
     repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    registered: dict[str, object] | None = None
     if args.from_fixture:
         fixture_path = repo_root / "connector/fixtures/stepik/starter_stepik_course.json"
         fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
         course = fixture.get("course", {})
         sections = fixture.get("sections", [])
+        course_title = (
+            args.title
+            or (course.get("title") if isinstance(course, dict) else None)
+            or f"Stepik course {args.course_id}"
+        )
+        if args.register:
+            create_storage_roots(roots)
+            source, path, state = upsert_source(
+                roots.data,
+                platform="stepik",
+                source_ref=str(args.course_id),
+                title=course_title,
+                access_mode=args.access_mode,
+            )
+            registered = {"state": state, "registry_path": str(path), "source": source}
         _emit(
             {
                 "schema": "aoa_course_stepik_discovery_receipt_v1",
                 "status": "ok",
                 "source_mode": "stepik_fixture",
                 "course_id": args.course_id,
-                "course_title": course.get("title") if isinstance(course, dict) else None,
+                "course_title": course_title,
                 "section_count": len(sections) if isinstance(sections, list) else 0,
                 "fixture": str(fixture_path),
+                "registered": registered,
                 "network_touched": False,
             }
         )
         return 0
+    if args.register:
+        create_storage_roots(roots)
+        source, path, state = upsert_source(
+            roots.data,
+            platform="stepik",
+            source_ref=str(args.course_id),
+            title=args.title or f"Stepik course {args.course_id}",
+            access_mode=args.access_mode,
+        )
+        registered = {"state": state, "registry_path": str(path), "source": source}
     _emit(
         {
             "schema": "aoa_course_stepik_discovery_receipt_v1",
@@ -442,6 +497,8 @@ def cmd_discover_stepik(args: argparse.Namespace) -> int:
             "source_mode": "stepik_live",
             "course_id": args.course_id,
             "next_command": f"aoa-course materialize stepik-live {args.course_id} --run stepik-course-{args.course_id}",
+            "sync_command": "aoa-course sync stepik-live --run stepik-live-sync",
+            "registered": registered,
             "network_touched": False,
         }
     )
@@ -608,6 +665,39 @@ def cmd_sync_browser_live(args: argparse.Namespace) -> int:
         wait_until=args.wait_until,
         max_lessons=args.max_lessons,
         link_pattern=args.link_pattern,
+        source_limit=args.source_limit,
+        build_artifacts=args.build_artifacts,
+    )
+    _emit(receipt)
+    return 0 if receipt.get("status") in {"ok", "partial"} else 1
+
+
+def cmd_sync_stepik_fixture(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = sync_stepik_fixture_sources(
+        roots,
+        sync_run_id=args.run,
+        source_limit=args.source_limit,
+        build_artifacts=args.build_artifacts,
+    )
+    _emit(receipt)
+    return 0 if receipt.get("status") in {"ok", "partial"} else 1
+
+
+def cmd_sync_stepik_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    max_sections = None if args.full_course else args.max_sections
+    max_units = None if args.full_course else args.max_units_per_section
+    max_steps = None if args.full_course else args.max_steps_per_lesson
+    receipt = sync_stepik_live_sources(
+        roots,
+        sync_run_id=args.run,
+        token_env=args.token_env,
+        max_sections=max_sections,
+        max_units_per_section=max_units,
+        max_steps_per_lesson=max_steps,
+        batch_size=args.batch_size,
+        include_step_sources=args.include_step_sources,
         source_limit=args.source_limit,
         build_artifacts=args.build_artifacts,
     )
@@ -882,6 +972,32 @@ def cmd_eval_browser_sync(_args: argparse.Namespace) -> int:
         if not matches:
             failures.append({"platform": platform, "missing": "ok checkpoint with normalized/index/graph paths"})
     _emit({"schema": "aoa_course_eval_browser_sync_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_stepik_sync(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    status = load_sync_status(roots, sync_run_id="stepik-sync-fixture", platform="stepik")
+    checkpoints = status.get("checkpoints", [])
+    failures = []
+    matches = [
+        item
+        for item in checkpoints
+        if isinstance(item, dict)
+        and item.get("platform") == "stepik"
+        and item.get("status") == "ok"
+        and item.get("normalized_path")
+        and item.get("index_path")
+        and item.get("graph_path")
+    ]
+    if not matches:
+        failures.append(
+            {
+                "platform": "stepik",
+                "missing": "ok checkpoint with normalized/index/graph paths",
+            }
+        )
+    _emit({"schema": "aoa_course_eval_stepik_sync_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 

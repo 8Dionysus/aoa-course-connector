@@ -24,6 +24,12 @@ def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
     assert plan["git_safe"] is False
 
 
+def test_stepik_source_defaults_to_public_api(tmp_path: Path) -> None:
+    source, _path, state = upsert_source(tmp_path / "data", "stepik", "67", "Stepik Course")
+    assert state == "added"
+    assert source["access_mode"] == "public_api"
+
+
 def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",

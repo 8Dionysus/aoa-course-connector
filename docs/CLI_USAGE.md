@@ -9,6 +9,10 @@ aoa-course materialize fixture --run starter-fixture
 aoa-course materialize stepik-fixture --run stepik-fixture
 aoa-course materialize stepik-live 67 --run stepik-live-smoke --max-sections 1 --max-units-per-section 1 --max-steps-per-lesson 2
 aoa-course materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources
+aoa-course discover stepik 67 --register --title "Stepik course 67"
+aoa-course sync stepik-fixture --run stepik-sync-fixture --build-artifacts
+aoa-course sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
+aoa-course sync status --run stepik-sync-fixture --platform stepik
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5
