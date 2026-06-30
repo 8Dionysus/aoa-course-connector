@@ -13,6 +13,7 @@ aoa-course discover stepik 67 --register --title "Stepik course 67"
 aoa-course sync stepik-fixture --run stepik-sync-fixture --build-artifacts
 aoa-course sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
 aoa-course sync status --run stepik-sync-fixture --platform stepik
+aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN
 aoa-course smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
 aoa-course smoke stepik-live 67 --run stepik-live-public-smoke --query "Python course"
 aoa-course discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
@@ -20,6 +21,7 @@ aoa-course discover stepik-account --run stepik-account-discovery-live --token-e
 aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
+aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5

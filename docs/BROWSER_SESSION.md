@@ -188,6 +188,11 @@ aoa-course auth capture-browser-state getcourse "https://school.example" \
 
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --expect-origin-contains "school.example"
+
+aoa-course preflight live \
+  --platform getcourse \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin school.example
 ```
 
 Then capture a visible page:
@@ -243,3 +248,8 @@ aoa-course sync browser-live \
 
 Use `--platform` more than once to narrow the source set. Use `sync status` to
 inspect checkpoints before choosing which child run to query.
+
+`preflight live` is the safe handoff check before these live routes. It reads
+the local source registry and redacted browser storage-state status, reports
+whether discovery/sync is ready, and suggests the next command without printing
+private HTML, cookie values, or tokens.

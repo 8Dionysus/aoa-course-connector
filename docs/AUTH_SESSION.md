@@ -45,3 +45,21 @@ aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.s
 
 Inspection reports only counts, timestamps, and match status. It does not print
 cookie values, localStorage values, or tokens.
+
+## Live Preflight
+
+Before running live discovery or sync, ask the connector to inspect local
+readiness without touching the network:
+
+```bash
+aoa-course preflight live \
+  --platform getcourse \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin school.example
+```
+
+The report checks registered sources, browser storage-state usability, Stepik
+token presence when requested, and next commands. It is read-only, returns
+`network_touched: false`, and redacts cookie, localStorage, and token values.
+Use `--require-ready` when an automation script should fail if a live source is
+not ready yet.

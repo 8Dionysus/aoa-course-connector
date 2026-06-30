@@ -22,6 +22,9 @@
   ingestion, index/graph build, and optional answer evidence checks.
 - Prove browser-session auth-state planning, capture, and redacted inspection
   so live GetCourse/Skillspace routes have a reproducible onboarding step.
+- Prove read-only live preflight reports so agents can verify Stepik token
+  presence, browser auth-state usability, registered source readiness, and next
+  commands before touching live sources.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -37,15 +40,17 @@
 
 ## Next
 
-- Run the gated live smoke route on connected GetCourse and Skillspace accounts to
-  calibrate login redirects, pagination, and DOM heuristics against real themes.
+- Run the gated live smoke route on connected GetCourse and Skillspace accounts
+  after `preflight live` reports ready local state, then calibrate login
+  redirects, pagination, and DOM heuristics against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
   status, comments, and discussion markup found by live smoke.
 - Run gated live full-course Stepik sync on an operator-selected authenticated
   course and calibrate permission/source-enrichment behavior.
 - Broaden Stepik live smoke calibration beyond public bounded course checks.
 - Calibrate Stepik account-level discovery against operator-selected
-  authenticated accounts where official scopes expose enough catalog data.
+  authenticated accounts after `preflight live --platform stepik` reports token
+  and source readiness where official scopes expose enough catalog data.
 - Add optional external embedding providers behind the stable semantic index
   contract.
 

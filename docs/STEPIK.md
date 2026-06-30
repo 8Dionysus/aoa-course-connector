@@ -76,6 +76,7 @@ refs and register them as local Stepik sources:
 
 ```bash
 export STEPIK_API_TOKEN=...
+aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN
 aoa-course discover stepik-account \
   --run stepik-account-discovery-live \
   --token-env STEPIK_API_TOKEN \
@@ -86,6 +87,10 @@ aoa-course discover stepik-account \
 The live route reads the current account through Stepik API auth, discovers
 course IDs from enrollment data, and writes only local source-registry entries.
 It does not store or print the token value.
+
+`preflight live --platform stepik` checks token presence and registered Stepik
+sources without touching the network. It reports `token_present` but never logs
+the token value, and it can be used with `--require-ready` in operator scripts.
 
 Safe fixture discovery proves the same registration route without network
 access:

@@ -14,7 +14,12 @@ For local state:
 export AOA_COURSE_INSTANCE_ROOT="$PWD/.connector-state"
 aoa-course init
 aoa-course doctor
+aoa-course preflight live
 ```
+
+`preflight live` is safe before credentials exist. It reports missing live auth
+as a warning, does not touch the network, and gives the next commands for
+Stepik tokens or browser storage-state capture.
 
 For this Abyss machine, use the external storage example when the corpus grows:
 

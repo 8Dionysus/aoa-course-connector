@@ -56,3 +56,6 @@
   explicit not-started states.
 - Added Stepik account-level course discovery with fixture/live routes and
   optional source-registry registration for connected accounts.
+- Added read-only live preflight reports for Stepik token presence,
+  browser-session storage-state readiness, registered sources, next commands,
+  and secret-redacted operator handoff.
