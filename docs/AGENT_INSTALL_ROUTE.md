@@ -25,24 +25,28 @@
 13. After starter, Stepik fixture, and GetCourse browser fixture artifacts are
     built, run `eval answer-quality` to prove top-result path, source id,
     freshness, snippet, and evidence-field quality.
-14. Run the freshness conflict fixture and `eval freshness-ranking` to prove
+14. Run MCP calls for `graph_neighbors`, `freshness_report`, and
+    `evidence_report` against `starter-fixture` to prove agents can traverse
+    graph neighborhoods and inspect source evidence/freshness without shelling
+    into lower-level CLI internals.
+15. Run the freshness conflict fixture and `eval freshness-ranking` to prove
     current material ranks above stale material when base relevance is tied.
-15. Run the authority conflict fixture and `eval authority-ranking` to prove
+16. Run the authority conflict fixture and `eval authority-ranking` to prove
     official lessons and mentor comments rank above learner comments when base
     relevance is tied.
-16. After Stepik, GetCourse, and Skillspace fixture indexes are built, run
+17. After Stepik, GetCourse, and Skillspace fixture indexes are built, run
     `eval adapter-authority` to prove adapter-derived authority metadata reaches
     normalized objects and query packets.
-17. Run `eval live-calibration` to prove the fixture-safe calibration packet for
+18. Run `eval live-calibration` to prove the fixture-safe calibration packet for
     GetCourse, Skillspace, and Stepik smoke reports before collecting connected
     account reports.
-18. Before live browser sources, run `auth plan-browser-state`, capture the
+19. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-19. Run `preflight live --platform getcourse` or
+20. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-20. Confirm browser preflight marks only sources whose host matches the saved
+21. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-21. Add live sources only after auth-state and storage roots are local and
+22. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

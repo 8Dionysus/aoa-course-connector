@@ -155,8 +155,20 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "evidence_report" for tool in tools_manifest()["tools"])
     result = call_tool("search", {"query": "rollback", "run": "starter-fixture"})
     assert result["results"]
+    graph = call_tool("graph_neighbors", {"node_id": "lesson:starter:unlock-risk", "run": "starter-fixture"})
+    assert graph["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
+    assert graph["graph"]["neighbors"]
+    freshness = call_tool("freshness_report", {"run": "starter-fixture"})
+    assert freshness["freshness"]["states"]
+    evidence = call_tool("evidence_report", {"query": "rollback", "run": "starter-fixture"})
+    assert evidence["evidence_chain"]
+    assert evidence["freshness_report"]["has_source_timestamps"] is True
+    assert evidence["result_refs"][0]["evidence_id"]
     checkpoint = make_checkpoint(
         source={"source_id": "source:getcourse:test", "platform": "getcourse", "source_ref": "https://school.example", "access_mode": "browser_session"},
         sync_run_id="browser-sync-fixture",
@@ -240,8 +252,10 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
+    evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
+    assert evidence_tool["inputSchema"]["required"] == ["query"]
 
     called = handle_jsonrpc_message({
         "jsonrpc": "2.0",
@@ -253,6 +267,15 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert result["isError"] is False
     assert result["structuredContent"]["tool"] == "search"
     assert result["structuredContent"]["results"]
+
+    evidence = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 31,
+        "method": "tools/call",
+        "params": {"name": "evidence_report", "arguments": {"query": "rollback", "run": "starter-fixture"}},
+    })
+    assert evidence["result"]["structuredContent"]["tool"] == "evidence_report"
+    assert evidence["result"]["structuredContent"]["evidence_chain"]
 
     preflight = handle_jsonrpc_message({
         "jsonrpc": "2.0",

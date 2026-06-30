@@ -12,6 +12,8 @@
   state.
 - Prove source-registry driven sync checkpoints with optional per-source
   index/graph builds and MCP status.
+- Prove MCP graph, freshness, and evidence-report calls so agents can inspect
+  source-backed results without shelling into lower-level CLI internals.
 - Prove bounded GetCourse and Skillspace course-tree crawling from safe browser
   fixtures and optional live Playwright auth state.
 - Prove visible browser-session progress/status, comments, and paginated catalog

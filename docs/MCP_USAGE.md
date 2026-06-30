@@ -14,6 +14,7 @@ Initial tools:
 - `lesson_context`
 - `graph_neighbors`
 - `freshness_report`
+- `evidence_report`
 
 CLI smoke:
 
@@ -24,6 +25,9 @@ aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
+aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
+aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
+aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
@@ -60,6 +64,11 @@ Tool calls return both text content and `structuredContent` so agents can keep
 source-backed result objects, `score`/`rank_score`, `authority_tier`,
 rank features, evidence chains, freshness/authority reports, and graph packets
 without reparsing prose.
+
+`evidence_report` is the compact agent handoff for a query. It returns the
+evidence chain, freshness report, authority report, and result references with
+source URL, course path, fetched timestamp, freshness state, authority tier, and
+rank score.
 
 `live_preflight` is read-only and returns `network_touched: false`. It lets an
 agent inspect Stepik token presence, browser storage-state readiness, registered

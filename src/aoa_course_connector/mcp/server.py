@@ -79,6 +79,7 @@ TOOLS = [
     {"name": "lesson_context", "description": "Return source-backed lesson context for a query.", "inputSchema": _query_schema(mode=True)},
     {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods.", "inputSchema": _object_schema({"node_id": _string_schema("Graph node id."), "run": _string_schema("Connector run id."), "limit": _integer_schema("Maximum neighbor count.", 1)})},
     {"name": "freshness_report", "description": "Report result freshness states.", "inputSchema": _run_schema()},
+    {"name": "evidence_report", "description": "Report source evidence, freshness, and authority for query results.", "inputSchema": _query_schema(mode=True)},
 ]
 TOOL_NAMES = {str(tool["name"]) for tool in TOOLS}
 
@@ -116,7 +117,50 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "graph": graph_neighbors(roots, str(args.get("node_id") or ""), run_id, int(args.get("limit") or 20))}
     if name == "freshness_report":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "freshness": freshness_report(roots, run_id)}
+    if name == "evidence_report":
+        packet = render_answer_packet(
+            roots,
+            str(args.get("query") or ""),
+            run_id,
+            int(args.get("limit") or 5),
+            str(args.get("mode") or "keyword"),
+        )
+        return {
+            "schema": "aoa_course_mcp_result_v1",
+            "tool": name,
+            "run_id": run_id,
+            "query": packet.get("query"),
+            "mode": packet.get("mode"),
+            "result_count": packet.get("result_count"),
+            "evidence_chain": packet.get("evidence_chain"),
+            "freshness_report": packet.get("freshness_report"),
+            "authority_report": packet.get("authority_report"),
+            "result_refs": _evidence_result_refs(packet),
+        }
     raise ValueError(f"unknown MCP tool: {name}")
+
+
+def _evidence_result_refs(packet: dict[str, object]) -> list[dict[str, object]]:
+    results = packet.get("results") if isinstance(packet.get("results"), list) else []
+    refs: list[dict[str, object]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        refs.append(
+            {
+                "doc_id": result.get("doc_id"),
+                "source_id": result.get("source_id"),
+                "source_url": result.get("source_url"),
+                "evidence_id": result.get("evidence_id"),
+                "path": result.get("path"),
+                "fetched_at": result.get("fetched_at"),
+                "freshness_state": result.get("freshness_state"),
+                "authority_tier": result.get("authority_tier"),
+                "score": result.get("score"),
+                "rank_score": result.get("rank_score"),
+            }
+        )
+    return refs
 
 
 def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
