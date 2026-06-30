@@ -14,8 +14,13 @@ For local state:
 export AOA_COURSE_INSTANCE_ROOT="$PWD/.connector-state"
 aoa-course init
 aoa-course doctor
+aoa-course readiness --run starter-fixture
 aoa-course preflight live
 ```
+
+`readiness` is the broad read-only route audit for the connector. It reports
+install files, storage roots, local run/index/graph readiness, source registry
+counts, MCP tool coverage, connected-source handoff status, and next commands.
 
 `preflight live` is safe before credentials exist. It reports missing live auth
 as a warning, does not touch the network, and gives the next commands for

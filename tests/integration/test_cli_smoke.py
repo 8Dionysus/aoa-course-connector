@@ -40,6 +40,16 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert evidence_inspect["freshness_report"]["has_source_timestamps"] is True
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
+    assert any(tool["name"] == "connector_readiness" for tool in tools["tools"])
+    readiness = run_cli(tmp_path, "readiness", "--run", "starter-fixture", "--platform", "stepik")
+    assert readiness["schema"] == "aoa_course_connector_readiness_v1"
+    assert readiness["network_touched"] is False
+    assert readiness["operational_ready"] is True
+    assert readiness["lanes"]["agent_query_ready"] is True
+    assert readiness["mcp"]["ready"] is True
+    mcp_readiness = run_cli(tmp_path, "mcp", "call", "connector_readiness", '{"runs":["starter-fixture"],"platforms":["stepik"]}')
+    assert mcp_readiness["result"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert mcp_readiness["result"]["runs"][0]["readiness"]["agent_query_ready"] is True
     ingest = run_cli(tmp_path, "mcp", "call", "ingest_status", '{"run":"starter-fixture"}')
     assert ingest["result"]["status"] == "ready"
     assert ingest["result"]["readiness"]["agent_query_ready"] is True
@@ -103,6 +113,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
+        {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -117,7 +128,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
@@ -126,6 +137,8 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[5]["result"]["structuredContent"]["preflight"]["network_touched"] is False
     assert responses[6]["result"]["structuredContent"]["plan"]["network_touched"] is False
     assert responses[7]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
+    assert responses[8]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[8]["result"]["structuredContent"]["mcp"]["ready"] is True
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

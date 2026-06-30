@@ -2,6 +2,7 @@
 
 ```bash
 aoa-course doctor
+aoa-course readiness --run starter-fixture
 aoa-course init
 aoa-course adapters list
 aoa-course sources add demo-course --platform offline_export --title "Demo Course"
@@ -79,6 +80,7 @@ aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
+aoa-course mcp call connector_readiness '{"runs":["starter-fixture"],"platforms":["getcourse","stepik"]}'
 ```
 
 Use `--source-id` on sync commands when an agent is refreshing one result from a
@@ -92,3 +94,11 @@ connected run receipt all write to portable runtime artifact storage. Use
 selected sources are ready.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network.
+
+Use `readiness` when an agent or operator needs one read-only route audit before
+continuing. It emits `aoa_course_connector_readiness_v1` with install route
+files, storage roots, source registry counts, per-run `agent_query_ready`,
+connected-source `connected_live_ready`, connected-run receipt status, MCP tool
+coverage, and next commands. `--require-ready` exits non-zero only when
+`operational_ready` is false; live source execution remains gated behind the
+separate `--allow-network` commands.
