@@ -82,7 +82,7 @@ Live connected-run receipts are runtime evidence and must stay out of Git.
 For GetCourse and Skillspace live runs, `calibration connected-run` uses the
 same default browser storage-state path checked by preflight,
 `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`,
-unless `--browser-state-file` is supplied.
+unless `--state-file` is supplied.
 The bounded public Stepik route has been field-smoked with this command shape:
 the resulting local receipt and calibration packet were `ok`, contained answer
 evidence and timestamps, and kept raw payloads and secret values out of the

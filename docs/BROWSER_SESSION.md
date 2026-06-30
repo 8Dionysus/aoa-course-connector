@@ -245,7 +245,7 @@ file because ready-source smoke commands can contain operator course URLs.
 When the same ready source is executed through
 `calibration connected-run --mode live --allow-network`, the runner uses the default
 `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`
-path unless `--browser-state-file` is supplied, and the receipt records
+path unless `--state-file` is supplied, and the receipt records
 `source_selection` plus per-stage source ids.
 
 Its `browser_auth_handoffs` section is the operator/agent checklist for
