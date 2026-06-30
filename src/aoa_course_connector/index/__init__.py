@@ -84,6 +84,14 @@ def vectorize_semantic_query(query: str, *, dimensions: int = DEFAULT_VECTOR_DIM
     return _normalize(_hash_features(features, dimensions=max(8, dimensions)))
 
 
+def semantic_query_feature_keys(query: str) -> set[str]:
+    return _feature_keys(_weighted_text_features(query, weight=1.0))
+
+
+def semantic_doc_feature_keys(doc: dict[str, object]) -> set[str]:
+    return _feature_keys(_semantic_features_for_doc(doc))
+
+
 def vector_dot(left: dict[str, float], right: dict[str, float]) -> float:
     if len(left) > len(right):
         left, right = right, left
@@ -145,6 +153,10 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
 
 
 def _semantic_vector_for_doc(doc: dict[str, object], *, dimensions: int) -> dict[str, float]:
+    return _normalize(_hash_features(_semantic_features_for_doc(doc), dimensions=dimensions))
+
+
+def _semantic_features_for_doc(doc: dict[str, object]) -> list[tuple[str, float]]:
     features: list[tuple[str, float]] = []
     features.extend(_weighted_text_features(str(doc.get("text") or ""), weight=1.0))
     title_path_text = " ".join(
@@ -157,7 +169,11 @@ def _semantic_vector_for_doc(doc: dict[str, object], *, dimensions: int) -> dict
         value = str(doc.get(key) or "").casefold()
         if value:
             features.append((f"{key}:{value}", 2.0))
-    return _normalize(_hash_features(features, dimensions=dimensions))
+    return features
+
+
+def _feature_keys(features: list[tuple[str, float]]) -> set[str]:
+    return {feature for feature, _weight in features if feature}
 
 
 def _weighted_text_features(text: str, *, weight: float) -> list[tuple[str, float]]:

@@ -75,4 +75,5 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-crawl
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
+printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-agent","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | PYTHONPATH=src python -m aoa_course_connector.mcp.server
 ```

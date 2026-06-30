@@ -7,7 +7,14 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
-from aoa_course_connector.index import sparse_vector_from_json, tokenize, vector_dot, vectorize_semantic_query
+from aoa_course_connector.index import (
+    semantic_doc_feature_keys,
+    semantic_query_feature_keys,
+    sparse_vector_from_json,
+    tokenize,
+    vector_dot,
+    vectorize_semantic_query,
+)
 from aoa_course_connector.storage import run_artifact_dir
 
 
@@ -35,6 +42,9 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
     index = json.loads(index_path.read_text(encoding="utf-8"))
     dimensions = int(index.get("dimensions") or 256)
     query_vector = vectorize_semantic_query(query, dimensions=dimensions)
+    query_features = semantic_query_feature_keys(query)
+    if not query_vector or not query_features:
+        return []
     query_terms = tokenize(query)
     ranked = []
     for doc in index.get("docs", []):
@@ -43,6 +53,8 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
         vector = sparse_vector_from_json(doc.get("vector"))
         score = vector_dot(query_vector, vector)
         if score <= 0:
+            continue
+        if not (query_features & semantic_doc_feature_keys(doc)):
             continue
         result = {key: value for key, value in doc.items() if key != "vector"}
         ranked.append(

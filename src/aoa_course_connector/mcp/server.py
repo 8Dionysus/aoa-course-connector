@@ -1,13 +1,16 @@
-"""Small dependency-free MCP-shaped tool dispatcher.
+"""Dependency-free MCP stdio server and local tool dispatcher.
 
 The full runtime registration belongs in abyss-stack. This module keeps the
-tool contract testable from the public repository.
+tool contract testable from the public repository while exposing a JSON-RPC
+stdio surface that MCP clients can launch directly.
 """
 
 from __future__ import annotations
 
 import json
 import sys
+from collections.abc import Iterable
+from typing import Any, TextIO
 
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, query_semantic_index, render_answer_packet
@@ -15,21 +18,54 @@ from aoa_course_connector.sources import load_registry
 from aoa_course_connector.sync import load_sync_status
 
 
+SERVER_NAME = "aoa-course-connector-mcp"
+SERVER_VERSION = "0.1.0"
+PROTOCOL_VERSION = "2025-11-25"
+
+
+def _query_schema(*, mode: bool = False) -> dict[str, object]:
+    properties = {
+        "query": _string_schema("Search query."),
+        "run": _string_schema("Connector run id."),
+        "limit": _integer_schema("Maximum result count.", 1),
+    }
+    if mode:
+        properties["mode"] = {"type": "string", "enum": ["keyword", "semantic", "hybrid"], "description": "Query mode."}
+    return _object_schema(properties, required=["query"])
+
+
+def _run_schema() -> dict[str, object]:
+    return _object_schema({"run": _string_schema("Connector run id.")})
+
+
+def _object_schema(properties: dict[str, object], *, required: Iterable[str] = ()) -> dict[str, object]:
+    return {"type": "object", "properties": properties, "required": list(required), "additionalProperties": False}
+
+
+def _string_schema(description: str) -> dict[str, str]:
+    return {"type": "string", "description": description}
+
+
+def _integer_schema(description: str, minimum: int) -> dict[str, Any]:
+    return {"type": "integer", "minimum": minimum, "description": description}
+
+
 TOOLS = [
-    {"name": "list_sources", "description": "List configured course sources."},
-    {"name": "ingest_status", "description": "Inspect local ingest run status."},
-    {"name": "sync_status", "description": "Inspect source sync checkpoints."},
-    {"name": "search", "description": "Search indexed course knowledge."},
-    {"name": "semantic_search", "description": "Search the local semantic/vector index."},
-    {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined."},
-    {"name": "lesson_context", "description": "Return source-backed lesson context for a query."},
-    {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods."},
-    {"name": "freshness_report", "description": "Report result freshness states."},
+    {"name": "list_sources", "description": "List configured course sources.", "inputSchema": _object_schema({})},
+    {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
+    {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
+    {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
+    {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
+    {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined.", "inputSchema": _query_schema()},
+    {"name": "lesson_context", "description": "Return source-backed lesson context for a query.", "inputSchema": _query_schema(mode=True)},
+    {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods.", "inputSchema": _object_schema({"node_id": _string_schema("Graph node id."), "run": _string_schema("Connector run id."), "limit": _integer_schema("Maximum neighbor count.", 1)})},
+    {"name": "freshness_report", "description": "Report result freshness states.", "inputSchema": _run_schema()},
 ]
+TOOL_NAMES = {str(tool["name"]) for tool in TOOLS}
 
 
 def tools_manifest() -> dict[str, object]:
-    return {"schema": "aoa_course_mcp_tools_v1", "server": "aoa-course-connector-mcp", "tools": TOOLS}
+    return {"schema": "aoa_course_mcp_tools_v1", "server": SERVER_NAME, "protocol_version": PROTOCOL_VERSION, "tools": TOOLS}
 
 
 def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str, object]:
@@ -62,20 +98,38 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     raise ValueError(f"unknown MCP tool: {name}")
 
 
+def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:
+    if isinstance(message, list):
+        responses = [response for item in message if (response := _handle_jsonrpc_request(item)) is not None]
+        return responses or None
+    return _handle_jsonrpc_request(message)
+
+
+def run_stdio(input_stream: TextIO = sys.stdin, output_stream: TextIO = sys.stdout) -> int:
+    for line in input_stream:
+        if not line.strip():
+            continue
+        response: dict[str, object] | list[dict[str, object]] | None
+        try:
+            request = json.loads(line)
+        except json.JSONDecodeError as exc:
+            response = _error_response(None, -32700, f"parse error: {exc}")
+        else:
+            if _looks_like_jsonrpc(request):
+                response = handle_jsonrpc_message(request)
+            else:
+                response = _handle_legacy_line_request(request)
+        if response is not None:
+            output_stream.write(json.dumps(response, sort_keys=True) + "\n")
+            output_stream.flush()
+    return 0
+
+
 def main() -> int:
     if sys.stdin.isatty():
         print(json.dumps(tools_manifest(), indent=2, sort_keys=True))
         return 0
-    for line in sys.stdin:
-        request = json.loads(line)
-        name = request.get("tool") or request.get("name")
-        arguments = request.get("arguments") or {}
-        try:
-            result = call_tool(str(name), arguments)
-            print(json.dumps({"status": "ok", "result": result}, sort_keys=True), flush=True)
-        except Exception as exc:  # pragma: no cover - server safety net
-            print(json.dumps({"status": "error", "error": str(exc)}, sort_keys=True), flush=True)
-    return 0
+    return run_stdio()
 
 
 def _ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
@@ -90,6 +144,98 @@ def _ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
         "semantic_index_exists": (artifact_dir / "indexes" / "semantic_index.json").exists(),
         "graph_exists": (artifact_dir / "graphs" / "course_graph.json").exists(),
     }
+
+
+def _handle_jsonrpc_request(message: object) -> dict[str, object] | None:
+    if not isinstance(message, dict):
+        return _error_response(None, -32600, "invalid request")
+    request_id = message.get("id")
+    method = message.get("method")
+    if message.get("jsonrpc") != "2.0" or not isinstance(method, str):
+        return _error_response(request_id, -32600, "invalid request")
+    if request_id is None and method.startswith("notifications/"):
+        return None
+    if method == "initialize":
+        return _success_response(request_id, _initialize_result(message.get("params")))
+    if method == "ping":
+        return _success_response(request_id, {})
+    if method == "tools/list":
+        return _success_response(request_id, {"tools": TOOLS})
+    if method == "tools/call":
+        return _handle_tools_call(request_id, message.get("params"))
+    return _error_response(request_id, -32601, f"method not found: {method}")
+
+
+def _handle_tools_call(request_id: object, params: object) -> dict[str, object]:
+    if not isinstance(params, dict):
+        return _error_response(request_id, -32602, "tools/call params must be an object")
+    name = params.get("name")
+    arguments = params.get("arguments") or {}
+    if not isinstance(name, str) or name not in TOOL_NAMES:
+        return _error_response(request_id, -32602, f"unknown tool: {name}")
+    if not isinstance(arguments, dict):
+        return _error_response(request_id, -32602, "tool arguments must be an object")
+    try:
+        result = call_tool(name, arguments)
+    except Exception as exc:  # pragma: no cover - tool safety net.
+        return _success_response(request_id, _tool_error(str(exc)))
+    return _success_response(request_id, _tool_success(result))
+
+
+def _handle_legacy_line_request(request: object) -> dict[str, object]:
+    if not isinstance(request, dict):
+        return {"status": "error", "error": "request must be a JSON object"}
+    name = request.get("tool") or request.get("name")
+    arguments = request.get("arguments") or {}
+    if not isinstance(arguments, dict):
+        return {"status": "error", "error": "arguments must be a JSON object"}
+    try:
+        result = call_tool(str(name), arguments)
+        return {"status": "ok", "result": result}
+    except Exception as exc:  # pragma: no cover - server safety net
+        return {"status": "error", "error": str(exc)}
+
+
+def _initialize_result(params: object) -> dict[str, object]:
+    requested = params.get("protocolVersion") if isinstance(params, dict) else None
+    return {
+        "protocolVersion": str(requested or PROTOCOL_VERSION),
+        "capabilities": {"tools": {"listChanged": False}},
+        "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
+        "instructions": "Search authorized local course indexes and return source-backed evidence packets.",
+    }
+
+
+def _tool_success(result: dict[str, object]) -> dict[str, object]:
+    return {
+        "content": [{"type": "text", "text": json.dumps(result, sort_keys=True)}],
+        "structuredContent": result,
+        "isError": False,
+    }
+
+
+def _tool_error(error: str) -> dict[str, object]:
+    return {
+        "content": [{"type": "text", "text": error}],
+        "structuredContent": {"schema": "aoa_course_mcp_error_v1", "error": error},
+        "isError": True,
+    }
+
+
+def _success_response(request_id: object, result: dict[str, object]) -> dict[str, object]:
+    return {"jsonrpc": "2.0", "id": request_id, "result": result}
+
+
+def _error_response(request_id: object, code: int, message: str) -> dict[str, object]:
+    return {"jsonrpc": "2.0", "id": request_id, "error": {"code": code, "message": message}}
+
+
+def _looks_like_jsonrpc(request: object) -> bool:
+    if isinstance(request, dict):
+        return request.get("jsonrpc") == "2.0" or "method" in request
+    if isinstance(request, list):
+        return True
+    return False
 
 
 if __name__ == "__main__":

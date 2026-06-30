@@ -138,6 +138,8 @@ class _SnapshotParser(HTMLParser):
             text = _clean(" ".join(str(part) for part in item.get("text", [])))
             attrs = item.get("attrs") if isinstance(item.get("attrs"), dict) else {}
             semantic_text = text or _semantic_label(attrs)
+            if not semantic_text and _looks_like_progress_block(tag, attrs, ""):
+                semantic_text = _progress_label(attrs, "")
             if semantic_text:
                 self._capture_semantic_block(tag, attrs, semantic_text)
             if not text:
@@ -259,17 +261,36 @@ def _progress_percent(attrs: dict[object, object], text: str) -> str:
     return match.group(1) if match else ""
 
 
+def _progress_label(attrs: dict[object, object], text: str) -> str:
+    label = text or _semantic_label(attrs)
+    if label:
+        return label
+    percent = _progress_percent(attrs, "")
+    return f"{percent} percent" if percent else "progress"
+
+
 def _progress_state(attrs: dict[object, object], text: str) -> str:
     value = attrs.get("data-aoa-progress-state")
     if value:
         return str(value)
     lowered = text.casefold()
     percent = _progress_percent(attrs, text)
+    if _is_zero_percent(percent) or any(token in lowered for token in ["not started", "not-started", "not_started", "не нач", "не приступ"]):
+        return "not_started"
     if percent == "100" or any(token in lowered for token in ["done", "завершен", "завершено"]):
         return "completed"
     if any(token in lowered for token in ["complete", "completed", "progress", "started", "in progress", "выполн", "прогресс", "пройден"]):
         return "in_progress"
     return "visible"
+
+
+def _is_zero_percent(value: str) -> bool:
+    if value in {"", None}:
+        return False
+    try:
+        return float(str(value).replace(",", ".")) == 0
+    except ValueError:
+        return False
 
 
 def _is_pagination_link(link: dict[str, str]) -> bool:

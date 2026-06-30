@@ -7,13 +7,18 @@ import sys
 from pathlib import Path
 
 
-def run_cli(tmp_path: Path, *args: str) -> dict[str, object]:
+def cli_env(tmp_path: Path) -> dict[str, str]:
     env = os.environ.copy()
     env["PYTHONPATH"] = "src"
     env["AOA_COURSE_DATA_ROOT"] = str(tmp_path / "data")
     env["AOA_COURSE_CACHE_ROOT"] = str(tmp_path / "cache")
     env["AOA_COURSE_AUTH_ROOT"] = str(tmp_path / "auth")
     env["AOA_COURSE_ARTIFACT_ROOT"] = str(tmp_path / "artifacts")
+    return env
+
+
+def run_cli(tmp_path: Path, *args: str) -> dict[str, object]:
+    env = cli_env(tmp_path)
     result = subprocess.run([sys.executable, "-m", "aoa_course_connector.cli", *args], check=False, capture_output=True, text=True, env=env)
     assert result.returncode == 0, result.stdout + result.stderr
     return json.loads(result.stdout)
@@ -30,6 +35,34 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert answer["evidence_chain"]
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
+
+
+def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
+    run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
+    run_cli(tmp_path, "build-index", "--run", "starter-fixture")
+    requests = [
+        {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "pytest", "version": "0"}}},
+        {"jsonrpc": "2.0", "method": "notifications/initialized"},
+        {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
+    ]
+    stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
+
+    result = subprocess.run(
+        [sys.executable, "-m", "aoa_course_connector.mcp.server"],
+        input=stdin,
+        check=False,
+        capture_output=True,
+        text=True,
+        env=cli_env(tmp_path),
+    )
+
+    assert result.returncode == 0, result.stdout + result.stderr
+    responses = [json.loads(line) for line in result.stdout.splitlines()]
+    assert [response["id"] for response in responses] == [1, 2, 3]
+    assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
+    assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
+    assert responses[2]["result"]["structuredContent"]["results"]
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

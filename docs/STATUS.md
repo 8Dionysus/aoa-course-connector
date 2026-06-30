@@ -21,7 +21,8 @@ This proves:
 - deterministic local semantic/vector search with `local_hashing_v1`;
 - graph construction for course/module/lesson/step/asset/topic/entity;
 - answer packets with evidence chains and freshness timestamps;
-- initial MCP tool surface;
+- JSON-RPC stdio MCP tool surface with structured `tools/list` and
+  `tools/call` responses;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,
@@ -40,8 +41,9 @@ This proves:
   fixtures, answer packets, index docs, graph edges, MCP context, and evals.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
-- Browser-session parser heuristics for unannotated progress/status and compact
-  visible comment/reply/discussion blocks.
+- Browser-session parser heuristics for unannotated, aria-only, and
+  not-started progress/status blocks plus compact visible
+  comment/reply/discussion blocks.
 - Browser-session smoke route for fixture, operator snapshot, and gated live
   calibration reports without printing private raw HTML.
 - Browser-session auth-state onboarding through CLI planning, optional
@@ -52,7 +54,7 @@ This proves:
   source-registry sync, index/graph build, answer evidence, and privacy-safe
   local raw API path reporting.
 - Semantic and hybrid query routes through CLI and MCP, backed by a portable
-  local semantic index artifact.
+  local semantic index artifact and collision guardrails.
 
 ## Remaining Goal Work
 

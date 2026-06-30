@@ -45,3 +45,12 @@
   partial blocked answer and Stepik fixture sync refuses non-fixture course IDs.
 - Added browser-session auth-state onboarding commands for Playwright state
   capture and redacted state inspection before live GetCourse/Skillspace sync.
+- Added JSON-RPC stdio support to `aoa-course-connector-mcp`, including
+  `initialize`, `tools/list`, and `tools/call` responses with structured tool
+  results.
+- Hardened deterministic semantic search against hash-collision-only matches
+  and made index manifest schema requirements variant-specific.
+- Hardened browser auth-state inspection so cookie-domain-only Playwright state
+  can still satisfy expected-origin checks.
+- Hardened browser progress parsing for aria-valuenow-only progress bars and
+  explicit not-started states.

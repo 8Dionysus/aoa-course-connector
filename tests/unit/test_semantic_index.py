@@ -11,6 +11,9 @@ from aoa_course_connector.mcp.server import call_tool
 from aoa_course_connector.query import query_hybrid_index, query_semantic_index, render_answer_packet
 
 
+REPO_ROOT = Path(__file__).resolve().parents[2]
+
+
 def roots(tmp_path: Path) -> StorageRoots:
     return StorageRoots(
         data=tmp_path / "data",
@@ -55,6 +58,36 @@ def test_semantic_and_hybrid_queries_return_evidence(tmp_path: Path) -> None:
     assert packet["mode"] == "hybrid"
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+
+
+def test_semantic_query_rejects_hash_collision_only_matches(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(storage, run_id="starter-fixture")
+    build_keyword_index(storage, run_id="starter-fixture")
+    build_semantic_index(storage, run_id="starter-fixture", dimensions=8)
+
+    query = "xylophone nebula quaternion"
+
+    assert query_semantic_index(storage, query, run_id="starter-fixture") == []
+    assert query_hybrid_index(storage, query, run_id="starter-fixture") == []
+
+
+def test_index_manifest_schema_keeps_kind_specific_required_fields() -> None:
+    schema = json.loads((REPO_ROOT / "connector" / "schemas" / "index_manifest.schema.json").read_text(encoding="utf-8"))
+    variants = {
+        variant["properties"]["schema"]["const"]: set(variant["required"])
+        for variant in schema["oneOf"]
+    }
+
+    assert variants["aoa_course_keyword_index_v1"] >= {"schema", "run_id", "doc_count", "term_count"}
+    assert variants["aoa_course_semantic_index_v1"] >= {
+        "schema",
+        "run_id",
+        "doc_count",
+        "provider",
+        "dimensions",
+        "feature_contract",
+    }
 
 
 def test_mcp_semantic_search(tmp_path: Path, monkeypatch) -> None:

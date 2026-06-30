@@ -2,8 +2,8 @@
 
 ## Now
 
-- Prove offline course fixture ingestion, index, graph, query, and MCP tool
-  shape.
+- Prove offline course fixture ingestion, index, graph, query, and JSON-RPC
+  stdio MCP tool shape.
 - Prove Stepik as the first clean API reference adapter.
 - Prove GetCourse and Skillspace through shared browser-session snapshot
   adapters.
@@ -29,7 +29,7 @@
 - Prove Stepik fixture/live smoke reports that combine registration, sync,
   artifacts, answer evidence, and privacy-safe local raw API path reporting.
 - Prove a deterministic semantic/vector index baseline behind the stable keyword
-  contract.
+  contract, including collision-only result guardrails.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 

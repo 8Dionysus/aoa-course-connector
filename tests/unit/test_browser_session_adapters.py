@@ -165,3 +165,31 @@ def test_browser_snapshot_reads_aria_only_progressbar() -> None:
         "updated_at": "",
         "label": "60 percent reviewed",
     }
+
+
+def test_browser_snapshot_reads_aria_valuenow_only_progressbar() -> None:
+    snapshot = parse_html_snapshot(
+        '<main><div class="progressbar" role="progressbar" aria-valuenow="40"></div></main>',
+        "https://academy.example/course/mobile-debugging",
+    )
+
+    assert snapshot.progress == {
+        "state": "visible",
+        "percent": "40",
+        "updated_at": "",
+        "label": "40 percent",
+    }
+
+
+def test_browser_snapshot_keeps_not_started_progress_out_of_in_progress() -> None:
+    snapshot = parse_html_snapshot(
+        '<main><div class="progressbar" role="progressbar" aria-valuenow="0" aria-label="Not started"></div></main>',
+        "https://academy.example/course/mobile-debugging",
+    )
+
+    assert snapshot.progress == {
+        "state": "not_started",
+        "percent": "0",
+        "updated_at": "",
+        "label": "Not started",
+    }
