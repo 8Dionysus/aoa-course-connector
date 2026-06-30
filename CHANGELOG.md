@@ -95,3 +95,6 @@
   including WebVTT/SRT cue cleanup, live caption-resource collection guardrails,
   smoke `transcript_count`, and source-authority checks in
   `eval browser-transcripts`.
+- Added transcript/caption health diagnostics to live calibration packets,
+  including transcript source-authority counts, caption sidecar totals, browser
+  reports with transcripts, and caption-resource error failures.

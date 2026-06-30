@@ -43,7 +43,8 @@
 - Prove adapter-derived authority metadata so browser-session roles and Stepik
   official API/source signals survive normalization, indexing, and query.
 - Prove live calibration packets that summarize GetCourse, Skillspace, and
-  Stepik smoke/preflight reports without committing private payloads.
+  Stepik smoke/preflight reports, answer evidence, transcript/caption health,
+  and caption-resource errors without committing private payloads.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional

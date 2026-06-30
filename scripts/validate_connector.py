@@ -324,6 +324,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "do not commit",
         "raw_paths_are_local_runtime_state",
         "contains_secret_values",
+        "transcript_count_total",
+        "caption_sidecar_count_total",
+        "caption_resource_error_count_total",
+        "browser_reports_with_transcripts",
         "aoa-evals",
     ]:
         if token not in live_calibration_doc:

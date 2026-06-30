@@ -13,7 +13,8 @@ suite_ref: evals/suites/live_calibration_packet.json
 
 This local suite checks the fixture-safe shape of live-calibration packets:
 multiple platform smoke reports, source-backed answer evidence, timestamp
-coverage, preflight input, and private-data redaction boundaries.
+coverage, browser transcript/caption health, preflight input, and private-data
+redaction boundaries.
 
 It does not touch private accounts. Live operator runs can build the same
 packet from saved smoke/preflight report JSON files.

@@ -5,6 +5,12 @@
   "expected_platforms": ["getcourse", "skillspace", "stepik"],
   "min_answer_result_count_total": 3,
   "min_answer_evidence_count_total": 3,
+  "min_transcript_count_total": 4,
+  "min_caption_sidecar_count_total": 2,
+  "required_transcript_source_authorities": [
+    "browser_caption_sidecar",
+    "browser_visible_transcript"
+  ],
   "required_quality_true_fields": [
     "all_answered_reports_have_evidence",
     "all_answered_reports_have_timestamps"

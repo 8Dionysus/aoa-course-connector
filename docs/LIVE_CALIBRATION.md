@@ -70,6 +70,14 @@ The packet summarizes report health without embedding raw private payloads:
 
 - `platforms`, `source_modes`, `report_count`, and `preflight_count` show the
   covered adapter routes.
+- `quality.transcript_count_total`, `quality.caption_sidecar_count_total`, and
+  `quality.transcript_source_authority_counts` show whether browser smoke found
+  visible transcript/caption text and caption sidecars.
+- `quality.browser_reports_with_transcripts` shows how many browser smoke
+  reports produced at least one canonical transcript object.
+- `quality.caption_resource_error_count_total` must stay `0`; any non-zero
+  value means a visible caption sidecar was present but could not be collected
+  or parsed cleanly.
 - `quality.answer_result_count_total` and
   `quality.answer_evidence_count_total` show whether answer checks found
   source-backed evidence.
@@ -80,9 +88,9 @@ The packet summarizes report health without embedding raw private payloads:
 - `privacy.contains_raw_payloads` and `privacy.contains_secret_values` must
   stay false.
 
-If a smoke report has no lessons, no evidence, no answer chain, a missing
-privacy guard, or a secret-like marker, packet `status` becomes `partial` and
-the `failures` list tells the next agent what to repair.
+If a smoke report has no lessons, no evidence, no answer chain, caption-resource
+errors, a missing privacy guard, or a secret-like marker, packet `status`
+becomes `partial` and the `failures` list tells the next agent what to repair.
 
 ## Next Work From A Packet
 
@@ -90,6 +98,8 @@ Use a successful packet to decide the next bounded field task:
 
 - expand a live sync from smoke limits to an operator-selected full course;
 - repair GetCourse or Skillspace selectors for real themes found in smoke;
+- repair protected or unusual caption sidecar collection when
+  `caption_resource_error_count_total` is non-zero;
 - calibrate Stepik source enrichment and account discovery on authenticated
   courses;
 - capture new local eval pressure when a recurring failure appears, without

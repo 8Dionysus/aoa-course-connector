@@ -305,6 +305,17 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
     }
     if isinstance(raw.get("crawl"), dict):
         receipt["crawl"] = raw["crawl"]
+    resources = raw.get("resources") if isinstance(raw.get("resources"), list) else []
+    caption_errors = raw.get("caption_resource_errors") if isinstance(raw.get("caption_resource_errors"), list) else []
+    receipt["caption_resource_count"] = len(resources)
+    receipt["caption_resource_error_count"] = len(caption_errors)
+    receipt["caption_resource_error_reasons"] = sorted(
+        {
+            str(error.get("reason") or "unknown")
+            for error in caption_errors
+            if isinstance(error, dict)
+        }
+    )
     receipt_path = data_dir / "browser_materialize_receipt.json"
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
     receipt["receipt_path"] = str(receipt_path)
