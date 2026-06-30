@@ -164,8 +164,8 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     sync_calls: list[dict[str, object]] = []
     smoke_calls: list[dict[str, object]] = []
 
-    def fake_sync(roots_arg, *, sync_run_id: str, source_ids=None, state_file=None, **_kwargs):
-        sync_calls.append({"source_ids": list(source_ids or []), "state_file": state_file})
+    def fake_sync(roots_arg, *, sync_run_id: str, source_ids=None, state_file=None, link_pattern=None, **_kwargs):
+        sync_calls.append({"source_ids": list(source_ids or []), "state_file": state_file, "link_pattern": link_pattern})
         receipt_path = roots_arg.data / "sync" / sync_run_id / "sync_receipt.json"
         receipt_path.parent.mkdir(parents=True, exist_ok=True)
         receipt = {
@@ -188,11 +188,12 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
         run_id: str,
         course_url: str,
         state_file=None,
+        link_pattern=None,
         query=None,
         build_artifacts: bool = True,
         **_kwargs,
     ):
-        smoke_calls.append({"platform": platform, "course_url": course_url, "state_file": state_file})
+        smoke_calls.append({"platform": platform, "course_url": course_url, "state_file": state_file, "link_pattern": link_pattern})
         report = smoke_browser_fixture(
             roots_arg,
             platform=platform,
@@ -211,6 +212,7 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
         mode="live",
         platforms=["getcourse"],
         allow_network=True,
+        link_pattern="*/lessons/*",
     )
     status = load_connected_calibration_status(storage, run_id="connected-live-browser-default-state")
 
@@ -218,8 +220,8 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     assert receipt["network_touched"] is True
     assert receipt["source_selection"]["ready_source_ids"] == [source["source_id"]]
     assert receipt["source_selection"]["selected_source_count"] == 1
-    assert sync_calls == [{"source_ids": [source["source_id"]], "state_file": state_file.resolve()}]
-    assert smoke_calls == [{"platform": "getcourse", "course_url": source["source_ref"], "state_file": state_file.resolve()}]
+    assert sync_calls == [{"source_ids": [source["source_id"]], "state_file": state_file.resolve(), "link_pattern": "*/lessons/*"}]
+    assert smoke_calls == [{"platform": "getcourse", "course_url": source["source_ref"], "state_file": state_file.resolve(), "link_pattern": "*/lessons/*"}]
     live_sync_stage = next(stage for stage in receipt["stages"] if stage["name"] == "live_sync")
     live_smoke_stage = next(stage for stage in receipt["stages"] if stage["name"] == "live_smoke")
     assert live_sync_stage["actions"][0]["source_ids"] == [source["source_id"]]

@@ -30,6 +30,7 @@ For agents, start with the combined read-only plan:
 aoa-course preflight connected-plan \
   --live-scope bounded \
   --query "course-specific question" \
+  --link-pattern "*/lessons/*" \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 ```
 
@@ -41,7 +42,9 @@ platform set covers GetCourse, Skillspace, and Stepik together, and its default
 `bounded` scope keeps Stepik live sync/smoke under smoke limits. Pass
 `--platform` only to narrow a diagnostic run; switch to `--live-scope
 full-course --include-step-sources` only for an explicit operator-selected
-full-course calibration.
+full-course calibration. For browser-session sources, `--link-pattern` is
+optional and narrows the course/lesson URL glob used by generated live sync and
+smoke commands.
 
 For GetCourse and Skillspace, inspect `browser_auth_handoffs` before running
 any live browser command. The handoff packet groups source readiness by host,

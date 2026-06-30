@@ -38,7 +38,7 @@ aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","m
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{}'
-aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question"}'
+aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 ```
 
@@ -134,6 +134,8 @@ preflight-report, source sync, per-source smoke, and `calibration build`
 commands. Agents should use it before connected live work so blocked sources,
 missing auth state, missing Stepik token env, runtime report paths, and
 calibration packet inputs are explicit before network-touching commands run.
+For browser-session platforms, pass `link_pattern` when a school needs a
+narrower course/lesson URL glob in live sync and smoke commands.
 For browser-session platforms, read `browser_auth_handoffs` first: it groups
 GetCourse/Skillspace sources by host, reports missing or mismatched
 storage-state, and provides the exact auth capture, redacted inspect, and

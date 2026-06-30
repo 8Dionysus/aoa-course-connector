@@ -231,6 +231,7 @@ one redacted handoff packet:
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
   --live-scope bounded \
   --query "course-specific question" \
+  --link-pattern "*/lessons/*" \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 ```
 
@@ -241,10 +242,11 @@ agents as MCP `connected_source_plan`. The default `--live-scope bounded`
 plans GetCourse, Skillspace, and Stepik together, while keeping Stepik live
 sync/smoke commands under smoke limits. Use `--platform` only to narrow a
 diagnostic run, and use `--live-scope full-course --include-step-sources` only
-for an explicit operator-selected full-course run. `--write-runbook` writes the
-same redacted handoff as Markdown under runtime artifact storage so an operator
-or agent can execute the setup, sync, smoke, and calibration steps without
-rereading raw JSON.
+for an explicit operator-selected full-course run. For browser-session sources,
+`--link-pattern` carries the same lesson/course URL glob into planned sync and
+smoke commands. `--write-runbook` writes the same redacted handoff as Markdown
+under runtime artifact storage so an operator or agent can execute the setup,
+sync, smoke, and calibration steps without rereading raw JSON.
 
 For GetCourse and Skillspace, the plan also includes
 `browser_auth_handoffs`: one per browser-session platform. Each handoff groups

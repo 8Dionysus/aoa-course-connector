@@ -127,6 +127,7 @@ def run_connected_calibration(
     max_lessons: int = 50,
     max_pages: int = 5,
     max_sources: int = 50,
+    link_pattern: str | None = None,
     source_limit: int | None = None,
 ) -> dict[str, object]:
     """Run a connected-source calibration workflow and write a receipt."""
@@ -162,6 +163,7 @@ def run_connected_calibration(
             max_lessons=max_lessons,
             max_pages=max_pages,
             max_sources=max_sources,
+            link_pattern=link_pattern,
             source_limit=source_limit,
             started_at=started_at,
         )
@@ -350,6 +352,7 @@ def _run_live(
     max_lessons: int,
     max_pages: int,
     max_sources: int,
+    link_pattern: str | None,
     source_limit: int | None,
     started_at: str,
 ) -> dict[str, object]:
@@ -372,6 +375,7 @@ def _run_live(
         max_lessons=max_lessons,
         max_pages=max_pages,
         max_sources=max_sources,
+        link_pattern=link_pattern,
         calibration_run=run_id,
         live_scope=live_scope,
         include_step_sources=include_step_sources,
@@ -474,6 +478,7 @@ def _run_live(
                 source_ids=ids,
                 state_file=state_file,
                 max_lessons=max_lessons,
+                link_pattern=link_pattern,
                 source_limit=source_limit,
                 build_artifacts=True,
             ),
@@ -530,6 +535,7 @@ def _run_live(
                     max_sources=max_sources,
                     max_pages=max_pages,
                     max_lessons=max_lessons,
+                    link_pattern=link_pattern,
                     query=query,
                     build_artifacts=True,
                 ),

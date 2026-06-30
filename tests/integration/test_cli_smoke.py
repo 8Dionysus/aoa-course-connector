@@ -248,13 +248,17 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
         "school.example",
         "--query",
         "course-specific question",
+        "--link-pattern",
+        "*/lessons/*",
     )
 
     assert plan["schema"] == "aoa_course_connected_source_plan_v1"
     assert plan["ready"] is True
     assert plan["live_scope"] == "bounded"
+    assert plan["link_pattern"] == "*/lessons/*"
     assert any("sync browser-live" in command for command in plan["next_commands"])
     assert any("smoke browser-live" in command for command in plan["next_commands"])
+    assert any("--link-pattern '*/lessons/*'" in command for command in plan["next_commands"])
     assert any("calibration build" in command for command in plan["next_commands"])
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke" in command for command in plan["next_commands"])
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in action["artifact_path"] for stage in plan["stages"] for action in stage["actions"] if action["kind"] == "calibration")

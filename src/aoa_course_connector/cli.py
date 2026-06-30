@@ -134,6 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_plan.add_argument("--max-lessons", type=int, default=50)
     preflight_plan.add_argument("--max-pages", type=int, default=5)
     preflight_plan.add_argument("--max-sources", type=int, default=50)
+    preflight_plan.add_argument("--link-pattern")
     preflight_plan.add_argument("--calibration-run", default="connected-live-calibration")
     preflight_plan.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
     preflight_plan.add_argument("--include-step-sources", action="store_true")
@@ -435,6 +436,7 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_connected.add_argument("--max-lessons", type=int, default=50)
     calibration_connected.add_argument("--max-pages", type=int, default=5)
     calibration_connected.add_argument("--max-sources", type=int, default=50)
+    calibration_connected.add_argument("--link-pattern")
     calibration_connected.add_argument("--source-limit", type=int)
     calibration_connected.set_defaults(func=cmd_calibration_connected_run)
     calibration_status = calibration_sub.add_parser("status")
@@ -657,6 +659,7 @@ def cmd_preflight_connected_plan(args: argparse.Namespace) -> int:
         max_lessons=args.max_lessons,
         max_pages=args.max_pages,
         max_sources=args.max_sources,
+        link_pattern=args.link_pattern,
         calibration_run=args.calibration_run,
         live_scope=args.live_scope,
         include_step_sources=args.include_step_sources,
@@ -1226,6 +1229,7 @@ def cmd_calibration_connected_run(args: argparse.Namespace) -> int:
             max_lessons=args.max_lessons,
             max_pages=args.max_pages,
             max_sources=args.max_sources,
+            link_pattern=args.link_pattern,
             source_limit=args.source_limit,
         )
     except ValueError as exc:

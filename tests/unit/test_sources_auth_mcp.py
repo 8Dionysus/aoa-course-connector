@@ -331,12 +331,19 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
 
     plan = call_tool(
         "connected_source_plan",
-        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.example"},
+        {
+            "platforms": ["getcourse"],
+            "state_file": str(state_file),
+            "expect_origin": "school.example",
+            "link_pattern": "*/lessons/*",
+        },
     )
 
     assert plan["tool"] == "connected_source_plan"
     assert plan["plan"]["ready"] is True
+    assert plan["plan"]["link_pattern"] == "*/lessons/*"
     assert any("smoke browser-live" in command for command in plan["plan"]["next_commands"])
+    assert any("--link-pattern '*/lessons/*'" in command for command in plan["plan"]["next_commands"])
     handoff = plan["plan"]["browser_auth_handoffs"][0]
     assert handoff["ready"] is True
     assert handoff["source_hosts"] == ["school.example"]
@@ -401,6 +408,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
+    assert "link_pattern" in connected_plan_tool["inputSchema"]["properties"]
     assert connected_run_tool["inputSchema"]["required"] == []
     assert evidence_tool["inputSchema"]["required"] == ["query"]
     assert refresh_tool["inputSchema"]["required"] == ["query"]
