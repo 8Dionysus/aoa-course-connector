@@ -15,7 +15,7 @@ from typing import Any, TextIO
 
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, query_semantic_index, render_answer_packet
-from aoa_course_connector.readiness import live_preflight
+from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.sync import load_sync_status
 
@@ -56,6 +56,27 @@ def _live_preflight_schema() -> dict[str, object]:
     )
 
 
+def _connected_source_plan_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "platforms": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
+                "description": "Optional connected platforms to plan.",
+            },
+            "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
+            "state_file": _string_schema("Optional browser storage-state file."),
+            "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
+            "include_disabled": {"type": "boolean", "description": "Include disabled sources in readiness checks."},
+            "query": _string_schema("Optional course-specific smoke query."),
+            "max_lessons": _integer_schema("Maximum lessons for browser live smoke/sync commands.", 1),
+            "max_pages": _integer_schema("Maximum catalog pages for browser live smoke commands.", 1),
+            "max_sources": _integer_schema("Maximum discovered sources for browser live smoke commands.", 1),
+            "calibration_run": _string_schema("Calibration run id for the handoff packet."),
+        }
+    )
+
+
 def _object_schema(properties: dict[str, object], *, required: Iterable[str] = ()) -> dict[str, object]:
     return {"type": "object", "properties": properties, "required": list(required), "additionalProperties": False}
 
@@ -73,6 +94,7 @@ TOOLS = [
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
+    {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
     {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined.", "inputSchema": _query_schema()},
@@ -100,6 +122,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sync": load_sync_status(roots, sync_run_id=str(args.get("sync_run") or ""), platform=str(args.get("platform") or ""))}
     if name == "live_preflight":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_live_preflight(roots, args)}
+    if name == "connected_source_plan":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "plan": _call_connected_source_plan(roots, args)}
     if name == "search":
         return {
             "schema": "aoa_course_mcp_result_v1",
@@ -182,6 +206,34 @@ def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[s
         expect_origin_contains=str(args.get("expect_origin") or "") or None,
         include_disabled=bool(args.get("include_disabled", False)),
     )
+
+
+def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    platforms = _platform_arg(args.get("platforms"), tool_name="connected_source_plan")
+    state_file = args.get("state_file")
+    if state_file is not None and not isinstance(state_file, str):
+        raise ValueError("connected_source_plan state_file must be a string")
+    return connected_source_plan(
+        roots,
+        platforms=platforms,
+        stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
+        browser_state_file=Path(state_file) if state_file else None,
+        expect_origin_contains=str(args.get("expect_origin") or "") or None,
+        include_disabled=bool(args.get("include_disabled", False)),
+        query=str(args.get("query") or "") or None,
+        max_lessons=int(args.get("max_lessons") or 50),
+        max_pages=int(args.get("max_pages") or 5),
+        max_sources=int(args.get("max_sources") or 50),
+        calibration_run=str(args.get("calibration_run") or "connected-live-calibration"),
+    )
+
+
+def _platform_arg(value: object, *, tool_name: str) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+    raise ValueError(f"{tool_name} platforms must be an array of strings")
 
 
 def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:

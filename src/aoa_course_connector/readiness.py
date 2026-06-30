@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import re
+import shlex
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -90,12 +92,332 @@ def live_preflight(
     }
 
 
+def connected_source_plan(
+    roots: StorageRoots,
+    *,
+    platforms: list[str] | None = None,
+    stepik_token_env: str = "STEPIK_API_TOKEN",
+    browser_state_file: Path | None = None,
+    expect_origin_contains: str | None = None,
+    include_disabled: bool = False,
+    query: str | None = None,
+    max_lessons: int = 50,
+    max_pages: int = 5,
+    max_sources: int = 50,
+    calibration_run: str = "connected-live-calibration",
+) -> dict[str, object]:
+    """Build a read-only launch plan for connected-source calibration."""
+
+    selected_platforms = _selected_platforms(platforms)
+    preflight = live_preflight(
+        roots,
+        platforms=selected_platforms,
+        stepik_token_env=stepik_token_env,
+        browser_state_file=browser_state_file,
+        expect_origin_contains=expect_origin_contains,
+        include_disabled=include_disabled,
+    )
+    source_checks = [
+        check
+        for check in preflight.get("checks", [])
+        if isinstance(check, dict) and check.get("kind") == "source"
+    ]
+    workflow_by_key = {
+        (str(workflow.get("name") or ""), str(workflow.get("platform") or "")): workflow
+        for workflow in preflight.get("workflows", [])
+        if isinstance(workflow, dict)
+    }
+    preflight_actions = _preflight_actions(
+        selected_platforms,
+        stepik_token_env=stepik_token_env,
+        browser_state_file=browser_state_file,
+        expect_origin_contains=expect_origin_contains,
+        include_disabled=include_disabled,
+    )
+    setup_actions = _setup_actions(preflight)
+    sync_actions = _sync_actions(
+        selected_platforms,
+        workflow_by_key,
+        stepik_token_env=stepik_token_env,
+        browser_state_file=browser_state_file,
+        max_lessons=max_lessons,
+    )
+    smoke_actions = _smoke_actions(
+        source_checks,
+        stepik_token_env=stepik_token_env,
+        browser_state_file=browser_state_file,
+        query=query,
+        max_lessons=max_lessons,
+        max_pages=max_pages,
+        max_sources=max_sources,
+    )
+    calibration_actions = _calibration_actions(
+        preflight_actions,
+        smoke_actions,
+        calibration_run=calibration_run,
+    )
+    source_plans = [_source_plan(check, smoke_actions) for check in source_checks]
+    platform_plans = _platform_plans(selected_platforms, source_checks, workflow_by_key)
+    ready_platforms = [plan for plan in platform_plans if plan.get("ready")]
+    status = "ok" if len(ready_platforms) == len(selected_platforms) else "partial" if ready_platforms else "warning"
+    stages = [
+        {"name": "preflight_reports", "ready": True, "actions": preflight_actions},
+        {"name": "setup_or_unblock", "ready": not setup_actions, "actions": setup_actions},
+        {"name": "live_sync", "ready": bool(sync_actions), "actions": sync_actions},
+        {"name": "live_smoke", "ready": bool(smoke_actions), "actions": smoke_actions},
+        {"name": "calibration_packet", "ready": bool(calibration_actions), "actions": calibration_actions},
+    ]
+    return {
+        "schema": "aoa_course_connected_source_plan_v1",
+        "status": status,
+        "ready": status == "ok",
+        "actionable": any(stage.get("actions") for stage in stages),
+        "network_touched": False,
+        "read_only": True,
+        "privacy": preflight.get("privacy"),
+        "storage": preflight.get("storage"),
+        "source_registry": preflight.get("source_registry"),
+        "platforms": selected_platforms,
+        "platform_plans": platform_plans,
+        "source_plans": source_plans,
+        "stages": stages,
+        "next_commands": _dedupe(
+            [
+                str(action.get("command") or "")
+                for stage in stages
+                for action in stage.get("actions", [])
+                if isinstance(action, dict) and action.get("command")
+            ]
+        ),
+        "preflight": preflight,
+    }
+
+
 def _selected_platforms(platforms: list[str] | None) -> list[str]:
     selected = list(dict.fromkeys(platforms or ["getcourse", "skillspace", "stepik"]))
     unsupported = [platform for platform in selected if platform not in CONNECTED_PLATFORMS]
     if unsupported:
         raise ValueError(f"unsupported preflight platform: {', '.join(unsupported)}")
     return selected
+
+
+def _preflight_actions(
+    platforms: list[str],
+    *,
+    stepik_token_env: str,
+    browser_state_file: Path | None,
+    expect_origin_contains: str | None,
+    include_disabled: bool,
+) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    for platform in platforms:
+        command = f"aoa-course preflight live --platform {platform}"
+        if platform == "stepik":
+            command += f" --stepik-token-env {shlex.quote(stepik_token_env)}"
+        if platform in BROWSER_PLATFORMS:
+            command += f" --state-file {_state_file_arg(platform, browser_state_file)}"
+            if expect_origin_contains:
+                command += f" --expect-origin {shlex.quote(expect_origin_contains)}"
+        if include_disabled:
+            command += " --include-disabled"
+        artifact = f"$AOA_COURSE_ARTIFACT_ROOT/{platform}-preflight.json"
+        actions.append(
+            {
+                "kind": "preflight_report",
+                "platform": platform,
+                "ready": True,
+                "network_touched": False,
+                "artifact_path": artifact,
+                "command": f'{command} > "{artifact}"',
+            }
+        )
+    return actions
+
+
+def _setup_actions(preflight: dict[str, object]) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    for command in preflight.get("next_commands", []):
+        text = str(command or "")
+        if not text:
+            continue
+        if " sync " in f" {text} ":
+            continue
+        actions.append({"kind": _setup_kind(text), "ready": True, "command": text, "network_touched": _command_touches_network(text)})
+    return actions
+
+
+def _setup_kind(command: str) -> str:
+    if command.startswith("export "):
+        return "set_token_env"
+    if "capture-browser-state" in command:
+        return "capture_browser_state"
+    if "inspect-browser-state" in command:
+        return "inspect_browser_state"
+    if "plan-browser-state" in command:
+        return "plan_browser_state"
+    if "discover " in command:
+        return "discover_sources"
+    return "setup"
+
+
+def _sync_actions(
+    platforms: list[str],
+    workflow_by_key: dict[tuple[str, str], dict[str, object]],
+    *,
+    stepik_token_env: str,
+    browser_state_file: Path | None,
+    max_lessons: int,
+) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    for platform in [item for item in platforms if item in BROWSER_PLATFORMS]:
+        workflow = workflow_by_key.get(("browser_live_sync", platform), {})
+        if not workflow.get("ready"):
+            continue
+        command = (
+            f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform} "
+            f"--state-file {_state_file_arg(platform, browser_state_file)} --max-lessons {max_lessons} --build-artifacts"
+        )
+        actions.append({"kind": "sync", "platform": platform, "ready": True, "network_touched": True, "command": command})
+    if "stepik" in platforms:
+        workflow = workflow_by_key.get(("stepik_source_sync", "stepik"), {})
+        if workflow.get("ready"):
+            command = (
+                "aoa-course sync stepik-live --run stepik-live-sync "
+                f"--token-env {shlex.quote(stepik_token_env)} --full-course --batch-size 20 "
+                "--include-step-sources --build-artifacts"
+            )
+            actions.append({"kind": "sync", "platform": "stepik", "ready": True, "network_touched": True, "command": command})
+    return actions
+
+
+def _smoke_actions(
+    source_checks: list[dict[str, object]],
+    *,
+    stepik_token_env: str,
+    browser_state_file: Path | None,
+    query: str | None,
+    max_lessons: int,
+    max_pages: int,
+    max_sources: int,
+) -> list[dict[str, object]]:
+    actions: list[dict[str, object]] = []
+    for source in source_checks:
+        if not source.get("ready"):
+            continue
+        platform = str(source.get("platform") or "")
+        source_ref = str(source.get("source_ref") or "")
+        slug = _source_slug(source)
+        artifact = f"$AOA_COURSE_ARTIFACT_ROOT/{platform}-live-smoke-{slug}.json"
+        if platform in BROWSER_PLATFORMS:
+            command = (
+                f"aoa-course smoke browser-live --platform {platform} --run {platform}-live-smoke-{slug} "
+                f"--course-url {shlex.quote(source_ref)} --state-file {_state_file_arg(platform, browser_state_file)} "
+                f"--max-sources {max_sources} --max-pages {max_pages} --max-lessons {max_lessons}"
+            )
+        elif platform == "stepik":
+            course_id = _stepik_course_id(source_ref)
+            if course_id is None:
+                actions.append(
+                    {
+                        "kind": "smoke",
+                        "platform": platform,
+                        "source_id": source.get("source_id"),
+                        "source_ref": source_ref,
+                        "ready": False,
+                        "network_touched": True,
+                        "blocked_by": [f"cannot parse Stepik course id from source_ref: {source_ref}"],
+                    }
+                )
+                continue
+            command = (
+                f"aoa-course smoke stepik-live {course_id} --run stepik-live-smoke-{slug} "
+                f"--token-env {shlex.quote(stepik_token_env)} --full-course --batch-size 20 --include-step-sources"
+            )
+        else:
+            continue
+        if query:
+            command += f" --query {shlex.quote(query)}"
+        actions.append(
+            {
+                "kind": "smoke",
+                "platform": platform,
+                "source_id": source.get("source_id"),
+                "source_ref": source_ref,
+                "ready": True,
+                "network_touched": True,
+                "artifact_path": artifact,
+                "command": f'{command} > "{artifact}"',
+            }
+        )
+    return actions
+
+
+def _calibration_actions(
+    preflight_actions: list[dict[str, object]],
+    smoke_actions: list[dict[str, object]],
+    *,
+    calibration_run: str,
+) -> list[dict[str, object]]:
+    ready_smoke_artifacts = [str(action.get("artifact_path") or "") for action in smoke_actions if action.get("ready") and action.get("artifact_path")]
+    if not ready_smoke_artifacts:
+        return []
+    preflight_artifacts = [str(action.get("artifact_path") or "") for action in preflight_actions if action.get("artifact_path")]
+    parts = ["aoa-course calibration build", f"--run {shlex.quote(calibration_run)}"]
+    for path in ready_smoke_artifacts:
+        parts.append(f'--report "{path}"')
+    for path in preflight_artifacts:
+        parts.append(f'--preflight-report "{path}"')
+    return [
+        {
+            "kind": "calibration",
+            "ready": True,
+            "network_touched": False,
+            "command": " ".join(parts),
+            "artifact_path": f"$AOA_COURSE_ARTIFACT_ROOT/{calibration_run}/calibration/live_calibration_packet.json",
+        }
+    ]
+
+
+def _source_plan(source: dict[str, object], smoke_actions: list[dict[str, object]]) -> dict[str, object]:
+    source_id = source.get("source_id")
+    smoke = next((action for action in smoke_actions if action.get("source_id") == source_id), None)
+    return {
+        "platform": source.get("platform"),
+        "source_id": source_id,
+        "source_ref": source.get("source_ref"),
+        "title": source.get("title"),
+        "access_mode": source.get("access_mode"),
+        "enabled": source.get("enabled"),
+        "ready": source.get("ready"),
+        "blockers": source.get("blockers", []),
+        "smoke_command": smoke.get("command") if smoke else None,
+        "smoke_report_path": smoke.get("artifact_path") if smoke else None,
+    }
+
+
+def _platform_plans(
+    platforms: list[str],
+    source_checks: list[dict[str, object]],
+    workflow_by_key: dict[tuple[str, str], dict[str, object]],
+) -> list[dict[str, object]]:
+    plans: list[dict[str, object]] = []
+    for platform in platforms:
+        platform_sources = [check for check in source_checks if check.get("platform") == platform]
+        sync_workflow = workflow_by_key.get(("stepik_source_sync" if platform == "stepik" else "browser_live_sync", platform), {})
+        blocked = [check for check in platform_sources if not check.get("ready")]
+        plans.append(
+            {
+                "platform": platform,
+                "ready": bool(sync_workflow.get("ready")),
+                "source_count": len(platform_sources),
+                "ready_source_count": len([check for check in platform_sources if check.get("ready")]),
+                "blocked_source_count": len(blocked),
+                "required_workflow": sync_workflow.get("name"),
+                "required_workflow_ready": bool(sync_workflow.get("ready")),
+                "blockers": [blocker for check in blocked for blocker in check.get("blockers", [])],
+            }
+        )
+    return plans
 
 
 def _append_stepik_preflight(
@@ -297,5 +619,30 @@ def _host(value: str) -> str:
     return parsed.hostname or ""
 
 
+def _state_file_arg(platform: str, state_file: Path | None) -> str:
+    if state_file:
+        return shlex.quote(str(state_file.expanduser()))
+    return f'"$AOA_COURSE_AUTH_ROOT/{platform}/account.storage-state.json"'
+
+
+def _command_touches_network(command: str) -> bool:
+    return any(token in command for token in ["capture-browser-state", "discover ", "sync ", "smoke "])
+
+
+def _source_slug(source: dict[str, object]) -> str:
+    source_id = str(source.get("source_id") or "")
+    seed = source_id.rsplit(":", maxsplit=1)[-1] if source_id else str(source.get("source_ref") or "source")
+    slug = re.sub(r"[^a-z0-9]+", "-", seed.casefold()).strip("-")
+    return slug[:48] or "source"
+
+
+def _stepik_course_id(source_ref: str) -> int | None:
+    text = source_ref.strip()
+    if text.isdigit():
+        return int(text)
+    match = re.search(r"(?:stepik\.org/)?course/(\d+)", text)
+    return int(match.group(1)) if match else None
+
+
 def _dedupe(values: list[str]) -> list[str]:
-    return list(dict.fromkeys(values))
+    return [value for value in dict.fromkeys(values) if value]

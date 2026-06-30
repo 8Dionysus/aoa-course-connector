@@ -33,6 +33,9 @@
 - Prove read-only live preflight reports so agents can verify Stepik token
   presence, browser auth-state usability, registered source readiness, and next
   commands through CLI and MCP before touching live sources.
+- Prove read-only connected-source launch plans so agents can convert preflight
+  readiness into exact preflight-report, source sync, per-source smoke, and
+  calibration packet commands before touching live sources.
 - Prove connector-local answer-quality evals that validate source identity,
   evidence fields, lesson path, snippets, freshness, and platform nuance beyond
   simple term presence.
@@ -61,9 +64,9 @@
 ## Next
 
 - Run the gated live smoke route on connected GetCourse and Skillspace accounts
-  after `preflight live` reports ready local state, then calibrate login
-  redirects, pagination, DOM heuristics, and live calibration packet failures
-  against real themes.
+  after `preflight connected-plan` reports ready local state, then calibrate
+  login redirects, pagination, DOM heuristics, and live calibration packet
+  failures against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
   status, comments, transcript/caption, sidecar resources, and discussion
   markup found by live smoke.

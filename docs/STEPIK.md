@@ -102,6 +102,20 @@ registered `api_token` or `oauth` sources still require the token before live
 sync is ready. Account discovery is treated as required only when no Stepik
 sources are already registered.
 
+For agent handoff, use the combined read-only connected plan:
+
+```bash
+aoa-course preflight connected-plan \
+  --platform stepik \
+  --stepik-token-env STEPIK_API_TOKEN \
+  --query "course-specific question"
+```
+
+The plan emits `sync stepik-live`, per-source `smoke stepik-live`, and
+`calibration build` commands when registered Stepik sources are ready. It keeps
+token values out of output and still marks `public_api` sources ready without a
+token.
+
 Account discovery filters inactive or deleted enrollments before registering
 course sources, so stale account records do not become live sync targets.
 

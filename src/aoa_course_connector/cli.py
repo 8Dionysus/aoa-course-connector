@@ -33,7 +33,7 @@ from aoa_course_connector.ingest import (
 )
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, write_answer_packet
-from aoa_course_connector.readiness import live_preflight
+from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.smoke import (
     smoke_browser_fixture as smoke_browser_fixture_route,
     smoke_browser_live as smoke_browser_live_route,
@@ -91,6 +91,19 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_live.add_argument("--include-disabled", action="store_true")
     preflight_live.add_argument("--require-ready", action="store_true")
     preflight_live.set_defaults(func=cmd_preflight_live)
+    preflight_plan = preflight_sub.add_parser("connected-plan")
+    preflight_plan.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    preflight_plan.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
+    preflight_plan.add_argument("--state-file", type=Path)
+    preflight_plan.add_argument("--expect-origin")
+    preflight_plan.add_argument("--include-disabled", action="store_true")
+    preflight_plan.add_argument("--query")
+    preflight_plan.add_argument("--max-lessons", type=int, default=50)
+    preflight_plan.add_argument("--max-pages", type=int, default=5)
+    preflight_plan.add_argument("--max-sources", type=int, default=50)
+    preflight_plan.add_argument("--calibration-run", default="connected-live-calibration")
+    preflight_plan.add_argument("--require-ready", action="store_true")
+    preflight_plan.set_defaults(func=cmd_preflight_connected_plan)
 
     sources = sub.add_parser("sources")
     sources_sub = sources.add_subparsers(dest="sources_command", required=True)
@@ -495,6 +508,25 @@ def cmd_preflight_live(args: argparse.Namespace) -> int:
     )
     _emit(report)
     return 0 if bool(report.get("ready")) or not args.require_ready else 1
+
+
+def cmd_preflight_connected_plan(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    plan = connected_source_plan(
+        roots,
+        platforms=args.platform,
+        stepik_token_env=args.stepik_token_env,
+        browser_state_file=args.state_file,
+        expect_origin_contains=args.expect_origin,
+        include_disabled=args.include_disabled,
+        query=args.query,
+        max_lessons=args.max_lessons,
+        max_pages=args.max_pages,
+        max_sources=args.max_sources,
+        calibration_run=args.calibration_run,
+    )
+    _emit(plan)
+    return 0 if bool(plan.get("ready")) or not args.require_ready else 1
 
 
 def cmd_sources_add(args: argparse.Namespace) -> int:

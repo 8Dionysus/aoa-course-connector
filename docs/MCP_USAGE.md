@@ -8,6 +8,7 @@ Initial tools:
 - `ingest_status`
 - `sync_status`
 - `live_preflight`
+- `connected_source_plan`
 - `search`
 - `semantic_search`
 - `hybrid_search`
@@ -31,6 +32,7 @@ aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
+aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"query":"course-specific question"}'
 ```
 
 ## JSON-RPC Stdio
@@ -57,6 +59,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"rollback","run":"starter-fixture"}}}' \
   '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"platforms":["stepik"]}}}' \
   | aoa-course-connector-mcp
 ```
 
@@ -75,3 +78,10 @@ agent inspect Stepik token presence, browser storage-state readiness, registered
 source readiness, and next commands before attempting live discovery or sync.
 It reports token/cookie/localStorage presence and counts only; secret values are
 not included in `structuredContent`.
+
+`connected_source_plan` is also read-only and returns `network_touched: false`.
+It wraps the live preflight report into an operator handoff plan with exact
+preflight-report, source sync, per-source smoke, and `calibration build`
+commands. Agents should use it before connected live work so blocked sources,
+missing auth state, missing Stepik token env, runtime report paths, and
+calibration packet inputs are explicit before network-touching commands run.

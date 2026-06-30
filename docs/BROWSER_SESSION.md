@@ -226,6 +226,19 @@ aoa-course preflight live \
   --expect-origin school.example
 ```
 
+When an agent needs to decide the next live action across registered browser
+sources, use the read-only connected plan:
+
+```bash
+aoa-course preflight connected-plan \
+  --platform getcourse \
+  --query "your course-specific question"
+```
+
+The plan reports which source hosts match the saved storage state and emits the
+exact `sync browser-live`, `smoke browser-live`, and `calibration build`
+commands only for ready sources.
+
 Then capture a visible page:
 
 ```bash

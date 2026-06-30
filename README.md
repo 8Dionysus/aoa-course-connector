@@ -197,6 +197,18 @@ and `smoke stepik-live` JSON reports under runtime artifact storage, then build
 one redacted handoff packet:
 
 ```bash
+PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
+  --platform getcourse \
+  --platform stepik \
+  --query "course-specific question"
+```
+
+`preflight connected-plan` is read-only. It inspects the source registry and
+auth readiness, then emits exact preflight, sync, smoke, and
+`calibration build` commands with runtime artifact paths. It is also exposed to
+agents as MCP `connected_source_plan`.
+
+```bash
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build \
   --run connected-live-calibration \
   --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" \
@@ -267,6 +279,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"r
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"platforms":["getcourse","stepik"]}'
 ```
 
 Runtime deployment in the full Abyss stack belongs in `abyss-stack`; this repo
