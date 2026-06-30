@@ -1,0 +1,18 @@
+{
+  "schema": "aoa_course_answer_eval_suite_v1",
+  "suite_id": "browser-crawl-answer-packets",
+  "cases": [
+    {
+      "query": "GetCourse bootloader rollback evidence",
+      "run": "getcourse-browser-crawl-fixture",
+      "must_contain_terms": ["getcourse", "bootloader", "rollback"],
+      "must_have_evidence": true
+    },
+    {
+      "query": "Skillspace logcat bugreport evidence",
+      "run": "skillspace-browser-crawl-fixture",
+      "must_contain_terms": ["skillspace", "logcat", "bugreport"],
+      "must_have_evidence": true
+    }
+  ]
+}

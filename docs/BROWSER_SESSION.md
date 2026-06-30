@@ -2,12 +2,14 @@
 
 GetCourse and Skillspace are hard browser-session adapters.
 
-The connector supports three browser-session routes:
+The connector supports four browser-session routes:
 
 1. `browser-fixture`: safe synthetic snapshots used by CI.
 2. `browser-snapshot`: operator-provided JSON snapshot captured outside Git.
 3. `browser-live`: optional Playwright capture using a connected user's local
    browser storage state.
+4. `crawl`: bounded course-tree traversal from an index page to visible lesson
+   pages.
 
 ## Fixture Proof
 
@@ -24,10 +26,34 @@ aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browse
 aoa-course eval browser-hard-adapters
 ```
 
+## Course-Tree Crawl Proof
+
+Use `crawl browser-fixture` when testing the adapter as a course tree rather
+than as a preassembled set of pages:
+
+```bash
+aoa-course crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture --max-lessons 20
+aoa-course build-index --run getcourse-browser-crawl-fixture
+aoa-course build-graph --run getcourse-browser-crawl-fixture
+aoa-course answer "GetCourse bootloader rollback evidence" --run getcourse-browser-crawl-fixture
+
+aoa-course crawl browser-fixture --platform skillspace --run skillspace-browser-crawl-fixture --max-lessons 20
+aoa-course build-index --run skillspace-browser-crawl-fixture
+aoa-course build-graph --run skillspace-browser-crawl-fixture
+aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-crawl-fixture
+aoa-course eval browser-crawl
+```
+
+The crawler extracts lesson links from the course index, keeps module hints from
+link metadata, matches already captured lesson pages by URL, and creates
+`discovered_not_fetched` placeholders only when a linked lesson page is absent
+from the snapshot.
+
 ## Snapshot Route
 
 ```bash
 aoa-course materialize browser-snapshot /path/to/snapshot.json --platform getcourse --run my-getcourse-run
+aoa-course crawl browser-snapshot /path/to/snapshot.json --platform getcourse --run my-getcourse-crawl --max-lessons 50
 ```
 
 Snapshot files use `aoa_course_browser_snapshot_v1` and should be stored outside
@@ -54,5 +80,16 @@ aoa-course materialize browser-live "https://school.example/teach/control/lesson
 The `state-file` is a local Playwright storage-state file produced after the
 operator logs in. Do not commit it.
 
-Live captures currently materialize one visible page at a time. Full course-tree
-navigation is the next expansion layer.
+To start from a course index and visit visible lesson pages in the same
+authorized session, use `crawl browser-live`:
+
+```bash
+aoa-course crawl browser-live "https://school.example/teach/control/stream" \
+  --platform getcourse \
+  --run getcourse-live-crawl \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --max-lessons 50
+```
+
+`--max-lessons` bounds the live traversal. `--link-pattern` can narrow discovery
+when a platform or school theme emits noisy navigation links.

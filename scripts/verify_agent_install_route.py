@@ -46,6 +46,15 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "skillspace-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "Skillspace logcat bugreport evidence", "--run", "skillspace-browser-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-hard-adapters"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "crawl", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "getcourse-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "getcourse-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "answer", "GetCourse bootloader rollback evidence", "--run", "getcourse-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "crawl", "browser-fixture", "--platform", "skillspace", "--run", "skillspace-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "skillspace-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "skillspace-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "answer", "Skillspace logcat bugreport evidence", "--run", "skillspace-browser-crawl-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-crawl"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "tools"],
         ]
         if not args.skip_pytest:

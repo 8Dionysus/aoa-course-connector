@@ -11,7 +11,17 @@ from aoa_course_connector.auth import browser_state_plan
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
-from aoa_course_connector.ingest import capture_browser_live, materialize_browser_fixture, materialize_browser_snapshot, materialize_fixture, materialize_stepik_fixture, materialize_stepik_live
+from aoa_course_connector.ingest import (
+    capture_browser_live,
+    crawl_browser_fixture,
+    crawl_browser_live,
+    crawl_browser_snapshot,
+    materialize_browser_fixture,
+    materialize_browser_snapshot,
+    materialize_fixture,
+    materialize_stepik_fixture,
+    materialize_stepik_live,
+)
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet, write_answer_packet
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
@@ -130,6 +140,32 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_browser_fixture.add_argument("--fixture", type=Path)
     ingest_browser_fixture.set_defaults(func=cmd_materialize_browser_fixture)
 
+    crawl = sub.add_parser("crawl")
+    crawl_sub = crawl.add_subparsers(dest="crawl_command", required=True)
+    crawl_fixture = crawl_sub.add_parser("browser-fixture")
+    crawl_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    crawl_fixture.add_argument("--run")
+    crawl_fixture.add_argument("--fixture", type=Path)
+    crawl_fixture.add_argument("--max-lessons", type=int, default=20)
+    crawl_fixture.add_argument("--link-pattern")
+    crawl_fixture.set_defaults(func=cmd_crawl_browser_fixture)
+    crawl_snapshot = crawl_sub.add_parser("browser-snapshot")
+    crawl_snapshot.add_argument("snapshot", type=Path)
+    crawl_snapshot.add_argument("--platform", choices=["getcourse", "skillspace"])
+    crawl_snapshot.add_argument("--run")
+    crawl_snapshot.add_argument("--max-lessons", type=int, default=20)
+    crawl_snapshot.add_argument("--link-pattern")
+    crawl_snapshot.set_defaults(func=cmd_crawl_browser_snapshot)
+    crawl_live = crawl_sub.add_parser("browser-live")
+    crawl_live.add_argument("url")
+    crawl_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    crawl_live.add_argument("--run")
+    crawl_live.add_argument("--state-file", type=Path)
+    crawl_live.add_argument("--wait-until", default="networkidle")
+    crawl_live.add_argument("--max-lessons", type=int, default=20)
+    crawl_live.add_argument("--link-pattern")
+    crawl_live.set_defaults(func=cmd_crawl_browser_live)
+
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
     build_index.set_defaults(func=cmd_build_index)
@@ -170,6 +206,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
+    eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -363,6 +400,55 @@ def cmd_materialize_browser_live(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_crawl_browser_fixture(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = crawl_browser_fixture(
+        roots,
+        platform=args.platform,
+        run_id=args.run,
+        fixture=args.fixture,
+        max_lessons=args.max_lessons,
+        link_pattern=args.link_pattern,
+    )
+    _emit(receipt)
+    return 0
+
+
+def cmd_crawl_browser_snapshot(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = crawl_browser_snapshot(
+        roots,
+        snapshot_path=args.snapshot,
+        platform=args.platform,
+        run_id=args.run,
+        max_lessons=args.max_lessons,
+        link_pattern=args.link_pattern,
+    )
+    _emit(receipt)
+    return 0
+
+
+def cmd_crawl_browser_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    run_id = args.run or f"{args.platform}-browser-live-crawl"
+    try:
+        receipt = crawl_browser_live(
+            roots,
+            url=args.url,
+            platform=args.platform,
+            run_id=run_id,
+            state_file=args.state_file,
+            wait_until=args.wait_until,
+            max_lessons=args.max_lessons,
+            link_pattern=args.link_pattern,
+        )
+    except RuntimeError as exc:
+        _emit({"schema": "aoa_course_browser_crawl_receipt_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    _emit(receipt)
+    return 0
+
+
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     receipt = materialize_stepik_fixture(roots, run_id=args.run, fixture=args.fixture)
@@ -471,6 +557,23 @@ def cmd_eval_browser_hard_adapters(_args: argparse.Namespace) -> int:
         if missing_terms or not packet.get("evidence_chain"):
             failures.append({"run_id": run_id, "query": query, "missing_terms": missing_terms, "has_evidence": bool(packet.get("evidence_chain"))})
     _emit({"schema": "aoa_course_eval_browser_hard_adapters_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_browser_crawl(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    failures = []
+    cases = [
+        ("getcourse-browser-crawl-fixture", "GetCourse bootloader rollback evidence", ["getcourse", "bootloader", "rollback"]),
+        ("skillspace-browser-crawl-fixture", "Skillspace logcat bugreport evidence", ["skillspace", "logcat", "bugreport"]),
+    ]
+    for run_id, query, terms in cases:
+        packet = render_answer_packet(roots, query, run_id, 5)
+        text = json.dumps(packet).casefold()
+        missing_terms = [term for term in terms if term not in text]
+        if missing_terms or not packet.get("evidence_chain"):
+            failures.append({"run_id": run_id, "query": query, "missing_terms": missing_terms, "has_evidence": bool(packet.get("evidence_chain"))})
+    _emit({"schema": "aoa_course_eval_browser_crawl_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 
