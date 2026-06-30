@@ -1,0 +1,40 @@
+{
+  "schema": "aoa_course_browser_snapshot_v1",
+  "platform": "getcourse",
+  "captured_at": "2026-06-29T13:00:00Z",
+  "course_title": "GetCourse Browser Fixture",
+  "source": {
+    "source_id": "source:getcourse:fixture",
+    "platform": "getcourse",
+    "source_ref": "https://school.example/teach/control/stream",
+    "access_mode": "browser_session",
+    "title": "GetCourse Browser Fixture"
+  },
+  "pages": [
+    {
+      "page_id": "getcourse-index",
+      "kind": "course_index",
+      "url": "https://school.example/teach/control/stream",
+      "title": "GetCourse Browser Fixture",
+      "html": "<html><head><title>GetCourse Browser Fixture</title></head><body><main><h1>GetCourse Browser Fixture</h1><h2 data-aoa-module=\"Firmware Recovery\">Firmware Recovery</h2><a data-aoa-kind=\"lesson\" data-aoa-module=\"Firmware Recovery\" href=\"/teach/control/lesson/view/id/101\">Bootloader recovery lesson</a><a data-aoa-kind=\"lesson\" data-aoa-module=\"Firmware Recovery\" href=\"/teach/control/lesson/view/id/102\">OTA evidence lesson</a></main></body></html>"
+    },
+    {
+      "page_id": "gc-lesson-101",
+      "kind": "lesson",
+      "module_title": "Firmware Recovery",
+      "url": "https://school.example/teach/control/lesson/view/id/101",
+      "title": "Bootloader recovery lesson",
+      "order": 1,
+      "html": "<article><h1>Bootloader recovery lesson</h1><p>Inside GetCourse the connected account can read lesson text after browser login. Before unlocking the bootloader, keep rollback index, region, boot image, and vendor boot evidence together.</p><a data-aoa-kind=\"asset\" href=\"https://school.example/files/recovery-checklist.pdf\" title=\"Recovery checklist\">Recovery checklist</a><a data-aoa-kind=\"assignment\" href=\"https://school.example/pl/tasks/mission\">Submit baseline evidence</a></article>"
+    },
+    {
+      "page_id": "gc-lesson-102",
+      "kind": "lesson",
+      "module_title": "Firmware Recovery",
+      "url": "https://school.example/teach/control/lesson/view/id/102",
+      "title": "OTA evidence lesson",
+      "order": 2,
+      "html": "<article><h1>OTA evidence lesson</h1><p>Course notes should preserve source URLs, fetched timestamps, and checksums for every OTA package mentioned in a lesson.</p></article>"
+    }
+  ]
+}

@@ -40,5 +40,12 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --r
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval clean-api
+PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval browser-hard-adapters
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
