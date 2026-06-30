@@ -25,6 +25,8 @@ from aoa_course_connector.sync import load_sync_status
 SERVER_NAME = "aoa-course-connector-mcp"
 SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-11-25"
+DEFAULT_RUN = "starter-fixture"
+DEFAULT_CONNECTED_RUN = "connected-calibration"
 
 
 def _query_schema(*, mode: bool = False) -> dict[str, object]:
@@ -132,7 +134,7 @@ def tools_manifest() -> dict[str, object]:
 def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str, object]:
     args = arguments or {}
     roots = StorageRoots.from_env(find_repo_root())
-    run_id = str(args.get("run") or "starter-fixture")
+    run_id = str(args.get("run") or DEFAULT_RUN)
     if name == "list_sources":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "registry": load_registry(roots.data)}
     if name == "ingest_status":
@@ -144,7 +146,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "connected_source_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "plan": _call_connected_source_plan(roots, args)}
     if name == "connected_run_status":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=run_id)}
+        connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=connected_run_id)}
     if name == "refresh_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "refresh": _call_refresh_plan(roots, args)}
     if name == "search":

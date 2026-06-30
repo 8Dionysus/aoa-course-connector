@@ -193,6 +193,12 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
     assert missing_connected_run["tool"] == "connected_run_status"
     assert missing_connected_run["connected_run"]["status"] == "missing"
+    run_connected_calibration(storage, mode="fixture", platforms=["stepik"])
+    default_connected_run = call_tool("connected_run_status", {})
+    assert default_connected_run["tool"] == "connected_run_status"
+    assert default_connected_run["connected_run"]["status"] == "ok"
+    assert default_connected_run["connected_run"]["run_id"] == "connected-calibration"
+    assert default_connected_run["connected_run"]["network_touched"] is False
     run_connected_calibration(storage, run_id="mcp-connected-fixture", mode="fixture", platforms=["stepik"])
     connected_run = call_tool("connected_run_status", {"run": "mcp-connected-fixture"})
     assert connected_run["connected_run"]["schema"] == "aoa_course_connected_calibration_run_status_v1"
