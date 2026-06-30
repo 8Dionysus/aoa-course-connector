@@ -41,6 +41,7 @@ aoa-course smoke browser-snapshot --platform getcourse --catalog-snapshot /path/
 aoa-course smoke browser-live --platform getcourse --catalog-url "https://school.example/teach/control/stream" --course-url "https://school.example/teach/control/stream/view/id/201" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --query "course-specific question"
 aoa-course eval live-calibration
 aoa-course calibration build --run connected-live-calibration --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" --report "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json" --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
+aoa-course calibration intake --run connected-live-calibration-intake --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
 aoa-course build-semantic-index --run starter-fixture
 aoa-course build-graph --run starter-fixture

@@ -83,6 +83,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval browser-transcripts
 PYTHONPATH=src python -m aoa_course_connector.cli eval semantic-index
 PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build --help
+PYTHONPATH=src python -m aoa_course_connector.cli calibration intake --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/live-calibration-fixture/calibration/live_calibration_packet.json" --run live-calibration-intake
 PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcourse https://school.example
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --platform getcourse --platform stepik --live-scope bounded

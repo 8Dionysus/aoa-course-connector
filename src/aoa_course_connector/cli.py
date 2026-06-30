@@ -9,7 +9,13 @@ from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
-from aoa_course_connector.calibration import build_live_calibration_packet, load_json_report, write_live_calibration_packet
+from aoa_course_connector.calibration import (
+    build_live_calibration_intake,
+    build_live_calibration_packet,
+    load_json_report,
+    write_live_calibration_intake,
+    write_live_calibration_packet,
+)
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
@@ -379,6 +385,10 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_build.add_argument("--report", action="append", type=Path, required=True)
     calibration_build.add_argument("--preflight-report", action="append", type=Path)
     calibration_build.set_defaults(func=cmd_calibration_build)
+    calibration_intake = calibration_sub.add_parser("intake")
+    calibration_intake.add_argument("--run", default="live-calibration-intake")
+    calibration_intake.add_argument("--packet", type=Path, required=True)
+    calibration_intake.set_defaults(func=cmd_calibration_intake)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -1061,6 +1071,15 @@ def cmd_calibration_build(args: argparse.Namespace) -> int:
     packet_path = write_live_calibration_packet(roots, packet, run_id=args.run)
     _emit({**packet, "packet_path": str(packet_path)})
     return 0 if packet.get("status") == "ok" else 1
+
+
+def cmd_calibration_intake(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    packet = load_json_report(args.packet)
+    intake = build_live_calibration_intake(packet=packet, run_id=args.run)
+    intake_path = write_live_calibration_intake(roots, intake, run_id=args.run)
+    _emit({**intake, "intake_path": str(intake_path)})
+    return 0
 
 
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:

@@ -3,7 +3,12 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aoa_course_connector.calibration import build_live_calibration_packet, write_live_calibration_packet
+from aoa_course_connector.calibration import (
+    build_live_calibration_intake,
+    build_live_calibration_packet,
+    write_live_calibration_intake,
+    write_live_calibration_packet,
+)
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.readiness import live_preflight
 from aoa_course_connector.smoke import smoke_browser_fixture, smoke_stepik_fixture
@@ -50,6 +55,16 @@ def test_live_calibration_packet_summarizes_fixture_smoke_reports(tmp_path: Path
     assert packet["privacy"]["contains_raw_payloads"] is False
     assert packet["privacy"]["contains_secret_values"] is False
     assert saved["packet_path"] == str(packet_path)
+
+    intake = build_live_calibration_intake(packet=saved, run_id="fixture-calibration-intake")
+    intake_path = write_live_calibration_intake(storage, intake, run_id="fixture-calibration-intake")
+    saved_intake = json.loads(intake_path.read_text(encoding="utf-8"))
+
+    assert intake["status"] == "ok"
+    assert intake["action_count"] == 0
+    assert intake["authority"]["central_proof_owner"] == "aoa-evals"
+    assert intake["privacy"]["shareable_after_review"] is True
+    assert saved_intake["intake_path"] == str(intake_path)
 
 
 def test_live_calibration_packet_rejects_secret_like_report_values(tmp_path: Path) -> None:
@@ -111,3 +126,24 @@ def test_live_calibration_packet_surfaces_caption_resource_errors(tmp_path: Path
         and failure["caption_resource_error_count"] == 1
         for failure in packet["failures"]
     )
+
+
+def test_live_calibration_intake_classifies_failures_into_repair_lanes(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    report = smoke_browser_fixture(storage, platform="getcourse", run_id="getcourse-intake-check")
+    report["course"]["caption_resource_error_count"] = 1
+    report["course"]["caption_resource_error_reasons"] = ["caption resource parsed without transcript text"]
+    report["artifacts"]["answer"]["result_count"] = 0
+    report["auth"] = {"token": "opaque-runtime-token"}
+    packet = build_live_calibration_packet(run_id="intake-check", smoke_reports=[report])
+
+    intake = build_live_calibration_intake(packet=packet, run_id="intake-check")
+
+    assert intake["status"] == "actionable"
+    assert intake["privacy"]["contains_secret_values"] is True
+    lanes = {action["lane"] for action in intake["actions"]}
+    assert "caption_or_transcript_collection" in lanes
+    assert "retrieval_quality" in lanes
+    assert "privacy_guard" in lanes
+    assert any(candidate["repo_local_path_hint"].startswith("evals/intake/") for candidate in intake["eval_intake_candidates"])
+    assert any("do not share" in step for step in intake["next_steps"])
