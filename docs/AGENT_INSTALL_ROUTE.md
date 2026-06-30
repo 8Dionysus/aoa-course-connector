@@ -48,17 +48,23 @@
 20. Run `eval live-calibration` to prove the fixture-safe calibration packet for
     GetCourse, Skillspace, and Stepik smoke reports before collecting connected
     account reports.
-21. Before live browser sources, run `auth plan-browser-state`, capture the
+21. Run `calibration connected-run --mode fixture --run connected-fixture-proof`
+    to prove source-registry sync, smoke reports, connected plan/runbook,
+    calibration packet, intake, and one connected run receipt without touching
+    live sources.
+22. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-22. Run `preflight live --platform getcourse` or
+23. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-23. Confirm browser preflight marks only sources whose host matches the saved
+24. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-24. Run `preflight connected-plan --write-runbook
+25. Run `preflight connected-plan --write-runbook
     "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`
     to produce the redacted setup/sync/smoke/calibration handoff with portable
     runtime artifact paths.
-25. Add live sources only after auth-state and storage roots are local and
+26. Run `calibration connected-run --mode live --allow-network` only after the
+    connected plan shows the selected sources are ready.
+27. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

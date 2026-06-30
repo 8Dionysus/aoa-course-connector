@@ -269,7 +269,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if "build-semantic-index --help" not in agents:
         errors.append("AGENTS route missing semantic provider option help check")
-    if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents:
+    if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents or "calibration connected-run" not in agents:
         errors.append("AGENTS route missing live calibration packet/intake validation")
     portable_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
     fixture_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/live-calibration-fixture/calibration/live_calibration_packet.json"
@@ -283,6 +283,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
             errors.append(f"{label} missing portable connected-live-calibration packet path")
     if "preflight connected-plan --write-runbook" not in agent_install_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md" not in agent_install_raw:
         errors.append("Agent install route missing portable connected-source runbook handoff")
+    if "calibration connected-run --mode fixture" not in agent_install_raw or "calibration connected-run --mode live --allow-network" not in agent_install_raw:
+        errors.append("Agent install route missing executable connected-run handoff")
     if "ARTIFACT_ROOT_EXPR" not in readiness_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}" not in readiness_raw:
         errors.append("Connected-source plan code missing portable artifact root expression")
     if "runs/{calibration_run}/calibration/live_calibration_packet.json" not in readiness_raw:
@@ -350,7 +352,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "--mode fixture", "--allow-network"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
@@ -367,7 +369,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_live_calibration_packet_v1",
         "aoa_course_connected_source_plan_v1",
         "aoa_course_live_calibration_intake_v1",
+        "aoa_course_connected_calibration_run_receipt_v1",
         "preflight connected-plan",
+        "calibration connected-run",
+        "allow-network",
         "live-scope bounded",
         "full-course",
         "include-step-sources",

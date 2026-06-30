@@ -40,6 +40,8 @@ aoa-course smoke browser-fixture --platform getcourse --run getcourse-browser-sm
 aoa-course smoke browser-snapshot --platform getcourse --catalog-snapshot /path/to/catalog.json --course-snapshot /path/to/course.json --query "course-specific question"
 aoa-course smoke browser-live --platform getcourse --catalog-url "https://school.example/teach/control/stream" --course-url "https://school.example/teach/control/stream/view/id/201" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --query "course-specific question"
 aoa-course eval live-calibration
+aoa-course calibration connected-run --mode fixture --run connected-fixture-proof
+aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope bounded --source-limit 1 --run connected-stepik-live-calibration
 aoa-course calibration build --run connected-live-calibration --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
 aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
@@ -80,3 +82,9 @@ aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"
 Use `--source-id` on sync commands when an agent is refreshing one result from a
 large source registry. Omitting it keeps the broader platform/source-ref sync
 behavior available for batch refreshes.
+
+Use `calibration connected-run --mode fixture` as the one-command local proof
+that source registry sync, smoke reports, calibration packet, intake, and the
+connected run receipt all write to portable runtime artifact storage. Use
+`--mode live --allow-network` only after `preflight connected-plan` shows the
+selected sources are ready.

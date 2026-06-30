@@ -135,6 +135,10 @@ This proves:
 - Live calibration intake reports through `calibration intake`, turning partial
   calibration packet failures into repair lanes and repo-local eval-intake
   candidates while leaving central proof authority in `aoa-evals`.
+- Executable connected-source calibration receipts through `calibration
+  connected-run`: fixture mode proves source-registry sync, smoke reports,
+  connected plan/runbook, calibration packet, and intake without network access;
+  live mode is gated by explicit `--allow-network`.
 
 ## Remaining Goal Work
 

@@ -136,3 +136,7 @@
 - Added `--source-id` scoped sync support and source-scoped connected-plan
   commands so incremental refresh can target one registry source instead of a
   whole platform batch.
+- Added `calibration connected-run` with fixture-safe executable receipts and a
+  live `--allow-network` gate so agents can run source sync, smoke reports,
+  connected plan/runbook, calibration packet, and intake as one connected-source
+  workflow.
