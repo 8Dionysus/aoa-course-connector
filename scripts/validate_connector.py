@@ -261,6 +261,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     readme = readme_raw.casefold()
     cli_usage_raw = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8")
     agent_install_raw = (repo_root / "docs" / "AGENT_INSTALL_ROUTE.md").read_text(encoding="utf-8")
+    readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
@@ -280,6 +281,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
             errors.append(f"{label} missing portable connected-live-calibration packet path")
     if "preflight connected-plan --write-runbook" not in agent_install_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md" not in agent_install_raw:
         errors.append("Agent install route missing portable connected-source runbook handoff")
+    if "ARTIFACT_ROOT_EXPR" not in readiness_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}" not in readiness_raw:
+        errors.append("Connected-source plan code missing portable artifact root expression")
+    if "runs/{calibration_run}/calibration/live_calibration_packet.json" not in readiness_raw:
+        errors.append("Connected-source plan code missing runs/<run> calibration artifact path")
     if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "eval browser-transcripts" not in agents:

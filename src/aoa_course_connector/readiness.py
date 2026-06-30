@@ -16,6 +16,7 @@ from aoa_course_connector.sources import load_registry, registry_path
 BROWSER_PLATFORMS = {"getcourse", "skillspace"}
 CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 LIVE_SCOPES = {"bounded", "full-course"}
+ARTIFACT_ROOT_EXPR = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
 
 
 def render_connected_source_runbook(plan: dict[str, object]) -> str:
@@ -393,7 +394,7 @@ def _preflight_actions(
                 command += f" --expect-origin {shlex.quote(expect_origin_contains)}"
         if include_disabled:
             command += " --include-disabled"
-        artifact = f"$AOA_COURSE_ARTIFACT_ROOT/{platform}-preflight.json"
+        artifact = f"{ARTIFACT_ROOT_EXPR}/{platform}-preflight.json"
         actions.append(
             {
                 "kind": "preflight_report",
@@ -484,7 +485,7 @@ def _smoke_actions(
         platform = str(source.get("platform") or "")
         source_ref = str(source.get("source_ref") or "")
         slug = _source_slug(source)
-        artifact = f"$AOA_COURSE_ARTIFACT_ROOT/{platform}-live-smoke-{slug}.json"
+        artifact = f"{ARTIFACT_ROOT_EXPR}/{platform}-live-smoke-{slug}.json"
         if platform in BROWSER_PLATFORMS:
             command = (
                 f"aoa-course smoke browser-live --platform {platform} --run {platform}-live-smoke-{slug} "
@@ -554,7 +555,7 @@ def _calibration_actions(
             "ready": True,
             "network_touched": False,
             "command": " ".join(parts),
-            "artifact_path": f"$AOA_COURSE_ARTIFACT_ROOT/{calibration_run}/calibration/live_calibration_packet.json",
+            "artifact_path": f"{ARTIFACT_ROOT_EXPR}/runs/{calibration_run}/calibration/live_calibration_packet.json",
         }
     ]
 
