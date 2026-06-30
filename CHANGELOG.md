@@ -140,3 +140,6 @@
   live `--allow-network` gate so agents can run source sync, smoke reports,
   connected plan/runbook, calibration packet, and intake as one connected-source
   workflow.
+- Verified the bounded public Stepik live connected-run route end to end through
+  a local runtime receipt with live sync, live smoke, calibration packet,
+  intake, answer evidence, timestamps, and privacy guards.

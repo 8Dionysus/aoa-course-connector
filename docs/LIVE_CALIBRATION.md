@@ -78,6 +78,11 @@ aoa-course calibration connected-run \
 ```
 
 Live connected-run receipts are runtime evidence and must stay out of Git.
+The bounded public Stepik route has been field-smoked with this command shape:
+the resulting local receipt and calibration packet were `ok`, contained answer
+evidence and timestamps, and kept raw payloads and secret values out of the
+packet. Treat that as route proof, not a guarantee that every authenticated or
+full-course Stepik source behaves the same.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"

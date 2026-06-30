@@ -259,6 +259,11 @@ PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run \
   --run connected-stepik-live-calibration
 ```
 
+The bounded public Stepik path has been field-smoked through this route without
+private credentials: a local runtime receipt produced an `ok` connected-source
+plan, live sync, live smoke, calibration packet, and intake while keeping raw
+API payloads and secret values out of shareable output.
+
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build \
