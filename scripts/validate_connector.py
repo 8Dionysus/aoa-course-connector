@@ -263,7 +263,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if "eval live-calibration" not in agents or "calibration build" not in agents:
         errors.append("AGENTS route missing live calibration packet validation")
-    if "preflight connected-plan" not in agents or "connected_source_plan" not in agents:
+    if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "eval browser-transcripts" not in agents:
         errors.append("AGENTS route missing browser transcript/caption eval")
@@ -287,7 +287,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "source url", "authority report"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "network_touched", "secret values", "structuredcontent"]:
+    for token in ["live_preflight", "connected_source_plan", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -320,6 +320,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_live_calibration_packet_v1",
         "aoa_course_connected_source_plan_v1",
         "preflight connected-plan",
+        "live-scope bounded",
+        "full-course",
+        "include-step-sources",
         "calibration build",
         "eval live-calibration",
         "smoke browser-live",
@@ -353,6 +356,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "account discovery",
         "preflight live",
         "preflight connected-plan",
+        "live-scope bounded",
         "sync stepik-fixture",
         "sync stepik-live",
         "sync status --run stepik-sync-fixture --platform stepik",
@@ -386,6 +390,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "transcript_count",
         "preflight live",
         "preflight connected-plan",
+        "live-scope bounded",
         "sync status",
         "--register",
         "checkpoint",

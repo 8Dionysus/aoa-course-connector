@@ -30,13 +30,17 @@ For agents, start with the combined read-only plan:
 aoa-course preflight connected-plan \
   --platform getcourse \
   --platform stepik \
+  --live-scope bounded \
   --query "course-specific question"
 ```
 
 The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
 result and lists exact commands for preflight report capture, auth/source
 unblocking, live sync, per-source smoke reports, and `calibration build`. It is
-the safest first handoff when connected-source state is unknown.
+the safest first handoff when connected-source state is unknown. Its default
+`bounded` scope keeps Stepik live sync/smoke under smoke limits; switch to
+`--live-scope full-course --include-step-sources` only for an explicit
+operator-selected full-course calibration.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"

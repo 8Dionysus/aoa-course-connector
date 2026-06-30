@@ -200,13 +200,17 @@ one redacted handoff packet:
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
   --platform getcourse \
   --platform stepik \
+  --live-scope bounded \
   --query "course-specific question"
 ```
 
 `preflight connected-plan` is read-only. It inspects the source registry and
 auth readiness, then emits exact preflight, sync, smoke, and
 `calibration build` commands with runtime artifact paths. It is also exposed to
-agents as MCP `connected_source_plan`.
+agents as MCP `connected_source_plan`. The default `--live-scope bounded`
+keeps Stepik live sync/smoke commands under smoke limits; use
+`--live-scope full-course --include-step-sources` only for an explicit
+operator-selected full-course run.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build \

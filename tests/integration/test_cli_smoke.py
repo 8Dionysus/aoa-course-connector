@@ -141,6 +141,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
 
     assert plan["schema"] == "aoa_course_connected_source_plan_v1"
     assert plan["ready"] is True
+    assert plan["live_scope"] == "bounded"
     assert any("sync browser-live" in command for command in plan["next_commands"])
     assert any("smoke browser-live" in command for command in plan["next_commands"])
     assert any("calibration build" in command for command in plan["next_commands"])

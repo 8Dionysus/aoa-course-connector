@@ -67,7 +67,9 @@ This proves:
 - Read-only connected-source launch plans through CLI `preflight
   connected-plan` and MCP `connected_source_plan`, turning source readiness into
   exact preflight, sync, smoke, and calibration commands without touching the
-  network or printing secrets.
+  network or printing secrets. Stepik launch plans default to bounded live
+  smoke/sync commands, with full-course/source-enrichment commands gated behind
+  explicit options.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.
@@ -76,6 +78,10 @@ This proves:
 - Stepik fixture/live smoke report routes that combine source registration,
   source-registry sync, index/graph build, answer evidence, and privacy-safe
   local raw API path reporting.
+- Bounded public Stepik live calibration has been exercised through the
+  connected-source route: preflight plus `smoke stepik-live` produced an
+  `ok` live calibration packet with source-backed answer evidence, timestamps,
+  and clean raw/secret privacy guards.
 - Semantic and hybrid query routes through CLI and MCP, backed by a portable
   local semantic index artifact and collision guardrails.
 - Answer-quality eval coverage that checks top-result source id, platform,

@@ -48,7 +48,10 @@ def test_live_preflight_allows_public_stepik_source_without_account_token(tmp_pa
     assert workflows["stepik_account_discovery"]["ready"] is False
     assert workflows["stepik_account_discovery"]["required_for_ready"] is False
     assert workflows["stepik_source_sync"]["ready"] is True
+    assert "--max-sections 1" in workflows["stepik_source_sync"]["next_command"]
+    assert "--full-course" not in workflows["stepik_source_sync"]["next_command"]
     assert not any(command.startswith("export STEPIK_API_TOKEN") for command in report["next_commands"])
+    assert not any("--full-course" in command for command in report["next_commands"])
 
 
 def test_live_preflight_browser_state_readiness_redacts_secret_material(tmp_path: Path) -> None:
@@ -209,8 +212,33 @@ def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path
 
     assert plan["status"] == "ok"
     assert plan["ready"] is True
+    assert plan["live_scope"] == "bounded"
+    assert plan["include_step_sources"] is False
     assert plan["platform_plans"][0]["ready_source_count"] == 1
     assert any("sync stepik-live" in command for command in plan["next_commands"])
     assert any("smoke stepik-live 67" in command for command in plan["next_commands"])
+    assert not any("--full-course" in command for command in plan["next_commands"])
+    assert not any("--include-step-sources" in command for command in plan["next_commands"])
+    assert any("--max-sections 1" in command for command in plan["next_commands"])
     assert any("calibration build" in command for command in plan["next_commands"])
     assert not any(command.startswith("export STEPIK_API_TOKEN") for command in plan["next_commands"])
+
+
+def test_connected_source_plan_stepik_full_course_scope_is_explicit(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    plan = connected_source_plan(
+        storage,
+        platforms=["stepik"],
+        live_scope="full-course",
+        include_step_sources=True,
+    )
+
+    assert plan["status"] == "ok"
+    assert plan["live_scope"] == "full-course"
+    assert plan["include_step_sources"] is True
+    assert any("--full-course" in command for command in plan["next_commands"])
+    assert any("--include-step-sources" in command for command in plan["next_commands"])
+    assert not any("--max-sections 1" in command for command in plan["next_commands"])

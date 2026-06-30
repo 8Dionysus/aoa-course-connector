@@ -102,6 +102,8 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_plan.add_argument("--max-pages", type=int, default=5)
     preflight_plan.add_argument("--max-sources", type=int, default=50)
     preflight_plan.add_argument("--calibration-run", default="connected-live-calibration")
+    preflight_plan.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
+    preflight_plan.add_argument("--include-step-sources", action="store_true")
     preflight_plan.add_argument("--require-ready", action="store_true")
     preflight_plan.set_defaults(func=cmd_preflight_connected_plan)
 
@@ -524,6 +526,8 @@ def cmd_preflight_connected_plan(args: argparse.Namespace) -> int:
         max_pages=args.max_pages,
         max_sources=args.max_sources,
         calibration_run=args.calibration_run,
+        live_scope=args.live_scope,
+        include_step_sources=args.include_step_sources,
     )
     _emit(plan)
     return 0 if bool(plan.get("ready")) or not args.require_ready else 1
