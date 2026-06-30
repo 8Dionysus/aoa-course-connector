@@ -40,6 +40,10 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert evidence_inspect["freshness_report"]["has_source_timestamps"] is True
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
+    ingest = run_cli(tmp_path, "mcp", "call", "ingest_status", '{"run":"starter-fixture"}')
+    assert ingest["result"]["status"] == "ready"
+    assert ingest["result"]["readiness"]["agent_query_ready"] is True
+    assert ingest["result"]["normalized"]["counts"]["lessons"] >= 1
     graph = run_cli(tmp_path, "mcp", "call", "graph_neighbors", '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}')
     assert graph["result"]["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
     freshness = run_cli(tmp_path, "mcp", "call", "freshness_report", '{"run":"starter-fixture"}')

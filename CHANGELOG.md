@@ -148,3 +148,6 @@
 - Hardened live connected-run browser execution so ready GetCourse/Skillspace
   sources use the same default account storage-state checked by preflight and
   receipts expose `source_selection` for source-scoped auditability.
+- Expanded MCP `ingest_status` into a read-only run readiness packet with
+  normalized counts, receipt summaries, index/semantic/graph metadata, and next
+  commands.

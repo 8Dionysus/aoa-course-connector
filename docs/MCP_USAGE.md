@@ -27,6 +27,7 @@ aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
@@ -44,6 +45,11 @@ that artifact was built with `http_json_v1`, the MCP route uses the same
 operator-configured endpoint and token environment variable name for query
 vectors; token values are read from the environment and are not written to the
 artifact or tool result.
+
+`ingest_status` is the read-only run readiness packet. It reports normalized
+bundle counts, materialization receipt summaries, keyword/semantic index
+metadata, graph node/edge counts, `agent_query_ready`, and next build/query
+commands without reading private raw payloads into `structuredContent`.
 
 ## JSON-RPC Stdio
 

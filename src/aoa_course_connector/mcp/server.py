@@ -25,6 +25,8 @@ from aoa_course_connector.sync import load_sync_status
 SERVER_NAME = "aoa-course-connector-mcp"
 SERVER_VERSION = "0.1.0"
 PROTOCOL_VERSION = "2025-11-25"
+DEFAULT_RUN = "starter-fixture"
+DEFAULT_CONNECTED_RUN = "connected-calibration"
 
 
 def _query_schema(*, mode: bool = False) -> dict[str, object]:
@@ -132,7 +134,7 @@ def tools_manifest() -> dict[str, object]:
 def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str, object]:
     args = arguments or {}
     roots = StorageRoots.from_env(find_repo_root())
-    run_id = str(args.get("run") or "starter-fixture")
+    run_id = str(args.get("run") or DEFAULT_RUN)
     if name == "list_sources":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "registry": load_registry(roots.data)}
     if name == "ingest_status":
@@ -144,7 +146,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "connected_source_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "plan": _call_connected_source_plan(roots, args)}
     if name == "connected_run_status":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=run_id)}
+        connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=connected_run_id)}
     if name == "refresh_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "refresh": _call_refresh_plan(roots, args)}
     if name == "search":
@@ -318,15 +321,215 @@ def main() -> int:
 def _ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
     data_dir = roots.data / "runs" / run_id
     artifact_dir = roots.artifact / "runs" / run_id
+    normalized_path = data_dir / "normalized" / "course_bundle.json"
+    keyword_path = artifact_dir / "indexes" / "keyword_index.json"
+    semantic_path = artifact_dir / "indexes" / "semantic_index.json"
+    graph_path = artifact_dir / "graphs" / "course_graph.json"
+    normalized = _normalized_bundle_status(normalized_path)
+    keyword = _artifact_json_status(
+        keyword_path,
+        keys=["schema", "built_at", "doc_count", "term_count", "unit"],
+    )
+    semantic = _artifact_json_status(
+        semantic_path,
+        keys=["schema", "built_at", "doc_count", "provider", "dimensions", "unit", "feature_contract"],
+    )
+    graph = _artifact_json_status(
+        graph_path,
+        keys=["schema", "built_at", "node_count", "edge_count"],
+    )
+    ready = bool(normalized.get("exists")) and bool(keyword.get("exists")) and bool(graph.get("exists"))
+    partial = data_dir.exists() or artifact_dir.exists()
     return {
         "schema": "aoa_course_ingest_status_v1",
         "tool": "ingest_status",
         "run_id": run_id,
-        "normalized_exists": (data_dir / "normalized" / "course_bundle.json").exists(),
-        "index_exists": (artifact_dir / "indexes" / "keyword_index.json").exists(),
-        "semantic_index_exists": (artifact_dir / "indexes" / "semantic_index.json").exists(),
-        "graph_exists": (artifact_dir / "graphs" / "course_graph.json").exists(),
+        "status": "ready" if ready else "partial" if partial else "missing",
+        "network_touched": False,
+        "read_only": True,
+        "storage": {
+            "data_dir": str(data_dir),
+            "artifact_dir": str(artifact_dir),
+        },
+        "normalized": normalized,
+        "receipts": _run_receipt_summaries(data_dir),
+        "indexes": {
+            "keyword": keyword,
+            "semantic": semantic,
+        },
+        "graph": graph,
+        "readiness": {
+            "normalized_ready": bool(normalized.get("exists")),
+            "query_ready": bool(keyword.get("exists")),
+            "semantic_query_ready": bool(semantic.get("exists")),
+            "graph_ready": bool(graph.get("exists")),
+            "agent_query_ready": ready,
+        },
+        "next_commands": _ingest_status_next_commands(
+            run_id,
+            normalized_exists=bool(normalized.get("exists")),
+            keyword_exists=bool(keyword.get("exists")),
+            semantic_exists=bool(semantic.get("exists")),
+            graph_exists=bool(graph.get("exists")),
+        ),
     }
+
+
+def _normalized_bundle_status(path: Path) -> dict[str, object]:
+    if not path.exists():
+        return {"exists": False, "path": str(path)}
+    payload = _load_json_file(path)
+    if _json_load_error(payload):
+        return {"exists": True, "path": str(path), "status": "error", "error": payload.get("_load_error")}
+    if not isinstance(payload, dict):
+        return {"exists": True, "path": str(path), "status": "error", "error": "normalized bundle is not a JSON object"}
+    counts = _bundle_counts(payload)
+    source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
+    return {
+        "exists": True,
+        "path": str(path),
+        "schema": payload.get("schema"),
+        "source": {
+            "source_id": source.get("source_id"),
+            "platform": source.get("platform"),
+            "access_mode": source.get("access_mode"),
+            "source_ref": source.get("source_ref"),
+            "title": source.get("title"),
+        },
+        "counts": counts,
+        "fetched_at": _bundle_fetched_at(payload),
+    }
+
+
+def _artifact_json_status(path: Path, *, keys: list[str]) -> dict[str, object]:
+    if not path.exists():
+        return {"exists": False, "path": str(path)}
+    payload = _load_json_file(path)
+    if _json_load_error(payload):
+        return {"exists": True, "path": str(path), "status": "error", "error": payload.get("_load_error")}
+    if not isinstance(payload, dict):
+        return {"exists": True, "path": str(path), "status": "error", "error": "artifact is not a JSON object"}
+    summary = {"exists": True, "path": str(path), "status": "ok"}
+    for key in keys:
+        if key in payload:
+            summary[key] = payload.get(key)
+    return summary
+
+
+def _run_receipt_summaries(data_dir: Path) -> list[dict[str, object]]:
+    if not data_dir.exists():
+        return []
+    summaries: list[dict[str, object]] = []
+    for path in sorted(data_dir.glob("*receipt*.json")):
+        payload = _load_json_file(path)
+        if _json_load_error(payload):
+            summaries.append({"path": str(path), "status": "error", "error": payload.get("_load_error")})
+            continue
+        if not isinstance(payload, dict):
+            summaries.append({"path": str(path), "status": "error", "error": "receipt is not a JSON object"})
+            continue
+        summaries.append(
+            {
+                "path": str(path),
+                "schema": payload.get("schema"),
+                "status": payload.get("status"),
+                "source_mode": payload.get("source_mode"),
+                "network_touched": bool(payload.get("network_touched")),
+                "completed_at": payload.get("completed_at"),
+                "course_count": payload.get("course_count"),
+                "evidence_count": payload.get("evidence_count"),
+                "raw_path": payload.get("raw_path"),
+                "normalized_path": payload.get("normalized_path"),
+            }
+        )
+    return summaries
+
+
+def _bundle_counts(bundle: dict[str, object]) -> dict[str, int]:
+    counts = {
+        "courses": 0,
+        "modules": 0,
+        "lessons": 0,
+        "steps": 0,
+        "assets": 0,
+        "transcripts": 0,
+        "assignments": 0,
+        "comment_threads": 0,
+        "comments": 0,
+        "evidence": len(bundle.get("evidence", [])) if isinstance(bundle.get("evidence"), list) else 0,
+    }
+    for course in _dict_items(bundle.get("courses")):
+        counts["courses"] += 1
+        for module in _dict_items(course.get("modules")):
+            counts["modules"] += 1
+            for lesson in _dict_items(module.get("lessons")):
+                counts["lessons"] += 1
+                counts["steps"] += len(_dict_items(lesson.get("steps")))
+                counts["assets"] += len(_dict_items(lesson.get("assets")))
+                counts["transcripts"] += len(_dict_items(lesson.get("transcripts")))
+                counts["assignments"] += len(_dict_items(lesson.get("assignments")))
+                threads = _dict_items(lesson.get("comment_threads"))
+                counts["comment_threads"] += len(threads)
+                counts["comments"] += sum(len(_dict_items(thread.get("comments"))) for thread in threads)
+    return counts
+
+
+def _bundle_fetched_at(bundle: dict[str, object]) -> dict[str, object]:
+    timestamps = sorted(
+        {
+            str(evidence.get("fetched_at"))
+            for evidence in _dict_items(bundle.get("evidence"))
+            if evidence.get("fetched_at")
+        }
+    )
+    return {
+        "count": len(timestamps),
+        "earliest": timestamps[0] if timestamps else None,
+        "latest": timestamps[-1] if timestamps else None,
+    }
+
+
+def _dict_items(value: object) -> list[dict[str, object]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
+
+
+def _ingest_status_next_commands(
+    run_id: str,
+    *,
+    normalized_exists: bool,
+    keyword_exists: bool,
+    semantic_exists: bool,
+    graph_exists: bool,
+) -> list[str]:
+    if not normalized_exists:
+        if run_id == "starter-fixture":
+            return [f"aoa-course materialize fixture --run {run_id}"]
+        return [
+            "aoa-course sources list",
+            "aoa-course sync status",
+            f"run an ingest, materialize, crawl, or source sync command that writes data/runs/{run_id}/normalized/course_bundle.json",
+        ]
+    commands: list[str] = []
+    if not keyword_exists:
+        commands.append(f"aoa-course build-index --run {run_id}")
+    if not semantic_exists:
+        commands.append(f"aoa-course build-semantic-index --run {run_id}")
+    if not graph_exists:
+        commands.append(f"aoa-course build-graph --run {run_id}")
+    if keyword_exists:
+        commands.append(f"aoa-course answer \"course-specific question\" --run {run_id}")
+    return commands
+
+
+def _load_json_file(path: Path) -> object:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as exc:
+        return {"_load_error": str(exc)}
+
+
+def _json_load_error(payload: object) -> bool:
+    return isinstance(payload, dict) and "_load_error" in payload
 
 
 def _handle_jsonrpc_request(message: object) -> dict[str, object] | None:

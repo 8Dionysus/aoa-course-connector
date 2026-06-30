@@ -72,6 +72,7 @@ aoa-course eval browser-progress-comments
 aoa-course eval browser-transcripts
 aoa-course eval semantic-index
 aoa-course mcp tools
+aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'

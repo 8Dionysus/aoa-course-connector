@@ -26,6 +26,9 @@ This proves:
 - answer packets with evidence chains and freshness timestamps;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
   `tools/call` responses;
+- MCP `ingest_status` returns a read-only run readiness packet with normalized
+  counts, materialization receipts, index/semantic/graph metadata, next
+  commands, and `agent_query_ready`;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh
