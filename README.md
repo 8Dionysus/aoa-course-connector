@@ -57,7 +57,9 @@ sources. The `crawl` route starts from a course index and expands visible lesson
 links into a course-tree snapshot. The `sync` route runs configured sources and
 records checkpoints. Browser fixtures also prove visible progress/status,
 discussion comments, and paginated catalog receipts flow into answer packets,
-indexes, and graphs.
+indexes, and graphs. The `smoke` route combines discovery, course
+materialization, index/graph build, and optional answer checks into one
+operator-facing report for fixture, snapshot, or gated live sources.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
@@ -77,6 +79,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
+PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
 
 PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture

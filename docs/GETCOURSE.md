@@ -66,4 +66,12 @@ aoa-course sync browser-live \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --max-lessons 50 \
   --build-artifacts
+
+aoa-course smoke browser-live \
+  --platform getcourse \
+  --run getcourse-live-smoke \
+  --catalog-url "https://school.example/teach/control/stream" \
+  --course-url "https://school.example/teach/control/stream/view/id/201" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --query "course-specific question"
 ```

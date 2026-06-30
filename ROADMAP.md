@@ -18,12 +18,14 @@
   receipt metadata from safe GetCourse and Skillspace fixtures.
 - Prove bounded GetCourse and Skillspace live discovery pagination route and
   unannotated DOM heuristics for progress/status/comments.
+- Prove fixture/snapshot/live browser smoke reports that combine discovery,
+  ingestion, index/graph build, and optional answer evidence checks.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 
 ## Next
 
-- Run gated live smoke on connected GetCourse and Skillspace accounts to
+- Run the gated live smoke route on connected GetCourse and Skillspace accounts to
   calibrate pagination and DOM heuristics against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
   status, comments, and discussion markup found by live smoke.

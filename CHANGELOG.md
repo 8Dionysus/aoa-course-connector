@@ -26,3 +26,6 @@
   and `browser-progress-comments` eval coverage.
 - Added bounded live discovery next-page following with `--max-pages` and
   unannotated DOM heuristics for visible progress/status and compact comments.
+- Added `smoke browser-fixture`, `smoke browser-snapshot`, and gated
+  `smoke browser-live` reports for operator calibration without printing raw
+  private HTML.
