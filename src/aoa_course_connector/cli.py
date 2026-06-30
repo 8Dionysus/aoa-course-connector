@@ -1555,6 +1555,7 @@ def cmd_eval_live_calibration(_args: argparse.Namespace) -> int:
             "packet_status": packet.get("status"),
             "report_count": packet.get("report_count"),
             "platforms": packet.get("platforms"),
+            "quality": packet.get("quality"),
             "failures": failures,
         }
     )
@@ -1580,6 +1581,22 @@ def _live_calibration_failures(packet: dict[str, object], suite: dict[str, objec
     min_evidence_count = int(suite.get("min_answer_evidence_count_total") or 0)
     if int(quality.get("answer_evidence_count_total") or 0) < min_evidence_count:
         failures.append({"field": "quality.answer_evidence_count_total", "expected_min": min_evidence_count, "actual": quality.get("answer_evidence_count_total")})
+    min_transcript_count = int(suite.get("min_transcript_count_total") or 0)
+    if int(quality.get("transcript_count_total") or 0) < min_transcript_count:
+        failures.append({"field": "quality.transcript_count_total", "expected_min": min_transcript_count, "actual": quality.get("transcript_count_total")})
+    min_caption_sidecar_count = int(suite.get("min_caption_sidecar_count_total") or 0)
+    if int(quality.get("caption_sidecar_count_total") or 0) < min_caption_sidecar_count:
+        failures.append({"field": "quality.caption_sidecar_count_total", "expected_min": min_caption_sidecar_count, "actual": quality.get("caption_sidecar_count_total")})
+    transcript_source_authority_counts = quality.get("transcript_source_authority_counts") if isinstance(quality.get("transcript_source_authority_counts"), dict) else {}
+    for source_authority in _list_of_strings(suite.get("required_transcript_source_authorities")):
+        if int(transcript_source_authority_counts.get(source_authority) or 0) < 1:
+            failures.append(
+                {
+                    "field": f"quality.transcript_source_authority_counts.{source_authority}",
+                    "expected_min": 1,
+                    "actual": transcript_source_authority_counts.get(source_authority),
+                }
+            )
     for field in _list_of_strings(suite.get("required_privacy_true_fields")):
         if privacy.get(field) is not True:
             failures.append({"field": f"privacy.{field}", "expected": True, "actual": privacy.get(field)})

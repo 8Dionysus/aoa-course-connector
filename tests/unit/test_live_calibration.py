@@ -40,6 +40,13 @@ def test_live_calibration_packet_summarizes_fixture_smoke_reports(tmp_path: Path
     assert packet["report_count"] == 3
     assert packet["quality"]["answer_result_count_total"] >= 3
     assert packet["quality"]["all_answered_reports_have_evidence"] is True
+    assert packet["quality"]["transcript_count_total"] >= 4
+    assert packet["quality"]["caption_sidecar_count_total"] >= 2
+    assert packet["quality"]["caption_resource_error_count_total"] == 0
+    assert packet["quality"]["transcript_source_authority_counts"]["browser_visible_transcript"] >= 2
+    assert packet["quality"]["transcript_source_authority_counts"]["browser_caption_sidecar"] >= 2
+    assert packet["smoke_reports"][0]["transcript_count"] >= 2
+    assert packet["smoke_reports"][0]["caption_resource_error_count"] == 0
     assert packet["privacy"]["contains_raw_payloads"] is False
     assert packet["privacy"]["contains_secret_values"] is False
     assert saved["packet_path"] == str(packet_path)
@@ -85,5 +92,22 @@ def test_live_calibration_packet_rejects_generic_token_keys(tmp_path: Path) -> N
     assert any(
         failure["surface"] == "privacy"
         and {"token", "api_key"} <= set(failure["keys"])
+        for failure in packet["failures"]
+    )
+
+
+def test_live_calibration_packet_surfaces_caption_resource_errors(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    report = smoke_browser_fixture(storage, platform="getcourse", run_id="getcourse-caption-error-check")
+    report["course"]["caption_resource_error_count"] = 1
+    report["course"]["caption_resource_error_reasons"] = ["caption resource request failed"]
+
+    packet = build_live_calibration_packet(run_id="caption-error-check", smoke_reports=[report])
+
+    assert packet["status"] == "partial"
+    assert packet["quality"]["caption_resource_error_count_total"] == 1
+    assert any(
+        failure["surface"] == "transcripts"
+        and failure["caption_resource_error_count"] == 1
         for failure in packet["failures"]
     )

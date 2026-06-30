@@ -92,8 +92,8 @@ This proves:
   storage state.
 - Fixture-safe live calibration packets through `eval live-calibration` and
   `calibration build`, covering GetCourse, Skillspace, and Stepik smoke reports,
-  answer evidence/timestamps, local raw-path handling, and secret/raw-payload
-  privacy guards.
+  answer evidence/timestamps, transcript/caption health, caption-resource
+  errors, local raw-path handling, and secret/raw-payload privacy guards.
 
 ## Remaining Goal Work
 

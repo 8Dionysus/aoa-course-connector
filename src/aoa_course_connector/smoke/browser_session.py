@@ -217,9 +217,12 @@ def _course_summary(receipt: dict[str, object] | None) -> dict[str, object]:
         "assignment_count": 0,
         "comment_count": 0,
         "transcript_count": 0,
+        "caption_sidecar_count": 0,
+        "visible_transcript_count": 0,
         "progress_detected_count": 0,
     }
     progress_states: list[str] = []
+    transcript_source_authority_counts: dict[str, int] = {}
     for course in bundle.get("courses", []):
         if not isinstance(course, dict):
             continue
@@ -239,6 +242,15 @@ def _course_summary(receipt: dict[str, object] | None) -> dict[str, object]:
                 counters["asset_count"] += len(lesson.get("assets", [])) if isinstance(lesson.get("assets"), list) else 0
                 counters["assignment_count"] += len(lesson.get("assignments", [])) if isinstance(lesson.get("assignments"), list) else 0
                 counters["transcript_count"] += len(lesson.get("transcripts", [])) if isinstance(lesson.get("transcripts"), list) else 0
+                for transcript in lesson.get("transcripts", []):
+                    if not isinstance(transcript, dict):
+                        continue
+                    source_authority = str(transcript.get("source_authority") or "unknown")
+                    transcript_source_authority_counts[source_authority] = transcript_source_authority_counts.get(source_authority, 0) + 1
+                    if source_authority == "browser_caption_sidecar":
+                        counters["caption_sidecar_count"] += 1
+                    if source_authority == "browser_visible_transcript":
+                        counters["visible_transcript_count"] += 1
                 for thread in lesson.get("comment_threads", []):
                     if isinstance(thread, dict) and isinstance(thread.get("comments"), list):
                         counters["comment_count"] += len(thread["comments"])
@@ -250,6 +262,10 @@ def _course_summary(receipt: dict[str, object] | None) -> dict[str, object]:
         "bundle_loaded": True,
         "evidence_count": len(bundle.get("evidence", [])) if isinstance(bundle.get("evidence"), list) else 0,
         "progress_states": sorted(set(progress_states)),
+        "transcript_source_authority_counts": transcript_source_authority_counts,
+        "caption_resource_count": int(receipt.get("caption_resource_count") or 0),
+        "caption_resource_error_count": int(receipt.get("caption_resource_error_count") or 0),
+        "caption_resource_error_reasons": receipt.get("caption_resource_error_reasons") if isinstance(receipt.get("caption_resource_error_reasons"), list) else [],
         **counters,
     }
 

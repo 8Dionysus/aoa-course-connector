@@ -245,6 +245,9 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert eval_result["suite_id"] == "live-calibration"
     assert eval_result["report_count"] == 3
     assert eval_result["platforms"] == ["getcourse", "skillspace", "stepik"]
+    assert eval_result["quality"]["transcript_count_total"] >= 4
+    assert eval_result["quality"]["caption_sidecar_count_total"] >= 2
+    assert eval_result["quality"]["caption_resource_error_count_total"] == 0
     assert Path(str(eval_result["packet_path"])).is_file()
 
     getcourse = run_cli(tmp_path, "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-calibration-cli", "--register")

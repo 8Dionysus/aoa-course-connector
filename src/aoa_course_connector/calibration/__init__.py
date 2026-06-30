@@ -102,6 +102,10 @@ def build_live_calibration_packet(
     source_modes = sorted({str(summary.get("source_mode") or "") for summary in smoke_summaries if summary.get("source_mode")})
     answer_result_total = sum(int(summary.get("answer_result_count") or 0) for summary in smoke_summaries)
     answer_evidence_total = sum(int(summary.get("answer_evidence_count") or 0) for summary in smoke_summaries)
+    transcript_count_total = sum(int(summary.get("transcript_count") or 0) for summary in smoke_summaries)
+    caption_sidecar_count_total = sum(int(summary.get("caption_sidecar_count") or 0) for summary in smoke_summaries)
+    caption_resource_error_count_total = sum(int(summary.get("caption_resource_error_count") or 0) for summary in smoke_summaries)
+    transcript_source_authority_counts = _sum_count_maps(summary.get("transcript_source_authority_counts") for summary in smoke_summaries)
     network_touched = any(bool(summary.get("network_touched")) for summary in smoke_summaries)
     return {
         "schema": "aoa_course_live_calibration_packet_v1",
@@ -118,6 +122,12 @@ def build_live_calibration_packet(
         "quality": {
             "answer_result_count_total": answer_result_total,
             "answer_evidence_count_total": answer_evidence_total,
+            "transcript_count_total": transcript_count_total,
+            "caption_sidecar_count_total": caption_sidecar_count_total,
+            "caption_resource_error_count_total": caption_resource_error_count_total,
+            "transcript_source_authority_counts": transcript_source_authority_counts,
+            "browser_report_count": sum(1 for summary in smoke_summaries if _is_browser_smoke(summary)),
+            "browser_reports_with_transcripts": sum(1 for summary in smoke_summaries if _is_browser_smoke(summary) and int(summary.get("transcript_count") or 0) > 0),
             "all_answered_reports_have_evidence": all(
                 not summary.get("answer_enabled") or int(summary.get("answer_evidence_count") or 0) > 0
                 for summary in smoke_summaries
@@ -171,6 +181,20 @@ def _smoke_summary(report: dict[str, object]) -> dict[str, object]:
         "answer_result_count": int(answer.get("result_count") or 0),
         "answer_evidence_count": int(answer.get("evidence_count") or 0),
         "has_source_timestamps": bool(answer.get("has_source_timestamps")),
+        "progress_detected_count": int(course.get("progress_detected_count") or 0),
+        "comment_count": int(course.get("comment_count") or 0),
+        "transcript_count": int(course.get("transcript_count") or 0),
+        "visible_transcript_count": int(course.get("visible_transcript_count") or 0),
+        "caption_sidecar_count": int(course.get("caption_sidecar_count") or 0),
+        "caption_resource_count": int(course.get("caption_resource_count") or 0),
+        "caption_resource_error_count": int(course.get("caption_resource_error_count") or 0),
+        "caption_resource_error_reasons": [str(reason) for reason in course.get("caption_resource_error_reasons", [])] if isinstance(course.get("caption_resource_error_reasons"), list) else [],
+        "transcript_source_authority_counts": {
+            str(key): int(value)
+            for key, value in course.get("transcript_source_authority_counts", {}).items()
+        }
+        if isinstance(course.get("transcript_source_authority_counts"), dict)
+        else {},
         "raw_path_count": len(privacy.get("raw_paths", [])) if isinstance(privacy.get("raw_paths"), list) else 0,
         "raw_paths_are_local_runtime_state": bool(privacy.get("raw_paths_are_local_runtime_state")),
         "private_data_commit_guard": bool(privacy.get("do_not_commit_raw_html_or_auth_state") or privacy.get("do_not_commit_raw_api_or_auth_state")),
@@ -206,6 +230,16 @@ def _smoke_failures(summary: dict[str, object]) -> list[dict[str, object]]:
             failures.append({**context, "surface": "answer", "reason": "answer returned no results"})
         if int(summary.get("answer_evidence_count") or 0) < 1:
             failures.append({**context, "surface": "answer", "reason": "answer has no evidence chain"})
+    if int(summary.get("caption_resource_error_count") or 0) > 0:
+        failures.append(
+            {
+                **context,
+                "surface": "transcripts",
+                "reason": "caption resource errors were recorded",
+                "caption_resource_error_count": summary.get("caption_resource_error_count"),
+                "caption_resource_error_reasons": summary.get("caption_resource_error_reasons"),
+            }
+        )
     if not summary.get("raw_paths_are_local_runtime_state") or not summary.get("private_data_commit_guard"):
         failures.append({**context, "surface": "privacy", "reason": "private/raw data guard is missing"})
     return failures
@@ -259,6 +293,24 @@ def _payload_key_hits(value: Any, key_set: set[str]) -> set[str]:
             hits.update(_payload_key_hits(child, key_set))
         return hits
     return set()
+
+
+def _sum_count_maps(items: Any) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    try:
+        iterator = iter(items)
+    except TypeError:
+        iterator = iter(())
+    for item in iterator:
+        if not isinstance(item, dict):
+            continue
+        for key, value in item.items():
+            counts[str(key)] = counts.get(str(key), 0) + int(value or 0)
+    return dict(sorted(counts.items()))
+
+
+def _is_browser_smoke(summary: dict[str, object]) -> bool:
+    return str(summary.get("source_mode") or "").startswith("browser_")
 
 
 def _now() -> str:
