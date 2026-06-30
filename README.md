@@ -251,7 +251,7 @@ storage. `--mode live` refuses to touch connected sources unless
 local auth/source readiness. For GetCourse and Skillspace, ready sources use the
 same default browser state file checked by preflight,
 `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`,
-unless `--browser-state-file` overrides it:
+unless `--state-file` overrides it:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run \
