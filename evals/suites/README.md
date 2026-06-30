@@ -12,6 +12,7 @@ Fixture-safe suites for local course connector behavior:
 - `answer_quality_packets.json`
 - `freshness_ranking.json`
 - `authority_ranking.json`
+- `adapter_authority_metadata.json`
 
 `answer-quality.suite.md` records the local suite note for the answer-quality
 contract. It is connector-local support evidence only; central proof doctrine,
@@ -22,3 +23,6 @@ ordering when base relevance is tied.
 
 `authority-ranking.suite.md` records the local suite note for authority-aware
 ordering when base relevance is tied.
+
+`adapter-authority.suite.md` records the local suite note for adapter-derived
+authority metadata preservation across normalized bundles and query packets.

@@ -209,6 +209,21 @@ def test_cli_authority_ranking_eval_proves_higher_authority_beats_lower_tie(tmp_
     assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 
+def test_cli_adapter_authority_eval_proves_adapter_metadata_reaches_query(tmp_path: Path) -> None:
+    run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")
+    run_cli(tmp_path, "build-index", "--run", "stepik-fixture")
+    for platform in ["getcourse", "skillspace"]:
+        run_id = f"{platform}-browser-fixture"
+        run_cli(tmp_path, "materialize", "browser-fixture", "--platform", platform, "--run", run_id)
+        run_cli(tmp_path, "build-index", "--run", run_id)
+
+    result = run_cli(tmp_path, "eval", "adapter-authority")
+
+    assert result["status"] == "ok"
+    assert result["suite_id"] == "adapter-authority"
+    assert {case["failure_count"] for case in result["case_results"]} == {0}
+
+
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [
         ("getcourse", "GetCourse bootloader rollback evidence"),

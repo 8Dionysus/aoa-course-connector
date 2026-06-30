@@ -70,6 +70,8 @@ REQUIRED_FILES = [
     "evals/suites/freshness_ranking.json",
     "evals/suites/authority-ranking.suite.md",
     "evals/suites/authority_ranking.json",
+    "evals/suites/adapter-authority.suite.md",
+    "evals/suites/adapter_authority_metadata.json",
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/browser_progress_comments_answer_packets.json",
@@ -285,12 +287,13 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "rank_score",
         "freshness-ranking",
         "authority-ranking",
+        "adapter-authority",
         "authority_tier",
     ]:
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
-    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking"]:
+    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority"]:
         if token not in eval_readme:
             errors.append(f"Eval README missing token: {token}")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()

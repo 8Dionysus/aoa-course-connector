@@ -29,3 +29,7 @@ The authority-ranking suite checks another ordering-specific conflict case:
 official lesson text and mentor comments must rank above learner comments when
 base relevance is tied, while authority tier, rank score, rank features, and
 evidence chain remain visible.
+
+The adapter-authority suite checks that authority metadata produced by
+browser-session and Stepik adapters survives normalization, indexing, and
+source-backed query packets.

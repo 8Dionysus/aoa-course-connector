@@ -41,7 +41,7 @@ from aoa_course_connector.smoke import (
     smoke_stepik_live as smoke_stepik_live_route,
 )
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
-from aoa_course_connector.storage import create_storage_roots, storage_status
+from aoa_course_connector.storage import create_storage_roots, run_data_dir, storage_status
 from aoa_course_connector.sync import (
     load_sync_status,
     sync_browser_fixture_sources,
@@ -403,6 +403,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
+    eval_sub.add_parser("adapter-authority").set_defaults(func=cmd_eval_adapter_authority)
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
@@ -1375,6 +1376,115 @@ def _authority_ranking_failures(packet: dict[str, object], case: dict[str, objec
             if not evidence.get(field):
                 failures.append({**context, "evidence_index": index, "missing_evidence_field": field})
     return failures
+
+
+def cmd_eval_adapter_authority(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    suite_path = find_repo_root() / "evals" / "suites" / "adapter_authority_metadata.json"
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    failures = []
+    case_results = []
+    for case in suite.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        case_failures = _adapter_authority_failures(roots, case)
+        case_results.append(
+            {
+                "case_id": case.get("case_id"),
+                "run": case.get("run") or DEFAULT_RUN,
+                "query": case.get("query"),
+                "failure_count": len(case_failures),
+            }
+        )
+        failures.extend(case_failures)
+    _emit(
+        {
+            "schema": "aoa_course_eval_adapter_authority_v1",
+            "suite_id": suite.get("suite_id"),
+            "status": "ok" if not failures else "error",
+            "case_results": case_results,
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _adapter_authority_failures(roots: StorageRoots, case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    run_id = str(case.get("run") or DEFAULT_RUN)
+    context = {"case_id": case.get("case_id"), "run": run_id}
+    bundle_path = run_data_dir(roots, run_id) / "normalized" / "course_bundle.json"
+    if not bundle_path.exists():
+        return [{**context, "missing": "normalized bundle", "path": str(bundle_path)}]
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    normalized_path = case.get("normalized_path")
+    if isinstance(normalized_path, list):
+        item = _value_at_path(bundle, normalized_path)
+        if not isinstance(item, dict):
+            failures.append({**context, "missing": "normalized item", "normalized_path": normalized_path})
+        else:
+            expected_fields = case.get("expected_normalized_fields")
+            field_items = expected_fields.items() if isinstance(expected_fields, dict) else []
+            for field, expected in field_items:
+                actual = item.get(str(field))
+                if actual != expected:
+                    failures.append({**context, "field": field, "expected": expected, "actual": actual})
+    query = case.get("query")
+    if query:
+        packet = render_answer_packet(
+            roots,
+            str(query),
+            run_id,
+            int(case.get("limit") or 5),
+            str(case.get("mode") or "keyword"),
+        )
+        results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+        if not results:
+            failures.append({**context, "query": query, "missing": "query results"})
+        else:
+            top = results[0]
+            expected_result = case.get("expected_top_result") if isinstance(case.get("expected_top_result"), dict) else {}
+            for field, expected in expected_result.items():
+                actual = top.get(str(field))
+                if actual != expected:
+                    failures.append({**context, "query": query, "top_doc_id": top.get("doc_id"), "field": field, "expected": expected, "actual": actual})
+            expected_matching_result = case.get("expected_result") if isinstance(case.get("expected_result"), dict) else {}
+            if expected_matching_result and not _has_matching_result(results, expected_matching_result):
+                failures.append({**context, "query": query, "missing": "matching query result", "expected_result": expected_matching_result, "available": _compact_result_fields(results)})
+            if not packet.get("evidence_chain"):
+                failures.append({**context, "query": query, "missing": "evidence_chain"})
+    return failures
+
+
+def _has_matching_result(results: list[dict[str, object]], expected: dict[object, object]) -> bool:
+    for result in results:
+        if all(result.get(str(field)) == value for field, value in expected.items()):
+            return True
+    return False
+
+
+def _compact_result_fields(results: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        {
+            "doc_id": result.get("doc_id"),
+            "kind": result.get("kind"),
+            "authority_tier": result.get("authority_tier"),
+            "authority_label": result.get("authority_label"),
+        }
+        for result in results
+    ]
+
+
+def _value_at_path(root: object, path: list[object]) -> object:
+    current = root
+    for part in path:
+        if isinstance(current, dict):
+            current = current.get(str(part))
+        elif isinstance(current, list) and isinstance(part, int) and 0 <= part < len(current):
+            current = current[part]
+        else:
+            return None
+    return current
 
 
 def _list_of_strings(value: object) -> list[str]:

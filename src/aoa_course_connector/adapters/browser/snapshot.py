@@ -174,6 +174,8 @@ class _SnapshotParser(HTMLParser):
                     "comment_id": str(attrs.get("data-aoa-comment-id") or attrs.get("id") or f"comment-{len(self.comments) + 1}"),
                     "thread_id": str(attrs.get("data-aoa-thread-id") or attrs.get("data-aoa-comment-thread") or "visible-thread"),
                     "author": str(attrs.get("data-aoa-author") or attrs.get("data-aoa-comment-author") or ""),
+                    "role": _comment_role(attrs),
+                    "authority_label": str(attrs.get("data-aoa-authority-label") or attrs.get("data-authority-label") or ""),
                     "created_at": str(attrs.get("data-aoa-created-at") or attrs.get("datetime") or ""),
                     "text": text,
                 }
@@ -234,6 +236,20 @@ def _looks_like_comment_block(tag: str, attrs: dict[object, object], text: str) 
     if not any(hint in attr_text for hint in COMMENT_HINTS):
         return False
     return tag in {"article", "div", "li", "p", "section"}
+
+
+def _comment_role(attrs: dict[object, object]) -> str:
+    for key in [
+        "data-aoa-author-role",
+        "data-aoa-comment-author-role",
+        "data-author-role",
+        "data-user-role",
+        "data-role",
+    ]:
+        value = attrs.get(key)
+        if value:
+            return str(value)
+    return ""
 
 
 def _attribute_haystack(attrs: dict[object, object], text: str) -> str:

@@ -44,6 +44,9 @@ Authority tiers are deterministic local signals derived from normalized item
 shape and safe metadata: `official_lesson`, `official_assignment`,
 `instructor_comment`, `mentor_comment`, `learner_comment`, `transcript`,
 `asset_metadata`, `progress_metadata`, `discussion_comment`, or `unknown`.
+When adapters provide explicit `authority_tier`, `authority_label`, `role`, or
+`source_authority` metadata, the index preserves those adapter-derived signals
+before falling back to kind/label heuristics.
 
 The local semantic index is a portable baseline, not a claim that the repo has
 external model embeddings configured. Future embedding providers must keep this
@@ -59,6 +62,9 @@ with equal base relevance, current evidence must rank above stale evidence.
 `aoa-course eval authority-ranking` checks the ranking-specific authority cases:
 official lesson text must rank above learner comments, and mentor comments must
 rank above learner comments when base relevance is tied.
+`aoa-course eval adapter-authority` checks that adapter-derived authority
+metadata from browser-session and Stepik fixtures survives normalization,
+indexing, and query packets.
 
 Commands:
 
@@ -74,6 +80,7 @@ aoa-course materialize fixture --run authority-ranking-fixture --fixture connect
 aoa-course build-index --run authority-ranking-fixture
 aoa-course build-semantic-index --run authority-ranking-fixture
 aoa-course eval authority-ranking
+aoa-course eval adapter-authority
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 ```

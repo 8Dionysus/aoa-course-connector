@@ -46,6 +46,12 @@ source block text during normalization. Some accounts or courses may not expose
 step source data; those failures are stored as `step_source_error` on the raw
 step object instead of failing the whole course sync.
 
+Stepik normalized steps, assignments, and asset metadata carry
+`authority_tier`, `authority_label`, and `source_authority` so official API or
+step-source material remains distinguishable in the local index and query
+packets. The fixture-safe `eval adapter-authority` route checks that this
+adapter-derived metadata survives the retrieval path.
+
 ## Source Registry Sync Route
 
 Register a Stepik course source once:

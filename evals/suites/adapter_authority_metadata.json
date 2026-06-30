@@ -1,0 +1,77 @@
+{
+  "schema": "aoa_course_adapter_authority_eval_suite_v1",
+  "suite_id": "adapter-authority",
+  "cases": [
+    {
+      "case_id": "getcourse_mentor_comment_role_to_query",
+      "run": "getcourse-browser-fixture",
+      "normalized_path": ["courses", 0, "modules", 0, "lessons", 0, "comment_threads", 0, "comments", 0],
+      "expected_normalized_fields": {
+        "role": "mentor",
+        "authority_tier": "mentor_comment",
+        "source_authority": "browser_visible_comment"
+      },
+      "query": "mentor anti-rollback vendor boot",
+      "expected_result": {
+        "kind": "comment",
+        "authority_tier": "mentor_comment",
+        "authority_label": "mentor"
+      },
+      "limit": 5
+    },
+    {
+      "case_id": "getcourse_learner_comment_role_preserved",
+      "run": "getcourse-browser-fixture",
+      "normalized_path": ["courses", 0, "modules", 0, "lessons", 0, "comment_threads", 0, "comments", 1],
+      "expected_normalized_fields": {
+        "role": "learner",
+        "authority_tier": "learner_comment",
+        "source_authority": "browser_visible_comment"
+      }
+    },
+    {
+      "case_id": "skillspace_mentor_comment_role_to_query",
+      "run": "skillspace-browser-fixture",
+      "normalized_path": ["courses", 0, "modules", 0, "lessons", 0, "comment_threads", 0, "comments", 0],
+      "expected_normalized_fields": {
+        "role": "mentor",
+        "authority_tier": "mentor_comment",
+        "source_authority": "browser_visible_comment"
+      },
+      "query": "timestamp window reproduction step",
+      "expected_result": {
+        "kind": "comment",
+        "authority_tier": "mentor_comment",
+        "authority_label": "mentor"
+      },
+      "limit": 5
+    },
+    {
+      "case_id": "stepik_official_api_step_to_query",
+      "run": "stepik-fixture",
+      "normalized_path": ["courses", 0, "modules", 0, "lessons", 0, "steps", 0],
+      "expected_normalized_fields": {
+        "authority_tier": "official_lesson",
+        "authority_label": "stepik official API",
+        "source_authority": "stepik_step_api"
+      },
+      "query": "Stepik public API evidence",
+      "expected_top_result": {
+        "kind": "step",
+        "authority_tier": "official_lesson",
+        "authority_label": "stepik official API"
+      },
+      "limit": 5
+    },
+    {
+      "case_id": "stepik_official_assignment_metadata",
+      "run": "stepik-fixture",
+      "normalized_path": ["courses", 0, "modules", 0, "lessons", 0, "assignments", 0],
+      "expected_normalized_fields": {
+        "authority_tier": "official_assignment",
+        "authority_label": "stepik official API",
+        "source_authority": "stepik_step_api"
+      }
+    }
+  ]
+}

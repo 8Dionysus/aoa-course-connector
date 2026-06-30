@@ -31,15 +31,24 @@ def test_getcourse_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert course["progress"]["percent"] == "50"
     assert course["progress"]["label"] == "2 of 4 lessons completed"
     bootloader_lesson = course["modules"][0]["lessons"][0]
-    assert bootloader_lesson["comment_threads"][0]["comments"][0]["author_label"] == "mentor"
-    assert "anti-rollback level" in bootloader_lesson["comment_threads"][0]["comments"][0]["text"]
+    mentor_comment = bootloader_lesson["comment_threads"][0]["comments"][0]
+    learner_comment = bootloader_lesson["comment_threads"][0]["comments"][1]
+    assert mentor_comment["author_label"] == "mentor"
+    assert mentor_comment["role"] == "mentor"
+    assert mentor_comment["authority_tier"] == "mentor_comment"
+    assert learner_comment["role"] == "learner"
+    assert learner_comment["authority_tier"] == "learner_comment"
+    assert bootloader_lesson["steps"][0]["authority_tier"] == "official_lesson"
+    assert bootloader_lesson["assets"][0]["authority_tier"] == "asset_metadata"
+    assert bootloader_lesson["assignments"][0]["authority_tier"] == "official_assignment"
+    assert "anti-rollback level" in mentor_comment["text"]
     build_keyword_index(storage, run_id="getcourse-browser-fixture")
     graph_path = build_graph(storage, run_id="getcourse-browser-fixture")
     results = query_keyword_index(storage, "GetCourse bootloader rollback evidence", run_id="getcourse-browser-fixture")
     assert results
     assert results[0]["platform"] == "getcourse"
     comment_results = query_keyword_index(storage, "mentor anti-rollback vendor boot", run_id="getcourse-browser-fixture")
-    assert any(result["kind"] == "comment" and "Mentor note" in result["text"] for result in comment_results)
+    assert any(result["kind"] == "comment" and result["authority_tier"] == "mentor_comment" and "Mentor note" in result["text"] for result in comment_results)
     progress_results = query_keyword_index(storage, "2 of 4 lessons completed in_progress", run_id="getcourse-browser-fixture")
     assert any(result["kind"] == "progress" for result in progress_results)
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
@@ -55,6 +64,10 @@ def test_skillspace_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     receipt = materialize_browser_fixture(storage, "skillspace", run_id="skillspace-browser-fixture")
     assert receipt["status"] == "ok"
+    bundle = json.loads((storage.data / "runs/skillspace-browser-fixture/normalized/course_bundle.json").read_text(encoding="utf-8"))
+    comment = bundle["courses"][0]["modules"][0]["lessons"][0]["comment_threads"][0]["comments"][0]
+    assert comment["role"] == "mentor"
+    assert comment["authority_tier"] == "mentor_comment"
     build_keyword_index(storage, run_id="skillspace-browser-fixture")
     build_graph(storage, run_id="skillspace-browser-fixture")
     results = query_keyword_index(storage, "Skillspace logcat bugreport evidence", run_id="skillspace-browser-fixture")
@@ -116,6 +129,8 @@ def test_browser_snapshot_extracts_progress_comments_and_pagination() -> None:
             "comment_id": "c1",
             "thread_id": "qna",
             "author": "mentor",
+            "role": "",
+            "authority_label": "",
             "created_at": "2026-06-29T00:00:00Z",
             "text": "Keep the evidence chain with the course note.",
         }
@@ -147,8 +162,35 @@ def test_browser_snapshot_uses_unannotated_progress_and_comment_hints() -> None:
             "comment_id": "comment-42",
             "thread_id": "visible-thread",
             "author": "",
+            "role": "",
+            "authority_label": "",
             "created_at": "",
             "text": "Mentor says keep the radio logs and bugreport together.",
+        }
+    ]
+
+
+def test_browser_snapshot_reads_comment_role_metadata() -> None:
+    snapshot = parse_html_snapshot(
+        """
+        <main>
+          <article data-aoa-kind="comment" data-aoa-comment-id="c2" data-aoa-author="Course Coach" data-aoa-author-role="instructor">
+            Official staff clarification: use the signed recovery image.
+          </article>
+        </main>
+        """,
+        "https://academy.example/course/mobile-debugging",
+    )
+
+    assert snapshot.comments == [
+        {
+            "comment_id": "c2",
+            "thread_id": "visible-thread",
+            "author": "Course Coach",
+            "role": "instructor",
+            "authority_label": "",
+            "created_at": "",
+            "text": "Official staff clarification: use the signed recovery image.",
         }
     ]
 

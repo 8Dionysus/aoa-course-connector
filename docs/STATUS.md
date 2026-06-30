@@ -74,6 +74,12 @@ This proves:
   `authority_boost`, `rank_score`, and a conflict fixture proving official
   lesson text and mentor comments beat learner comments when base relevance is
   tied.
+- Adapter-derived authority metadata for browser-session comments and Stepik
+  official API objects, with `adapter-authority` eval coverage proving the
+  signal survives normalized bundles, indexes, and query packets.
+- Browser live preflight rejects unsafe origin substring matches and withholds
+  the live sync command until registered source hosts match the saved browser
+  storage state.
 
 ## Remaining Goal Work
 
@@ -91,6 +97,6 @@ The next layer is live connected-source work:
   `preflight live --platform stepik` confirms token/source readiness;
 - external embedding provider integration behind the existing semantic index
   contract;
-- live-calibrated authority tiers from adapter/source metadata, beyond the
-  current fixture-proven official/mentor/learner/transcript/asset tiers;
+- live-calibrated authority tiers from adapter/source metadata beyond current
+  fixture-proven browser-role and Stepik official API signals;
 - richer live smoke routes gated away from CI secrets.
