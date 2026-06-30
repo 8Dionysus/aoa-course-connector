@@ -16,6 +16,18 @@ from aoa_course_connector.storage import run_artifact_dir, run_data_dir
 
 TOKEN_RE = re.compile(r"[\w.+#/-]+", re.UNICODE)
 DEFAULT_VECTOR_DIMENSIONS = 256
+KNOWN_AUTHORITY_TIERS = {
+    "official_lesson",
+    "official_assignment",
+    "instructor_comment",
+    "mentor_comment",
+    "learner_comment",
+    "transcript",
+    "asset_metadata",
+    "progress_metadata",
+    "discussion_comment",
+    "unknown",
+}
 
 
 def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
@@ -264,7 +276,7 @@ def _doc(
         "platform": course.get("platform"),
         "freshness_state": lesson.get("freshness_state", "unknown"),
         "authority_tier": _authority_tier(kind, item),
-        "authority_label": str(item.get("author_label") or item.get("role") or ""),
+        "authority_label": str(item.get("authority_label") or item.get("author_label") or item.get("role") or ""),
         "source_url": evidence_dict.get("source_url") or lesson.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),
@@ -272,6 +284,9 @@ def _doc(
 
 
 def _authority_tier(kind: str, item: dict[str, object]) -> str:
+    explicit = str(item.get("authority_tier") or "").casefold()
+    if explicit in KNOWN_AUTHORITY_TIERS:
+        return explicit
     if kind == "step":
         return "official_lesson"
     if kind == "assignment":

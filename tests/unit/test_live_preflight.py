@@ -105,6 +105,39 @@ def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_
     workflows = {workflow["name"]: workflow for workflow in report["workflows"]}
     assert workflows["browser_live_sync"]["ready"] is False
     assert report["ready"] is False
+    assert not any(command.startswith("aoa-course sync browser-live") for command in report["next_commands"])
+    assert any(command.startswith("aoa-course auth inspect-browser-state") for command in report["next_commands"])
+
+
+def test_live_preflight_rejects_source_host_substring_state_match(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "getcourse", "https://my-school.example/teach/control/stream", "My School")
+    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [],
+            "origins": [{"origin": "https://my-school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    report = live_preflight(storage, platforms=["getcourse"], expect_origin_contains="my-school.example")
+
+    source_checks = {
+        check["source_ref"]: check
+        for check in report["checks"]
+        if check["kind"] == "source"
+    }
+    assert source_checks["https://my-school.example/teach/control/stream"]["ready"] is True
+    source_check = source_checks["https://school.example/teach/control/stream"]
+    assert source_check["ready"] is False
+    assert "school.example" in " ".join(source_check["blockers"])
+    workflows = {workflow["name"]: workflow for workflow in report["workflows"]}
+    assert workflows["browser_live_sync"]["ready"] is False
+    assert report["ready"] is False
+    assert not any(command.startswith("aoa-course sync browser-live") for command in report["next_commands"])
 
 
 def test_live_preflight_reports_missing_browser_state_as_warning(tmp_path: Path) -> None:

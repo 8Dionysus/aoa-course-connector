@@ -158,7 +158,7 @@ def _storage_state_matches_expected_origin(
     needle = expect_origin_contains.casefold().strip()
     if not needle:
         return True
-    if any(needle in origin.casefold() for origin in origin_values):
+    if any(_origin_matches_expected_origin(needle, origin) for origin in origin_values):
         return True
     expected_host = _host_fragment(needle)
     if not expected_host:
@@ -179,6 +179,20 @@ def _host_fragment(value: str) -> str:
     parsed = urlparse(raw if "://" in raw else f"//{raw}")
     host = parsed.hostname or raw.split("/", 1)[0]
     return host.strip().lstrip(".")
+
+
+def _origin_matches_expected_origin(expected_origin: str, origin: str) -> bool:
+    expected = expected_origin.casefold().strip()
+    actual = origin.casefold().strip()
+    expected_host = _host_fragment(expected)
+    actual_host = _host_fragment(actual)
+    if not expected_host or not actual_host:
+        return False
+    expected_parsed = urlparse(expected if "://" in expected else f"//{expected}")
+    actual_parsed = urlparse(actual if "://" in actual else f"//{actual}")
+    if expected_parsed.scheme and actual_parsed.scheme and expected_parsed.scheme != actual_parsed.scheme:
+        return False
+    return expected_host == actual_host
 
 
 def _host_domain_matches(expected_host: str, cookie_domain: str) -> bool:

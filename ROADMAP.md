@@ -32,6 +32,8 @@
   over stale material when base relevance is tied or close.
 - Prove authority-aware ranking so official lessons and mentor comments win
   over learner comments when base relevance is tied or close.
+- Prove adapter-derived authority metadata so browser-session roles and Stepik
+  official API/source signals survive normalization, indexing, and query.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -61,7 +63,7 @@
 - Add optional external embedding providers behind the stable semantic index
   contract.
 - Calibrate adapter-provided authority tiers against live GetCourse,
-  Skillspace, and Stepik source metadata.
+  Skillspace, and Stepik source metadata beyond fixture-safe role/API signals.
 - Broaden answer-quality evals against live-calibrated GetCourse, Skillspace,
   and Stepik runs once operator credentials are connected.
 

@@ -30,13 +30,16 @@
 15. Run the authority conflict fixture and `eval authority-ranking` to prove
     official lessons and mentor comments rank above learner comments when base
     relevance is tied.
-16. Before live browser sources, run `auth plan-browser-state`, capture the
+16. After Stepik, GetCourse, and Skillspace fixture indexes are built, run
+    `eval adapter-authority` to prove adapter-derived authority metadata reaches
+    normalized objects and query packets.
+17. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-17. Run `preflight live --platform getcourse` or
+18. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-18. Confirm browser preflight marks only sources whose host matches the saved
+19. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-19. Add live sources only after auth-state and storage roots are local and
+20. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

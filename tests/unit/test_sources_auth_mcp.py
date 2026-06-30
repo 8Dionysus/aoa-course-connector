@@ -84,6 +84,23 @@ def test_browser_state_inspect_reports_missing_and_origin_mismatch(tmp_path: Pat
     assert mismatch["usable"] is False
 
 
+def test_browser_state_inspect_rejects_origin_substring_match(tmp_path: Path) -> None:
+    state_file = tmp_path / "account.storage-state.json"
+    state_file.write_text(
+        json.dumps({
+            "cookies": [],
+            "origins": [{"origin": "https://my-school.example", "localStorage": [{"name": "token", "value": "secret"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    status = inspect_browser_state(state_file, expect_origin_contains="school.example")
+
+    assert status["status"] == "mismatch"
+    assert status["usable"] is False
+    assert status["expected_origin_matched"] is False
+
+
 def test_browser_state_inspect_matches_expected_origin_from_cookie_domain(tmp_path: Path) -> None:
     state_file = tmp_path / "account.storage-state.json"
     state_file.write_text(

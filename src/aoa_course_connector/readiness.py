@@ -221,6 +221,7 @@ def _append_browser_preflight(
         ready = source_state_ready and bool(source.get("enabled", True))
         source_ready_flags.append(ready)
         checks.append(_source_check(source, ready=ready, blockers=blockers))
+    all_sources_ready = bool(sources) and all(source_ready_flags)
 
     workflows.append(
         {
@@ -239,7 +240,7 @@ def _append_browser_preflight(
         {
             "name": "browser_live_sync",
             "platform": platform,
-            "ready": bool(sources) and all(source_ready_flags),
+            "ready": all_sources_ready,
             "required_for_ready": True,
             "source_count": len(sources),
             "next_command": (
@@ -257,11 +258,14 @@ def _append_browser_preflight(
             f"aoa-course discover browser-live <catalog-url> --platform {platform} "
             f"--state-file {str(state_file)!r} --register --max-sources 50 --max-pages 5"
         )
-    else:
+    elif all_sources_ready:
         next_commands.append(
             f"aoa-course sync browser-live --platform {platform} "
             f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
         )
+    else:
+        next_commands.append(f"aoa-course auth inspect-browser-state {str(state_file)!r}")
+        next_commands.append(f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}")
 
 
 def _source_check(source: dict[str, object], *, ready: bool, blockers: list[str]) -> dict[str, object]:

@@ -99,6 +99,10 @@ comments when the page exposes them in accessible HTML. Extraction is
 data/aria-first and also handles compact unannotated blocks with progress,
 comment, reply, or discussion class/id hints. The normalized bundle keeps
 progress evidence at the course level and discussion evidence under the lesson.
+When comment blocks expose author-role metadata such as
+`data-aoa-author-role`, the adapter preserves it as `role`, `authority_tier`,
+`authority_label`, and `source_authority` so ranking can distinguish mentor,
+instructor, learner, and generic discussion notes.
 The keyword index includes both as searchable knowledge items, and the graph
 includes `course_has_progress`, `lesson_has_comment_thread`, and
 `thread_has_comment` edges.
@@ -114,6 +118,7 @@ aoa-course build-index --run skillspace-browser-fixture
 aoa-course build-graph --run skillspace-browser-fixture
 aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
 
+aoa-course eval adapter-authority
 aoa-course eval browser-progress-comments
 ```
 

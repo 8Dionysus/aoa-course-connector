@@ -86,6 +86,7 @@ def normalize_stepik_raw(raw: dict[str, Any], run_id: str, raw_ref: str | None =
                 source_block = step_source.get("block") if isinstance(step_source.get("block"), dict) else None
                 block = source_block or (step_raw.get("block") if isinstance(step_raw.get("block"), dict) else {})
                 kind = str(block.get("name") or "step")
+                source_authority = "stepik_step_source" if source_block else "stepik_step_api"
                 step_url = f"https://stepik.org/lesson/{lesson_id}/step/{step_raw.get('position') or step_index}"
                 step_evidence = _evidence(evidence, step_url, fetched_at, f"step:{step_id}", raw_ref)
                 text = _step_text(block, step_raw)
@@ -96,6 +97,9 @@ def normalize_stepik_raw(raw: dict[str, Any], run_id: str, raw_ref: str | None =
                         "kind": kind,
                         "order": int(step_raw.get("position") or step_index),
                         "text": text,
+                        "authority_tier": "official_lesson",
+                        "authority_label": "stepik official API",
+                        "source_authority": source_authority,
                         "evidence": step_evidence,
                     }
                 )
@@ -106,6 +110,9 @@ def normalize_stepik_raw(raw: dict[str, Any], run_id: str, raw_ref: str | None =
                             "lesson_id": lesson["lesson_id"],
                             "prompt": text or f"Stepik {kind} assignment {step_id}",
                             "status": str(step_raw.get("status") or "unknown"),
+                            "authority_tier": "official_assignment",
+                            "authority_label": "stepik official API",
+                            "source_authority": source_authority,
                             "evidence": step_evidence,
                         }
                     )
@@ -119,6 +126,9 @@ def normalize_stepik_raw(raw: dict[str, Any], run_id: str, raw_ref: str | None =
                             "title": f"Stepik video step {step_id}",
                             "url": str(video),
                             "download_state": "metadata_only",
+                            "authority_tier": "asset_metadata",
+                            "authority_label": "stepik official API",
+                            "source_authority": source_authority,
                             "evidence": step_evidence,
                         }
                     )
@@ -132,6 +142,9 @@ def normalize_stepik_raw(raw: dict[str, Any], run_id: str, raw_ref: str | None =
                                 "title": f"Stepik subtitle {subtitle.get('lang') or ''}".strip(),
                                 "url": str(subtitle.get("url")),
                                 "download_state": "metadata_only",
+                                "authority_tier": "asset_metadata",
+                                "authority_label": "stepik official API",
+                                "source_authority": source_authority,
                                 "evidence": step_evidence,
                             }
                         )

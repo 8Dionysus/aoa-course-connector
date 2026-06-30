@@ -69,6 +69,12 @@
 - Added authority-aware `authority_tier` and `authority_boost` ranking signals
   plus `eval authority-ranking` with official-vs-learner and mentor-vs-learner
   conflict fixtures.
+- Added adapter-derived authority metadata for browser-session comments and
+  Stepik official API objects plus `eval adapter-authority` to prove the signal
+  survives normalization, indexing, and query packets.
+- Hardened browser auth-state origin matching so source hosts must match exactly
+  instead of by unsafe substring, and preflight no longer suggests live sync
+  until every registered source host is ready.
 - Hardened live readiness and discovery edges: Stepik public API sources can
   preflight as sync-ready without an account token, inactive/deleted Stepik
   enrollments are ignored, browser storage state is checked per registered

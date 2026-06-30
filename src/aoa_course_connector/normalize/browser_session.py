@@ -9,6 +9,20 @@ from aoa_course_connector.adapters.browser import parse_html_snapshot
 from aoa_course_connector.evidence import make_evidence
 
 
+KNOWN_AUTHORITY_TIERS = {
+    "official_lesson",
+    "official_assignment",
+    "instructor_comment",
+    "mentor_comment",
+    "learner_comment",
+    "transcript",
+    "asset_metadata",
+    "progress_metadata",
+    "discussion_comment",
+    "unknown",
+}
+
+
 def normalize_browser_snapshot(raw: dict[str, Any], run_id: str, raw_ref: str | None = None) -> dict[str, object]:
     captured_at = str(raw.get("captured_at") or _now())
     platform = str(raw.get("platform") or raw.get("source", {}).get("platform") or "browser_session")
@@ -98,6 +112,9 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                 "kind": "browser_html_text",
                 "order": 1,
                 "text": step_text,
+                "authority_tier": "official_lesson",
+                "authority_label": f"{platform} lesson page",
+                "source_authority": "browser_visible_lesson",
                 "evidence": step_evidence,
             }
         ],
@@ -119,6 +136,9 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                 "title": asset.get("title") or f"Asset {asset_index}",
                 "url": asset.get("url") or url,
                 "download_state": "metadata_only",
+                "authority_tier": "asset_metadata",
+                "authority_label": f"{platform} visible asset metadata",
+                "source_authority": "browser_visible_asset",
                 "evidence": asset_evidence,
             }
         )
@@ -130,6 +150,9 @@ def _lesson_from_page(page: dict[str, Any], course: dict[str, object], platform:
                     "lesson_id": lesson_id,
                     "prompt": link.get("text") or link.get("href"),
                     "status": "available",
+                    "authority_tier": "official_assignment",
+                    "authority_label": f"{platform} visible assignment link",
+                    "source_authority": "browser_visible_assignment",
                     "evidence": lesson_evidence,
                 }
             )
@@ -166,11 +189,17 @@ def _comment_threads_from_snapshot(
         )
         comment_id = f"{thread_id}:comment:{_slug(comment.get('comment_id') or index)}"
         comment_evidence = _evidence(evidence, platform, url, captured_at, f"comment:{comment_id}", raw_ref)
+        author_label = comment.get("author") or "visible user"
+        role = _comment_role(comment, author_label)
         thread["comments"].append(
             {
                 "comment_id": comment_id,
                 "thread_id": thread_id,
-                "author_label": comment.get("author") or "visible user",
+                "author_label": author_label,
+                "role": role,
+                "authority_tier": _comment_authority_tier(role or author_label),
+                "authority_label": comment.get("authority_label") or role or author_label,
+                "source_authority": "browser_visible_comment",
                 "posted_at": comment.get("created_at") or captured_at,
                 "text": comment.get("text") or "",
                 "evidence": comment_evidence,
@@ -212,6 +241,33 @@ def _evidence(store: dict[str, dict[str, object]], platform: str, source_url: st
     item = make_evidence(platform, source_url, fetched_at, selector=selector, raw_ref=raw_ref or "")
     store[str(item["evidence_id"])] = item
     return item
+
+
+def _comment_role(comment: dict[str, str], author_label: str) -> str:
+    explicit = str(comment.get("role") or "").strip()
+    if explicit:
+        return explicit
+    label = str(author_label or "").casefold()
+    if any(token in label for token in ["instructor", "teacher", "coach", "admin", "staff"]):
+        return "instructor"
+    if any(token in label for token in ["mentor", "tutor"]):
+        return "mentor"
+    if any(token in label for token in ["learner", "student", "member", "user"]):
+        return "learner"
+    return ""
+
+
+def _comment_authority_tier(role_or_label: str) -> str:
+    label = role_or_label.casefold()
+    if label in KNOWN_AUTHORITY_TIERS:
+        return label
+    if any(token in label for token in ["instructor", "teacher", "coach", "admin", "staff"]):
+        return "instructor_comment"
+    if any(token in label for token in ["mentor", "tutor"]):
+        return "mentor_comment"
+    if any(token in label for token in ["learner", "student", "member", "user"]):
+        return "learner_comment"
+    return "discussion_comment"
 
 
 def _slug(value: object) -> str:

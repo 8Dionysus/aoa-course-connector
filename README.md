@@ -164,6 +164,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval adapter-authority
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
 PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
 

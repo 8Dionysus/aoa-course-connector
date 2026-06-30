@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from aoa_course_connector.adapters.stepik import client as stepik_client
@@ -24,11 +25,19 @@ def test_stepik_fixture_to_answer_packet(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     receipt = materialize_stepik_fixture(storage, run_id="stepik-fixture")
     assert receipt["status"] == "ok"
+    bundle = json.loads((storage.data / "runs/stepik-fixture/normalized/course_bundle.json").read_text(encoding="utf-8"))
+    lesson = bundle["courses"][0]["modules"][0]["lessons"][0]
+    assert lesson["steps"][0]["authority_tier"] == "official_lesson"
+    assert lesson["steps"][0]["authority_label"] == "stepik official API"
+    assert lesson["steps"][0]["source_authority"] == "stepik_step_api"
+    assert lesson["assignments"][0]["authority_tier"] == "official_assignment"
+    assert lesson["assignments"][0]["source_authority"] == "stepik_step_api"
     build_keyword_index(storage, run_id="stepik-fixture")
     build_graph(storage, run_id="stepik-fixture")
     results = query_keyword_index(storage, "Stepik public API evidence", run_id="stepik-fixture")
     assert results
     assert results[0]["platform"] == "stepik"
+    assert results[0]["authority_tier"] == "official_lesson"
     packet = render_answer_packet(storage, "Stepik public API evidence", run_id="stepik-fixture")
     assert packet["evidence_chain"]
 
