@@ -48,6 +48,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-
 PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
 PYTHONPATH=src python -m aoa_course_connector.cli smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval clean-api
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register

@@ -53,6 +53,19 @@ def test_catalog_link_pattern_rejects_nonmatching_course_hints() -> None:
     assert [link["href"] for link in links] == ["https://academy.example/course/allowed"]
 
 
+def test_catalog_link_pattern_still_rejects_pagination_links() -> None:
+    html = """
+    <main>
+      <a href="/teach/control/stream/view/id/201">Course A</a>
+      <a rel="next" href="/teach/control/stream?page=2">Next page</a>
+    </main>
+    """
+
+    links = discover_course_links(html, "https://school.example/", platform="getcourse", link_pattern="*/teach/control/stream*")
+
+    assert [link["href"] for link in links] == ["https://school.example/teach/control/stream/view/id/201"]
+
+
 def test_skillspace_catalog_allows_course_slugs_with_non_course_words() -> None:
     html = """
     <main>

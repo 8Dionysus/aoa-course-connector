@@ -21,6 +21,10 @@ aoa-course preflight live
 as a warning, does not touch the network, and gives the next commands for
 Stepik tokens or browser storage-state capture.
 
+When a Stepik source is registered as `public_api`, preflight can mark the
+source sync route ready without a token. Token-gated Stepik sources and browser
+sources still require matching local auth state before live sync is ready.
+
 For this Abyss machine, use the external storage example when the corpus grows:
 
 ```bash

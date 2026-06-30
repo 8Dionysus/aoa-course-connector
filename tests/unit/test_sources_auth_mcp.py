@@ -100,6 +100,20 @@ def test_browser_state_inspect_matches_expected_origin_from_cookie_domain(tmp_pa
     assert status["expected_origin_matched"] is True
 
 
+def test_browser_state_inspect_rejects_subdomain_cookie_for_parent_origin(tmp_path: Path) -> None:
+    state_file = tmp_path / "account.storage-state.json"
+    state_file.write_text(
+        '{"cookies": [{"name": "session", "value": "secret", "domain": ".login.school.example", "path": "/"}], "origins": []}',
+        encoding="utf-8",
+    )
+
+    status = inspect_browser_state(state_file, expect_origin_contains="https://school.example")
+
+    assert status["status"] == "mismatch"
+    assert status["usable"] is False
+    assert status["expected_origin_matched"] is False
+
+
 def test_stepik_source_defaults_to_public_api(tmp_path: Path) -> None:
     source, _path, state = upsert_source(tmp_path / "data", "stepik", "67", "Stepik Course")
     assert state == "added"
@@ -194,6 +208,14 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
         "method": "initialize",
         "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
     })
+    unsupported_initialize = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 11,
+        "method": "initialize",
+        "params": {"protocolVersion": "1900-01-01", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
+    })
+    assert initialize["result"]["protocolVersion"] == "2025-11-25"
+    assert unsupported_initialize["result"]["protocolVersion"] == "2025-11-25"
     assert initialize["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert initialize["result"]["capabilities"]["tools"]["listChanged"] is False
     assert handle_jsonrpc_message({"jsonrpc": "2.0", "method": "notifications/initialized"}) is None

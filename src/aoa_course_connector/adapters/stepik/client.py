@@ -218,16 +218,31 @@ def _current_stepik_user(client: StepikClient) -> dict[str, Any]:
 def _course_ids_from_enrollments(enrollments: list[dict[str, Any]]) -> list[int]:
     ids = []
     for enrollment in enrollments:
+        if not _enrollment_is_active(enrollment):
+            continue
         course_id = _int_or_none(enrollment.get("course") or enrollment.get("course_id"))
         if course_id is not None:
             ids.append(course_id)
     return _dedupe_ids(ids)
 
 
+def _enrollment_is_active(enrollment: dict[str, Any]) -> bool:
+    if enrollment.get("is_deleted") is True:
+        return False
+    if enrollment.get("is_active") is False:
+        return False
+    return True
+
+
 def _course_discovery_record(course: dict[str, Any], enrollments: list[dict[str, Any]]) -> dict[str, Any]:
     course_id = int(course["id"])
     enrollment = next(
-        (item for item in enrollments if _int_or_none(item.get("course") or item.get("course_id")) == course_id),
+        (
+            item
+            for item in enrollments
+            if _enrollment_is_active(item)
+            and _int_or_none(item.get("course") or item.get("course_id")) == course_id
+        ),
         {},
     )
     return {

@@ -240,8 +240,9 @@ def _handle_legacy_line_request(request: object) -> dict[str, object]:
 
 def _initialize_result(params: object) -> dict[str, object]:
     requested = params.get("protocolVersion") if isinstance(params, dict) else None
+    negotiated = str(requested) if requested == PROTOCOL_VERSION else PROTOCOL_VERSION
     return {
-        "protocolVersion": str(requested or PROTOCOL_VERSION),
+        "protocolVersion": negotiated,
         "capabilities": {"tools": {"listChanged": False}},
         "serverInfo": {"name": SERVER_NAME, "version": SERVER_VERSION},
         "instructions": "Search authorized local course indexes and return source-backed evidence packets.",

@@ -66,3 +66,8 @@
 - Added freshness-aware `rank_score`/`rank_features` for keyword, semantic, and
   hybrid results plus `eval freshness-ranking` with a current-vs-stale conflict
   fixture.
+- Hardened live readiness and discovery edges: Stepik public API sources can
+  preflight as sync-ready without an account token, inactive/deleted Stepik
+  enrollments are ignored, browser storage state is checked per registered
+  source host, pagination links cannot pass catalog `link_pattern`, and MCP
+  initialize falls back to the supported protocol version.

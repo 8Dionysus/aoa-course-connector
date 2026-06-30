@@ -40,6 +40,10 @@ JSON-RPC over stdio. It supports:
 - `tools/call`
 - `notifications/initialized`
 
+On `initialize`, the server returns the supported protocol version
+`2025-11-25`. If a client sends an unsupported protocol version, the response
+falls back to the supported version instead of echoing an unusable value.
+
 Example smoke:
 
 ```bash

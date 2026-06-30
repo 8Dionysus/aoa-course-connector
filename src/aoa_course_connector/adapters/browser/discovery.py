@@ -135,13 +135,13 @@ def is_course_link(link: dict[str, str], *, platform: str | None = None, link_pa
     href = str(link.get("href") or "")
     if not href:
         return False
-    if link_pattern:
-        return fnmatch(href, link_pattern)
     kind = str(link.get("kind") or "").casefold()
     rel = str(link.get("rel") or "").casefold().split()
     text = str(link.get("text") or "").casefold()
     if kind in PAGINATION_KINDS or "next" in rel or text in {"next", "next page", "more"}:
         return False
+    if link_pattern:
+        return fnmatch(href, link_pattern)
     if kind in COURSE_KINDS:
         return True
     lowered = href.casefold()

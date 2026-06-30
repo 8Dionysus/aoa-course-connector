@@ -253,3 +253,12 @@ inspect checkpoints before choosing which child run to query.
 the local source registry and redacted browser storage-state status, reports
 whether discovery/sync is ready, and suggests the next command without printing
 private HTML, cookie values, or tokens.
+
+For registered browser sources, preflight checks the saved storage state against
+each source host before marking `browser_live_sync` ready. A state file captured
+for `a.example` does not make a registered `b.example` source ready; capture or
+select auth state for the matching host first.
+
+Catalog discovery also rejects pagination links before applying a custom
+`link_pattern`, so broad patterns cannot accidentally register "next page"
+links as course sources.

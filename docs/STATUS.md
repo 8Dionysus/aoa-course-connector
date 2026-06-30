@@ -27,7 +27,7 @@ This proves:
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,
   optional authenticated step-source enrichment, account-level source discovery,
-  and client pagination helpers.
+  active-enrollment filtering, and client pagination helpers.
 - GetCourse and Skillspace browser-session snapshot adapters through fixtures
   and optional Playwright live capture route.
 - GetCourse and Skillspace account-level browser discovery into the local source
@@ -42,6 +42,8 @@ This proves:
   fixtures, answer packets, index docs, graph edges, MCP context, and evals.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
+- Browser catalog discovery rejects pagination links even when a broad
+  `link_pattern` would otherwise match them.
 - Browser-session parser heuristics for unannotated, aria-only, and
   not-started progress/status blocks plus compact visible
   comment/reply/discussion blocks.
@@ -52,6 +54,9 @@ This proves:
 - Read-only live preflight reports for Stepik tokens, browser storage-state
   usability, source-registry readiness, next commands, secret redaction, and
   MCP `live_preflight` structuredContent.
+- Live preflight distinguishes Stepik `public_api` sources from token-gated
+  `api_token`/`oauth` sources and checks browser-session storage state against
+  each registered source host before marking sync ready.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
   index/graph builds, CLI status, MCP status, and eval coverage.
 - Stepik fixture/live smoke report routes that combine source registration,

@@ -91,6 +91,13 @@ It does not store or print the token value.
 `preflight live --platform stepik` checks token presence and registered Stepik
 sources without touching the network. It reports `token_present` but never logs
 the token value, and it can be used with `--require-ready` in operator scripts.
+Registered `public_api` sources can be sync-ready without `STEPIK_API_TOKEN`;
+registered `api_token` or `oauth` sources still require the token before live
+sync is ready. Account discovery is treated as required only when no Stepik
+sources are already registered.
+
+Account discovery filters inactive or deleted enrollments before registering
+course sources, so stale account records do not become live sync targets.
 
 Safe fixture discovery proves the same registration route without network
 access:

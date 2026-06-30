@@ -58,7 +58,8 @@ def live_preflight(
             expect_origin_contains=expect_origin_contains,
         )
 
-    ready = bool(workflows) and all(bool(item.get("ready")) for item in workflows)
+    required_workflows = [item for item in workflows if item.get("required_for_ready", True)]
+    ready = bool(required_workflows) and all(bool(item.get("ready")) for item in required_workflows)
     return {
         "schema": "aoa_course_live_preflight_v1",
         "status": "ok" if ready else "warning",
@@ -128,11 +129,13 @@ def _append_stepik_preflight(
             blockers.append(f"missing token env {token_env}")
         checks.append(_source_check(source, ready=ready, blockers=blockers))
 
+    account_discovery_required = not bool(sources)
     workflows.append(
         {
             "name": "stepik_account_discovery",
             "platform": "stepik",
             "ready": token_present,
+            "required_for_ready": account_discovery_required,
             "source_count": len(sources),
             "next_command": (
                 "aoa-course discover stepik-account "
@@ -145,6 +148,7 @@ def _append_stepik_preflight(
             "name": "stepik_source_sync",
             "platform": "stepik",
             "ready": bool(sources) and all(bool(item.get("ready")) for item in checks if item.get("kind") == "source" and item.get("platform") == "stepik"),
+            "required_for_ready": True,
             "source_count": len(sources),
             "next_command": (
                 "aoa-course sync stepik-live --run stepik-live-sync "
@@ -152,7 +156,12 @@ def _append_stepik_preflight(
             ),
         }
     )
-    if not token_present:
+    token_blocked_sources = [
+        source
+        for source in sources
+        if str(source.get("access_mode") or "") in {"api_token", "oauth"}
+    ]
+    if not token_present and (not sources or token_blocked_sources):
         next_commands.append(f"export {token_env}=<stepik-api-token>")
     if not sources:
         next_commands.append(f"aoa-course discover stepik-account --token-env {token_env} --register --max-pages 5")
@@ -194,15 +203,31 @@ def _append_browser_preflight(
             "next_command": f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}",
         }
     )
+    source_ready_flags: list[bool] = []
     for source in sources:
-        blockers = [] if state_ready else [f"browser storage state is {state.get('status')}"]
-        checks.append(_source_check(source, ready=state_ready and bool(source.get("enabled", True)), blockers=blockers))
+        source_host = _host(str(source.get("source_ref") or ""))
+        source_state = (
+            inspect_browser_state(state_file, expect_origin_contains=source_host)
+            if source_host
+            else state
+        )
+        source_state_ready = bool(source_state.get("usable"))
+        blockers = []
+        if not source_state_ready:
+            if source_host and state_ready:
+                blockers.append(f"browser storage state does not match source host {source_host}")
+            else:
+                blockers.append(f"browser storage state is {source_state.get('status')}")
+        ready = source_state_ready and bool(source.get("enabled", True))
+        source_ready_flags.append(ready)
+        checks.append(_source_check(source, ready=ready, blockers=blockers))
 
     workflows.append(
         {
             "name": "browser_live_discovery",
             "platform": platform,
             "ready": state_ready,
+            "required_for_ready": True,
             "source_count": len(sources),
             "next_command": (
                 f"aoa-course discover browser-live <catalog-url> --platform {platform} "
@@ -214,7 +239,8 @@ def _append_browser_preflight(
         {
             "name": "browser_live_sync",
             "platform": platform,
-            "ready": state_ready and bool(sources),
+            "ready": bool(sources) and all(source_ready_flags),
+            "required_for_ready": True,
             "source_count": len(sources),
             "next_command": (
                 f"aoa-course sync browser-live --platform {platform} "

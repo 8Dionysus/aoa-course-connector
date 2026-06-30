@@ -16,6 +16,8 @@
    live credentials.
 10. Run `preflight live --platform stepik` to prove the live readiness report
     is safe and read-only even before an operator provides `STEPIK_API_TOKEN`.
+    Registered `public_api` Stepik sources can be sync-ready without a token;
+    account discovery and token-gated sources still require the token.
 11. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
    sync, index/graph, answer, and privacy-safe report route.
 12. Run browser fixture discovery with `--register` to prove the local source
@@ -31,5 +33,7 @@
 16. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-17. Add live sources only after auth-state and storage roots are local and
+17. Confirm browser preflight marks only sources whose host matches the saved
+    storage state as sync-ready.
+18. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

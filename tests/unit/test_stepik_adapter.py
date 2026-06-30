@@ -160,11 +160,14 @@ def test_stepik_account_discovery_uses_current_user_enrollments(monkeypatch) -> 
             return [
                 {"id": 7001, "user": 501, "course": 67, "is_active": True},
                 {"id": 7002, "user": 501, "course": 100, "is_active": True},
+                {"id": 7003, "user": 501, "course": 200, "is_active": False},
+                {"id": 7004, "user": 501, "course": 300, "is_deleted": True},
             ]
 
         def get_objects(self, resource: str, resource_ids: list[int], *, batch_size: int = 20) -> list[dict[str, object]]:
             self.calls.append((resource, tuple(resource_ids), batch_size))
             assert resource == "courses"
+            assert resource_ids == [67, 100]
             return [
                 {"id": 67, "title": "Stepik API Fixture", "canonical_url": "https://stepik.org/course/67"},
                 {"id": 100, "title": "Connected Account Fixture", "canonical_url": "https://stepik.org/course/100"},
@@ -206,8 +209,13 @@ def test_stepik_account_discovery_side_loaded_fallback_keeps_only_enrolled_cours
                     "courses": [
                         {"id": 67, "title": "Enrolled Course"},
                         {"id": 200, "title": "Public But Not Enrolled"},
+                        {"id": 300, "title": "Deleted Enrollment"},
                     ],
-                    "enrollments": [{"id": 7001, "user": 501, "course": 67, "is_active": True}],
+                    "enrollments": [
+                        {"id": 7001, "user": 501, "course": 67, "is_active": True},
+                        {"id": 7002, "user": 501, "course": 200, "is_active": False},
+                        {"id": 7003, "user": 501, "course": 300, "is_deleted": True},
+                    ],
                     "meta": {"page": 1, "has_next": False},
                 }
             ]

@@ -242,10 +242,13 @@ def _load_json(path: Path, errors: list[str]) -> None:
 
 
 def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None:
+    agents = (repo_root / "AGENTS.md").read_text(encoding="utf-8")
     source_policy = (repo_root / "connector" / "SOURCE_POLICY.md").read_text(encoding="utf-8").casefold()
     storage_policy = (repo_root / "connector" / "STORAGE_POLICY.md").read_text(encoding="utf-8")
     readme = (repo_root / "README.md").read_text(encoding="utf-8").casefold()
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
+    if "build-semantic-index --run stepik-fixture" not in agents:
+        errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     for token in ["getcourse", "skillspace", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
         if token not in source_policy:
             errors.append(f"source policy missing boundary token: {token}")
@@ -263,6 +266,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["live_preflight", "network_touched", "secret values", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
+    for token in ["unsupported protocol version", "2025-11-25"]:
+        if token not in mcp.casefold():
+            errors.append(f"MCP usage missing protocol negotiation token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
     for token in [
         "build-semantic-index",
@@ -301,6 +307,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "sync stepik-live",
         "sync status --run stepik-sync-fixture --platform stepik",
         "public_api",
+        "sync-ready without `stepik_api_token`",
+        "inactive or deleted enrollments",
         "smoke stepik-fixture",
         "smoke stepik-live",
         "aoa_course_stepik_smoke_report_v1",
@@ -334,6 +342,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "getcourse",
         "skillspace",
         "playwright",
+        "each source host",
+        "pagination links before applying a custom",
     ]:
         if token not in browser_doc:
             errors.append(f"Browser session doc missing token: {token}")
