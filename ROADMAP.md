@@ -20,6 +20,8 @@
   unannotated DOM heuristics for progress/status/comments.
 - Prove fixture/snapshot/live browser smoke reports that combine discovery,
   ingestion, index/graph build, and optional answer evidence checks.
+- Prove Stepik batched full-course API materialization with optional
+  authenticated step-source enrichment.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 
@@ -29,8 +31,10 @@
   calibrate pagination and DOM heuristics against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
   status, comments, and discussion markup found by live smoke.
-- Expand Stepik adapter from bounded smoke slices to robust pagination and
-  authenticated account scopes.
+- Run gated live full-course Stepik sync on an operator-selected authenticated
+  course and calibrate permission/source-enrichment behavior.
+- Expand Stepik from course-id sync into source-registry driven discovery where
+  official account scopes expose enough course catalog data.
 - Add semantic/vector index behind the stable keyword index contract.
 
 ## Later

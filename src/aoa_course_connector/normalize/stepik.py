@@ -82,7 +82,9 @@ def normalize_stepik_raw(raw: dict[str, Any], run_id: str, raw_ref: str | None =
                 if not isinstance(step_raw, dict):
                     continue
                 step_id = str(step_raw.get("id") or step_index)
-                block = step_raw.get("block") if isinstance(step_raw.get("block"), dict) else {}
+                step_source = step_raw.get("step_source") if isinstance(step_raw.get("step_source"), dict) else {}
+                source_block = step_source.get("block") if isinstance(step_source.get("block"), dict) else None
+                block = source_block or (step_raw.get("block") if isinstance(step_raw.get("block"), dict) else {})
                 kind = str(block.get("name") or "step")
                 step_url = f"https://stepik.org/lesson/{lesson_id}/step/{step_raw.get('position') or step_index}"
                 step_evidence = _evidence(evidence, step_url, fetched_at, f"step:{step_id}", raw_ref)

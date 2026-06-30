@@ -43,6 +43,8 @@ def materialize_stepik_live(
     max_sections: int | None = 1,
     max_units_per_section: int | None = 2,
     max_steps_per_lesson: int | None = 5,
+    batch_size: int = 20,
+    include_step_sources: bool = False,
 ) -> dict[str, object]:
     create_storage_roots(roots)
     data_dir = run_data_dir(roots, run_id)
@@ -56,6 +58,8 @@ def materialize_stepik_live(
         max_sections=max_sections,
         max_units_per_section=max_units_per_section,
         max_steps_per_lesson=max_steps_per_lesson,
+        batch_size=batch_size,
+        include_step_sources=include_step_sources,
     )
     raw_path = raw_dir / f"stepik_course_{course_id}.json"
     raw_path.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")

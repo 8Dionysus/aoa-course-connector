@@ -22,7 +22,9 @@ This proves:
 - answer packets with evidence chains and freshness timestamps;
 - initial MCP tool surface;
 - fresh-copy agent install route.
-- Stepik clean API adapter through fixture and bounded live public API smoke.
+- Stepik clean API adapter through fixture, bounded live public API smoke,
+  batched full-course materialization route, optional authenticated
+  step-source enrichment, and client pagination helpers.
 - GetCourse and Skillspace browser-session snapshot adapters through fixtures
   and optional Playwright live capture route.
 - GetCourse and Skillspace account-level browser discovery into the local source
@@ -50,5 +52,6 @@ The next layer is live connected-source work:
   calibrate real theme selectors and pagination behavior;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress and comment blocks use unusual markup;
-- broader Stepik sync coverage beyond bounded smoke slices;
+- gated live full-course Stepik runs against operator-selected authenticated
+  courses to calibrate real course size, permissions, and source enrichment;
 - richer live smoke routes gated away from CI secrets.

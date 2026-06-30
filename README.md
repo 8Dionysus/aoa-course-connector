@@ -47,6 +47,20 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-live-
 PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run stepik-live-smoke
 ```
 
+For an operator-selected full-course Stepik sync:
+
+```bash
+export STEPIK_API_TOKEN=...
+PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-full-course
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-full-course
+PYTHONPATH=src python -m aoa_course_connector.cli answer "course-specific question" --run stepik-full-course
+```
+
+`--full-course` removes the smoke limits, `--batch-size` uses Stepik `ids[]`
+multi-ID API reads, and `--include-step-sources` performs best-effort source
+enrichment when the connected account is allowed to read it.
+
 ## Browser-Session Hard Adapter Proof
 
 GetCourse and Skillspace now have a shared browser-session snapshot route. CI
@@ -98,7 +112,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugr
 | --- | --- |
 | GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Stepik | Working clean API reference adapter |
+| Stepik | Working clean API reference adapter with fixture, bounded live smoke, batched full-course materialization, and optional authenticated step-source enrichment |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
 

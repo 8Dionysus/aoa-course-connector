@@ -244,7 +244,17 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     if "aoa-course-connector-mcp" not in mcp:
         errors.append("MCP usage missing server package name")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()
-    for token in ["stepik-live", "stepik-fixture", "course -> sections -> units -> lessons -> steps", "stepik_api_token"]:
+    for token in [
+        "stepik-live",
+        "stepik-fixture",
+        "course -> sections -> units -> lessons -> steps",
+        "stepik_api_token",
+        "--full-course",
+        "--batch-size",
+        "--include-step-sources",
+        "ids[]",
+        "meta.has_next",
+    ]:
         if token not in stepik_doc:
             errors.append(f"Stepik doc missing token: {token}")
     browser_doc = (repo_root / "docs" / "BROWSER_SESSION.md").read_text(encoding="utf-8").casefold()
