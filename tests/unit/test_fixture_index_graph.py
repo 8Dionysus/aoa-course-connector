@@ -4,9 +4,12 @@ from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
-from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet
+from aoa_course_connector.query import graph_neighbors, query_hybrid_index, query_keyword_index, render_answer_packet
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def roots(tmp_path: Path) -> StorageRoots:
@@ -42,3 +45,27 @@ def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:
     kinds = {edge["kind"] for edge in packet["edges"]}
     assert "module_contains_lesson" in kinds
     assert "lesson_about_topic" in kinds
+
+
+def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(
+        storage,
+        run_id="freshness-ranking-fixture",
+        fixture=REPO_ROOT / "connector" / "fixtures" / "course" / "freshness_conflict_course.json",
+    )
+    build_keyword_index(storage, run_id="freshness-ranking-fixture")
+    build_semantic_index(storage, run_id="freshness-ranking-fixture")
+
+    keyword = query_keyword_index(storage, "firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert [result["doc_id"] for result in keyword] == [
+        "step:step:freshness:zzz-current-policy",
+        "step:step:freshness:aaa-stale-policy",
+    ]
+    assert keyword[0]["score"] == keyword[1]["score"]
+    assert keyword[0]["rank_score"] > keyword[1]["rank_score"]
+    assert keyword[0]["rank_features"]["freshness_state"] == "current"
+
+    hybrid = query_hybrid_index(storage, "firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert hybrid[0]["doc_id"] == "step:step:freshness:zzz-current-policy"
+    assert hybrid[0]["rank_score"] > hybrid[1]["rank_score"]

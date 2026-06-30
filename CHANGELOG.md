@@ -63,3 +63,6 @@
   through structuredContent without touching the network or printing secrets.
 - Repaired the local eval-port contract and added `eval answer-quality` for
   source id, path, snippet, freshness, and evidence-field checks.
+- Added freshness-aware `rank_score`/`rank_features` for keyword, semantic, and
+  hybrid results plus `eval freshness-ranking` with a current-vs-stale conflict
+  fixture.

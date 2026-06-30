@@ -19,3 +19,8 @@ per-source artifacts.
 The answer-quality suite raises the bar above term presence: it checks top
 result shape, source id, platform, path, snippets, freshness, and evidence
 fields for fixture-safe runs.
+
+The freshness-ranking suite checks the ordering-specific conflict case: when
+current and stale course items have equal base relevance, the current item must
+rank higher while the packet still exposes the base `score`, adjusted
+`rank_score`, rank features, and evidence chain.

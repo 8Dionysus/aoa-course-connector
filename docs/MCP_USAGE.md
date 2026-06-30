@@ -53,8 +53,8 @@ printf '%s\n' \
 ```
 
 Tool calls return both text content and `structuredContent` so agents can keep
-source-backed result objects, evidence chains, freshness data, and graph packets
-without reparsing prose.
+source-backed result objects, `score`/`rank_score`, evidence chains, freshness
+data, and graph packets without reparsing prose.
 
 `live_preflight` is read-only and returns `network_touched: false`. It lets an
 agent inspect Stepik token presence, browser storage-state readiness, registered

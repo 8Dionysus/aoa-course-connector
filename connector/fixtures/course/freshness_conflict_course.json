@@ -1,0 +1,78 @@
+{
+  "schema": "aoa_course_raw_fixture_v1",
+  "captured_at": "2026-06-29T12:00:00Z",
+  "source": {
+    "source_id": "source:offline:freshness-conflict-course",
+    "platform": "offline_export",
+    "source_ref": "freshness-conflict-course",
+    "access_mode": "offline_export",
+    "title": "Freshness Conflict Fixture"
+  },
+  "courses": [
+    {
+      "course_id": "course:freshness:ranking",
+      "title": "Freshness Ranking Fixture",
+      "description": "Safe synthetic fixture for proving freshness-aware ranking when relevance is tied.",
+      "url": "https://example.invalid/courses/freshness-ranking",
+      "progress": {
+        "state": "in_progress",
+        "updated_at": "2026-06-29T12:00:00Z"
+      },
+      "modules": [
+        {
+          "module_id": "module:freshness:policy",
+          "title": "Ranking Conflict",
+          "order": 1,
+          "lessons": [
+            {
+              "lesson_id": "lesson:freshness:aaa-stale-policy",
+              "title": "Firmware Rollback Policy",
+              "url": "https://example.invalid/courses/freshness-ranking/lessons/stale-policy",
+              "order": 1,
+              "freshness_state": "stale",
+              "steps": [
+                {
+                  "step_id": "step:freshness:aaa-stale-policy",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Firmware rollback policy: keep same-or-newer builds only."
+                }
+              ],
+              "assets": [],
+              "transcripts": [],
+              "assignments": [],
+              "comment_threads": [],
+              "topics": ["firmware", "rollback", "ranking"],
+              "entities": [
+                {"kind": "concept", "value": "freshness ranking"}
+              ]
+            },
+            {
+              "lesson_id": "lesson:freshness:zzz-current-policy",
+              "title": "Firmware Rollback Policy",
+              "url": "https://example.invalid/courses/freshness-ranking/lessons/current-policy",
+              "order": 2,
+              "freshness_state": "current",
+              "steps": [
+                {
+                  "step_id": "step:freshness:zzz-current-policy",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Firmware rollback policy: keep same-or-newer builds only."
+                }
+              ],
+              "assets": [],
+              "transcripts": [],
+              "assignments": [],
+              "comment_threads": [],
+              "topics": ["firmware", "rollback", "ranking"],
+              "entities": [
+                {"kind": "concept", "value": "freshness ranking"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

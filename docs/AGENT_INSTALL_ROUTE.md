@@ -23,11 +23,13 @@
 13. After starter, Stepik fixture, and GetCourse browser fixture artifacts are
     built, run `eval answer-quality` to prove top-result path, source id,
     freshness, snippet, and evidence-field quality.
-14. Before live browser sources, run `auth plan-browser-state`, capture the
+14. Run the freshness conflict fixture and `eval freshness-ranking` to prove
+    current material ranks above stale material when base relevance is tied.
+15. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-15. Run `preflight live --platform getcourse` or
+16. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-16. Add live sources only after auth-state and storage roots are local and
+17. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

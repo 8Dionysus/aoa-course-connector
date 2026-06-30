@@ -18,6 +18,19 @@ from aoa_course_connector.index import (
 from aoa_course_connector.storage import run_artifact_dir
 
 
+FRESHNESS_RANK_WEIGHTS = {
+    "current": 0.08,
+    "fresh": 0.08,
+    "verified": 0.06,
+    "active": 0.05,
+    "unknown": 0.0,
+    "stale": -0.12,
+    "outdated": -0.14,
+    "deprecated": -0.18,
+    "archived": -0.08,
+}
+
+
 def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
     index_path = run_artifact_dir(roots, run_id) / "indexes" / "keyword_index.json"
     index = json.loads(index_path.read_text(encoding="utf-8"))
@@ -33,8 +46,17 @@ def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-
         doc = docs.get(doc_id)
         if not doc:
             continue
-        ranked.append({**doc, "score": score, "snippet": _snippet(str(doc.get("text") or ""), query_terms)})
-    return ranked[:limit]
+        rank_features = _rank_features(doc)
+        ranked.append(
+            {
+                **doc,
+                "score": score,
+                "rank_score": _rank_score(score, rank_features),
+                "rank_features": rank_features,
+                "snippet": _snippet(str(doc.get("text") or ""), query_terms),
+            }
+        )
+    return sorted(ranked, key=_result_sort_key)[:limit]
 
 
 def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
@@ -57,15 +79,18 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
         if not (query_features & semantic_doc_feature_keys(doc)):
             continue
         result = {key: value for key, value in doc.items() if key != "vector"}
+        rank_features = _rank_features(result)
         ranked.append(
             {
                 **result,
                 "score": round(score, 6),
+                "rank_score": _rank_score(score, rank_features),
+                "rank_features": rank_features,
                 "score_mode": "semantic_vector",
                 "snippet": _snippet(str(doc.get("text") or ""), query_terms),
             }
         )
-    return sorted(ranked, key=lambda item: (-float(item["score"]), str(item.get("doc_id"))))[:limit]
+    return sorted(ranked, key=_result_sort_key)[:limit]
 
 
 def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
@@ -98,8 +123,20 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
         keyword_score = float(components.get("keyword") or 0.0)
         semantic_score = float(components.get("semantic") or 0.0)
         score = (0.45 * keyword_score) + (0.55 * semantic_score)
-        ranked.append({**entry, "score": round(score, 6), "score_mode": "hybrid"})
-    return sorted(ranked, key=lambda item: (-float(item["score"]), str(item.get("doc_id"))))[:limit]
+        rank_features = _rank_features(entry)
+        components["freshness"] = round(float(rank_features.get("freshness_boost") or 0.0), 6)
+        components["provenance"] = round(float(rank_features.get("provenance_boost") or 0.0), 6)
+        ranked.append(
+            {
+                **entry,
+                "score": round(score, 6),
+                "rank_score": _rank_score(score, rank_features),
+                "rank_features": rank_features,
+                "score_components": components,
+                "score_mode": "hybrid",
+            }
+        )
+    return sorted(ranked, key=_result_sort_key)[:limit]
 
 
 def graph_neighbors(roots: StorageRoots, node_id: str, run_id: str = "starter-fixture", limit: int = 20) -> dict[str, object]:
@@ -193,6 +230,29 @@ def _snippet(text: str, terms: list[str]) -> str:
     start = max(0, min(positions) - 80) if positions else 0
     end = min(len(text), start + 240)
     return text[start:end]
+
+
+def _rank_features(doc: dict[str, object]) -> dict[str, object]:
+    state = str(doc.get("freshness_state") or "unknown").casefold()
+    evidence_fields = ["source_id", "source_url", "fetched_at", "evidence_id"]
+    provenance_complete = all(doc.get(field) for field in evidence_fields)
+    return {
+        "freshness_state": state,
+        "freshness_boost": FRESHNESS_RANK_WEIGHTS.get(state, 0.0),
+        "provenance_boost": 0.03 if provenance_complete else 0.0,
+        "provenance_complete": provenance_complete,
+    }
+
+
+def _rank_score(score: float, features: dict[str, object]) -> float:
+    multiplier = 1.0 + float(features.get("freshness_boost") or 0.0) + float(features.get("provenance_boost") or 0.0)
+    return round(max(0.0, score * multiplier), 6)
+
+
+def _result_sort_key(item: dict[str, object]) -> tuple[float, float, str]:
+    rank_score = float(item.get("rank_score") or item.get("score") or 0.0)
+    score = float(item.get("score") or 0.0)
+    return (-rank_score, -score, str(item.get("doc_id") or ""))
 
 
 def _now() -> str:
