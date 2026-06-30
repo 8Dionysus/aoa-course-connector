@@ -40,6 +40,7 @@ aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"s
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
+aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
 `semantic_search` follows the semantic index artifact for the requested run. If
@@ -60,8 +61,11 @@ connected-run receipt status, MCP tool coverage, `operational_ready`,
 `connected_live_ready`, embedded `connected_run_handoff`, and next commands.
 For browser-session sources, pass `link_pattern` when the whole-connector audit
 should preserve a narrowed course/lesson glob in the connected-source plan and
-ready connected-run handoff. It is the first MCP packet an agent should inspect
-when deciding whether to install, build starter artifacts, connect sources, run
+ready connected-run handoff. Pass `max_lessons`, `max_pages`, `max_sources`,
+`live_scope`, and `include_step_sources` when that audit must preserve the same
+bounded or full-course traversal breadth an operator expects the later
+connected run to use. It is the first MCP packet an agent should inspect when
+deciding whether to install, build starter artifacts, connect sources, run
 fixture calibration, or move into gated live work.
 On a fresh state, its `next_commands` can point to CLI `bootstrap fixture`,
 which creates the local starter artifacts and default fixture connected-run

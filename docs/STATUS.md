@@ -34,7 +34,10 @@ This proves:
   storage roots, source registry counts, selected run/index/graph readiness,
   connected-source handoff status, compact `connected_run_handoff`,
   connected-run receipt status, MCP tool coverage, `operational_ready`,
-  `connected_live_ready`, and next commands;
+  `connected_live_ready`, and next commands. The embedded connected plan
+  preserves operator-selected `live_scope`, `include_step_sources`,
+  `link_pattern`, `max_lessons`, `max_pages`, and `max_sources` through the
+  ready connected-run handoff;
 - CLI `bootstrap fixture` returns `aoa_course_fixture_bootstrap_receipt_v1` and
   turns a fresh local state into a query-ready starter proof: storage roots,
   normalized starter bundle, keyword index, semantic index, graph, default

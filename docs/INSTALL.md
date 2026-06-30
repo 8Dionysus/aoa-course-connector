@@ -28,7 +28,10 @@ receipt without network or secrets.
 install files, storage roots, local run/index/graph readiness, source registry
 counts, MCP tool coverage, connected-source handoff status,
 `connected_run_handoff`, and next commands. For browser-session sources,
-`--link-pattern` keeps narrowed lesson/course globs in that handoff.
+`--link-pattern` keeps narrowed lesson/course globs in that handoff. Use
+`--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
+`--include-step-sources` when a readiness audit must preserve the exact
+operator-selected connected-run breadth.
 
 `preflight live` is safe before credentials exist. It reports missing live auth
 as a warning, does not touch the network, and gives the next commands for

@@ -87,7 +87,12 @@ def build_parser() -> argparse.ArgumentParser:
     readiness.add_argument("--expect-origin")
     readiness.add_argument("--include-disabled", action="store_true")
     readiness.add_argument("--query")
+    readiness.add_argument("--max-lessons", type=int, default=50)
+    readiness.add_argument("--max-pages", type=int, default=5)
+    readiness.add_argument("--max-sources", type=int, default=50)
     readiness.add_argument("--link-pattern")
+    readiness.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
+    readiness.add_argument("--include-step-sources", action="store_true")
     readiness.add_argument("--require-ready", action="store_true")
     readiness.set_defaults(func=cmd_readiness)
 
@@ -589,7 +594,12 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         expect_origin_contains=args.expect_origin,
         include_disabled=args.include_disabled,
         query=args.query,
+        max_lessons=args.max_lessons,
+        max_pages=args.max_pages,
+        max_sources=args.max_sources,
         link_pattern=args.link_pattern,
+        live_scope=args.live_scope,
+        include_step_sources=args.include_step_sources,
         mcp_tool_names=tools,
     )
     _emit(report)
