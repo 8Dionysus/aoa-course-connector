@@ -57,9 +57,12 @@ commands without reading private raw payloads into `structuredContent`.
 `aoa_course_connector_readiness_v1` with install route files, storage roots,
 source registry counts, selected run readiness, connected-source plan summary,
 connected-run receipt status, MCP tool coverage, `operational_ready`,
-`connected_live_ready`, and next commands. It is the first MCP packet an agent
-should inspect when deciding whether to install, build starter artifacts,
-connect sources, run fixture calibration, or move into gated live work.
+`connected_live_ready`, embedded `connected_run_handoff`, and next commands.
+For browser-session sources, pass `link_pattern` when the whole-connector audit
+should preserve a narrowed course/lesson glob in the connected-source plan and
+ready connected-run handoff. It is the first MCP packet an agent should inspect
+when deciding whether to install, build starter artifacts, connect sources, run
+fixture calibration, or move into gated live work.
 On a fresh state, its `next_commands` can point to CLI `bootstrap fixture`,
 which creates the local starter artifacts and default fixture connected-run
 receipt before the agent returns to MCP queries.

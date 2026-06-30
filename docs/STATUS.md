@@ -32,8 +32,9 @@ This proves:
 - CLI `readiness` and MCP `connector_readiness` return one read-only
   `aoa_course_connector_readiness_v1` route audit with install-route files,
   storage roots, source registry counts, selected run/index/graph readiness,
-  connected-source handoff status, connected-run receipt status, MCP tool
-  coverage, `operational_ready`, `connected_live_ready`, and next commands;
+  connected-source handoff status, compact `connected_run_handoff`,
+  connected-run receipt status, MCP tool coverage, `operational_ready`,
+  `connected_live_ready`, and next commands;
 - CLI `bootstrap fixture` returns `aoa_course_fixture_bootstrap_receipt_v1` and
   turns a fresh local state into a query-ready starter proof: storage roots,
   normalized starter bundle, keyword index, semantic index, graph, default

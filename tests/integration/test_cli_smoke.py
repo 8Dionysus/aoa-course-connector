@@ -299,6 +299,23 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in runbook
     assert "secret" not in runbook
 
+    readiness = run_cli(
+        tmp_path,
+        "readiness",
+        "--platform",
+        "getcourse",
+        "--expect-origin",
+        "school.example",
+        "--query",
+        "course-specific question",
+        "--link-pattern",
+        "*/lessons/*",
+    )
+    assert readiness["connected_live_ready"] is True
+    assert readiness["connected_source_plan"]["connected_run_handoff"]["ready"] is True
+    assert "--link-pattern '*/lessons/*'" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
+    assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+
 
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")

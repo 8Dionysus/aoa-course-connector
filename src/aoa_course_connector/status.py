@@ -58,6 +58,7 @@ def connector_readiness(
     expect_origin_contains: str | None = None,
     include_disabled: bool = False,
     query: str | None = None,
+    link_pattern: str | None = None,
     mcp_tool_names: list[str] | set[str] | None = None,
 ) -> dict[str, object]:
     """Build a single read-only route audit for install, query, and live handoff."""
@@ -85,6 +86,7 @@ def connector_readiness(
         expect_origin_contains=expect_origin_contains,
         include_disabled=include_disabled,
         query=query,
+        link_pattern=link_pattern,
     )
     connected_status = load_connected_calibration_status(roots, run_id=connected_run)
     mcp = _mcp_surface(mcp_tool_names)
@@ -265,10 +267,12 @@ def _compact_connected_plan(plan: dict[str, object]) -> dict[str, object]:
         "actionable": bool(plan.get("actionable")),
         "network_touched": bool(plan.get("network_touched")),
         "live_scope": plan.get("live_scope"),
+        "link_pattern": plan.get("link_pattern", ""),
         "platforms": plan.get("platforms", []),
         "source_registry": plan.get("source_registry"),
         "platform_plans": plan.get("platform_plans", []),
         "browser_auth_handoffs": plan.get("browser_auth_handoffs", []),
+        "connected_run_handoff": plan.get("connected_run_handoff", {}),
         "next_commands": plan.get("next_commands", []),
     }
 
@@ -302,7 +306,12 @@ def _next_commands(
         )
     if not bool(preflight.get("ready")):
         commands.extend([str(command) for command in preflight.get("next_commands", []) if str(command)])
-    if not bool(connected_plan.get("ready")):
+    if bool(connected_plan.get("ready")):
+        handoff = connected_plan.get("connected_run_handoff") if isinstance(connected_plan.get("connected_run_handoff"), dict) else {}
+        command = str(handoff.get("command") or "")
+        if command:
+            commands.append(command)
+    else:
         commands.extend([str(command) for command in connected_plan.get("next_commands", []) if str(command)])
     if not bool(mcp.get("ready")):
         commands.append("aoa-course mcp tools")

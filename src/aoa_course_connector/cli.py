@@ -87,6 +87,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness.add_argument("--expect-origin")
     readiness.add_argument("--include-disabled", action="store_true")
     readiness.add_argument("--query")
+    readiness.add_argument("--link-pattern")
     readiness.add_argument("--require-ready", action="store_true")
     readiness.set_defaults(func=cmd_readiness)
 
@@ -588,6 +589,7 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         expect_origin_contains=args.expect_origin,
         include_disabled=args.include_disabled,
         query=args.query,
+        link_pattern=args.link_pattern,
         mcp_tool_names=tools,
     )
     _emit(report)

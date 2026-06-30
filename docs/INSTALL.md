@@ -26,7 +26,9 @@ receipt without network or secrets.
 
 `readiness` is the broad read-only route audit for the connector. It reports
 install files, storage roots, local run/index/graph readiness, source registry
-counts, MCP tool coverage, connected-source handoff status, and next commands.
+counts, MCP tool coverage, connected-source handoff status,
+`connected_run_handoff`, and next commands. For browser-session sources,
+`--link-pattern` keeps narrowed lesson/course globs in that handoff.
 
 `preflight live` is safe before credentials exist. It reports missing live auth
 as a warning, does not touch the network, and gives the next commands for

@@ -64,6 +64,7 @@ def _connector_readiness_schema() -> dict[str, object]:
             "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
             "include_disabled": {"type": "boolean", "description": "Include disabled sources in readiness checks."},
             "query": _string_schema("Optional course-specific smoke query for connected planning."),
+            "link_pattern": _string_schema("Optional browser lesson/course link glob for connected browser live commands."),
         }
     )
 
@@ -287,6 +288,7 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
         expect_origin_contains=str(args.get("expect_origin") or "") or None,
         include_disabled=bool(args.get("include_disabled", False)),
         query=str(args.get("query") or "") or None,
+        link_pattern=str(args.get("link_pattern") or "") or None,
         mcp_tool_names=TOOL_NAMES,
     )
 

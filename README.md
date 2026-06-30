@@ -44,7 +44,9 @@ and returns the final readiness packet without touching the network.
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry
 counts, run/index/graph readiness, connected-source handoff status, MCP tool
 coverage, `operational_ready`, `connected_live_ready`, and concrete next
-commands without touching the network.
+commands without touching the network. For browser-session sources,
+`--link-pattern` flows into the embedded connected-source plan so a ready
+readiness packet can expose the same narrowed `connected_run_handoff` command.
 
 To build the same semantic index contract through an external embedding
 endpoint, keep the token in the environment and pass only the env var name:
