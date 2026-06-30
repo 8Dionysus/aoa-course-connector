@@ -28,8 +28,6 @@ For agents, start with the combined read-only plan:
 
 ```bash
 aoa-course preflight connected-plan \
-  --platform getcourse \
-  --platform stepik \
   --live-scope bounded \
   --query "course-specific question" \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
@@ -39,9 +37,11 @@ The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
 result and lists exact commands for preflight report capture, auth/source
 unblocking, live sync, per-source smoke reports, and `calibration build`. It is
 the safest first handoff when connected-source state is unknown. Its default
-`bounded` scope keeps Stepik live sync/smoke under smoke limits; switch to
-`--live-scope full-course --include-step-sources` only for an explicit
-operator-selected full-course calibration.
+platform set covers GetCourse, Skillspace, and Stepik together, and its default
+`bounded` scope keeps Stepik live sync/smoke under smoke limits. Pass
+`--platform` only to narrow a diagnostic run; switch to `--live-scope
+full-course --include-step-sources` only for an explicit operator-selected
+full-course calibration.
 
 For GetCourse and Skillspace, inspect `browser_auth_handoffs` before running
 any live browser command. The handoff packet groups source readiness by host,

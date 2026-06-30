@@ -28,7 +28,7 @@ aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
-aoa-course mcp call connector_readiness '{"runs":["starter-fixture"],"platforms":["getcourse","stepik"]}'
+aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
@@ -37,8 +37,8 @@ aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
-aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
-aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
+aoa-course mcp call live_preflight '{}'
+aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 ```
 
@@ -63,6 +63,9 @@ connect sources, run fixture calibration, or move into gated live work.
 On a fresh state, its `next_commands` can point to CLI `bootstrap fixture`,
 which creates the local starter artifacts and default fixture connected-run
 receipt before the agent returns to MCP queries.
+When `platforms` is omitted, `live_preflight`, `connected_source_plan`, and
+`connector_readiness` use the full priority set: GetCourse, Skillspace, and
+Stepik. Pass `platforms` only to narrow a diagnostic or platform-specific run.
 
 ## JSON-RPC Stdio
 
@@ -88,10 +91,10 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"rollback","run":"starter-fixture"}}}' \
   '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"refresh_plan","arguments":{"query":"rollback","run":"starter-fixture","mode":"keyword"}}}' \
-  '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
-  '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{}}}' \
+  '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
-  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"],"platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
   | aoa-course-connector-mcp
 ```
 

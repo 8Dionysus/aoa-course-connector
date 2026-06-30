@@ -229,8 +229,6 @@ one redacted handoff packet:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
-  --platform getcourse \
-  --platform stepik \
   --live-scope bounded \
   --query "course-specific question" \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
@@ -240,12 +238,13 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
 auth readiness, then emits exact preflight, sync, smoke, and
 `calibration build` commands with runtime artifact paths. It is also exposed to
 agents as MCP `connected_source_plan`. The default `--live-scope bounded`
-keeps Stepik live sync/smoke commands under smoke limits; use
-`--live-scope full-course --include-step-sources` only for an explicit
-operator-selected full-course run. `--write-runbook` writes the same redacted
-handoff as Markdown under runtime artifact storage so an operator or agent can
-execute the setup, sync, smoke, and calibration steps without rereading raw
-JSON.
+plans GetCourse, Skillspace, and Stepik together, while keeping Stepik live
+sync/smoke commands under smoke limits. Use `--platform` only to narrow a
+diagnostic run, and use `--live-scope full-course --include-step-sources` only
+for an explicit operator-selected full-course run. `--write-runbook` writes the
+same redacted handoff as Markdown under runtime artifact storage so an operator
+or agent can execute the setup, sync, smoke, and calibration steps without
+rereading raw JSON.
 
 For GetCourse and Skillspace, the plan also includes
 `browser_auth_handoffs`: one per browser-session platform. Each handoff groups
@@ -363,8 +362,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"r
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"platforms":["getcourse","stepik"]}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
 ```
 
