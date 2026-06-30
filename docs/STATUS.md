@@ -23,12 +23,14 @@ This proves:
 - initial MCP tool surface;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture and bounded live public API smoke.
+- GetCourse and Skillspace browser-session snapshot adapters through fixtures
+  and optional Playwright live capture route.
 
 ## Remaining Goal Work
 
 The next layer is live connected-source work:
 
-- GetCourse browser-session discovery;
-- Skillspace browser-session discovery;
+- full GetCourse browser-session course-tree crawler beyond one-page snapshots;
+- full Skillspace browser-session course-tree crawler beyond one-page snapshots;
 - broader Stepik sync coverage beyond bounded smoke slices;
 - richer live smoke routes gated away from CI secrets.

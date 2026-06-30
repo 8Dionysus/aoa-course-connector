@@ -4,3 +4,4 @@ owner: connector-local
 suites:
   - evals/suites/starter_course_answer_packets.json
   - evals/suites/stepik_clean_api_answer_packets.json
+  - evals/suites/browser_hard_adapter_answer_packets.json

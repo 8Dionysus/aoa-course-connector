@@ -39,3 +39,19 @@ def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     answer = run_cli(tmp_path, "answer", "Stepik public API evidence", "--run", "stepik-fixture")
     assert answer["result_count"] >= 1
     assert answer["evidence_chain"]
+
+
+def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
+    for platform, query in [
+        ("getcourse", "GetCourse bootloader rollback evidence"),
+        ("skillspace", "Skillspace logcat bugreport evidence"),
+    ]:
+        run_id = f"{platform}-browser-fixture"
+        run_cli(tmp_path, "materialize", "browser-fixture", "--platform", platform, "--run", run_id)
+        run_cli(tmp_path, "build-index", "--run", run_id)
+        run_cli(tmp_path, "build-graph", "--run", run_id)
+        answer = run_cli(tmp_path, "answer", query, "--run", run_id)
+        assert answer["result_count"] >= 1
+        assert answer["evidence_chain"]
+    eval_result = run_cli(tmp_path, "eval", "browser-hard-adapters")
+    assert eval_result["status"] == "ok"

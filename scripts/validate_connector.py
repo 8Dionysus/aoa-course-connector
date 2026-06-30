@@ -28,12 +28,15 @@ REQUIRED_FILES = [
     "connector/manifests/artifact_classes.yaml",
     "connector/profiles/starter-course.yaml",
     "connector/fixtures/course/starter_course.json",
+    "connector/fixtures/browser/getcourse_starter_snapshot.json",
+    "connector/fixtures/browser/skillspace_starter_snapshot.json",
     "connector/fixtures/stepik/starter_stepik_course.json",
     "docs/ARCHITECTURE.md",
     "docs/INSTALL.md",
     "docs/AGENT_INSTALL_ROUTE.md",
     "docs/STORAGE_CONTRACT.md",
     "docs/AUTH_SESSION.md",
+    "docs/BROWSER_SESSION.md",
     "docs/ADAPTER_GUIDE.md",
     "docs/GETCOURSE.md",
     "docs/SKILLSPACE.md",
@@ -55,13 +58,17 @@ REQUIRED_FILES = [
     "evals/README.md",
     "evals/suites/README.md",
     "evals/suites/starter_course_answer_packets.json",
+    "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/stepik_clean_api_answer_packets.json",
     "kag/AGENTS.md",
     "kag/README.md",
     "kag/manifest.json",
     "src/aoa_course_connector/cli.py",
+    "src/aoa_course_connector/adapters/browser/snapshot.py",
     "src/aoa_course_connector/adapters/stepik/client.py",
+    "src/aoa_course_connector/ingest/browser_session.py",
     "src/aoa_course_connector/ingest/stepik.py",
+    "src/aoa_course_connector/normalize/browser_session.py",
     "src/aoa_course_connector/normalize/stepik.py",
     "src/aoa_course_connector/mcp/server.py",
     "scripts/validate_connector.py",
@@ -77,6 +84,7 @@ REQUIRED_DIRS = [
     ".github/workflows",
     "connector/schemas",
     "src/aoa_course_connector/adapters",
+    "src/aoa_course_connector/adapters/browser",
     "src/aoa_course_connector/adapters/stepik",
     "src/aoa_course_connector/auth",
     "src/aoa_course_connector/core",
@@ -223,6 +231,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["stepik-live", "stepik-fixture", "course -> sections -> units -> lessons -> steps", "stepik_api_token"]:
         if token not in stepik_doc:
             errors.append(f"Stepik doc missing token: {token}")
+    browser_doc = (repo_root / "docs" / "BROWSER_SESSION.md").read_text(encoding="utf-8").casefold()
+    for token in ["browser-fixture", "browser-snapshot", "browser-live", "getcourse", "skillspace", "playwright"]:
+        if token not in browser_doc:
+            errors.append(f"Browser session doc missing token: {token}")
 
 
 def _is_allowed_kag_indexes(rel_parts: tuple[str, ...]) -> bool:

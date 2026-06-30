@@ -11,7 +11,7 @@ from aoa_course_connector.auth import browser_state_plan
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
-from aoa_course_connector.ingest import materialize_fixture, materialize_stepik_fixture, materialize_stepik_live
+from aoa_course_connector.ingest import capture_browser_live, materialize_browser_fixture, materialize_browser_snapshot, materialize_fixture, materialize_stepik_fixture, materialize_stepik_live
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet, write_answer_packet
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
@@ -74,6 +74,9 @@ def build_parser() -> argparse.ArgumentParser:
     discover_stepik.add_argument("course_id", type=int)
     discover_stepik.add_argument("--from-fixture", action="store_true")
     discover_stepik.set_defaults(func=cmd_discover_stepik)
+    discover_browser = discover_sub.add_parser("browser-fixture")
+    discover_browser.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    discover_browser.set_defaults(func=cmd_discover_browser_fixture)
 
     materialize = sub.add_parser("materialize")
     materialize_sub = materialize.add_subparsers(dest="materialize_command", required=True)
@@ -93,6 +96,23 @@ def build_parser() -> argparse.ArgumentParser:
     stepik_live.add_argument("--max-units-per-section", type=int, default=2)
     stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
     stepik_live.set_defaults(func=cmd_materialize_stepik_live)
+    browser_fixture = materialize_sub.add_parser("browser-fixture")
+    browser_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    browser_fixture.add_argument("--run")
+    browser_fixture.add_argument("--fixture", type=Path)
+    browser_fixture.set_defaults(func=cmd_materialize_browser_fixture)
+    browser_snapshot = materialize_sub.add_parser("browser-snapshot")
+    browser_snapshot.add_argument("snapshot", type=Path)
+    browser_snapshot.add_argument("--platform", choices=["getcourse", "skillspace"])
+    browser_snapshot.add_argument("--run")
+    browser_snapshot.set_defaults(func=cmd_materialize_browser_snapshot)
+    browser_live = materialize_sub.add_parser("browser-live")
+    browser_live.add_argument("url")
+    browser_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    browser_live.add_argument("--run")
+    browser_live.add_argument("--state-file", type=Path)
+    browser_live.add_argument("--wait-until", default="networkidle")
+    browser_live.set_defaults(func=cmd_materialize_browser_live)
 
     ingest = sub.add_parser("ingest")
     ingest_sub = ingest.add_subparsers(dest="ingest_command", required=True)
@@ -104,6 +124,11 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_stepik_fixture.add_argument("--run", default="stepik-fixture")
     ingest_stepik_fixture.add_argument("--fixture", type=Path)
     ingest_stepik_fixture.set_defaults(func=cmd_materialize_stepik_fixture)
+    ingest_browser_fixture = ingest_sub.add_parser("browser-fixture")
+    ingest_browser_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    ingest_browser_fixture.add_argument("--run")
+    ingest_browser_fixture.add_argument("--fixture", type=Path)
+    ingest_browser_fixture.set_defaults(func=cmd_materialize_browser_fixture)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -144,6 +169,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
+    eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -285,9 +311,54 @@ def cmd_discover_stepik(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_discover_browser_fixture(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    fixture_path = repo_root / "connector" / "fixtures" / "browser" / f"{args.platform}_starter_snapshot.json"
+    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+    pages = fixture.get("pages", [])
+    _emit(
+        {
+            "schema": "aoa_course_browser_discovery_receipt_v1",
+            "status": "ok",
+            "platform": args.platform,
+            "source_mode": f"{args.platform}_browser_fixture",
+            "page_count": len(pages) if isinstance(pages, list) else 0,
+            "fixture": str(fixture_path),
+            "network_touched": False,
+        }
+    )
+    return 0
+
+
 def cmd_materialize_fixture(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     receipt = materialize_fixture(roots, run_id=args.run, fixture=args.fixture)
+    _emit(receipt)
+    return 0
+
+
+def cmd_materialize_browser_fixture(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = materialize_browser_fixture(roots, platform=args.platform, run_id=args.run, fixture=args.fixture)
+    _emit(receipt)
+    return 0
+
+
+def cmd_materialize_browser_snapshot(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = materialize_browser_snapshot(roots, snapshot_path=args.snapshot, platform=args.platform, run_id=args.run)
+    _emit(receipt)
+    return 0
+
+
+def cmd_materialize_browser_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    run_id = args.run or f"{args.platform}-browser-live"
+    try:
+        receipt = capture_browser_live(roots, url=args.url, platform=args.platform, run_id=run_id, state_file=args.state_file, wait_until=args.wait_until)
+    except RuntimeError as exc:
+        _emit({"schema": "aoa_course_browser_live_receipt_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
     _emit(receipt)
     return 0
 
@@ -383,6 +454,23 @@ def cmd_eval_clean_api(_args: argparse.Namespace) -> int:
     if not packet.get("evidence_chain"):
         failures.append({"missing": "evidence_chain"})
     _emit({"schema": "aoa_course_eval_clean_api_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_browser_hard_adapters(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    failures = []
+    cases = [
+        ("getcourse-browser-fixture", "GetCourse bootloader rollback evidence", ["getcourse", "bootloader", "rollback"]),
+        ("skillspace-browser-fixture", "Skillspace logcat bugreport evidence", ["skillspace", "logcat", "bugreport"]),
+    ]
+    for run_id, query, terms in cases:
+        packet = render_answer_packet(roots, query, run_id, 5)
+        text = json.dumps(packet).casefold()
+        missing_terms = [term for term in terms if term not in text]
+        if missing_terms or not packet.get("evidence_chain"):
+            failures.append({"run_id": run_id, "query": query, "missing_terms": missing_terms, "has_evidence": bool(packet.get("evidence_chain"))})
+    _emit({"schema": "aoa_course_eval_browser_hard_adapters_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 

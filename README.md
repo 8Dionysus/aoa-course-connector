@@ -47,12 +47,30 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-live-
 PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run stepik-live-smoke
 ```
 
+## Browser-Session Hard Adapter Proof
+
+GetCourse and Skillspace now have a shared browser-session snapshot route. CI
+uses safe synthetic snapshots; live operator-owned pages can be captured with
+the optional Playwright browser extra.
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli answer "GetCourse bootloader rollback evidence" --run getcourse-browser-fixture
+
+PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
+```
+
 ## Priority Platforms
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Hard browser-session adapter for authorized course pages |
-| Skillspace | Hard browser-session adapter for authorized course pages |
+| GetCourse | Working browser-session snapshot adapter; live Playwright capture gated by local auth state |
+| Skillspace | Working browser-session snapshot adapter; live Playwright capture gated by local auth state |
 | Stepik | Working clean API reference adapter |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |

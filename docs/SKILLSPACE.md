@@ -12,3 +12,18 @@ Expected route:
 
 Skillspace public API coverage appears limited for full course-content export, so
 the first live route should be browser-session discovery.
+
+## Current Working Route
+
+`aoa-course-connector` supports Skillspace through the shared browser-session
+snapshot adapter:
+
+```bash
+aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
+aoa-course build-index --run skillspace-browser-fixture
+aoa-course build-graph --run skillspace-browser-fixture
+aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
+```
+
+For live operator-owned pages, use `materialize browser-live` with a local
+Playwright storage-state file under `AOA_COURSE_AUTH_ROOT`.

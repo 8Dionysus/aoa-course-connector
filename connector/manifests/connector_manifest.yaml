@@ -8,6 +8,8 @@ priority_adapters:
   - getcourse
   - skillspace
 working_adapters:
+  - getcourse
+  - skillspace
   - stepik
 reference_adapters:
   - stepik
