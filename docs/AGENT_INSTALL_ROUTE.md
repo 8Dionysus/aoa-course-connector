@@ -14,12 +14,17 @@
 9. Run `discover stepik-account --from-fixture --register --source-limit 1` to
    prove connected-account course discovery can write Stepik sources without
    live credentials.
-10. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
+10. Run `preflight live --platform stepik` to prove the live readiness report
+    is safe and read-only even before an operator provides `STEPIK_API_TOKEN`.
+11. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
    sync, index/graph, answer, and privacy-safe report route.
-11. Run browser fixture discovery with `--register` to prove the local source
+12. Run browser fixture discovery with `--register` to prove the local source
    registry route.
-12. Before live browser sources, run `auth plan-browser-state`, capture the
+13. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-13. Add live sources only after auth-state and storage roots are local and
+14. Run `preflight live --platform getcourse` or
+    `preflight live --platform skillspace` to inspect source registry and
+    redacted browser-state readiness before live discovery or sync.
+15. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

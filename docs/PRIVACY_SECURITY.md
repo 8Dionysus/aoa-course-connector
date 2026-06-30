@@ -7,3 +7,6 @@
   print or commit Playwright storage-state JSON.
 - Do not perform write actions against course platforms.
 - Keep live tests gated and fixture tests safe for CI.
+- Use `preflight live` before live discovery/sync when possible; it checks local
+  token presence and browser-state usability without touching the network or
+  printing secret values.

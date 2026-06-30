@@ -49,6 +49,8 @@ This proves:
   calibration reports without printing private raw HTML.
 - Browser-session auth-state onboarding through CLI planning, optional
   Playwright capture, and redacted storage-state inspection.
+- Read-only live preflight reports for Stepik tokens, browser storage-state
+  usability, source-registry readiness, next commands, and secret redaction.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
   index/graph builds, CLI status, MCP status, and eval coverage.
 - Stepik fixture/live smoke report routes that combine source registration,
@@ -62,13 +64,15 @@ This proves:
 The next layer is live connected-source work:
 
 - run gated live smoke with connected GetCourse and Skillspace accounts to
-  calibrate real login redirects, theme selectors, and pagination behavior;
+  calibrate real login redirects, theme selectors, and pagination behavior
+  after `preflight live` reports ready local auth/source state;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress and comment blocks use unusual markup;
 - gated live full-course Stepik runs against operator-selected authenticated
   courses to calibrate real course size, permissions, and source enrichment;
 - broader Stepik live smoke calibration against operator-selected authenticated
-  courses, account discovery output, and full-course source-registry runs;
+  courses, account discovery output, and full-course source-registry runs after
+  `preflight live --platform stepik` confirms token/source readiness;
 - external embedding provider integration behind the existing semantic index
   contract;
 - richer live smoke routes gated away from CI secrets.

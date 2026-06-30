@@ -72,8 +72,8 @@ def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "secret"}]}],
+            "cookies": [{"name": "session", "value": "SUPER_PRIVATE_COOKIE", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_PRIVATE_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
@@ -84,6 +84,29 @@ def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
     assert status["usable"] is True
     assert status["cookie_count"] == 1
     assert status["local_storage_entry_count"] == 1
+
+
+def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_path: Path) -> None:
+    run_cli(tmp_path, "sources", "add", "https://school.example/teach/control/stream", "--platform", "getcourse", "--title", "School")
+    state_file = tmp_path / "auth" / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "secret"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    report = run_cli(tmp_path, "preflight", "live", "--platform", "getcourse", "--expect-origin", "school.example")
+
+    assert report["schema"] == "aoa_course_live_preflight_v1"
+    assert report["ready"] is True
+    assert report["network_touched"] is False
+    assert report["source_registry"]["selected_source_count"] == 1
+    rendered = json.dumps(report)
+    assert "SUPER_PRIVATE_COOKIE" not in rendered
+    assert "SUPER_PRIVATE_TOKEN" not in rendered
 
 
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:

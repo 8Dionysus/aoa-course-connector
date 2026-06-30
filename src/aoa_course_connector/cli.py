@@ -32,6 +32,7 @@ from aoa_course_connector.ingest import (
 )
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, write_answer_packet
+from aoa_course_connector.readiness import live_preflight
 from aoa_course_connector.smoke import (
     smoke_browser_fixture as smoke_browser_fixture_route,
     smoke_browser_live as smoke_browser_live_route,
@@ -78,6 +79,17 @@ def build_parser() -> argparse.ArgumentParser:
     adapters = sub.add_parser("adapters")
     adapters_sub = adapters.add_subparsers(dest="adapters_command", required=True)
     adapters_sub.add_parser("list").set_defaults(func=cmd_adapters_list)
+
+    preflight = sub.add_parser("preflight")
+    preflight_sub = preflight.add_subparsers(dest="preflight_command", required=True)
+    preflight_live = preflight_sub.add_parser("live")
+    preflight_live.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    preflight_live.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
+    preflight_live.add_argument("--state-file", type=Path)
+    preflight_live.add_argument("--expect-origin")
+    preflight_live.add_argument("--include-disabled", action="store_true")
+    preflight_live.add_argument("--require-ready", action="store_true")
+    preflight_live.set_defaults(func=cmd_preflight_live)
 
     sources = sub.add_parser("sources")
     sources_sub = sources.add_subparsers(dest="sources_command", required=True)
@@ -452,6 +464,20 @@ def cmd_storage_status(args: argparse.Namespace) -> int:
 def cmd_adapters_list(_args: argparse.Namespace) -> int:
     _emit({"schema": "aoa_course_adapters_v1", "adapters": adapter_list()})
     return 0
+
+
+def cmd_preflight_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    report = live_preflight(
+        roots,
+        platforms=args.platform,
+        stepik_token_env=args.stepik_token_env,
+        browser_state_file=args.state_file,
+        expect_origin_contains=args.expect_origin,
+        include_disabled=args.include_disabled,
+    )
+    _emit(report)
+    return 0 if bool(report.get("ready")) or not args.require_ready else 1
 
 
 def cmd_sources_add(args: argparse.Namespace) -> int:
