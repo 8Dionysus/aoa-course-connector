@@ -53,3 +53,18 @@ def test_stepik_fixture_smoke_targets_registered_source_ref(tmp_path: Path) -> N
     raw_paths = report["privacy"]["raw_paths"]
     assert len(raw_paths) == 1
     assert "stepik-smoke-targeted-source-stepik-1fa027c617" in raw_paths[0]
+
+
+def test_stepik_fixture_smoke_rejects_non_fixture_course_id_before_registering(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+
+    report = smoke_stepik_fixture(storage, course_id=123, run_id="stepik-smoke-wrong-course")
+
+    assert report["status"] == "error"
+    assert report["source"]["source_ref"] == "123"
+    assert report["source"]["expected_fixture_source_ref"] == "67"
+    assert report["source"]["registry_state"] == "not_registered"
+    assert "stepik_fixture_course_id_mismatch" in report["failures"]
+    assert "smoke stepik-live" in report["error"]
+    assert report["sync"] == {"enabled": False}
+    assert not (storage.data / "sources").exists()

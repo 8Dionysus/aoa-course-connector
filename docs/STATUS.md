@@ -18,6 +18,7 @@ This proves:
 
 - canonical course fixture normalization;
 - source-backed keyword search;
+- deterministic local semantic/vector search with `local_hashing_v1`;
 - graph construction for course/module/lesson/step/asset/topic/entity;
 - answer packets with evidence chains and freshness timestamps;
 - initial MCP tool surface;
@@ -48,6 +49,8 @@ This proves:
 - Stepik fixture/live smoke report routes that combine source registration,
   source-registry sync, index/graph build, answer evidence, and privacy-safe
   local raw API path reporting.
+- Semantic and hybrid query routes through CLI and MCP, backed by a portable
+  local semantic index artifact.
 
 ## Remaining Goal Work
 
@@ -61,4 +64,6 @@ The next layer is live connected-source work:
   courses to calibrate real course size, permissions, and source enrichment;
 - broader Stepik live smoke calibration against operator-selected authenticated
   courses and full-course source-registry runs;
+- external embedding provider integration behind the existing semantic index
+  contract;
 - richer live smoke routes gated away from CI secrets.

@@ -10,7 +10,7 @@ import json
 import sys
 
 from aoa_course_connector.config import StorageRoots, find_repo_root
-from aoa_course_connector.query import freshness_report, graph_neighbors, query_keyword_index, render_answer_packet
+from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, query_semantic_index, render_answer_packet
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.sync import load_sync_status
 
@@ -20,6 +20,8 @@ TOOLS = [
     {"name": "ingest_status", "description": "Inspect local ingest run status."},
     {"name": "sync_status", "description": "Inspect source sync checkpoints."},
     {"name": "search", "description": "Search indexed course knowledge."},
+    {"name": "semantic_search", "description": "Search the local semantic/vector index."},
+    {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined."},
     {"name": "lesson_context", "description": "Return source-backed lesson context for a query."},
     {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods."},
     {"name": "freshness_report", "description": "Report result freshness states."},
@@ -41,9 +43,18 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "sync_status":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sync": load_sync_status(roots, sync_run_id=str(args.get("sync_run") or ""), platform=str(args.get("platform") or ""))}
     if name == "search":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "results": query_keyword_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5))}
+        return {
+            "schema": "aoa_course_mcp_result_v1",
+            "tool": name,
+            "mode": str(args.get("mode") or "keyword"),
+            "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), str(args.get("mode") or "keyword")),
+        }
+    if name == "semantic_search":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "semantic", "results": query_semantic_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5))}
+    if name == "hybrid_search":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "hybrid", "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), "hybrid")}
     if name == "lesson_context":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "answer_packet": render_answer_packet(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5))}
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "answer_packet": render_answer_packet(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), str(args.get("mode") or "keyword"))}
     if name == "graph_neighbors":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "graph": graph_neighbors(roots, str(args.get("node_id") or ""), run_id, int(args.get("limit") or 20))}
     if name == "freshness_report":
@@ -76,6 +87,7 @@ def _ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
         "run_id": run_id,
         "normalized_exists": (data_dir / "normalized" / "course_bundle.json").exists(),
         "index_exists": (artifact_dir / "indexes" / "keyword_index.json").exists(),
+        "semantic_index_exists": (artifact_dir / "indexes" / "semantic_index.json").exists(),
         "graph_exists": (artifact_dir / "graphs" / "course_graph.json").exists(),
     }
 

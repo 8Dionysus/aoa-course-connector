@@ -15,7 +15,7 @@ from aoa_course_connector.discover import (
     discover_browser_snapshot as discover_browser_snapshot_route,
 )
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import (
     capture_browser_live,
     crawl_browser_fixture,
@@ -28,7 +28,7 @@ from aoa_course_connector.ingest import (
     materialize_stepik_live,
 )
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
-from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet, write_answer_packet
+from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, write_answer_packet
 from aoa_course_connector.smoke import (
     smoke_browser_fixture as smoke_browser_fixture_route,
     smoke_browser_live as smoke_browser_live_route,
@@ -317,6 +317,11 @@ def build_parser() -> argparse.ArgumentParser:
     build_index.add_argument("--run", default=DEFAULT_RUN)
     build_index.set_defaults(func=cmd_build_index)
 
+    build_semantic = sub.add_parser("build-semantic-index")
+    build_semantic.add_argument("--run", default=DEFAULT_RUN)
+    build_semantic.add_argument("--dimensions", type=int, default=256)
+    build_semantic.set_defaults(func=cmd_build_semantic_index)
+
     build_graph_parser = sub.add_parser("build-graph")
     build_graph_parser.add_argument("--run", default=DEFAULT_RUN)
     build_graph_parser.set_defaults(func=cmd_build_graph)
@@ -325,12 +330,14 @@ def build_parser() -> argparse.ArgumentParser:
     query.add_argument("query")
     query.add_argument("--run", default=DEFAULT_RUN)
     query.add_argument("--limit", type=int, default=5)
+    query.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
     query.set_defaults(func=cmd_query)
 
     answer = sub.add_parser("answer")
     answer.add_argument("query")
     answer.add_argument("--run", default=DEFAULT_RUN)
     answer.add_argument("--limit", type=int, default=5)
+    answer.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
     answer.set_defaults(func=cmd_answer)
 
     graph = sub.add_parser("graph")
@@ -358,6 +365,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("browser-discovery").set_defaults(func=cmd_eval_browser_discovery)
     eval_sub.add_parser("browser-sync").set_defaults(func=cmd_eval_browser_sync)
     eval_sub.add_parser("stepik-sync").set_defaults(func=cmd_eval_stepik_sync)
+    eval_sub.add_parser("semantic-index").set_defaults(func=cmd_eval_semantic_index)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -868,6 +876,13 @@ def cmd_build_index(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_build_semantic_index(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    path = build_semantic_index(roots, run_id=args.run, dimensions=args.dimensions)
+    _emit({"schema": "aoa_course_build_semantic_index_receipt_v1", "status": "ok", "run_id": args.run, "semantic_index_path": str(path)})
+    return 0
+
+
 def cmd_build_graph(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     path = build_graph(roots, run_id=args.run)
@@ -877,13 +892,21 @@ def cmd_build_graph(args: argparse.Namespace) -> int:
 
 def cmd_query(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
-    _emit({"schema": "aoa_course_query_result_v1", "run_id": args.run, "query": args.query, "results": query_keyword_index(roots, args.query, args.run, args.limit)})
+    _emit(
+        {
+            "schema": "aoa_course_query_result_v1",
+            "run_id": args.run,
+            "query": args.query,
+            "mode": args.mode,
+            "results": query_index(roots, args.query, args.run, args.limit, args.mode),
+        }
+    )
     return 0
 
 
 def cmd_answer(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
-    packet = render_answer_packet(roots, args.query, args.run, args.limit)
+    packet = render_answer_packet(roots, args.query, args.run, args.limit, args.mode)
     path = write_answer_packet(packet, roots, args.run)
     _emit({"status": "ok", "answer_path": str(path), **packet})
     return 0
@@ -1060,6 +1083,22 @@ def cmd_eval_stepik_sync(_args: argparse.Namespace) -> int:
             }
         )
     _emit({"schema": "aoa_course_eval_stepik_sync_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_semantic_index(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    failures = []
+    packet = render_answer_packet(roots, "bootloader rollback", DEFAULT_RUN, 5, "hybrid")
+    text = json.dumps(packet).casefold()
+    for term in ["bootloader", "rollback"]:
+        if term not in text:
+            failures.append({"missing_term": term})
+    if not packet.get("evidence_chain"):
+        failures.append({"missing": "evidence_chain"})
+    if packet.get("mode") != "hybrid":
+        failures.append({"missing": "hybrid mode"})
+    _emit({"schema": "aoa_course_eval_semantic_index_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 

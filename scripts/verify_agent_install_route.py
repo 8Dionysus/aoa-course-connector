@@ -30,8 +30,10 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "doctor"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "fixture", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "starter-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "build-semantic-index", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "bootloader unlock rollback", "--run", "starter-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "answer", "bootloader rollback", "--run", "starter-fixture", "--mode", "hybrid"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-fixture", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-live", "--help"],
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "stepik", "67", "--register", "--title", "Stepik course 67"],
@@ -40,6 +42,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "stepik-sync"],
             [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "stepik-fixture", "67", "--run", "stepik-smoke-fixture", "--query", "Stepik public API evidence"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "stepik-fixture"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "build-semantic-index", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "Stepik public API evidence", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "clean-api"],
@@ -71,7 +74,10 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "skillspace-browser-crawl-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "Skillspace logcat bugreport evidence", "--run", "skillspace-browser-crawl-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-crawl"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "eval", "semantic-index"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "tools"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_search", '{"query":"rollback","run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "hybrid_search", '{"query":"rollback","run":"starter-fixture"}'],
         ]
         if not args.skip_pytest:
             commands.insert(1, [sys.executable, "-m", "pytest", "-q"])

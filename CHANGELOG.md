@@ -38,3 +38,6 @@
 - Added `smoke stepik-fixture` and gated `smoke stepik-live` reports for
   Stepik registration, sync, artifacts, answer evidence, and privacy-safe raw
   API path reporting.
+- Added deterministic `local_hashing_v1` semantic/vector index, semantic and
+  hybrid query modes, CLI build/query/answer support, MCP semantic/hybrid search
+  tools, and semantic index eval coverage.

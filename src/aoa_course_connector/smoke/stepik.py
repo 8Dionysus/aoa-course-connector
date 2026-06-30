@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.index import build_semantic_index
 from aoa_course_connector.query import render_answer_packet, write_answer_packet
 from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.storage import create_storage_roots
@@ -14,6 +15,7 @@ from aoa_course_connector.sync import sync_stepik_fixture_sources, sync_stepik_l
 
 
 DEFAULT_QUERY = "Python course"
+STEPIK_FIXTURE_COURSE_ID = 67
 
 
 def smoke_stepik_fixture(
@@ -25,6 +27,35 @@ def smoke_stepik_fixture(
     query: str | None = None,
     build_artifacts: bool = True,
 ) -> dict[str, object]:
+    if int(course_id) != STEPIK_FIXTURE_COURSE_ID:
+        expected_ref = str(STEPIK_FIXTURE_COURSE_ID)
+        actual_ref = str(course_id)
+        return {
+            "schema": "aoa_course_stepik_smoke_report_v1",
+            "status": "error",
+            "run_id": run_id,
+            "platform": "stepik",
+            "source_mode": "stepik_fixture_smoke",
+            "network_touched": False,
+            "source": {
+                "source_ref": actual_ref,
+                "expected_fixture_source_ref": expected_ref,
+                "registry_state": "not_registered",
+            },
+            "failures": ["stepik_fixture_course_id_mismatch"],
+            "error": (
+                f"stepik-fixture smoke only supports fixture course {expected_ref}; "
+                f"use smoke stepik-live for course {actual_ref}"
+            ),
+            "sync": {"enabled": False},
+            "course": {"enabled": False},
+            "artifacts": {"enabled": False},
+            "privacy": {
+                "raw_paths": [],
+                "raw_paths_are_local_runtime_state": True,
+                "do_not_commit_raw_api_or_auth_state": True,
+            },
+        }
     source_ref = str(course_id)
     source = _register_source(roots, source_ref=source_ref, title=title, access_mode="public_api")
     sync = sync_stepik_fixture_sources(
@@ -217,6 +248,7 @@ def _artifact_summary(
     if not checkpoint:
         return {"enabled": True, "answer": {"enabled": False}}
     run_id = str(checkpoint.get("run_id") or "")
+    semantic_index_path = build_semantic_index(roots, run_id=run_id) if checkpoint.get("normalized_path") else ""
     answer: dict[str, object] = {"enabled": False}
     if checkpoint.get("index_path") and query:
         packet = render_answer_packet(roots, query, run_id, 5)
@@ -234,6 +266,7 @@ def _artifact_summary(
     return {
         "enabled": True,
         "index_path": checkpoint.get("index_path", ""),
+        "semantic_index_path": str(semantic_index_path),
         "graph_path": checkpoint.get("graph_path", ""),
         "answer": answer,
     }

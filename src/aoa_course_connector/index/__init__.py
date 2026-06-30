@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections import Counter, defaultdict
 from datetime import UTC, datetime
+from hashlib import blake2b
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
@@ -13,6 +15,7 @@ from aoa_course_connector.storage import run_artifact_dir, run_data_dir
 
 
 TOKEN_RE = re.compile(r"[\w.+#/-]+", re.UNICODE)
+DEFAULT_VECTOR_DIMENSIONS = 256
 
 
 def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
@@ -41,8 +44,60 @@ def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") ->
     return path
 
 
+def build_semantic_index(roots: StorageRoots, run_id: str = "starter-fixture", *, dimensions: int = DEFAULT_VECTOR_DIMENSIONS) -> Path:
+    bundle_path = run_data_dir(roots, run_id) / "normalized" / "course_bundle.json"
+    bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
+    docs = []
+    for doc in _iter_docs(bundle):
+        vector = _semantic_vector_for_doc(doc, dimensions=max(8, dimensions))
+        docs.append({**doc, "vector": _serialize_vector(vector)})
+    output_dir = run_artifact_dir(roots, run_id) / "indexes"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "semantic_index.json"
+    payload = {
+        "schema": "aoa_course_semantic_index_v1",
+        "run_id": run_id,
+        "built_at": _now(),
+        "unit": "course_knowledge_item",
+        "provider": "local_hashing_v1",
+        "dimensions": max(8, dimensions),
+        "feature_contract": {
+            "text_tokens": True,
+            "title_path_tokens": True,
+            "adjacent_bigrams": True,
+            "kind_platform_features": True,
+            "normalized_sparse_vectors": True,
+        },
+        "doc_count": len(docs),
+        "docs": docs,
+    }
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
 def tokenize(text: str) -> list[str]:
     return [token.casefold() for token in TOKEN_RE.findall(text) if token.strip()]
+
+
+def vectorize_semantic_query(query: str, *, dimensions: int = DEFAULT_VECTOR_DIMENSIONS) -> dict[str, float]:
+    features = _weighted_text_features(query, weight=1.0)
+    return _normalize(_hash_features(features, dimensions=max(8, dimensions)))
+
+
+def vector_dot(left: dict[str, float], right: dict[str, float]) -> float:
+    if len(left) > len(right):
+        left, right = right, left
+    return sum(weight * right.get(index, 0.0) for index, weight in left.items())
+
+
+def sparse_vector_from_json(items: object) -> dict[str, float]:
+    if not isinstance(items, list):
+        return {}
+    vector: dict[str, float] = {}
+    for item in items:
+        if isinstance(item, dict) and item.get("i") is not None:
+            vector[str(item["i"])] = float(item.get("w") or 0.0)
+    return vector
 
 
 def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
@@ -87,6 +142,51 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
                         text = f"{asset.get('title', '')} {asset.get('kind', '')} {asset.get('download_state', '')}"
                         docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, lesson_path, asset.get("evidence") or lesson_evidence))
     return docs
+
+
+def _semantic_vector_for_doc(doc: dict[str, object], *, dimensions: int) -> dict[str, float]:
+    features: list[tuple[str, float]] = []
+    features.extend(_weighted_text_features(str(doc.get("text") or ""), weight=1.0))
+    title_path_text = " ".join(
+        str(doc.get(key) or "")
+        for key in ["course_title", "module_title", "lesson_title"]
+    )
+    path_text = " ".join(str(item) for item in doc.get("path", []) if item) if isinstance(doc.get("path"), list) else ""
+    features.extend(_weighted_text_features(f"{title_path_text} {path_text}", weight=1.6))
+    for key in ["kind", "platform"]:
+        value = str(doc.get(key) or "").casefold()
+        if value:
+            features.append((f"{key}:{value}", 2.0))
+    return _normalize(_hash_features(features, dimensions=dimensions))
+
+
+def _weighted_text_features(text: str, *, weight: float) -> list[tuple[str, float]]:
+    tokens = tokenize(text)
+    features = [(token, weight) for token in tokens]
+    features.extend((f"{left}_{right}", weight * 1.25) for left, right in zip(tokens, tokens[1:]))
+    return features
+
+
+def _hash_features(features: list[tuple[str, float]], *, dimensions: int) -> dict[str, float]:
+    vector: dict[str, float] = {}
+    for feature, weight in features:
+        if not feature:
+            continue
+        digest = blake2b(feature.encode("utf-8"), digest_size=8).digest()
+        index = str(int.from_bytes(digest, "big") % dimensions)
+        vector[index] = vector.get(index, 0.0) + weight
+    return vector
+
+
+def _normalize(vector: dict[str, float]) -> dict[str, float]:
+    norm = math.sqrt(sum(value * value for value in vector.values()))
+    if not norm:
+        return {}
+    return {index: value / norm for index, value in sorted(vector.items(), key=lambda item: int(item[0]))}
+
+
+def _serialize_vector(vector: dict[str, float]) -> list[dict[str, object]]:
+    return [{"i": int(index), "w": round(weight, 6)} for index, weight in vector.items() if weight]
 
 
 def _course_doc(kind: str, item_id: object, text: object, course: dict[str, object], path: list[str], evidence: object) -> dict[str, object]:
