@@ -302,18 +302,18 @@ def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
 
 
 def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_path: Path) -> None:
-    run_cli(tmp_path, "sources", "add", "https://school.example/teach/control/stream", "--platform", "getcourse", "--title", "School")
+    run_cli(tmp_path, "sources", "add", "https://school.operator.edu/teach/control/stream", "--platform", "getcourse", "--title", "School")
     state_file = tmp_path / "auth" / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "secret"}]}],
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "secret"}]}],
         }),
         encoding="utf-8",
     )
 
-    report = run_cli(tmp_path, "preflight", "live", "--platform", "getcourse", "--expect-origin", "school.example")
+    report = run_cli(tmp_path, "preflight", "live", "--platform", "getcourse", "--expect-origin", "school.operator.edu")
 
     assert report["schema"] == "aoa_course_live_preflight_v1"
     assert report["ready"] is True
@@ -330,7 +330,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
         "--platform",
         "getcourse",
         "--expect-origin",
-        "school.example",
+        "school.operator.edu",
         "--query",
         "course-specific question",
         "--link-pattern",
@@ -353,7 +353,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in action["artifact_path"] for stage in plan["stages"] for action in stage["actions"] if action["kind"] == "calibration")
     handoff = plan["browser_auth_handoffs"][0]
     assert handoff["ready"] is True
-    assert handoff["source_hosts"] == ["school.example"]
+    assert handoff["source_hosts"] == ["school.operator.edu"]
     assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
     assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
     rendered_plan = json.dumps(plan)

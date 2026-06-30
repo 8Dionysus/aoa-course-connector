@@ -181,6 +181,10 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getc
 Browser preflight checks saved storage state against each registered source
 host before marking live sync ready. A state file captured for one school host
 does not make another registered host ready.
+Fixture-discovered GetCourse and Skillspace entries use reserved example hosts
+to prove the install route. Live preflight marks those entries as
+`fixture_or_example_source` with `operator_live_candidate: false` and will not
+emit `sync browser-live` until a real operator-owned course URL is registered.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register

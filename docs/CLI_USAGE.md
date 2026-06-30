@@ -111,6 +111,11 @@ command for the same platforms, source ids, query, live scope, and browser
 By default, `preflight connected-plan` and the MCP `connected_source_plan` route
 cover GetCourse, Skillspace, and Stepik together; pass `--platform` or
 `platforms` only to narrow a diagnostic run.
+Fixture-discovered browser sources and reserved example hosts such as
+`*.example` are install proof only. Live preflight marks them as
+`fixture_or_example_source` with `operator_live_candidate: false`, does not
+emit `sync browser-live` for them, and asks the operator to register a real
+operator-owned course URL before live sync.
 For browser-session sources, pass `--link-pattern` or MCP `link_pattern` when a
 school needs a narrower course/lesson URL glob for live sync, smoke, and the
 connected-run handoff.

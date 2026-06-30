@@ -48,6 +48,13 @@ aoa-course eval browser-discovery
 under `AOA_COURSE_DATA_ROOT`. Without `--register`, discovery is read-only and
 emits a receipt only.
 
+Fixture-discovered browser sources use reserved example hosts. They prove the
+source-registry, sync, index, graph, and query route, but they are not operator
+live sources. Before live sync, register a real operator-owned course URL with
+`discover browser-live --register` or `sources add`; live preflight marks
+example-host entries as `fixture_or_example_source` and
+`operator_live_candidate: false`.
+
 Fixture, snapshot, and live discovery receipts include `page_count` plus
 pagination metadata such as `pagination.next_link_count`. This proves paginated
 catalog captures can be represented without committing private account pages.

@@ -160,6 +160,11 @@ preflight-report, source sync, per-source smoke, `calibration build`, and
 work so blocked sources, missing auth state, missing Stepik token env, runtime
 report paths, and calibration packet inputs are explicit before
 network-touching commands run.
+Browser fixture sources and reserved example hosts such as `*.example` are not
+treated as operator live candidates. They remain useful install proof, but
+`connected_source_plan` marks them with `fixture_or_example_source` and
+`operator_live_candidate: false`, withholds browser live sync commands, and
+points the operator to register real operator-owned course URLs first.
 For browser-session platforms, pass `link_pattern` when a school needs a
 narrower course/lesson URL glob in live sync, smoke, and connected-run
 commands.

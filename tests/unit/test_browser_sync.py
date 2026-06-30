@@ -66,14 +66,14 @@ def test_refresh_live_cycle_uses_selected_source_readiness_and_default_browser_s
     monkeypatch,
 ) -> None:
     storage = roots(tmp_path)
-    selected, _path, _state = upsert_source(storage.data, "getcourse", "https://school.example/course", "School")
-    upsert_source(storage.data, "getcourse", "https://other.example/course", "Other School")
+    selected, _path, _state = upsert_source(storage.data, "getcourse", "https://school.operator.edu/course", "School")
+    upsert_source(storage.data, "getcourse", "https://other.operator.edu/course", "Other School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "secret"}]}],
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "secret"}]}],
         }),
         encoding="utf-8",
     )
