@@ -318,7 +318,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "source_selection", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -374,6 +374,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_live_calibration_intake_v1",
         "aoa_course_connected_calibration_run_receipt_v1",
         "aoa_course_connected_calibration_run_status_v1",
+        "source_selection",
+        "account.storage-state.json",
         "preflight connected-plan",
         "calibration connected-run",
         "connected_run_status",

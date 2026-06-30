@@ -6,6 +6,7 @@ from pathlib import Path
 import aoa_course_connector.calibration.connected_run as connected_run_module
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.smoke.browser_session import smoke_browser_fixture
 from aoa_course_connector.smoke.stepik import smoke_stepik_fixture
 from aoa_course_connector.sources import upsert_source
 
@@ -125,6 +126,97 @@ def test_connected_calibration_live_source_limit_ignores_unselected_blocked_sour
     assert receipt["status"] == "ok"
     assert selected_ids == [ready["source_id"]]
     assert not any(failure.get("source_id") == blocked["source_id"] for failure in receipt["failures"])
+
+
+def test_connected_calibration_live_browser_uses_default_ready_state_file(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(
+        storage.data,
+        "getcourse",
+        "https://school.example/teach/control/stream",
+        "School",
+        access_mode="browser_session",
+    )
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    sync_calls: list[dict[str, object]] = []
+    smoke_calls: list[dict[str, object]] = []
+
+    def fake_sync(roots_arg, *, sync_run_id: str, source_ids=None, state_file=None, **_kwargs):
+        sync_calls.append({"source_ids": list(source_ids or []), "state_file": state_file})
+        receipt_path = roots_arg.data / "sync" / sync_run_id / "sync_receipt.json"
+        receipt_path.parent.mkdir(parents=True, exist_ok=True)
+        receipt = {
+            "schema": "aoa_course_sync_receipt_v1",
+            "status": "ok",
+            "sync_run_id": sync_run_id,
+            "source_count": len(source_ids or []),
+            "synced_sources": [],
+            "failed_sources": [],
+            "network_touched": True,
+            "receipt_path": str(receipt_path),
+        }
+        receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
+        return receipt
+
+    def fake_smoke(
+        roots_arg,
+        *,
+        platform: str,
+        run_id: str,
+        course_url: str,
+        state_file=None,
+        query=None,
+        build_artifacts: bool = True,
+        **_kwargs,
+    ):
+        smoke_calls.append({"platform": platform, "course_url": course_url, "state_file": state_file})
+        report = smoke_browser_fixture(
+            roots_arg,
+            platform=platform,
+            run_id=run_id,
+            query=query,
+            build_artifacts=build_artifacts,
+        )
+        return {**report, "source_mode": "browser_live_smoke", "network_touched": True}
+
+    monkeypatch.setattr(connected_run_module, "sync_browser_live_sources", fake_sync)
+    monkeypatch.setattr(connected_run_module, "smoke_browser_live", fake_smoke)
+
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-browser-default-state",
+        mode="live",
+        platforms=["getcourse"],
+        allow_network=True,
+    )
+    status = load_connected_calibration_status(storage, run_id="connected-live-browser-default-state")
+
+    assert receipt["status"] == "ok"
+    assert receipt["network_touched"] is True
+    assert receipt["source_selection"]["ready_source_ids"] == [source["source_id"]]
+    assert receipt["source_selection"]["selected_source_count"] == 1
+    assert sync_calls == [{"source_ids": [source["source_id"]], "state_file": state_file.resolve()}]
+    assert smoke_calls == [{"platform": "getcourse", "course_url": source["source_ref"], "state_file": state_file.resolve()}]
+    live_sync_stage = next(stage for stage in receipt["stages"] if stage["name"] == "live_sync")
+    live_smoke_stage = next(stage for stage in receipt["stages"] if stage["name"] == "live_smoke")
+    assert live_sync_stage["actions"][0]["source_ids"] == [source["source_id"]]
+    assert live_sync_stage["actions"][0]["state_file"] == str(state_file.resolve())
+    assert live_smoke_stage["actions"][0]["source_id"] == source["source_id"]
+    assert status["source_selection"]["ready_source_ids"] == [source["source_id"]]
+    rendered = json.dumps(receipt)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
 
 
 def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Path, monkeypatch) -> None:
