@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -16,8 +17,12 @@ from aoa_course_connector.index import (
     vector_dot,
     vectorize_semantic_query,
 )
+from aoa_course_connector.sources import load_registry
 from aoa_course_connector.storage import run_artifact_dir
 
+
+BROWSER_REFRESH_PLATFORMS = {"getcourse", "skillspace"}
+LIVE_REFRESH_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 
 FRESHNESS_RANK_WEIGHTS = {
     "current": 0.08,
@@ -186,12 +191,14 @@ def graph_neighbors(roots: StorageRoots, node_id: str, run_id: str = "starter-fi
 
 def query_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5, mode: str = "keyword") -> list[dict[str, object]]:
     if mode == "keyword":
-        return query_keyword_index(roots, query=query, run_id=run_id, limit=limit)
-    if mode == "semantic":
-        return query_semantic_index(roots, query=query, run_id=run_id, limit=limit)
-    if mode == "hybrid":
-        return query_hybrid_index(roots, query=query, run_id=run_id, limit=limit)
-    raise ValueError(f"unsupported query mode: {mode}")
+        results = query_keyword_index(roots, query=query, run_id=run_id, limit=limit)
+    elif mode == "semantic":
+        results = query_semantic_index(roots, query=query, run_id=run_id, limit=limit)
+    elif mode == "hybrid":
+        results = query_hybrid_index(roots, query=query, run_id=run_id, limit=limit)
+    else:
+        raise ValueError(f"unsupported query mode: {mode}")
+    return _attach_refresh_hints(roots, results, query=query, run_id=run_id)
 
 
 def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5, mode: str = "keyword") -> dict[str, object]:
@@ -210,6 +217,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
                     "fetched_at": result.get("fetched_at"),
                     "platform": result.get("platform"),
                     "path": result.get("path"),
+                    "refresh_hint": result.get("refresh_hint"),
                 }
             )
     return {
@@ -228,6 +236,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
         "authority_report": {
             "tiers": sorted({str(result.get("authority_tier") or "unknown") for result in results}),
         },
+        "refresh_report": _refresh_report(results),
     }
 
 
@@ -258,6 +267,197 @@ def _snippet(text: str, terms: list[str]) -> str:
     start = max(0, min(positions) - 80) if positions else 0
     end = min(len(text), start + 240)
     return text[start:end]
+
+
+def _attach_refresh_hints(roots: StorageRoots, results: list[dict[str, object]], *, query: str, run_id: str) -> list[dict[str, object]]:
+    sources_by_id = _registry_sources_by_id(roots)
+    return [
+        {
+            **result,
+            "refresh_hint": _refresh_hint(result, sources_by_id=sources_by_id, query=query, run_id=run_id),
+        }
+        for result in results
+    ]
+
+
+def _registry_sources_by_id(roots: StorageRoots) -> dict[str, dict[str, object]]:
+    try:
+        registry = load_registry(roots.data)
+    except (OSError, json.JSONDecodeError):
+        return {}
+    sources: dict[str, dict[str, object]] = {}
+    for source in registry.get("sources", []):
+        if not isinstance(source, dict):
+            continue
+        source_id = str(source.get("source_id") or "")
+        if source_id:
+            sources[source_id] = source
+    return sources
+
+
+def _refresh_hint(
+    result: dict[str, object],
+    *,
+    sources_by_id: dict[str, dict[str, object]],
+    query: str,
+    run_id: str,
+) -> dict[str, object]:
+    source_id = str(result.get("source_id") or "")
+    source = sources_by_id.get(source_id) if source_id else None
+    platform = str((source or {}).get("platform") or result.get("platform") or "")
+    source_ref = str((source or {}).get("source_ref") or result.get("source_url") or "")
+    access_mode = str((source or {}).get("access_mode") or _default_access_hint(platform))
+    registry_match = source is not None
+    local_rebuild_commands = [
+        f"aoa-course build-index --run {shlex.quote(run_id)}",
+        f"aoa-course build-semantic-index --run {shlex.quote(run_id)}",
+        f"aoa-course build-graph --run {shlex.quote(run_id)}",
+    ]
+    source_refresh = _source_refresh_hint(
+        platform=platform,
+        source_ref=source_ref,
+        access_mode=access_mode,
+        registry_match=registry_match,
+        query=query,
+    )
+    return {
+        "schema": "aoa_course_refresh_hint_v1",
+        "source_id": source_id,
+        "platform": platform,
+        "source_ref": source_ref,
+        "access_mode": access_mode,
+        "registry_match": registry_match,
+        "local_run": run_id,
+        "network_touched": False,
+        "local_rebuild_commands": local_rebuild_commands,
+        "source_refresh": source_refresh,
+        "recommended_sequence": _refresh_sequence(source_refresh),
+    }
+
+
+def _source_refresh_hint(
+    *,
+    platform: str,
+    source_ref: str,
+    access_mode: str,
+    registry_match: bool,
+    query: str,
+) -> dict[str, object]:
+    if platform not in LIVE_REFRESH_PLATFORMS:
+        return {
+            "available": False,
+            "reason": "source has no connected live refresh route; update the raw/offline export and rebuild local artifacts",
+            "commands_touch_network": False,
+            "blocked_by": ["no_connected_live_adapter"],
+        }
+    preflight_command = f"aoa-course preflight connected-plan --platform {platform} --live-scope bounded{_query_arg(query)}"
+    payload: dict[str, object] = {
+        "available": True,
+        "requires_source_registry": True,
+        "registry_match": registry_match,
+        "access_mode": access_mode,
+        "preflight_command": preflight_command,
+        "status_command": f"aoa-course sync status --platform {platform}",
+        "commands_touch_network": False,
+        "blocked_by": [] if registry_match else ["source_not_found_in_local_registry"],
+    }
+    if registry_match:
+        payload["sync_command"] = _sync_command(platform, access_mode)
+        payload["commands_touch_network"] = True
+        payload["post_sync_guidance"] = "read sync status, pick the synced checkpoint run_id, then rerun answer/evidence_report against that run"
+    elif platform in BROWSER_REFRESH_PLATFORMS and source_ref:
+        payload["register_command"] = f"aoa-course sources add {shlex.quote(source_ref)} --platform {platform}"
+    elif platform == "stepik":
+        payload["register_guidance"] = "register the original Stepik course id or course URL, then rerun the connected plan"
+    return payload
+
+
+def _sync_command(platform: str, access_mode: str) -> str:
+    if platform in BROWSER_REFRESH_PLATFORMS:
+        return f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform} --build-artifacts"
+    if platform == "stepik":
+        command = "aoa-course sync stepik-live --run stepik-live-sync --build-artifacts"
+        if access_mode in {"api_token", "oauth"}:
+            command += " --token-env STEPIK_API_TOKEN"
+        return command
+    return ""
+
+
+def _refresh_sequence(source_refresh: dict[str, object]) -> list[str]:
+    sequence = ["rebuild_local_indexes_and_graph"]
+    if not source_refresh.get("available"):
+        return sequence
+    if not source_refresh.get("registry_match"):
+        sequence.insert(0, "register_source_or_recover_source_registry_match")
+    sequence.insert(0, "run_connected_source_plan")
+    if source_refresh.get("sync_command"):
+        sequence.append("sync_live_source_when_preflight_is_ready")
+    sequence.append("rerun_answer_or_evidence_report")
+    return sequence
+
+
+def _query_arg(query: str) -> str:
+    return f" --query {shlex.quote(query)}" if query else ""
+
+
+def _default_access_hint(platform: str) -> str:
+    if platform in BROWSER_REFRESH_PLATFORMS:
+        return "browser_session"
+    if platform == "stepik":
+        return "public_api"
+    if platform == "offline_export":
+        return "offline_export"
+    return "unknown"
+
+
+def _refresh_report(results: list[dict[str, object]]) -> dict[str, object]:
+    hints = [result.get("refresh_hint") for result in results if isinstance(result.get("refresh_hint"), dict)]
+    unique_hints = _unique_refresh_hints(hints)
+    local_rebuild_commands: list[str] = []
+    source_commands: list[str] = []
+    for hint in unique_hints:
+        local_rebuild_commands.extend([str(command) for command in hint.get("local_rebuild_commands", []) if command])
+        source_refresh = hint.get("source_refresh") if isinstance(hint.get("source_refresh"), dict) else {}
+        for key in ["preflight_command", "register_command", "sync_command", "status_command"]:
+            command = source_refresh.get(key)
+            if command:
+                source_commands.append(str(command))
+    return {
+        "schema": "aoa_course_refresh_report_v1",
+        "result_count": len(results),
+        "source_count": len(unique_hints),
+        "refreshable_source_count": len([hint for hint in unique_hints if _source_refresh(hint).get("available")]),
+        "registry_matched_source_count": len([hint for hint in unique_hints if hint.get("registry_match")]),
+        "network_touched": False,
+        "commands_touch_network": any(bool(_source_refresh(hint).get("commands_touch_network")) for hint in unique_hints),
+        "local_rebuild_commands": _dedupe(local_rebuild_commands),
+        "source_commands": _dedupe(source_commands),
+    }
+
+
+def _unique_refresh_hints(hints: list[object]) -> list[dict[str, object]]:
+    by_key: dict[str, dict[str, object]] = {}
+    for hint in hints:
+        if not isinstance(hint, dict):
+            continue
+        source_id = str(hint.get("source_id") or "")
+        key = f"{source_id}|{hint.get('local_run')}" if source_id else "|".join(
+            [
+                str(hint.get("platform") or ""),
+                str(hint.get("source_ref") or ""),
+                str(hint.get("local_run") or ""),
+            ]
+        )
+        by_key.setdefault(key, hint)
+    return list(by_key.values())
+
+
+def _source_refresh(hint: dict[str, object]) -> dict[str, object]:
+    return hint.get("source_refresh") if isinstance(hint.get("source_refresh"), dict) else {}
+
+
+def _dedupe(items: list[str]) -> list[str]:
+    return list(dict.fromkeys(item for item in items if item))
 
 
 def _rank_features(doc: dict[str, object]) -> dict[str, object]:

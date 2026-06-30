@@ -306,7 +306,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "source url", "authority report"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "connected_source_plan", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
@@ -334,6 +334,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "authority-ranking",
         "adapter-authority",
         "authority_tier",
+        "refresh_hint",
+        "refresh_report",
+        "local_rebuild_commands",
+        "preflight connected-plan",
+        "registry_match",
     ]:
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")

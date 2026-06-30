@@ -1199,6 +1199,7 @@ def cmd_evidence_inspect(args: argparse.Namespace) -> int:
             "evidence_chain": packet["evidence_chain"],
             "freshness_report": packet["freshness_report"],
             "authority_report": packet["authority_report"],
+            "refresh_report": packet["refresh_report"],
         }
     )
     return 0

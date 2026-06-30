@@ -71,13 +71,17 @@ printf '%s\n' \
 
 Tool calls return both text content and `structuredContent` so agents can keep
 source-backed result objects, `score`/`rank_score`, `authority_tier`,
-rank features, evidence chains, freshness/authority reports, and graph packets
-without reparsing prose.
+rank features, evidence chains, freshness/authority reports, refresh hints, and
+graph packets without reparsing prose.
 
 `evidence_report` is the compact agent handoff for a query. It returns the
-evidence chain, freshness report, authority report, and result references with
-source URL, course path, fetched timestamp, freshness state, authority tier, and
-rank score.
+evidence chain, freshness report, authority report, refresh report, and result
+references with source URL, course path, fetched timestamp, freshness state,
+authority tier, rank score, and `refresh_hint`. The hint always gives local
+`build-index`, `build-semantic-index`, and `build-graph` rebuild commands. For
+GetCourse, Skillspace, and Stepik it also points agents to
+`preflight connected-plan` first, and only exposes live sync commands when the
+result source matches the local source registry.
 
 `live_preflight` is read-only and returns `network_touched: false`. It lets an
 agent inspect Stepik token presence, browser storage-state readiness, registered

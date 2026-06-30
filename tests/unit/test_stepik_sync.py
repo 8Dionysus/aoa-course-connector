@@ -60,6 +60,13 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     packet = render_answer_packet(storage, "Stepik public API evidence", run_id=checkpoint["run_id"])
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+    hint = packet["results"][0]["refresh_hint"]
+    assert hint["platform"] == "stepik"
+    assert hint["registry_match"] is True
+    assert hint["source_refresh"]["access_mode"] == "public_api"
+    assert "preflight connected-plan --platform stepik" in hint["source_refresh"]["preflight_command"]
+    assert "sync stepik-live" in hint["source_refresh"]["sync_command"]
+    assert packet["refresh_report"]["registry_matched_source_count"] == 1
 
 
 def test_stepik_fixture_sync_records_bad_source_ref(tmp_path: Path) -> None:

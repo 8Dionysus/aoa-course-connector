@@ -41,6 +41,13 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=checkpoint["run_id"])
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+    hint = packet["results"][0]["refresh_hint"]
+    assert hint["platform"] == "getcourse"
+    assert hint["registry_match"] is True
+    assert hint["source_refresh"]["registry_match"] is True
+    assert "preflight connected-plan --platform getcourse" in hint["source_refresh"]["preflight_command"]
+    assert "sync browser-live" in hint["source_refresh"]["sync_command"]
+    assert packet["refresh_report"]["registry_matched_source_count"] == 1
 
 
 def test_sync_checkpoints_keep_per_run_source_history(tmp_path: Path) -> None:

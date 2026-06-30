@@ -28,7 +28,12 @@ This proves:
   `tools/call` responses;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
-  state, authority tier, and rank score;
+  state, authority tier, rank score, refresh report, and per-result refresh
+  hints;
+- answer/search/evidence packets now tell agents how to rebuild local indexes
+  and graphs for the current run, how to run a bounded connected-source
+  preflight, and which registry-matched live sync route can refresh GetCourse,
+  Skillspace, or Stepik sources without touching the network during planning;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,
