@@ -36,22 +36,26 @@ def test_stepik_fixture_to_answer_packet(tmp_path: Path) -> None:
 def test_stepik_live_fetches_step_block_sources(monkeypatch) -> None:
     class FakeStepikClient:
         def __init__(self, **_kwargs: object) -> None:
-            self.calls: list[tuple[str, int]] = []
+            self.calls: list[tuple[str, object]] = []
 
         def first(self, resource: str, resource_id: int) -> dict[str, object]:
             self.calls.append((resource, resource_id))
             if resource == "courses":
                 return {"id": resource_id, "title": "Demo", "sections": [10]}
-            if resource == "sections":
-                return {"id": resource_id, "title": "Section", "units": [20]}
-            if resource == "units":
-                return {"id": resource_id, "lesson": 30, "position": 1}
-            if resource == "lessons":
-                return {"id": resource_id, "title": "Lesson", "steps": [40]}
-            if resource == "steps":
-                return {"id": resource_id, "lesson": 30, "position": 1, "block": 50}
             if resource == "blocks":
                 return {"id": resource_id, "name": "text", "text": "<p>Live Stepik text</p>"}
+            raise AssertionError(resource)
+
+        def get_objects(self, resource: str, resource_ids: list[int], *, batch_size: int = 20) -> list[dict[str, object]]:
+            self.calls.append((resource, tuple(resource_ids)))
+            if resource == "sections":
+                return [{"id": resource_ids[0], "title": "Section", "units": [20]}]
+            if resource == "units":
+                return [{"id": resource_ids[0], "lesson": 30, "position": 1}]
+            if resource == "lessons":
+                return [{"id": resource_ids[0], "title": "Lesson", "steps": [40]}]
+            if resource == "steps":
+                return [{"id": resource_ids[0], "lesson": 30, "position": 1, "block": 50}]
             raise AssertionError(resource)
 
     instances: list[FakeStepikClient] = []
@@ -68,3 +72,73 @@ def test_stepik_live_fetches_step_block_sources(monkeypatch) -> None:
     step = raw["sections"][0]["units"][0]["steps"][0]
     assert step["block"]["text"] == "<p>Live Stepik text</p>"
     assert ("blocks", 50) in instances[0].calls
+
+
+def test_stepik_live_batches_full_course_and_fetches_step_sources(monkeypatch) -> None:
+    class FakeStepikClient:
+        def __init__(self, **_kwargs: object) -> None:
+            self.calls: list[tuple[str, object]] = []
+
+        def first(self, resource: str, resource_id: int) -> dict[str, object]:
+            self.calls.append((resource, resource_id))
+            if resource == "courses":
+                return {"id": resource_id, "title": "Demo", "sections": [10, 11]}
+            if resource == "blocks":
+                return {"id": resource_id, "name": "text", "text": f"<p>Block {resource_id}</p>"}
+            if resource == "step-sources":
+                return {"id": resource_id, "block": {"name": "text", "text": f"<p>Source text {resource_id}</p>"}}
+            raise AssertionError(resource)
+
+        def get_objects(self, resource: str, resource_ids: list[int], *, batch_size: int = 20) -> list[dict[str, object]]:
+            self.calls.append((resource, tuple(resource_ids), batch_size))
+            if resource == "sections":
+                return [
+                    {"id": 10, "title": "First", "units": [20]},
+                    {"id": 11, "title": "Second", "units": [21]},
+                ]
+            if resource == "units":
+                return [{"id": item, "lesson": item + 10, "position": 1} for item in resource_ids]
+            if resource == "lessons":
+                return [{"id": item, "title": f"Lesson {item}", "steps": [item + 10]} for item in resource_ids]
+            if resource == "steps":
+                return [{"id": item, "lesson": item - 10, "position": 1, "block": item + 10} for item in resource_ids]
+            raise AssertionError(resource)
+
+    instances: list[FakeStepikClient] = []
+
+    def fake_client(**kwargs: object) -> FakeStepikClient:
+        instance = FakeStepikClient(**kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(stepik_client, "StepikClient", fake_client)
+
+    raw = stepik_client.fetch_stepik_course(1, batch_size=2, include_step_sources=True)
+
+    assert len(raw["sections"]) == 2
+    assert raw["limits"]["max_sections"] is None
+    assert raw["limits"]["include_step_sources"] is True
+    first_step = raw["sections"][0]["units"][0]["steps"][0]
+    assert first_step["step_source"]["block"]["text"] == "<p>Source text 40</p>"
+    assert ("sections", (10, 11), 2) in instances[0].calls
+    assert ("step-sources", 40) in instances[0].calls
+
+
+def test_stepik_client_iter_pages_uses_meta_has_next(monkeypatch) -> None:
+    client = stepik_client.StepikClient()
+    calls: list[dict[str, object]] = []
+
+    def fake_collection(resource: str, params: dict[str, object] | None = None) -> dict[str, object]:
+        assert resource == "courses"
+        params = params or {}
+        calls.append(params)
+        page = int(params["page"])
+        return {
+            "courses": [{"id": page}],
+            "meta": {"has_next": page < 2},
+        }
+
+    monkeypatch.setattr(client, "get_collection", fake_collection)
+
+    assert client.iter_pages("courses") == [{"id": 1}, {"id": 2}]
+    assert calls == [{"page": 1}, {"page": 2}]

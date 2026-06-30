@@ -22,8 +22,21 @@ ADAPTERS: dict[str, dict[str, object]] = {
         "platform": "stepik",
         "status": "working_clean_api_adapter",
         "auth_modes": ["public_api", "api_token", "oauth"],
-        "coverage": ["course", "sections", "units", "lessons", "steps"],
-        "notes": "Working reference API adapter with fixture and bounded live materialization.",
+        "coverage": [
+            "course",
+            "sections",
+            "units",
+            "lessons",
+            "steps",
+            "batched_full_course",
+            "step_sources_when_authorized",
+            "paginated_collections",
+        ],
+        "notes": (
+            "Working reference API adapter with fixture, bounded live smoke, "
+            "batched full-course materialization, and optional authenticated "
+            "step-source enrichment."
+        ),
     },
     "moodle": {
         "platform": "moodle",

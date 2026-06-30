@@ -37,6 +37,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixt
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live --help
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval clean-api

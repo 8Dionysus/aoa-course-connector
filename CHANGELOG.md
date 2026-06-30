@@ -29,3 +29,6 @@
 - Added `smoke browser-fixture`, `smoke browser-snapshot`, and gated
   `smoke browser-live` reports for operator calibration without printing raw
   private HTML.
+- Added Stepik `ids[]` batched course traversal, `--full-course` live
+  materialization, `--batch-size`, optional `--include-step-sources`
+  enrichment, and `meta.has_next` pagination helpers.

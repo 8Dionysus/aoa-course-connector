@@ -140,6 +140,9 @@ def build_parser() -> argparse.ArgumentParser:
     stepik_live.add_argument("--max-sections", type=int, default=1)
     stepik_live.add_argument("--max-units-per-section", type=int, default=2)
     stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
+    stepik_live.add_argument("--batch-size", type=int, default=20)
+    stepik_live.add_argument("--include-step-sources", action="store_true")
+    stepik_live.add_argument("--full-course", action="store_true")
     stepik_live.set_defaults(func=cmd_materialize_stepik_live)
     browser_fixture = materialize_sub.add_parser("browser-fixture")
     browser_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
@@ -688,14 +691,19 @@ def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:
 def cmd_materialize_stepik_live(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     run_id = args.run or f"stepik-course-{args.course_id}"
+    max_sections = None if args.full_course else args.max_sections
+    max_units = None if args.full_course else args.max_units_per_section
+    max_steps = None if args.full_course else args.max_steps_per_lesson
     receipt = materialize_stepik_live(
         roots,
         course_id=args.course_id,
         run_id=run_id,
         token_env=args.token_env,
-        max_sections=args.max_sections,
-        max_units_per_section=args.max_units_per_section,
-        max_steps_per_lesson=args.max_steps_per_lesson,
+        max_sections=max_sections,
+        max_units_per_section=max_units,
+        max_steps_per_lesson=max_steps,
+        batch_size=args.batch_size,
+        include_step_sources=args.include_step_sources,
     )
     _emit(receipt)
     return 0
