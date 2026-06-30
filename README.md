@@ -47,6 +47,10 @@ coverage, `operational_ready`, `connected_live_ready`, and concrete next
 commands without touching the network. For browser-session sources,
 `--link-pattern` flows into the embedded connected-source plan so a ready
 readiness packet can expose the same narrowed `connected_run_handoff` command.
+Use `--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
+`--include-step-sources` when the whole-connector audit must preserve the same
+operator-selected live traversal bounds that will later be used by the
+connected run.
 
 To build the same semantic index contract through an external embedding
 endpoint, keep the token in the environment and pass only the env var name:

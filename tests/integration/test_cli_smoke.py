@@ -310,11 +310,28 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
         "course-specific question",
         "--link-pattern",
         "*/lessons/*",
+        "--max-lessons",
+        "7",
+        "--max-pages",
+        "3",
+        "--max-sources",
+        "4",
     )
     assert readiness["connected_live_ready"] is True
+    assert readiness["connected_source_plan"]["live_scope"] == "bounded"
+    assert readiness["connected_source_plan"]["include_step_sources"] is False
+    assert readiness["connected_source_plan"]["max_lessons"] == 7
+    assert readiness["connected_source_plan"]["max_pages"] == 3
+    assert readiness["connected_source_plan"]["max_sources"] == 4
     assert readiness["connected_source_plan"]["connected_run_handoff"]["ready"] is True
     assert "--link-pattern '*/lessons/*'" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
+    assert "--max-lessons 7" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
+    assert "--max-pages 3" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
+    assert "--max-sources 4" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
     assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+    assert any("--max-lessons 7" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+    assert any("--max-pages 3" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+    assert any("--max-sources 4" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
 
 
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:

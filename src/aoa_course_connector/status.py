@@ -58,7 +58,12 @@ def connector_readiness(
     expect_origin_contains: str | None = None,
     include_disabled: bool = False,
     query: str | None = None,
+    max_lessons: int = 50,
+    max_pages: int = 5,
+    max_sources: int = 50,
     link_pattern: str | None = None,
+    live_scope: str = "bounded",
+    include_step_sources: bool = False,
     mcp_tool_names: list[str] | set[str] | None = None,
 ) -> dict[str, object]:
     """Build a single read-only route audit for install, query, and live handoff."""
@@ -86,7 +91,12 @@ def connector_readiness(
         expect_origin_contains=expect_origin_contains,
         include_disabled=include_disabled,
         query=query,
+        max_lessons=max_lessons,
+        max_pages=max_pages,
+        max_sources=max_sources,
         link_pattern=link_pattern,
+        live_scope=live_scope,
+        include_step_sources=include_step_sources,
     )
     connected_status = load_connected_calibration_status(roots, run_id=connected_run)
     mcp = _mcp_surface(mcp_tool_names)
@@ -267,6 +277,10 @@ def _compact_connected_plan(plan: dict[str, object]) -> dict[str, object]:
         "actionable": bool(plan.get("actionable")),
         "network_touched": bool(plan.get("network_touched")),
         "live_scope": plan.get("live_scope"),
+        "include_step_sources": bool(plan.get("include_step_sources")),
+        "max_lessons": plan.get("max_lessons"),
+        "max_pages": plan.get("max_pages"),
+        "max_sources": plan.get("max_sources"),
         "link_pattern": plan.get("link_pattern", ""),
         "platforms": plan.get("platforms", []),
         "source_registry": plan.get("source_registry"),

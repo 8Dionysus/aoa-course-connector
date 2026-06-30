@@ -4,6 +4,7 @@
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
+aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
 aoa-course init
 aoa-course adapters list
 aoa-course sources add demo-course --platform offline_export --title "Demo Course"
@@ -82,6 +83,7 @@ aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","m
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
+aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
 Use `--source-id` on sync commands when an agent is refreshing one result from a
@@ -119,6 +121,9 @@ files, storage roots, source registry counts, per-run `agent_query_ready`,
 connected-source `connected_live_ready`, connected-run receipt status, MCP tool
 coverage, embedded `connected_run_handoff`, and next commands. For
 browser-session sources, `--link-pattern` flows into the embedded connected
-plan and its ready connected-run handoff. `--require-ready` exits non-zero only
-when `operational_ready` is false; live source execution remains gated behind
-the separate `--allow-network` commands.
+plan and its ready connected-run handoff. `--max-lessons`, `--max-pages`,
+`--max-sources`, `--live-scope`, and `--include-step-sources` also flow into
+the embedded connected plan, so a readiness packet can preserve either a bounded
+browser crawl or an explicit Stepik full-course/source-enrichment handoff.
+`--require-ready` exits non-zero only when `operational_ready` is false; live
+source execution remains gated behind the separate `--allow-network` commands.

@@ -64,7 +64,12 @@ def _connector_readiness_schema() -> dict[str, object]:
             "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
             "include_disabled": {"type": "boolean", "description": "Include disabled sources in readiness checks."},
             "query": _string_schema("Optional course-specific smoke query for connected planning."),
+            "max_lessons": _integer_schema("Maximum lessons for browser live smoke/sync commands.", 1),
+            "max_pages": _integer_schema("Maximum catalog pages for browser live smoke commands.", 1),
+            "max_sources": _integer_schema("Maximum discovered sources for browser live smoke commands.", 1),
             "link_pattern": _string_schema("Optional browser lesson/course link glob for connected browser live commands."),
+            "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
+            "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to planned commands."},
         }
     )
 
@@ -288,7 +293,12 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
         expect_origin_contains=str(args.get("expect_origin") or "") or None,
         include_disabled=bool(args.get("include_disabled", False)),
         query=str(args.get("query") or "") or None,
+        max_lessons=int(args.get("max_lessons") or 50),
+        max_pages=int(args.get("max_pages") or 5),
+        max_sources=int(args.get("max_sources") or 50),
         link_pattern=str(args.get("link_pattern") or "") or None,
+        live_scope=str(args.get("live_scope") or "bounded"),
+        include_step_sources=bool(args.get("include_step_sources", False)),
         mcp_tool_names=TOOL_NAMES,
     )
 

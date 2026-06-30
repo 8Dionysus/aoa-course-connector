@@ -336,16 +336,30 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
             "state_file": str(state_file),
             "expect_origin": "school.example",
             "link_pattern": "*/lessons/*",
+            "max_lessons": 7,
+            "max_pages": 3,
+            "max_sources": 4,
         },
     )
 
     assert plan["tool"] == "connected_source_plan"
     assert plan["plan"]["ready"] is True
     assert plan["plan"]["link_pattern"] == "*/lessons/*"
+    assert plan["plan"]["live_scope"] == "bounded"
+    assert plan["plan"]["include_step_sources"] is False
+    assert plan["plan"]["max_lessons"] == 7
+    assert plan["plan"]["max_pages"] == 3
+    assert plan["plan"]["max_sources"] == 4
     assert any("smoke browser-live" in command for command in plan["plan"]["next_commands"])
     assert any("--link-pattern '*/lessons/*'" in command for command in plan["plan"]["next_commands"])
+    assert any("--max-lessons 7" in command for command in plan["plan"]["next_commands"])
+    assert any("--max-pages 3" in command for command in plan["plan"]["next_commands"])
+    assert any("--max-sources 4" in command for command in plan["plan"]["next_commands"])
     assert "calibration connected-run --mode live --allow-network" in plan["plan"]["connected_run_handoff"]["command"]
     assert "--link-pattern '*/lessons/*'" in plan["plan"]["connected_run_handoff"]["command"]
+    assert "--max-lessons 7" in plan["plan"]["connected_run_handoff"]["command"]
+    assert "--max-pages 3" in plan["plan"]["connected_run_handoff"]["command"]
+    assert "--max-sources 4" in plan["plan"]["connected_run_handoff"]["command"]
     handoff = plan["plan"]["browser_auth_handoffs"][0]
     assert handoff["ready"] is True
     assert handoff["source_hosts"] == ["school.example"]
@@ -362,16 +376,31 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
             "expect_origin": "school.example",
             "query": "course-specific question",
             "link_pattern": "*/lessons/*",
+            "max_lessons": 7,
+            "max_pages": 3,
+            "max_sources": 4,
+            "live_scope": "bounded",
         },
     )
     assert readiness["connected_live_ready"] is True
     assert readiness["connected_live_ready"] == readiness["lanes"]["connected_live_ready"]
     compact_plan = readiness["connected_source_plan"]
     assert compact_plan["link_pattern"] == "*/lessons/*"
+    assert compact_plan["live_scope"] == "bounded"
+    assert compact_plan["include_step_sources"] is False
+    assert compact_plan["max_lessons"] == 7
+    assert compact_plan["max_pages"] == 3
+    assert compact_plan["max_sources"] == 4
     assert compact_plan["connected_run_handoff"]["ready"] is True
     assert "--link-pattern '*/lessons/*'" in compact_plan["connected_run_handoff"]["command"]
+    assert "--max-lessons 7" in compact_plan["connected_run_handoff"]["command"]
+    assert "--max-pages 3" in compact_plan["connected_run_handoff"]["command"]
+    assert "--max-sources 4" in compact_plan["connected_run_handoff"]["command"]
     assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["next_commands"])
     assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+    assert any("--max-lessons 7" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+    assert any("--max-pages 3" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
+    assert any("--max-sources 4" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
 
 
 def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> None:
@@ -418,6 +447,11 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
     assert "runs" in readiness_tool["inputSchema"]["properties"]
     assert "link_pattern" in readiness_tool["inputSchema"]["properties"]
+    assert readiness_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
+    assert "include_step_sources" in readiness_tool["inputSchema"]["properties"]
+    assert "max_lessons" in readiness_tool["inputSchema"]["properties"]
+    assert "max_pages" in readiness_tool["inputSchema"]["properties"]
+    assert "max_sources" in readiness_tool["inputSchema"]["properties"]
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
@@ -467,6 +501,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert preflight_result["isError"] is False
     assert preflight_result["structuredContent"]["tool"] == "live_preflight"
     assert preflight_result["structuredContent"]["preflight"]["network_touched"] is False
+    upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
 
     connected_plan = handle_jsonrpc_message({
         "jsonrpc": "2.0",
@@ -490,10 +525,33 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
         "jsonrpc": "2.0",
         "id": 43,
         "method": "tools/call",
-        "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}},
+        "params": {
+            "name": "connector_readiness",
+            "arguments": {
+                "runs": ["starter-fixture"],
+                "platforms": ["stepik"],
+                "live_scope": "full-course",
+                "include_step_sources": True,
+                "max_lessons": 9,
+                "max_pages": 4,
+                "max_sources": 2,
+            },
+        },
     })
     readiness_content = readiness["result"]["structuredContent"]
     assert readiness_content["tool"] == "connector_readiness"
     assert readiness_content["schema"] == "aoa_course_connector_readiness_v1"
     assert readiness_content["runs"][0]["readiness"]["agent_query_ready"] is True
     assert readiness_content["mcp"]["ready"] is True
+    compact_plan = readiness_content["connected_source_plan"]
+    assert compact_plan["live_scope"] == "full-course"
+    assert compact_plan["include_step_sources"] is True
+    assert compact_plan["max_lessons"] == 9
+    assert compact_plan["max_pages"] == 4
+    assert compact_plan["max_sources"] == 2
+    assert compact_plan["connected_run_handoff"]["ready"] is True
+    assert "--live-scope full-course" in compact_plan["connected_run_handoff"]["command"]
+    assert "--include-step-sources" in compact_plan["connected_run_handoff"]["command"]
+    assert "--max-lessons 9" in compact_plan["connected_run_handoff"]["command"]
+    assert "--max-pages 4" in compact_plan["connected_run_handoff"]["command"]
+    assert "--max-sources 2" in compact_plan["connected_run_handoff"]["command"]

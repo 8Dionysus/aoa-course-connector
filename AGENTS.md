@@ -97,6 +97,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --liv
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --live-scope bounded --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
+PYTHONPATH=src python -m aoa_course_connector.cli readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 7 --max-pages 3 --max-sources 4 --live-scope bounded
 PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture
