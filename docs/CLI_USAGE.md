@@ -4,6 +4,7 @@
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
+aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
 aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
 aoa-course init
 aoa-course adapters list
@@ -135,3 +136,13 @@ for example the read-only `preflight connected-plan` check and the gated
 suggesting a blind fixture bootstrap.
 `--require-ready` exits non-zero only when `operational_ready` is false; live
 source execution remains gated behind the separate `--allow-network` commands.
+
+Use `goal audit` after `bootstrap fixture` and `readiness` when an agent needs
+a DoD-oriented handoff instead of another free-form status summary. It emits
+`aoa_course_goal_audit_v1` with `requirements`, `ready_for_operator_connection`,
+`goal_complete`, current readiness lanes, and `remaining_live_requirements`.
+`--require-ready-for-connection` exits non-zero until the offline starter,
+fixture connected-run receipt, MCP surface, docs, schemas, storage contract,
+and source/privacy boundaries are in place. The audit is read-only and does not
+mark the global goal complete; it keeps live GetCourse, Skillspace, Stepik,
+and external embedding calibration as explicit operator-access prerequisites.

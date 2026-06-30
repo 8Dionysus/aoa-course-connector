@@ -46,6 +46,13 @@ This proves:
   normalized starter bundle, keyword index, semantic index, graph, default
   GetCourse/Skillspace/Stepik fixture connected-run receipt, and embedded
   readiness without touching the network;
+- CLI `goal audit` returns `aoa_course_goal_audit_v1`, a read-only
+  DoD-oriented handoff that separates `ready_for_operator_connection` from
+  `goal_complete`, keeps live account calibration in
+  `remaining_live_requirements`, and exits non-zero with
+  `--require-ready-for-connection` until offline starter, fixture
+  connected-run, MCP, docs, schemas, storage, and privacy/source boundaries are
+  all in place;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh

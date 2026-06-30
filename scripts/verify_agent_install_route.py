@@ -97,6 +97,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "doctor"],
             [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "readiness", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "goal", "audit", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready-for-connection"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "fixture", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-semantic-index", "--run", "starter-fixture"],

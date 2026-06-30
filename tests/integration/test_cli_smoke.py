@@ -134,6 +134,21 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert answer["result_count"] >= 1
     connected_status = run_cli(tmp_path, "calibration", "status", "--run", "connected-calibration")
     assert connected_status["status"] == "ok"
+    goal = run_cli(
+        tmp_path,
+        "goal",
+        "audit",
+        "--run",
+        "starter-fixture",
+        "--connected-run",
+        "connected-calibration",
+        "--require-ready-for-connection",
+    )
+    assert goal["schema"] == "aoa_course_goal_audit_v1"
+    assert goal["status"] == "ready_for_operator_connection"
+    assert goal["ready_for_operator_connection"] is True
+    assert goal["goal_complete"] is False
+    assert goal["remaining_live_requirements"]
 
 
 def test_cli_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path) -> None:

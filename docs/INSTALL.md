@@ -16,6 +16,7 @@ aoa-course init
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
+aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
 aoa-course preflight live
 ```
 
@@ -36,6 +37,11 @@ operator-selected connected-run breadth.
 `preflight live` is safe before credentials exist. It reports missing live auth
 as a warning, does not touch the network, and gives the next commands for
 Stepik tokens or browser storage-state capture.
+
+`goal audit` is the read-only closeout handoff for a fresh agent. After
+bootstrap it should report `ready_for_operator_connection: true` while keeping
+`goal_complete: false` until live GetCourse, Skillspace, Stepik, and external
+embedding calibration are performed with operator-owned access.
 
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser
