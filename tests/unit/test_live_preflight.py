@@ -146,6 +146,43 @@ def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_
     assert any(command.startswith("aoa-course auth inspect-browser-state") for command in report["next_commands"])
 
 
+def test_connected_source_plan_can_scope_browser_work_to_one_ready_source(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source_a, _, _ = upsert_source(storage.data, "getcourse", "https://a.operator.edu/teach/control/stream", "A")
+    source_b, _, _ = upsert_source(storage.data, "getcourse", "https://b.operator.edu/teach/control/stream", "B")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".a.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://a.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    unscoped = connected_source_plan(storage, platforms=["getcourse"])
+    scoped = connected_source_plan(storage, platforms=["getcourse"], source_ids=[str(source_a["source_id"])])
+
+    assert unscoped["ready"] is False
+    assert {source["source_id"] for source in unscoped["source_plans"]} == {source_a["source_id"], source_b["source_id"]}
+    assert scoped["ready"] is True
+    assert scoped["source_ids"] == [source_a["source_id"]]
+    assert scoped["source_registry"]["selected_source_count"] == 1
+    assert scoped["source_registry"]["missing_source_ids"] == []
+    assert scoped["preflight"]["source_registry"]["selected_source_ids"] == [source_a["source_id"]]
+    assert any(str(source_a["source_id"]) in command for command in scoped["preflight"]["next_commands"])
+    assert [source["source_id"] for source in scoped["source_plans"]] == [source_a["source_id"]]
+    assert scoped["platform_plans"][0]["ready_source_count"] == 1
+    assert scoped["platform_plans"][0]["blocked_source_count"] == 0
+    assert scoped["connected_run_handoff"]["source_ids"] == [source_a["source_id"]]
+    assert f"--source-id {source_a['source_id']}" in scoped["connected_run_handoff"]["command"]
+    assert str(source_b["source_id"]) not in scoped["connected_run_handoff"]["command"]
+    assert any("sync browser-live" in command and str(source_a["source_id"]) in command for command in scoped["next_commands"])
+    rendered = json.dumps(scoped)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
+
+
 def test_live_preflight_rejects_source_host_substring_state_match(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     upsert_source(storage.data, "getcourse", "https://my-school.operator.edu/teach/control/stream", "My School")

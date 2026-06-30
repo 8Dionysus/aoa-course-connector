@@ -26,7 +26,7 @@ aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
-aoa-course preflight connected-plan --live-scope bounded --query "course-specific question" --link-pattern "*/lessons/*" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
+aoa-course preflight connected-plan --live-scope bounded --source-id "source:getcourse:..." --query "course-specific question" --link-pattern "*/lessons/*" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5
@@ -82,15 +82,18 @@ aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call live_preflight '{}'
-aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
-Use `--source-id` on sync commands when an agent is refreshing one result from a
-large source registry. Omitting it keeps the broader platform/source-ref sync
-behavior available for batch refreshes.
+Use `--source-id` on `preflight live`, `preflight connected-plan`, `readiness`,
+and sync commands when an agent is preparing or refreshing one result from a
+large source registry. Omitting it keeps the broader platform/source-ref
+behavior available for batch refreshes. MCP uses the array form `source_ids`.
+Scoped readiness and plan packets repeat the chosen ids in
+`source_registry.selected_source_ids`.
 
 Use `bootstrap fixture` as the one-command fresh-install starter route. It
 creates storage roots, materializes the starter fixture, builds the keyword
@@ -109,8 +112,10 @@ contains the exact `calibration connected-run --mode live --allow-network`
 command for the same platforms, source ids, query, live scope, and browser
 `--link-pattern`.
 By default, `preflight connected-plan` and the MCP `connected_source_plan` route
-cover GetCourse, Skillspace, and Stepik together; pass `--platform` or
-`platforms` only to narrow a diagnostic run.
+cover GetCourse, Skillspace, and Stepik together; pass `--platform`/`platforms`
+to narrow a diagnostic run and `--source-id`/`source_ids` to plan only one
+registered source so another not-yet-authorized source does not block the
+ready source's connected-run handoff.
 Fixture-discovered browser sources and reserved example hosts such as
 `*.example` are install proof only. Live preflight marks them as
 `fixture_or_example_source` with `operator_live_candidate: false`, does not

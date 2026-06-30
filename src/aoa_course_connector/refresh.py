@@ -67,6 +67,7 @@ def refresh_query_cycle(
     base["connected_plan"] = _connected_plan_for_hint(
         roots,
         platform=platform,
+        source_id=selected_source_id,
         query=query,
         state_file=state_file,
         stepik_token_env=stepik_token_env,
@@ -204,6 +205,7 @@ def _connected_plan_for_hint(
     roots: StorageRoots,
     *,
     platform: str,
+    source_id: str,
     query: str,
     state_file: Path | None,
     stepik_token_env: str,
@@ -213,6 +215,7 @@ def _connected_plan_for_hint(
     return connected_source_plan(
         roots,
         platforms=[platform],
+        source_ids=[source_id],
         query=query,
         browser_state_file=state_file,
         stepik_token_env=stepik_token_env,

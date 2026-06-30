@@ -168,12 +168,14 @@ def live_preflight(
     roots: StorageRoots,
     *,
     platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
     stepik_token_env: str = "STEPIK_API_TOKEN",
     browser_state_file: Path | None = None,
     expect_origin_contains: str | None = None,
     include_disabled: bool = False,
 ) -> dict[str, object]:
     selected_platforms = _selected_platforms(platforms)
+    selected_source_ids = _selected_source_ids(source_ids)
     registry = load_registry(roots.data)
     sources = [
         source
@@ -181,6 +183,7 @@ def live_preflight(
         if isinstance(source, dict)
         and source.get("platform") in selected_platforms
         and (include_disabled or source.get("enabled", True))
+        and (not selected_source_ids or str(source.get("source_id") or "") in selected_source_ids)
     ]
     checks: list[dict[str, object]] = []
     workflows: list[dict[str, object]] = []
@@ -231,6 +234,8 @@ def live_preflight(
             "path": str(registry_path(roots.data)),
             "source_count": len([item for item in registry.get("sources", []) if isinstance(item, dict)]),
             "selected_source_count": len(sources),
+            "selected_source_ids": selected_source_ids,
+            "missing_source_ids": _missing_source_ids(selected_source_ids, registry.get("sources", [])),
         },
         "platforms": selected_platforms,
         "checks": checks,
@@ -247,6 +252,7 @@ def connected_source_plan(
     roots: StorageRoots,
     *,
     platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
     stepik_token_env: str = "STEPIK_API_TOKEN",
     browser_state_file: Path | None = None,
     expect_origin_contains: str | None = None,
@@ -264,9 +270,11 @@ def connected_source_plan(
 
     selected_platforms = _selected_platforms(platforms)
     selected_live_scope = _selected_live_scope(live_scope)
+    selected_source_ids = _selected_source_ids(source_ids)
     preflight = live_preflight(
         roots,
         platforms=selected_platforms,
+        source_ids=selected_source_ids,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
         expect_origin_contains=expect_origin_contains,
@@ -288,6 +296,7 @@ def connected_source_plan(
         browser_state_file=browser_state_file,
         expect_origin_contains=expect_origin_contains,
         include_disabled=include_disabled,
+        source_ids=selected_source_ids,
     )
     setup_actions = _setup_actions(preflight)
     sync_actions = _sync_actions(
@@ -367,6 +376,7 @@ def connected_source_plan(
         "storage": preflight.get("storage"),
         "source_registry": preflight.get("source_registry"),
         "platforms": selected_platforms,
+        "source_ids": selected_source_ids,
         "live_scope": selected_live_scope,
         "include_step_sources": include_step_sources,
         "max_lessons": max_lessons,
@@ -398,6 +408,21 @@ def _selected_platforms(platforms: list[str] | None) -> list[str]:
     return selected
 
 
+def _selected_source_ids(source_ids: list[str] | None) -> list[str]:
+    return list(dict.fromkeys([str(source_id) for source_id in (source_ids or []) if str(source_id)]))
+
+
+def _missing_source_ids(selected_source_ids: list[str], sources: object) -> list[str]:
+    if not selected_source_ids:
+        return []
+    available = {
+        str(source.get("source_id") or "")
+        for source in sources
+        if isinstance(source, dict)
+    } if isinstance(sources, list) else set()
+    return [source_id for source_id in selected_source_ids if source_id not in available]
+
+
 def _selected_live_scope(live_scope: str) -> str:
     selected = str(live_scope or "bounded")
     if selected not in LIVE_SCOPES:
@@ -412,6 +437,7 @@ def _preflight_actions(
     browser_state_file: Path | None,
     expect_origin_contains: str | None,
     include_disabled: bool,
+    source_ids: list[str],
 ) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for platform in platforms:
@@ -424,6 +450,8 @@ def _preflight_actions(
                 command += f" --expect-origin {shlex.quote(expect_origin_contains)}"
         if include_disabled:
             command += " --include-disabled"
+        for source_id in source_ids:
+            command += f" --source-id {shlex.quote(source_id)}"
         artifact = f"{ARTIFACT_ROOT_EXPR}/{platform}-preflight.json"
         actions.append(
             {
@@ -972,6 +1000,7 @@ def _append_stepik_preflight(
     sources: list[dict[str, object]],
     token_env: str,
 ) -> None:
+    source_id_flags = _source_id_flags(sources)
     token_present = bool(os.environ.get(token_env))
     checks.append(
         {
@@ -1018,6 +1047,7 @@ def _append_stepik_preflight(
             "source_count": len(sources),
             "next_command": (
                 "aoa-course sync stepik-live --run stepik-live-sync "
+                f"{source_id_flags}"
                 "--batch-size 20 --max-sections 1 --max-units-per-section 2 "
                 "--max-steps-per-lesson 5 --build-artifacts"
             ),
@@ -1035,6 +1065,7 @@ def _append_stepik_preflight(
     else:
         next_commands.append(
             "aoa-course sync stepik-live --run stepik-live-sync --batch-size 20 "
+            f"{source_id_flags}"
             "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
             "--build-artifacts"
         )
@@ -1052,6 +1083,7 @@ def _append_browser_preflight(
     expect_origin_contains: str | None,
 ) -> None:
     state_file = (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
+    source_id_flags = _source_id_flags(sources)
     expected_origin = expect_origin_contains or _origin_hint(sources)
     state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
     state_ready = bool(state.get("usable"))
@@ -1131,6 +1163,7 @@ def _append_browser_preflight(
             "fixture_or_example_source_count": fixture_source_count,
             "next_command": (
                 f"aoa-course sync browser-live --platform {platform} "
+                f"{source_id_flags}"
                 f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
             ),
         }
@@ -1151,6 +1184,7 @@ def _append_browser_preflight(
     elif all_sources_ready:
         next_commands.append(
             f"aoa-course sync browser-live --platform {platform} "
+            f"{source_id_flags}"
             f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
         )
     else:
@@ -1171,6 +1205,15 @@ def _source_check(source: dict[str, object], *, ready: bool, blockers: list[str]
         "status": "ok" if ready else "blocked",
         "blockers": blockers,
     }
+
+
+def _source_id_flags(sources: list[dict[str, object]]) -> str:
+    flags = " ".join(
+        f"--source-id {shlex.quote(str(source.get('source_id')))}"
+        for source in sources
+        if source.get("source_id")
+    )
+    return f"{flags} " if flags else ""
 
 
 def _origin_hint(sources: list[dict[str, object]]) -> str:

@@ -53,6 +53,7 @@ def connector_readiness(
     *,
     runs: list[str] | None = None,
     platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
     connected_run: str = DEFAULT_CONNECTED_RUN,
     stepik_token_env: str = "STEPIK_API_TOKEN",
     browser_state_file: Path | None = None,
@@ -74,11 +75,12 @@ def connector_readiness(
     missing_route_files = [rel for rel in REQUIRED_ROUTE_FILES if not (repo_root / rel).exists()]
     storage = storage_status(repo_root, roots)
     registry = load_registry(roots.data)
-    source_summary = _source_registry_summary(roots, registry, include_disabled=include_disabled)
+    source_summary = _source_registry_summary(roots, registry, include_disabled=include_disabled, source_ids=source_ids)
     run_statuses = [ingest_status(roots, run_id) for run_id in selected_runs]
     preflight = live_preflight(
         roots,
         platforms=selected_platforms,
+        source_ids=source_ids,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
         expect_origin_contains=expect_origin_contains,
@@ -87,6 +89,7 @@ def connector_readiness(
     plan = connected_source_plan(
         roots,
         platforms=selected_platforms,
+        source_ids=source_ids,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
         expect_origin_contains=expect_origin_contains,
@@ -111,7 +114,7 @@ def connector_readiness(
         "repo_route_ready": not missing_route_files,
         "data_artifact_roots_ready": bool(storage_exists.get("data")) and bool(storage_exists.get("artifact")),
         "all_storage_roots_exist": all(bool(storage_exists.get(name)) for name in ["data", "cache", "auth", "artifact"]),
-        "source_registry_configured": int(source_summary.get("enabled_source_count", 0)) > 0,
+        "source_registry_configured": int(source_summary.get("selected_source_count", 0)) > 0,
         "agent_query_ready": query_ready,
         "connected_live_ready": bool(plan.get("ready")),
         "connected_run_receipt_ready": connected_status.get("status") == "ok",
@@ -216,9 +219,16 @@ def ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
     }
 
 
-def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *, include_disabled: bool) -> dict[str, object]:
+def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *, include_disabled: bool, source_ids: list[str] | None = None) -> dict[str, object]:
     sources = [source for source in registry.get("sources", []) if isinstance(source, dict)]
-    selected_sources = [source for source in sources if include_disabled or source.get("enabled", True)]
+    selected_ids = list(dict.fromkeys([str(source_id) for source_id in (source_ids or []) if str(source_id)]))
+    selected_sources = [
+        source
+        for source in sources
+        if (include_disabled or source.get("enabled", True))
+        and (not selected_ids or str(source.get("source_id") or "") in selected_ids)
+    ]
+    available_ids = {str(source.get("source_id") or "") for source in sources}
     platform_counts = Counter(str(source.get("platform") or "unknown") for source in selected_sources)
     access_mode_counts = Counter(str(source.get("access_mode") or "unknown") for source in selected_sources)
     return {
@@ -228,6 +238,8 @@ def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *
         "source_count": len(sources),
         "enabled_source_count": len([source for source in sources if source.get("enabled", True)]),
         "selected_source_count": len(selected_sources),
+        "selected_source_ids": selected_ids,
+        "missing_source_ids": [source_id for source_id in selected_ids if source_id not in available_ids],
         "platform_counts": dict(sorted(platform_counts.items())),
         "access_mode_counts": dict(sorted(access_mode_counts.items())),
         "sources": [

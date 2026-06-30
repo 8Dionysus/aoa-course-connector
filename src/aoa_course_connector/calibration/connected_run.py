@@ -381,6 +381,7 @@ def _run_live(
     plan = connected_source_plan(
         roots,
         platforms=platforms,
+        source_ids=source_ids,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
         expect_origin_contains=expect_origin_contains,
@@ -396,7 +397,7 @@ def _run_live(
     plan_path = _write_json(run_dir / "connected-source-plan.json", plan)
     runbook_path = run_dir / "connected-source-runbook.md"
     runbook = write_connected_source_runbook(plan, runbook_path)
-    preflight = plan.get("preflight") if isinstance(plan.get("preflight"), dict) else live_preflight(roots, platforms=platforms)
+    preflight = plan.get("preflight") if isinstance(plan.get("preflight"), dict) else live_preflight(roots, platforms=platforms, source_ids=source_ids)
     preflight_path = _write_json(run_dir / "live-preflight.json", preflight)
     preflight_reports.append(preflight)
     preflight_paths.append(str(preflight_path))

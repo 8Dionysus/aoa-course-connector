@@ -39,7 +39,7 @@ aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","m
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{}'
-aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
@@ -81,6 +81,10 @@ treating the receipt as missing and running fixture bootstrap again.
 When `platforms` is omitted, `live_preflight`, `connected_source_plan`, and
 `connector_readiness` use the full priority set: GetCourse, Skillspace, and
 Stepik. Pass `platforms` only to narrow a diagnostic or platform-specific run.
+Pass `source_ids` when a large registry contains several sources but the agent
+is preparing one selected source. The source scope applies before any
+network-touching command is emitted, so a ready source is not blocked by another
+source whose browser state or token is not ready yet.
 
 `goal_audit` is the MCP equivalent of CLI `goal audit`. It returns
 `aoa_course_goal_audit_v1` with `requirements`,
@@ -160,6 +164,9 @@ preflight-report, source sync, per-source smoke, `calibration build`, and
 work so blocked sources, missing auth state, missing Stepik token env, runtime
 report paths, and calibration packet inputs are explicit before
 network-touching commands run.
+When `source_ids` is supplied, `source_plans`, platform readiness, and
+`connected_run_handoff.source_ids` are scoped to those ids. The same selection
+is surfaced in `source_registry.selected_source_ids` for agent-side evidence.
 Browser fixture sources and reserved example hosts such as `*.example` are not
 treated as operator live candidates. They remain useful install proof, but
 `connected_source_plan` marks them with `fixture_or_example_source` and
