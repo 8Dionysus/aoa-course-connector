@@ -38,6 +38,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "stepik-fixture", "--run", "stepik-sync-fixture", "--build-artifacts"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "status", "--run", "stepik-sync-fixture", "--platform", "stepik"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "stepik-sync"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "stepik-fixture", "67", "--run", "stepik-smoke-fixture", "--query", "Stepik public API evidence"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "Stepik public API evidence", "--run", "stepik-fixture"],

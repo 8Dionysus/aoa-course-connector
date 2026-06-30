@@ -45,6 +45,9 @@ This proves:
   calibration reports without printing private raw HTML.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
   index/graph builds, CLI status, MCP status, and eval coverage.
+- Stepik fixture/live smoke report routes that combine source registration,
+  source-registry sync, index/graph build, answer evidence, and privacy-safe
+  local raw API path reporting.
 
 ## Remaining Goal Work
 
@@ -56,5 +59,6 @@ The next layer is live connected-source work:
   progress and comment blocks use unusual markup;
 - gated live full-course Stepik runs against operator-selected authenticated
   courses to calibrate real course size, permissions, and source enrichment;
-- Stepik live sync from source registry against operator-selected real courses;
+- broader Stepik live smoke calibration against operator-selected authenticated
+  courses and full-course source-registry runs;
 - richer live smoke routes gated away from CI secrets.

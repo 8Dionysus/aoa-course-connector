@@ -76,6 +76,13 @@ For live source-registry sync, register the course once and run:
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
 ```
 
+For a single Stepik operator smoke report:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
+PYTHONPATH=src python -m aoa_course_connector.cli smoke stepik-live 67 --run stepik-live-public-smoke --query "Python course"
+```
+
 ## Browser-Session Hard Adapter Proof
 
 GetCourse and Skillspace now have a shared browser-session snapshot route. CI
@@ -127,7 +134,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugr
 | --- | --- |
 | GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Stepik | Working clean API reference adapter with fixture, bounded live smoke, source-registry sync checkpoints, batched full-course materialization, and optional authenticated step-source enrichment |
+| Stepik | Working clean API reference adapter with fixture/live smoke reports, source-registry sync checkpoints, batched full-course materialization, and optional authenticated step-source enrichment |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
 

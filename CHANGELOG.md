@@ -35,3 +35,6 @@
 - Added Stepik source-registry discovery/registration, fixture/live sync
   commands, sync checkpoints, MCP-visible status, and `stepik-sync` eval
   coverage.
+- Added `smoke stepik-fixture` and gated `smoke stepik-live` reports for
+  Stepik registration, sync, artifacts, answer evidence, and privacy-safe raw
+  API path reporting.
