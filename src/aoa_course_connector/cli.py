@@ -1673,22 +1673,27 @@ def cmd_eval_browser_transcripts(_args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     failures = []
     cases = [
-        ("getcourse-browser-fixture", "transcript excerpt vendor boot recovery plan", ["transcript", "vendor", "recovery"], "transcript"),
-        ("skillspace-browser-fixture", "caption bugreport timeline", ["caption", "bugreport", "timeline"], "transcript"),
+        ("getcourse-browser-fixture", "transcript excerpt vendor boot recovery plan", ["transcript", "vendor", "recovery"], "transcript", "browser_visible_transcript"),
+        ("getcourse-browser-fixture", "sidecar caption safe mode recovery logs", ["sidecar", "safe", "recovery"], "transcript", "browser_caption_sidecar"),
+        ("skillspace-browser-fixture", "caption bugreport timeline", ["caption", "bugreport", "timeline"], "transcript", "browser_visible_transcript"),
+        ("skillspace-browser-fixture", "sidecar subtitle ANR tombstone evidence", ["sidecar", "anr", "tombstone"], "transcript", "browser_caption_sidecar"),
     ]
-    for run_id, query, terms, expected_kind in cases:
+    for run_id, query, terms, expected_kind, expected_source_authority in cases:
         packet = render_answer_packet(roots, query, run_id, 5)
         text = json.dumps(packet).casefold()
         missing_terms = [term for term in terms if term.casefold() not in text]
-        has_kind = any(isinstance(result, dict) and result.get("kind") == expected_kind for result in packet.get("results", []))
-        if missing_terms or not has_kind or not packet.get("evidence_chain"):
+        matching_results = [result for result in packet.get("results", []) if isinstance(result, dict) and result.get("kind") == expected_kind]
+        has_source_authority = any(result.get("source_authority") == expected_source_authority for result in matching_results)
+        if missing_terms or not matching_results or not has_source_authority or not packet.get("evidence_chain"):
             failures.append(
                 {
                     "run_id": run_id,
                     "query": query,
                     "expected_kind": expected_kind,
+                    "expected_source_authority": expected_source_authority,
                     "missing_terms": missing_terms,
-                    "has_expected_kind": has_kind,
+                    "has_expected_kind": bool(matching_results),
+                    "has_expected_source_authority": has_source_authority,
                     "has_evidence": bool(packet.get("evidence_chain")),
                 }
             )

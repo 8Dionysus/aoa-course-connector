@@ -34,7 +34,16 @@
       "url": "https://school.example/teach/control/lesson/view/id/102",
       "title": "OTA evidence lesson",
       "order": 2,
-      "html": "<article><h1>OTA evidence lesson</h1><p>Course notes should preserve source URLs, fetched timestamps, and checksums for every OTA package mentioned in a lesson.</p></article>"
+      "html": "<article><h1>OTA evidence lesson</h1><p>Course notes should preserve source URLs, fetched timestamps, and checksums for every OTA package mentioned in a lesson.</p><video controls><track kind=\"captions\" src=\"https://school.example/captions/bootloop-rescue.vtt\" srclang=\"en\" label=\"English captions\"></video></article>"
+    }
+  ],
+  "resources": [
+    {
+      "url": "https://school.example/captions/bootloop-rescue.vtt",
+      "kind": "captions",
+      "language": "en",
+      "content_type": "text/vtt",
+      "text": "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nSidecar caption: bootloop rescue starts with safe mode and recovery logs.\n\n00:00:04.000 --> 00:00:07.000\nKeep EDL risk notes separate from normal reboot guidance."
     }
   ]
 }

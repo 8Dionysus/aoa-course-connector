@@ -46,6 +46,10 @@ This proves:
 - GetCourse and Skillspace visible transcript/caption extraction into
   canonical Transcript objects, keyword-index documents, `lesson_has_transcript`
   graph edges, answer packets, and `browser-transcripts` eval coverage.
+- GetCourse and Skillspace caption sidecar extraction from `<track>` resources
+  and local snapshot `resources[]` into canonical Transcript objects,
+  `browser_caption_sidecar` source authority, smoke `transcript_count`, answer
+  packets, and `browser-transcripts` eval coverage.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
 - Browser catalog discovery rejects pagination links even when a broad
@@ -99,7 +103,8 @@ The next layer is live connected-source work:
   calibrate real login redirects, theme selectors, and pagination behavior
   after `preflight live` reports ready local auth/source state;
 - broader live selector coverage for real GetCourse and Skillspace themes where
-  progress, comment, transcript, and caption blocks use unusual markup;
+  progress, comment, transcript, caption, and caption-sidecar resources use
+  unusual markup or protected text-resource behavior;
 - gated live full-course Stepik runs against operator-selected authenticated
   courses to calibrate real course size, permissions, and source enrichment;
 - broader Stepik live smoke calibration against operator-selected authenticated

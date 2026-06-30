@@ -216,6 +216,7 @@ def _course_summary(receipt: dict[str, object] | None) -> dict[str, object]:
         "asset_count": 0,
         "assignment_count": 0,
         "comment_count": 0,
+        "transcript_count": 0,
         "progress_detected_count": 0,
     }
     progress_states: list[str] = []
@@ -237,6 +238,7 @@ def _course_summary(receipt: dict[str, object] | None) -> dict[str, object]:
                 counters["lesson_count"] += 1
                 counters["asset_count"] += len(lesson.get("assets", [])) if isinstance(lesson.get("assets"), list) else 0
                 counters["assignment_count"] += len(lesson.get("assignments", [])) if isinstance(lesson.get("assignments"), list) else 0
+                counters["transcript_count"] += len(lesson.get("transcripts", [])) if isinstance(lesson.get("transcripts"), list) else 0
                 for thread in lesson.get("comment_threads", []):
                     if isinstance(thread, dict) and isinstance(thread.get("comments"), list):
                         counters["comment_count"] += len(thread["comments"])

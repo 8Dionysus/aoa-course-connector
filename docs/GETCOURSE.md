@@ -18,8 +18,8 @@ The connector should not depend on media download to deliver useful knowledge.
 
 `aoa-course-connector` supports GetCourse through the shared browser-session
 discovery, snapshot, and course-tree crawl adapters. Fixture proofs cover
-paginated catalog receipts, visible course progress, and visible discussion
-comments:
+paginated catalog receipts, visible course progress, visible discussion
+comments, visible transcripts, and caption sidecars from `<track>` resources:
 
 ```bash
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
@@ -33,6 +33,7 @@ aoa-course build-graph --run getcourse-browser-fixture
 aoa-course answer "GetCourse bootloader rollback evidence" --run getcourse-browser-fixture
 aoa-course answer "mentor anti-rollback vendor boot" --run getcourse-browser-fixture
 aoa-course answer "transcript excerpt vendor boot recovery plan" --run getcourse-browser-fixture
+aoa-course answer "sidecar caption safe mode recovery logs" --run getcourse-browser-fixture
 aoa-course eval browser-progress-comments
 aoa-course eval browser-transcripts
 

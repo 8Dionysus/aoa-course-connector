@@ -91,3 +91,7 @@
   normalized transcript objects, index docs, graph edges, and answer packets.
 - Tightened live calibration privacy checks so generic token/API-key fields are
   rejected as secret-bearing source-report payloads.
+- Added browser-session caption sidecar extraction from `<track>` resources,
+  including WebVTT/SRT cue cleanup, live caption-resource collection guardrails,
+  smoke `transcript_count`, and source-authority checks in
+  `eval browser-transcripts`.

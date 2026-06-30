@@ -113,7 +113,7 @@ class _SnapshotParser(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         attr = {key: value or "" for key, value in attrs}
         if tag in BLOCK_TAGS:
-            self._stack.append({"tag": tag, "attrs": attr, "text": []})
+            self._stack.append({"tag": tag, "attrs": attr, "text": [], "semantic_text": []})
         if tag == "a" and attr.get("href"):
             link = {
                 "href": urljoin(self.base_url, attr["href"]),
@@ -137,6 +137,7 @@ class _SnapshotParser(HTMLParser):
                         "kind": kind,
                         "url": urljoin(self.base_url, src),
                         "title": attr.get("title") or attr.get("alt") or attr.get("download") or src.rsplit("/", 1)[-1],
+                        "language": _transcript_language(attr),
                     }
                 )
 
@@ -150,8 +151,10 @@ class _SnapshotParser(HTMLParser):
         if self._stack and self._stack[-1].get("tag") == tag:
             item = self._stack.pop()
             text = _clean(" ".join(str(part) for part in item.get("text", [])))
+            nested_text = _clean(" ".join(str(part) for part in item.get("semantic_text", [])))
             attrs = item.get("attrs") if isinstance(item.get("attrs"), dict) else {}
-            semantic_text = text or _semantic_label(attrs)
+            semantic_source = nested_text if _can_use_nested_semantic_text(attrs) else text
+            semantic_text = semantic_source or _semantic_label(attrs)
             if not semantic_text and _looks_like_progress_block(tag, attrs, ""):
                 semantic_text = _progress_label(attrs, "")
             if semantic_text:
@@ -170,6 +173,8 @@ class _SnapshotParser(HTMLParser):
         text = unescape(data)
         if self._stack:
             self._stack[-1]["text"].append(text)  # type: ignore[index,union-attr]
+            for item in self._stack:
+                item["semantic_text"].append(text)  # type: ignore[index,union-attr]
         if self._link_stack:
             self._link_stack[-1]["text"] = f"{self._link_stack[-1].get('text', '')} {text}".strip()
 
@@ -272,6 +277,22 @@ def _looks_like_transcript_block(tag: str, attrs: dict[object, object], text: st
         return True
     haystack = _attribute_haystack(attrs, "")
     return tag in {"article", "div", "li", "p", "pre", "section"} and any(hint in haystack for hint in TRANSCRIPT_HINTS)
+
+
+def _can_use_nested_semantic_text(attrs: dict[object, object]) -> bool:
+    kind = str(attrs.get("data-aoa-kind") or "").casefold()
+    if kind in TRANSCRIPT_KINDS or kind in {"comment", "progress"}:
+        return True
+    if (
+        attrs.get("data-aoa-transcript-id")
+        or attrs.get("data-transcript-id")
+        or attrs.get("data-aoa-comment-id")
+        or attrs.get("data-aoa-progress-state")
+        or attrs.get("data-aoa-progress-percent")
+    ):
+        return True
+    haystack = _attribute_haystack(attrs, "")
+    return any(hint in haystack for hint in TRANSCRIPT_HINTS | COMMENT_HINTS | PROGRESS_HINTS)
 
 
 def _transcript_language(attrs: dict[object, object]) -> str:
