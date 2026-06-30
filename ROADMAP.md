@@ -10,6 +10,8 @@
 - Prove GetCourse and Skillspace account-level source discovery into the local
   source registry from safe browser fixtures and optional live Playwright auth
   state.
+- Prove source-registry driven sync checkpoints with optional per-source
+  index/graph builds and MCP status.
 - Prove bounded GetCourse and Skillspace course-tree crawling from safe browser
   fixtures and optional live Playwright auth state.
 - Document GetCourse and Skillspace hard-adapter strategy.
@@ -17,12 +19,10 @@
 
 ## Next
 
-- Expand GetCourse browser-session discovery/crawl from bounded catalog and
-  course-index traversal to pagination, progress, checkpoints, and visible
-  comments.
-- Expand Skillspace browser-session discovery/crawl from bounded catalog and
-  course-index traversal to pagination, progress, checkpoints, and visible
-  comments.
+- Expand GetCourse browser-session discovery/crawl/sync from bounded catalog and
+  course-index traversal to pagination, progress, and visible comments.
+- Expand Skillspace browser-session discovery/crawl/sync from bounded catalog
+  and course-index traversal to pagination, progress, and visible comments.
 - Expand Stepik adapter from bounded smoke slices to robust pagination and
   authenticated account scopes.
 - Add semantic/vector index behind the stable keyword index contract.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from fnmatch import fnmatch
 from typing import Any
+from urllib.parse import urlparse
 
 from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
 
@@ -22,11 +23,12 @@ NON_COURSE_URL_HINTS = (
     "task",
     "homework",
     "assignment",
-    "files/",
-    "assets/",
+    "files",
+    "assets",
     "login",
     "logout",
 )
+NON_COURSE_PATH_SEGMENTS = set(NON_COURSE_URL_HINTS)
 
 
 def build_browser_catalog_discovery(
@@ -129,10 +131,15 @@ def is_course_link(link: dict[str, str], *, platform: str | None = None, link_pa
     if kind in COURSE_KINDS:
         return True
     lowered = href.casefold()
-    if any(hint in lowered for hint in NON_COURSE_URL_HINTS):
+    if _has_non_course_path_segment(lowered):
         return False
     if platform == "getcourse" and "teach/control/stream" in lowered:
         return True
     if platform == "skillspace" and "/course/" in lowered:
         return True
     return any(hint in lowered for hint in COURSE_URL_HINTS)
+
+
+def _has_non_course_path_segment(href: str) -> bool:
+    segments = {segment for segment in urlparse(href).path.casefold().split("/") if segment}
+    return bool(segments & NON_COURSE_PATH_SEGMENTS)

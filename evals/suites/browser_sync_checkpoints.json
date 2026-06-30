@@ -1,0 +1,18 @@
+{
+  "schema": "aoa_course_sync_eval_suite_v1",
+  "suite_id": "browser-sync-checkpoints",
+  "cases": [
+    {
+      "sync_run": "browser-sync-fixture",
+      "platform": "getcourse",
+      "must_have_status": "ok",
+      "must_have_artifacts": ["normalized_path", "index_path", "graph_path"]
+    },
+    {
+      "sync_run": "browser-sync-fixture",
+      "platform": "skillspace",
+      "must_have_status": "ok",
+      "must_have_artifacts": ["normalized_path", "index_path", "graph_path"]
+    }
+  ]
+}

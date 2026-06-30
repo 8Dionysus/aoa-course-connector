@@ -10,6 +10,7 @@ from aoa_course_connector.index import build_keyword_index
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.sources import load_registry, upsert_source
+from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
 
 def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
@@ -39,5 +40,15 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
     monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     result = call_tool("search", {"query": "rollback", "run": "starter-fixture"})
     assert result["results"]
+    checkpoint = make_checkpoint(
+        source={"source_id": "source:getcourse:test", "platform": "getcourse", "source_ref": "https://school.example", "access_mode": "browser_session"},
+        sync_run_id="browser-sync-fixture",
+        run_id="browser-sync-fixture-source",
+        status="ok",
+    )
+    upsert_checkpoint(storage, checkpoint)
+    sync_status = call_tool("sync_status", {"sync_run": "browser-sync-fixture"})
+    assert sync_status["sync"]["ok_count"] == 1

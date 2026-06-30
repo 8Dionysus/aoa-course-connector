@@ -21,6 +21,8 @@ discovery, snapshot, and course-tree crawl adapters:
 ```bash
 aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register --max-sources 50
 aoa-course sources list
+aoa-course sync browser-fixture --run browser-sync-fixture --platform skillspace --build-artifacts
+aoa-course sync status --run browser-sync-fixture --platform skillspace
 
 aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
 aoa-course build-index --run skillspace-browser-fixture
@@ -51,4 +53,11 @@ aoa-course crawl browser-live "https://academy.example/course/mobile-debugging" 
   --run skillspace-live-crawl \
   --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
   --max-lessons 50
+
+aoa-course sync browser-live \
+  --run skillspace-live-sync \
+  --platform skillspace \
+  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
+  --max-lessons 50 \
+  --build-artifacts
 ```

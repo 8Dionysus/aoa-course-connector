@@ -31,6 +31,7 @@ from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet, write_answer_packet
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
 from aoa_course_connector.storage import create_storage_roots, storage_status
+from aoa_course_connector.sync import load_sync_status, sync_browser_fixture_sources, sync_browser_live_sources
 
 
 DEFAULT_RUN = "starter-fixture"
@@ -194,6 +195,31 @@ def build_parser() -> argparse.ArgumentParser:
     crawl_live.add_argument("--link-pattern")
     crawl_live.set_defaults(func=cmd_crawl_browser_live)
 
+    sync = sub.add_parser("sync")
+    sync_sub = sync.add_subparsers(dest="sync_command", required=True)
+    sync_fixture = sync_sub.add_parser("browser-fixture")
+    sync_fixture.add_argument("--run", default="browser-sync-fixture")
+    sync_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], action="append")
+    sync_fixture.add_argument("--max-lessons", type=int, default=20)
+    sync_fixture.add_argument("--link-pattern")
+    sync_fixture.add_argument("--source-limit", type=int)
+    sync_fixture.add_argument("--build-artifacts", action="store_true")
+    sync_fixture.set_defaults(func=cmd_sync_browser_fixture)
+    sync_live = sync_sub.add_parser("browser-live")
+    sync_live.add_argument("--run", default="browser-live-sync")
+    sync_live.add_argument("--platform", choices=["getcourse", "skillspace"], action="append")
+    sync_live.add_argument("--state-file", type=Path)
+    sync_live.add_argument("--wait-until", default="networkidle")
+    sync_live.add_argument("--max-lessons", type=int, default=20)
+    sync_live.add_argument("--link-pattern")
+    sync_live.add_argument("--source-limit", type=int)
+    sync_live.add_argument("--build-artifacts", action="store_true")
+    sync_live.set_defaults(func=cmd_sync_browser_live)
+    sync_status = sync_sub.add_parser("status")
+    sync_status.add_argument("--run")
+    sync_status.add_argument("--platform", choices=["getcourse", "skillspace"])
+    sync_status.set_defaults(func=cmd_sync_status)
+
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
     build_index.set_defaults(func=cmd_build_index)
@@ -236,6 +262,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
     eval_sub.add_parser("browser-discovery").set_defaults(func=cmd_eval_browser_discovery)
+    eval_sub.add_parser("browser-sync").set_defaults(func=cmd_eval_browser_sync)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -511,6 +538,44 @@ def cmd_crawl_browser_live(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_sync_browser_fixture(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = sync_browser_fixture_sources(
+        roots,
+        sync_run_id=args.run,
+        platforms=args.platform,
+        max_lessons=args.max_lessons,
+        link_pattern=args.link_pattern,
+        source_limit=args.source_limit,
+        build_artifacts=args.build_artifacts,
+    )
+    _emit(receipt)
+    return 0 if receipt.get("status") in {"ok", "partial"} else 1
+
+
+def cmd_sync_browser_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = sync_browser_live_sources(
+        roots,
+        sync_run_id=args.run,
+        platforms=args.platform,
+        state_file=args.state_file,
+        wait_until=args.wait_until,
+        max_lessons=args.max_lessons,
+        link_pattern=args.link_pattern,
+        source_limit=args.source_limit,
+        build_artifacts=args.build_artifacts,
+    )
+    _emit(receipt)
+    return 0 if receipt.get("status") in {"ok", "partial"} else 1
+
+
+def cmd_sync_status(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    _emit(load_sync_status(roots, sync_run_id=args.run, platform=args.platform))
+    return 0
+
+
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     receipt = materialize_stepik_fixture(roots, run_id=args.run, fixture=args.fixture)
@@ -656,6 +721,28 @@ def cmd_eval_browser_discovery(_args: argparse.Namespace) -> int:
         if not matches:
             failures.append({"platform": platform, "missing_registered_source_hint": term})
     _emit({"schema": "aoa_course_eval_browser_discovery_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_browser_sync(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    status = load_sync_status(roots, sync_run_id="browser-sync-fixture")
+    checkpoints = status.get("checkpoints", [])
+    failures = []
+    for platform in ["getcourse", "skillspace"]:
+        matches = [
+            item
+            for item in checkpoints
+            if isinstance(item, dict)
+            and item.get("platform") == platform
+            and item.get("status") == "ok"
+            and item.get("normalized_path")
+            and item.get("index_path")
+            and item.get("graph_path")
+        ]
+        if not matches:
+            failures.append({"platform": platform, "missing": "ok checkpoint with normalized/index/graph paths"})
+    _emit({"schema": "aoa_course_eval_browser_sync_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 
