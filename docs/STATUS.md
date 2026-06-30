@@ -27,7 +27,7 @@ This proves:
   and optional Playwright live capture route.
 - GetCourse and Skillspace account-level browser discovery into the local source
   registry through fixtures, snapshot input, optional Playwright live discovery,
-  and source-registry evals.
+  bounded live next-page following, and source-registry evals.
 - GetCourse and Skillspace source-registry driven browser sync with
   `SyncCheckpoint` records, optional per-source index/graph builds, CLI status,
   MCP status, and evals.
@@ -37,14 +37,16 @@ This proves:
   fixtures, answer packets, index docs, graph edges, MCP context, and evals.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
+- Browser-session parser heuristics for unannotated progress/status and compact
+  visible comment/reply/discussion blocks.
 
 ## Remaining Goal Work
 
 The next layer is live connected-source work:
 
-- automatic GetCourse/Skillspace live next-page following beyond fixture and
-  operator-snapshot pagination receipts;
+- gated live smoke with connected GetCourse and Skillspace accounts to calibrate
+  real theme selectors and pagination behavior;
 - broader live selector coverage for real GetCourse and Skillspace themes where
-  progress and comment blocks are not annotated like fixtures;
+  progress and comment blocks use unusual markup;
 - broader Stepik sync coverage beyond bounded smoke slices;
 - richer live smoke routes gated away from CI secrets.

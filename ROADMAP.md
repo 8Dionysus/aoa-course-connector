@@ -16,15 +16,17 @@
   fixtures and optional live Playwright auth state.
 - Prove visible browser-session progress/status, comments, and paginated catalog
   receipt metadata from safe GetCourse and Skillspace fixtures.
+- Prove bounded GetCourse and Skillspace live discovery pagination route and
+  unannotated DOM heuristics for progress/status/comments.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 
 ## Next
 
-- Expand GetCourse and Skillspace live discovery from one captured page to
-  bounded next-page following with checkpointed pagination receipts.
-- Broaden GetCourse and Skillspace live DOM selectors for unannotated progress,
-  status, comments, and discussion blocks across real account themes.
+- Run gated live smoke on connected GetCourse and Skillspace accounts to
+  calibrate pagination and DOM heuristics against real themes.
+- Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
+  status, comments, and discussion markup found by live smoke.
 - Expand Stepik adapter from bounded smoke slices to robust pagination and
   authenticated account scopes.
 - Add semantic/vector index behind the stable keyword index contract.

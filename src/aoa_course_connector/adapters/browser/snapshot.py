@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from html import unescape
 from html.parser import HTMLParser
@@ -37,6 +38,35 @@ ASSET_LINK_EXTENSIONS = {
     ".xlsx",
     ".zip",
 }
+COMMENT_HINTS = {
+    "answer",
+    "comment",
+    "comments",
+    "discussion",
+    "forum",
+    "message",
+    "reply",
+    "вопрос",
+    "коммент",
+    "обсужд",
+    "ответ",
+}
+COMMENT_NOISE_TEXTS = {"add comment", "comments", "leave a comment", "добавить комментарий", "комментарии"}
+PROGRESS_HINTS = {
+    "complete",
+    "completed",
+    "completion",
+    "done",
+    "percent",
+    "progress",
+    "progressbar",
+    "status",
+    "выполн",
+    "заверш",
+    "прогресс",
+    "пройден",
+}
+PERCENT_RE = re.compile(r"(?<!\d)(100|\d{1,2})(?:\s*(?:%|percent|процент))", re.IGNORECASE)
 
 
 @dataclass
@@ -106,10 +136,12 @@ class _SnapshotParser(HTMLParser):
         if self._stack and self._stack[-1].get("tag") == tag:
             item = self._stack.pop()
             text = _clean(" ".join(str(part) for part in item.get("text", [])))
+            attrs = item.get("attrs") if isinstance(item.get("attrs"), dict) else {}
+            semantic_text = text or _semantic_label(attrs)
+            if semantic_text:
+                self._capture_semantic_block(tag, attrs, semantic_text)
             if not text:
                 return
-            attrs = item.get("attrs") if isinstance(item.get("attrs"), dict) else {}
-            self._capture_semantic_block(attrs, text)
             if tag == "title":
                 self.title_parts.append(text)
             elif tag in {"h1", "h2", "h3", "h4"}:
@@ -125,19 +157,19 @@ class _SnapshotParser(HTMLParser):
         if self._link_stack:
             self._link_stack[-1]["text"] = f"{self._link_stack[-1].get('text', '')} {text}".strip()
 
-    def _capture_semantic_block(self, attrs: dict[object, object], text: str) -> None:
+    def _capture_semantic_block(self, tag: str, attrs: dict[object, object], text: str) -> None:
         kind = str(attrs.get("data-aoa-kind") or "").casefold()
-        if kind == "progress" or attrs.get("data-aoa-progress-state") or attrs.get("data-aoa-progress-percent"):
+        if _looks_like_progress_block(tag, attrs, text):
             self.progress = {
-                "state": str(attrs.get("data-aoa-progress-state") or attrs.get("aria-valuetext") or "visible"),
-                "percent": str(attrs.get("data-aoa-progress-percent") or attrs.get("aria-valuenow") or ""),
+                "state": _progress_state(attrs, text),
+                "percent": _progress_percent(attrs, text),
                 "updated_at": str(attrs.get("data-aoa-updated-at") or ""),
                 "label": text,
             }
-        if kind == "comment" or attrs.get("data-aoa-comment-id"):
+        if kind == "comment" or _looks_like_comment_block(tag, attrs, text):
             self.comments.append(
                 {
-                    "comment_id": str(attrs.get("data-aoa-comment-id") or f"comment-{len(self.comments) + 1}"),
+                    "comment_id": str(attrs.get("data-aoa-comment-id") or attrs.get("id") or f"comment-{len(self.comments) + 1}"),
                     "thread_id": str(attrs.get("data-aoa-thread-id") or attrs.get("data-aoa-comment-thread") or "visible-thread"),
                     "author": str(attrs.get("data-aoa-author") or attrs.get("data-aoa-comment-author") or ""),
                     "created_at": str(attrs.get("data-aoa-created-at") or attrs.get("datetime") or ""),
@@ -172,6 +204,72 @@ def _looks_like_asset_link(attrs: dict[str, str], href: str) -> bool:
         return True
     path = urlparse(href).path.lower()
     return any(path.endswith(extension) for extension in ASSET_LINK_EXTENSIONS)
+
+
+def _looks_like_progress_block(tag: str, attrs: dict[object, object], text: str) -> bool:
+    kind = str(attrs.get("data-aoa-kind") or "").casefold()
+    if kind == "progress" or attrs.get("data-aoa-progress-state") or attrs.get("data-aoa-progress-percent"):
+        return True
+    role = str(attrs.get("role") or "").casefold()
+    if role == "progressbar" or attrs.get("aria-valuenow"):
+        return True
+    haystack = _attribute_haystack(attrs, text)
+    if not any(hint in haystack for hint in PROGRESS_HINTS):
+        return False
+    return bool(_progress_percent(attrs, text)) or tag in {"meter", "progress"}
+
+
+def _looks_like_comment_block(tag: str, attrs: dict[object, object], text: str) -> bool:
+    kind = str(attrs.get("data-aoa-kind") or "").casefold()
+    if kind == "comment" or attrs.get("data-aoa-comment-id"):
+        return True
+    cleaned = _clean(text)
+    if len(cleaned) < 8 or len(cleaned) > 1200:
+        return False
+    if cleaned.casefold() in COMMENT_NOISE_TEXTS or len(cleaned.split()) < 3:
+        return False
+    attr_text = _attribute_haystack(attrs, "")
+    if not any(hint in attr_text for hint in COMMENT_HINTS):
+        return False
+    return tag in {"article", "div", "li", "p", "section"}
+
+
+def _attribute_haystack(attrs: dict[object, object], text: str) -> str:
+    parts = [text]
+    for key in ["class", "id", "role", "aria-label", "data-testid", "data-test", "data-qa", "data-aoa-kind"]:
+        value = attrs.get(key)
+        if value:
+            parts.append(str(value))
+    return " ".join(parts).casefold()
+
+
+def _semantic_label(attrs: dict[object, object]) -> str:
+    for key in ["aria-valuetext", "aria-label", "title", "data-aoa-label"]:
+        value = attrs.get(key)
+        if value:
+            return _clean(str(value))
+    return ""
+
+
+def _progress_percent(attrs: dict[object, object], text: str) -> str:
+    value = attrs.get("data-aoa-progress-percent") or attrs.get("aria-valuenow")
+    if value not in {None, ""}:
+        return str(value)
+    match = PERCENT_RE.search(text)
+    return match.group(1) if match else ""
+
+
+def _progress_state(attrs: dict[object, object], text: str) -> str:
+    value = attrs.get("data-aoa-progress-state")
+    if value:
+        return str(value)
+    lowered = text.casefold()
+    percent = _progress_percent(attrs, text)
+    if percent == "100" or any(token in lowered for token in ["done", "завершен", "завершено"]):
+        return "completed"
+    if any(token in lowered for token in ["complete", "completed", "progress", "started", "in progress", "выполн", "прогресс", "пройден"]):
+        return "in_progress"
+    return "visible"
 
 
 def _is_pagination_link(link: dict[str, str]) -> bool:

@@ -263,6 +263,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "pagination",
         "max-lessons",
         "max-sources",
+        "max-pages",
         "getcourse",
         "skillspace",
         "playwright",

@@ -113,6 +113,7 @@ def build_parser() -> argparse.ArgumentParser:
     discover_browser_live.add_argument("--state-file", type=Path)
     discover_browser_live.add_argument("--wait-until", default="networkidle")
     discover_browser_live.add_argument("--max-sources", type=int, default=50)
+    discover_browser_live.add_argument("--max-pages", type=int, default=5)
     discover_browser_live.add_argument("--link-pattern")
     discover_browser_live.add_argument("--register", action="store_true")
     discover_browser_live.set_defaults(func=cmd_discover_browser_live)
@@ -447,6 +448,7 @@ def cmd_discover_browser_live(args: argparse.Namespace) -> int:
             state_file=args.state_file,
             wait_until=args.wait_until,
             max_sources=args.max_sources,
+            max_pages=args.max_pages,
             link_pattern=args.link_pattern,
             register=args.register,
         )

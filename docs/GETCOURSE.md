@@ -51,7 +51,8 @@ aoa-course discover browser-live "https://school.example/teach/control/stream" \
   --run getcourse-live-discovery \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --register \
-  --max-sources 50
+  --max-sources 50 \
+  --max-pages 5
 
 aoa-course crawl browser-live "https://school.example/teach/control/stream" \
   --platform getcourse \
