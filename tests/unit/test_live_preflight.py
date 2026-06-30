@@ -155,6 +155,32 @@ def test_live_preflight_reports_missing_browser_state_as_warning(tmp_path: Path)
     assert any("capture-browser-state" in command for command in report["next_commands"])
 
 
+def test_connected_source_plan_defaults_to_all_priority_platforms(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    upsert_source(storage.data, "skillspace", "https://school.skillspace.example/courses", "School Skillspace")
+    upsert_source(storage.data, "stepik", "https://stepik.org/course/67/syllabus", "Stepik Public", access_mode="public_api")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    plan = connected_source_plan(storage, query="course-specific question")
+
+    assert plan["schema"] == "aoa_course_connected_source_plan_v1"
+    assert plan["platforms"] == ["getcourse", "skillspace", "stepik"]
+    assert plan["status"] == "partial"
+    assert plan["ready"] is False
+    assert plan["source_registry"]["selected_source_count"] == 3
+    platform_plans = {item["platform"]: item for item in plan["platform_plans"]}
+    assert platform_plans["getcourse"]["blocked_source_count"] == 1
+    assert platform_plans["skillspace"]["blocked_source_count"] == 1
+    assert platform_plans["stepik"]["ready_source_count"] == 1
+    assert [handoff["platform"] for handoff in plan["browser_auth_handoffs"]] == ["getcourse", "skillspace"]
+    assert any("capture-browser-state getcourse" in command for command in plan["next_commands"])
+    assert any("capture-browser-state skillspace" in command for command in plan["next_commands"])
+    assert any("sync stepik-live" in command for command in plan["next_commands"])
+    preflight_stage = next(stage for stage in plan["stages"] if stage["name"] == "preflight_reports")
+    assert [action["platform"] for action in preflight_stage["actions"]] == ["getcourse", "skillspace", "stepik"]
+
+
 def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")

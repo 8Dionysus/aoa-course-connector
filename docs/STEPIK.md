@@ -105,7 +105,7 @@ registered `api_token` or `oauth` sources still require the token before live
 sync is ready. Account discovery is treated as required only when no Stepik
 sources are already registered.
 
-For agent handoff, use the combined read-only connected plan:
+For a Stepik-focused agent handoff, narrow the read-only connected plan:
 
 ```bash
 aoa-course preflight connected-plan \

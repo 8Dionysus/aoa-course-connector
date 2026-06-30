@@ -226,8 +226,8 @@ aoa-course preflight live \
   --expect-origin school.example
 ```
 
-When an agent needs to decide the next live action across registered browser
-sources, use the read-only connected plan:
+When an agent needs to decide the next live action for GetCourse browser
+sources, narrow the read-only connected plan:
 
 ```bash
 aoa-course preflight connected-plan \

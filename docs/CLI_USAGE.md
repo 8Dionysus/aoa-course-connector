@@ -24,7 +24,7 @@ aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
-aoa-course preflight connected-plan --platform getcourse --platform stepik --live-scope bounded --query "course-specific question" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
+aoa-course preflight connected-plan --live-scope bounded --query "course-specific question" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5
@@ -79,9 +79,9 @@ aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","ru
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
-aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
-aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
-aoa-course mcp call connector_readiness '{"runs":["starter-fixture"],"platforms":["getcourse","stepik"]}'
+aoa-course mcp call live_preflight '{}'
+aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question"}'
+aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 ```
 
 Use `--source-id` on sync commands when an agent is refreshing one result from a
@@ -101,6 +101,9 @@ that source registry sync, smoke reports, calibration packet, intake, and the
 connected run receipt all write to portable runtime artifact storage. Use
 `--mode live --allow-network` only after `preflight connected-plan` shows the
 selected sources are ready.
+By default, `preflight connected-plan` and the MCP `connected_source_plan` route
+cover GetCourse, Skillspace, and Stepik together; pass `--platform` or
+`platforms` only to narrow a diagnostic run.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network.
 
