@@ -90,6 +90,7 @@ def build_parser() -> argparse.ArgumentParser:
     readiness = sub.add_parser("readiness")
     readiness.add_argument("--run", action="append")
     readiness.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    readiness.add_argument("--source-id", action="append")
     readiness.add_argument("--connected-run", default="connected-calibration")
     readiness.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
     readiness.add_argument("--state-file", type=Path)
@@ -133,6 +134,7 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_sub = preflight.add_subparsers(dest="preflight_command", required=True)
     preflight_live = preflight_sub.add_parser("live")
     preflight_live.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    preflight_live.add_argument("--source-id", action="append")
     preflight_live.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
     preflight_live.add_argument("--state-file", type=Path)
     preflight_live.add_argument("--expect-origin")
@@ -141,6 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_live.set_defaults(func=cmd_preflight_live)
     preflight_plan = preflight_sub.add_parser("connected-plan")
     preflight_plan.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    preflight_plan.add_argument("--source-id", action="append")
     preflight_plan.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
     preflight_plan.add_argument("--state-file", type=Path)
     preflight_plan.add_argument("--expect-origin")
@@ -614,6 +617,7 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         roots,
         runs=args.run,
         platforms=args.platform,
+        source_ids=args.source_id,
         connected_run=args.connected_run,
         stepik_token_env=args.stepik_token_env,
         browser_state_file=args.state_file,
@@ -675,6 +679,7 @@ def cmd_preflight_live(args: argparse.Namespace) -> int:
     report = live_preflight(
         roots,
         platforms=args.platform,
+        source_ids=args.source_id,
         stepik_token_env=args.stepik_token_env,
         browser_state_file=args.state_file,
         expect_origin_contains=args.expect_origin,
@@ -689,6 +694,7 @@ def cmd_preflight_connected_plan(args: argparse.Namespace) -> int:
     plan = connected_source_plan(
         roots,
         platforms=args.platform,
+        source_ids=args.source_id,
         stepik_token_env=args.stepik_token_env,
         browser_state_file=args.state_file,
         expect_origin_contains=args.expect_origin,

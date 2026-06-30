@@ -250,6 +250,10 @@ exact `sync browser-live`, `smoke browser-live`, `calibration build`, and
 turns the redacted JSON plan into a Markdown checklist under runtime artifact
 storage; do not commit that file because ready-source smoke commands can
 contain operator course URLs.
+Use `--source-id "source:getcourse:..."` when the registry contains several
+browser-session courses and the current auth state is meant for one selected
+source. The same scoped selection is available to MCP as `source_ids`, and the
+ready handoff should repeat it under `connected_run_handoff.source_ids`.
 When the same ready source is executed through
 `calibration connected-run --mode live --allow-network`, the runner uses the default
 `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`

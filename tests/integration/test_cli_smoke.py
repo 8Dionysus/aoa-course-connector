@@ -419,6 +419,43 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert any("--max-sources 4" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
 
 
+def test_cli_and_mcp_connected_plan_can_scope_to_selected_source(tmp_path: Path) -> None:
+    source_a = run_cli(tmp_path, "sources", "add", "https://a.operator.edu/teach/control/stream", "--platform", "getcourse", "--title", "A")["source"]
+    source_b = run_cli(tmp_path, "sources", "add", "https://b.operator.edu/teach/control/stream", "--platform", "getcourse", "--title", "B")["source"]
+    state_file = tmp_path / "auth" / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "secret", "domain": ".a.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://a.operator.edu", "localStorage": [{"name": "token", "value": "secret"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    unscoped = run_cli(tmp_path, "preflight", "connected-plan", "--platform", "getcourse")
+    scoped = run_cli(tmp_path, "preflight", "connected-plan", "--platform", "getcourse", "--source-id", str(source_a["source_id"]))
+    readiness = run_cli(tmp_path, "readiness", "--platform", "getcourse", "--source-id", str(source_a["source_id"]))
+    mcp = run_cli(
+        tmp_path,
+        "mcp",
+        "call",
+        "connected_source_plan",
+        json.dumps({"platforms": ["getcourse"], "source_ids": [source_a["source_id"]]}),
+    )
+
+    assert unscoped["ready"] is False
+    assert {source["source_id"] for source in unscoped["source_plans"]} == {source_a["source_id"], source_b["source_id"]}
+    assert scoped["ready"] is True
+    assert scoped["source_ids"] == [source_a["source_id"]]
+    assert [source["source_id"] for source in scoped["source_plans"]] == [source_a["source_id"]]
+    assert str(source_b["source_id"]) not in scoped["connected_run_handoff"]["command"]
+    assert readiness["connected_live_ready"] is True
+    assert readiness["sources"]["selected_source_ids"] == [source_a["source_id"]]
+    assert readiness["sources"]["selected_source_count"] == 1
+    assert mcp["result"]["plan"]["ready"] is True
+    assert mcp["result"]["plan"]["source_ids"] == [source_a["source_id"]]
+
+
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")
     run_cli(tmp_path, "build-index", "--run", "stepik-fixture")

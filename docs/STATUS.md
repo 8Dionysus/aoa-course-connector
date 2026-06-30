@@ -118,6 +118,10 @@ This proves:
   `calibration connected-run --mode live --allow-network` route. Stepik launch
   plans default to bounded live smoke/sync commands, with
   full-course/source-enrichment commands gated behind explicit options.
+- `preflight live`, `preflight connected-plan`, `readiness`, and MCP
+  `source_ids` support source-scoped planning, so one ready registered source
+  can produce its own preflight, sync, smoke, and connected-run handoff without
+  being blocked by another source whose auth state or token is not ready yet.
 - GetCourse and Skillspace connected plans now include browser auth handoff
   packets that group registered sources by host, show state-file readiness, and
   provide capture, redacted inspect, and recheck commands before live sync is

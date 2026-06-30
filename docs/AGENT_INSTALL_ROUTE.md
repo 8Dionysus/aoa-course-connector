@@ -77,8 +77,13 @@
     "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`
     to produce the redacted setup/sync/smoke/calibration handoff with portable
     runtime artifact paths and a `connected_run_handoff`.
-29. Run the plan's exact
+29. In a large registry, add `--source-id "<registered-source-id>"` to
+    `preflight live`, `preflight connected-plan`, or `readiness` when preparing
+    one selected source. MCP uses `source_ids`; the scoped plan should show the
+    same ids in `source_registry.selected_source_ids` and
+    `connected_run_handoff.source_ids`.
+30. Run the plan's exact
     `calibration connected-run --mode live --allow-network` handoff only after
     the connected plan shows the selected sources are ready.
-30. Add live sources only after auth-state and storage roots are local and
+31. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

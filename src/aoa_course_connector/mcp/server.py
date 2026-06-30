@@ -59,6 +59,7 @@ def _connector_readiness_schema() -> dict[str, object]:
                 "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
                 "description": "Optional connected platforms to audit.",
             },
+            "source_ids": _source_ids_schema("Optional source ids to select from the registry for connected planning."),
             "connected_run": _string_schema("Connected calibration run id to inspect."),
             "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
             "state_file": _string_schema("Optional browser storage-state file."),
@@ -96,6 +97,7 @@ def _live_preflight_schema() -> dict[str, object]:
                 "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
                 "description": "Optional connected platforms to inspect.",
             },
+            "source_ids": _source_ids_schema("Optional source ids to inspect from the registry."),
             "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
             "state_file": _string_schema("Optional browser storage-state file."),
             "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
@@ -112,6 +114,7 @@ def _connected_source_plan_schema() -> dict[str, object]:
                 "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
                 "description": "Optional connected platforms to plan.",
             },
+            "source_ids": _source_ids_schema("Optional source ids to select from the registry for this connected plan."),
             "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
             "state_file": _string_schema("Optional browser storage-state file."),
             "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
@@ -151,6 +154,10 @@ def _string_schema(description: str) -> dict[str, str]:
 
 def _integer_schema(description: str, minimum: int) -> dict[str, Any]:
     return {"type": "integer", "minimum": minimum, "description": description}
+
+
+def _source_ids_schema(description: str) -> dict[str, object]:
+    return {"type": "array", "items": {"type": "string"}, "description": description}
 
 
 TOOLS = [
@@ -280,6 +287,7 @@ def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[s
     return live_preflight(
         roots,
         platforms=platform_list,
+        source_ids=_string_array_arg(args.get("source_ids"), tool_name="live_preflight", field_name="source_ids"),
         stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
         browser_state_file=Path(state_file) if state_file else None,
         expect_origin_contains=str(args.get("expect_origin") or "") or None,
@@ -304,6 +312,7 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
         roots,
         runs=runs,
         platforms=platforms,
+        source_ids=_string_array_arg(args.get("source_ids"), tool_name="connector_readiness", field_name="source_ids"),
         connected_run=str(args.get("connected_run") or DEFAULT_CONNECTED_RUN),
         stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
         browser_state_file=Path(state_file) if state_file else None,
@@ -345,6 +354,7 @@ def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) ->
     return connected_source_plan(
         roots,
         platforms=platforms,
+        source_ids=_string_array_arg(args.get("source_ids"), tool_name="connected_source_plan", field_name="source_ids"),
         stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
         browser_state_file=Path(state_file) if state_file else None,
         expect_origin_contains=str(args.get("expect_origin") or "") or None,
@@ -384,6 +394,14 @@ def _platform_arg(value: object, *, tool_name: str) -> list[str] | None:
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return value
     raise ValueError(f"{tool_name} platforms must be an array of strings")
+
+
+def _string_array_arg(value: object, *, tool_name: str, field_name: str) -> list[str] | None:
+    if value is None:
+        return None
+    if isinstance(value, list) and all(isinstance(item, str) for item in value):
+        return value
+    raise ValueError(f"{tool_name} {field_name} must be an array of strings")
 
 
 def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:
