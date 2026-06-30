@@ -281,6 +281,8 @@ def _next_commands(
     commands: list[str] = []
     if not all(bool(storage_exists.get(name)) for name in ["data", "cache", "auth", "artifact"]):
         commands.append("aoa-course init")
+    if any(run_status.get("status") != "ready" for run_status in run_statuses) or connected_run.get("status") != "ok":
+        commands.append(f"aoa-course bootstrap fixture --connected-run {DEFAULT_CONNECTED_RUN}")
     for run_status in run_statuses:
         commands.extend([str(command) for command in run_status.get("next_commands", []) if str(command)])
     if int(source_summary.get("enabled_source_count", 0)) == 0:
@@ -296,8 +298,6 @@ def _next_commands(
         commands.extend([str(command) for command in preflight.get("next_commands", []) if str(command)])
     if not bool(connected_plan.get("ready")):
         commands.extend([str(command) for command in connected_plan.get("next_commands", []) if str(command)])
-    if connected_run.get("status") != "ok":
-        commands.append(f"aoa-course calibration connected-run --mode fixture --run {DEFAULT_CONNECTED_RUN}")
     if not bool(mcp.get("ready")):
         commands.append("aoa-course mcp tools")
     commands.append("aoa-course readiness --run starter-fixture")

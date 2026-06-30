@@ -9,6 +9,7 @@ from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration import (
     build_live_calibration_intake,
     build_live_calibration_packet,
@@ -91,6 +92,17 @@ def build_parser() -> argparse.ArgumentParser:
 
     init = sub.add_parser("init")
     init.set_defaults(func=cmd_init)
+
+    bootstrap = sub.add_parser("bootstrap")
+    bootstrap_sub = bootstrap.add_subparsers(dest="bootstrap_command", required=True)
+    bootstrap_fixture_parser = bootstrap_sub.add_parser("fixture")
+    bootstrap_fixture_parser.add_argument("--run", default=DEFAULT_RUN)
+    bootstrap_fixture_parser.add_argument("--fixture", type=Path)
+    bootstrap_fixture_parser.add_argument("--connected-run", default="connected-calibration")
+    bootstrap_fixture_parser.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    bootstrap_fixture_parser.add_argument("--query")
+    bootstrap_fixture_parser.add_argument("--skip-connected", action="store_true")
+    bootstrap_fixture_parser.set_defaults(func=cmd_bootstrap_fixture)
 
     storage = sub.add_parser("storage")
     storage_sub = storage.add_subparsers(dest="storage_command", required=True)
@@ -586,6 +598,25 @@ def cmd_init(_args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     _emit({"schema": "aoa_course_init_v1", "status": "ok", "created": create_storage_roots(roots), "network_touched": False})
     return 0
+
+
+def cmd_bootstrap_fixture(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
+    receipt = bootstrap_fixture(
+        repo_root,
+        roots,
+        run_id=args.run,
+        fixture=args.fixture,
+        connected_run=args.connected_run,
+        platforms=args.platform,
+        query=args.query,
+        skip_connected=args.skip_connected,
+        mcp_tool_names=tools,
+    )
+    _emit(receipt)
+    return 0 if receipt.get("status") == "ok" else 1
 
 
 def cmd_storage_status(args: argparse.Namespace) -> int:

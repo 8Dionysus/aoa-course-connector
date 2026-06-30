@@ -4,6 +4,7 @@ Run:
 
 ```bash
 aoa-course doctor
+aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik
 aoa-course readiness --run starter-fixture
 aoa-course storage status --measure
 python scripts/validate_connector.py
@@ -12,6 +13,10 @@ python scripts/validate_connector.py
 `readiness` is read-only and does not touch the network. Check
 `operational_ready`, `connected_live_ready`, `lanes`, and `next_commands` before
 rerunning lower-level sync, index, graph, or MCP commands.
+
+If `readiness` reports missing starter artifacts or a missing default
+connected-run receipt, rerun `bootstrap fixture`. The command is fixture-only,
+does not use secrets, and writes only local runtime state.
 
 If query returns no results, rebuild:
 
