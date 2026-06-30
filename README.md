@@ -202,7 +202,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
   --platform stepik \
   --live-scope bounded \
   --query "course-specific question" \
-  --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/connected-source-runbook.md"
+  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 ```
 
 `preflight connected-plan` is read-only. It inspects the source registry and

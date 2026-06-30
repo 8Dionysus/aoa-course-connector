@@ -32,7 +32,7 @@ aoa-course preflight connected-plan \
   --platform stepik \
   --live-scope bounded \
   --query "course-specific question" \
-  --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/connected-source-runbook.md"
+  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 ```
 
 The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
