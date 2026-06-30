@@ -111,6 +111,9 @@
 - Added browser auth handoff packets to connected-source plans so GetCourse and
   Skillspace sources are grouped by host with state-file readiness, auth
   capture, redacted inspect, and connected-plan recheck commands.
+- Added `preflight connected-plan --write-runbook` so the redacted
+  connected-source plan can be written as a runtime Markdown checklist for
+  operator setup, sync, smoke, and calibration.
 - Verified the bounded public Stepik live calibration route through preflight,
   live smoke, answer evidence, timestamp checks, and live calibration packet
   privacy guards.

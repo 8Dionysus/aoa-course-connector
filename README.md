@@ -201,7 +201,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
   --platform getcourse \
   --platform stepik \
   --live-scope bounded \
-  --query "course-specific question"
+  --query "course-specific question" \
+  --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/connected-source-runbook.md"
 ```
 
 `preflight connected-plan` is read-only. It inspects the source registry and
@@ -210,7 +211,10 @@ auth readiness, then emits exact preflight, sync, smoke, and
 agents as MCP `connected_source_plan`. The default `--live-scope bounded`
 keeps Stepik live sync/smoke commands under smoke limits; use
 `--live-scope full-course --include-step-sources` only for an explicit
-operator-selected full-course run.
+operator-selected full-course run. `--write-runbook` writes the same redacted
+handoff as Markdown under runtime artifact storage so an operator or agent can
+execute the setup, sync, smoke, and calibration steps without rereading raw
+JSON.
 
 For GetCourse and Skillspace, the plan also includes
 `browser_auth_handoffs`: one per browser-session platform. Each handoff groups

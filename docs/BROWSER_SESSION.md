@@ -233,12 +233,15 @@ sources, use the read-only connected plan:
 aoa-course preflight connected-plan \
   --platform getcourse \
   --live-scope bounded \
-  --query "your course-specific question"
+  --query "your course-specific question" \
+  --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/getcourse-connected-runbook.md"
 ```
 
 The plan reports which source hosts match the saved storage state and emits the
 exact `sync browser-live`, `smoke browser-live`, and `calibration build`
-commands only for ready sources.
+commands only for ready sources. `--write-runbook` turns the redacted JSON plan
+into a Markdown checklist under runtime artifact storage; do not commit that
+file because ready-source smoke commands can contain operator course URLs.
 
 Its `browser_auth_handoffs` section is the operator/agent checklist for
 blocked browser sources. It groups registered sources by host, shows the
