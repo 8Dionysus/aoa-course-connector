@@ -82,7 +82,10 @@ This proves:
   allowed.
 - Connected-source plans can write a redacted Markdown runbook under runtime
   artifact storage, giving operators and agents a concrete setup, sync, smoke,
-  and calibration checklist without committing private source state.
+  and calibration checklist without committing private source state. Generated
+  preflight, smoke, and calibration packet commands use the portable
+  `${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}` fallback and the
+  real `runs/<run>/calibration/...` artifact layout.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.

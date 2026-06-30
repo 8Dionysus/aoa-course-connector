@@ -120,6 +120,9 @@
 - Added `preflight connected-plan --write-runbook` so the redacted
   connected-source plan can be written as a runtime Markdown checklist for
   operator setup, sync, smoke, and calibration.
+- Hardened generated connected-source plan artifact paths so preflight, smoke,
+  and calibration commands use the portable artifact-root fallback and
+  `runs/<run>/calibration/...` packet layout.
 - Verified the bounded public Stepik live calibration route through preflight,
   live smoke, answer evidence, timestamp checks, and live calibration packet
   privacy guards.

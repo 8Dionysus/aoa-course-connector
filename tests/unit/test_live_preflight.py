@@ -183,7 +183,10 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert any("sync browser-live" in action["command"] for action in stage_actions["live_sync"])
     assert any("smoke browser-live" in action["command"] for action in stage_actions["live_smoke"])
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
-    assert plan["source_plans"][0]["smoke_report_path"].startswith("$AOA_COURSE_ARTIFACT_ROOT/")
+    assert plan["source_plans"][0]["smoke_report_path"].startswith("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/")
+    assert stage_actions["preflight_reports"][0]["artifact_path"] == "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
+    assert stage_actions["calibration_packet"][0]["artifact_path"] == "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
+    assert "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in stage_actions["calibration_packet"][0]["artifact_path"]
     handoff = plan["browser_auth_handoffs"][0]
     assert handoff["platform"] == "getcourse"
     assert handoff["ready"] is True
@@ -281,6 +284,8 @@ def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path
     assert not any("--include-step-sources" in command for command in plan["next_commands"])
     assert any("--max-sections 1" in command for command in plan["next_commands"])
     assert any("calibration build" in command for command in plan["next_commands"])
+    assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke" in command for command in plan["next_commands"])
+    assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in action["artifact_path"] for action in next(stage for stage in plan["stages"] if stage["name"] == "calibration_packet")["actions"])
     assert not any(command.startswith("export STEPIK_API_TOKEN") for command in plan["next_commands"])
 
 
