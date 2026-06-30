@@ -76,6 +76,20 @@ aoa-course sync stepik-live --run stepik-live-sync --full-course --batch-size 20
 aoa-course mcp call sync_status '{"sync_run":"stepik-live-sync","platform":"stepik"}'
 ```
 
+## Smoke Reports
+
+Stepik smoke reports combine source registration, sync, optional index/graph
+builds, answer evidence, and privacy-safe local path reporting.
+
+```bash
+aoa-course smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
+aoa-course smoke stepik-live 67 --run stepik-live-public-smoke --query "Python course"
+```
+
+`smoke stepik-fixture` is safe for CI and fresh-agent validation because it does
+not touch the network. `smoke stepik-live` is an operator action and returns an
+`aoa_course_stepik_smoke_report_v1` payload with `network_touched: true`.
+
 Live materialization stores raw API responses and normalized bundles under
 `AOA_COURSE_DATA_ROOT`; generated indexes and graphs go under
 `AOA_COURSE_ARTIFACT_ROOT`.

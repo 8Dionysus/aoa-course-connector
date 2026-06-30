@@ -24,6 +24,8 @@
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
   index/graph builds, MCP status, and eval coverage.
+- Prove Stepik fixture/live smoke reports that combine registration, sync,
+  artifacts, answer evidence, and privacy-safe local raw API path reporting.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
 
@@ -35,6 +37,7 @@
   status, comments, and discussion markup found by live smoke.
 - Run gated live full-course Stepik sync on an operator-selected authenticated
   course and calibrate permission/source-enrichment behavior.
+- Broaden Stepik live smoke calibration beyond public bounded course checks.
 - Expand Stepik from registered course-id sync into account-level discovery
   where official account scopes expose enough course catalog data.
 - Add semantic/vector index behind the stable keyword index contract.
