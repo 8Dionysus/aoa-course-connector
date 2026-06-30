@@ -14,15 +14,15 @@
 !.connector-state/auth/.gitkeep
 !.connector-state/artifacts/.gitkeep
 
-data/
-cache/
-auth/
-artifacts/
-raw/
-indexes/
-vectors/
-graphs/
-exports/full/
+/data/
+/cache/
+/auth/
+/artifacts/
+/raw/
+/indexes/
+/vectors/
+/graphs/
+/exports/full/
 *.sqlite
 *.sqlite3
 *.parquet
