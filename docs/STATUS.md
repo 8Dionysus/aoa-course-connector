@@ -177,7 +177,10 @@ This proves:
   `execution_options`, and `query_handoff` entries after fixture or gated live
   runs. Query handoff entries now include CLI commands and MCP `mcp_commands`
   for `search`, `lesson_context`, and `evidence_report`, so agents can stay on
-  the MCP surface after a connected run.
+  the MCP surface after a connected run. Partial connected-run receipts also
+  include `repair_lanes` for network gate, source auth/readiness, source
+  selection, source sync, live smoke/selector, and calibration-packet intake
+  failures with concrete next commands.
 
 ## Remaining Goal Work
 

@@ -99,11 +99,13 @@ After any connected run, use `calibration status --run <run>` or MCP
 `connected_run_status` to read the receipt summary without executing network
 work. The `aoa_course_connected_calibration_run_status_v1` status packet
 includes `source_selection`, stage summaries, packet quality, privacy flags,
-failures, next steps, runtime artifact paths, `execution_options`, and
-`query_handoff` entries for the sync/smoke runs that already have local
-indexes, graphs, answer packets, CLI `query`/`answer` commands, and
-`mcp_commands` for MCP `search`, `lesson_context`, and `evidence_report`
-handoffs.
+failures, `repair_lanes`, next steps, runtime artifact paths,
+`execution_options`, and `query_handoff` entries for the sync/smoke runs that
+already have local indexes, graphs, answer packets, CLI `query`/`answer`
+commands, and `mcp_commands` for MCP `search`, `lesson_context`, and
+`evidence_report` handoffs.
+`repair_lanes` turn partial runs into concrete network gate, source readiness,
+source selection, sync, smoke/selector, or packet-intake follow-up commands.
 `execution_options` records the course-specific query, browser `link_pattern`,
 source limit, and live traversal limits used for the run, so later selector or
 retrieval work can tell how broad the calibration actually was.

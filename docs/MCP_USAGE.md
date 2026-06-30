@@ -161,8 +161,11 @@ larger Stepik full-course/source-enrichment route.
 `calibration connected-run`. It returns
 `aoa_course_connected_calibration_run_status_v1` with status, stages,
 artifact paths, `source_selection`, `execution_options`, `query_handoff`,
-packet quality, privacy flags, failures, and next steps from
+packet quality, privacy flags, failures, `repair_lanes`, and next steps from
 `connected_calibration_receipt.json`.
+`repair_lanes` classify partial connected-run failures into network gate,
+source auth/readiness, source selection, sync, live smoke/selector, and
+calibration-packet intake routes with concrete next commands.
 `execution_options` records the query, browser `link_pattern`, source limit,
 and traversal bounds used by the connected run without exposing token values.
 `query_handoff` gives agents the run ids, local index/graph/answer paths, and

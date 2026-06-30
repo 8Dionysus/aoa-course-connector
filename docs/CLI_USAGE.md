@@ -114,8 +114,8 @@ school needs a narrower course/lesson URL glob for live sync, smoke, and the
 connected-run handoff.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network. The status packet includes
-`query_handoff` entries with CLI commands and MCP `mcp_commands` for `search`,
-`lesson_context`, and `evidence_report`.
+`repair_lanes` for partial runs plus `query_handoff` entries with CLI commands
+and MCP `mcp_commands` for `search`, `lesson_context`, and `evidence_report`.
 
 Use `readiness` when an agent or operator needs one read-only route audit before
 continuing. It emits `aoa_course_connector_readiness_v1` with install route
