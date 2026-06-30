@@ -216,6 +216,17 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert any("--link-pattern '*/lessons/*'" in action["command"] for action in stage_actions["live_sync"])
     assert any("--link-pattern '*/lessons/*'" in action["command"] for action in stage_actions["live_smoke"])
     assert plan["link_pattern"] == "*/lessons/*"
+    connected_run = stage_actions["connected_run"][0]
+    assert connected_run["kind"] == "connected_run"
+    assert connected_run["ready"] is True
+    assert connected_run["network_touched"] is True
+    assert connected_run["source_ids"] == [plan["source_plans"][0]["source_id"]]
+    assert "calibration connected-run --mode live --allow-network" in connected_run["command"]
+    assert "--platform getcourse" in connected_run["command"]
+    assert "--source-id" in connected_run["command"]
+    assert "--query 'course-specific question'" in connected_run["command"]
+    assert "--link-pattern '*/lessons/*'" in connected_run["command"]
+    assert plan["connected_run_handoff"] == connected_run
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
     assert plan["source_plans"][0]["smoke_report_path"].startswith("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/")
     assert "--source-id" in plan["source_plans"][0]["sync_command"]
@@ -250,6 +261,10 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     assert plan["platform_plans"][0]["blocked_source_count"] == 1
     assert plan["platform_plans"][0]["blockers"] == ["browser storage state is missing"]
     assert plan["source_plans"][0]["smoke_command"] is None
+    connected_run = next(stage for stage in plan["stages"] if stage["name"] == "connected_run")["actions"][0]
+    assert connected_run["ready"] is False
+    assert "command" not in connected_run
+    assert "skillspace workflow is not ready" in connected_run["blocked_by"]
     handoff = plan["browser_auth_handoffs"][0]
     assert handoff["platform"] == "skillspace"
     assert handoff["ready"] is False
@@ -295,6 +310,7 @@ def test_connected_source_runbook_renders_handoff_without_secret_values(tmp_path
     assert "school.example" in runbook
     assert "capture-browser-state getcourse account" in runbook
     assert "smoke browser-live" in runbook
+    assert "calibration connected-run --mode live --allow-network" in runbook
     assert "calibration build" in runbook
     assert "SUPER_SECRET_COOKIE" not in runbook
     assert "SUPER_SECRET_TOKEN" not in runbook

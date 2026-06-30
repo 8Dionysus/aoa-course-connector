@@ -353,7 +353,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "source_selection", "query_handoff", "link_pattern", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "link_pattern", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -390,7 +390,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network", "--link-pattern", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "--mode fixture", "--allow-network", "--link-pattern", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     for token in [
@@ -436,6 +436,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_connected_calibration_run_status_v1",
         "source_selection",
         "query_handoff",
+        "connected_run_handoff",
         "link-pattern",
         "account.storage-state.json",
         "preflight connected-plan",

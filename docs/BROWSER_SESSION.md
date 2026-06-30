@@ -238,15 +238,17 @@ aoa-course preflight connected-plan \
 ```
 
 The plan reports which source hosts match the saved storage state and emits the
-exact `sync browser-live`, `smoke browser-live`, and `calibration build`
-commands only for ready sources. `--write-runbook` turns the redacted JSON plan
-into a Markdown checklist under runtime artifact storage; do not commit that
-file because ready-source smoke commands can contain operator course URLs.
+exact `sync browser-live`, `smoke browser-live`, `calibration build`, and
+`connected_run_handoff` commands only for ready sources. `--write-runbook`
+turns the redacted JSON plan into a Markdown checklist under runtime artifact
+storage; do not commit that file because ready-source smoke commands can
+contain operator course URLs.
 When the same ready source is executed through
 `calibration connected-run --mode live --allow-network`, the runner uses the default
 `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`
 path unless `--state-file` is supplied, and the receipt records
-`source_selection` plus per-stage source ids.
+`source_selection` plus per-stage source ids. If `--link-pattern` was passed to
+the plan, the connected-run handoff preserves it for live sync and smoke.
 
 Its `browser_auth_handoffs` section is the operator/agent checklist for
 blocked browser sources. It groups registered sources by host, shows the

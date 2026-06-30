@@ -236,17 +236,19 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
 ```
 
 `preflight connected-plan` is read-only. It inspects the source registry and
-auth readiness, then emits exact preflight, sync, smoke, and
-`calibration build` commands with runtime artifact paths. It is also exposed to
-agents as MCP `connected_source_plan`. The default `--live-scope bounded`
-plans GetCourse, Skillspace, and Stepik together, while keeping Stepik live
-sync/smoke commands under smoke limits. Use `--platform` only to narrow a
-diagnostic run, and use `--live-scope full-course --include-step-sources` only
-for an explicit operator-selected full-course run. For browser-session sources,
-`--link-pattern` carries the same lesson/course URL glob into planned sync and
-smoke commands. `--write-runbook` writes the same redacted handoff as Markdown
-under runtime artifact storage so an operator or agent can execute the setup,
-sync, smoke, and calibration steps without rereading raw JSON.
+auth readiness, then emits exact preflight, sync, smoke, `calibration build`,
+and one-command `calibration connected-run --mode live --allow-network`
+handoffs with runtime artifact paths. It is also exposed to agents as MCP
+`connected_source_plan`. The default `--live-scope bounded` plans GetCourse,
+Skillspace, and Stepik together, while keeping Stepik live sync/smoke commands
+under smoke limits. Use `--platform` only to narrow a diagnostic run, and use
+`--live-scope full-course --include-step-sources` only for an explicit
+operator-selected full-course run. For browser-session sources,
+`--link-pattern` carries the same lesson/course URL glob into planned sync,
+smoke, and connected-run commands. `--write-runbook` writes the same redacted
+handoff as Markdown under runtime artifact storage so an operator or agent can
+execute the setup, sync, smoke, and calibration steps without rereading raw
+JSON.
 
 For GetCourse and Skillspace, the plan also includes
 `browser_auth_handoffs`: one per browser-session platform. Each handoff groups
@@ -255,7 +257,8 @@ those hosts, and gives the exact `auth plan-browser-state`,
 `auth capture-browser-state`, `auth inspect-browser-state`, and recheck
 commands needed before live sync can start.
 
-`calibration connected-run` is the executable route over the same contract.
+`calibration connected-run` is the executable route over the same contract; a
+ready connected plan exposes the exact command as `connected_run_handoff`.
 `--mode fixture` runs safe GetCourse, Skillspace, and Stepik fixtures end to
 end, writes smoke reports, a connected-source plan, a runbook, a calibration
 packet, an intake report, and one

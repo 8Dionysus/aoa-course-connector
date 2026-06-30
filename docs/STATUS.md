@@ -97,20 +97,25 @@ This proves:
   MCP `live_preflight` structuredContent.
 - Read-only connected-source launch plans through CLI `preflight
   connected-plan` and MCP `connected_source_plan`, turning source readiness into
-  exact preflight, sync, smoke, and calibration commands without touching the
-  network or printing secrets. Stepik launch plans default to bounded live
-  smoke/sync commands, with full-course/source-enrichment commands gated behind
-  explicit options.
+  exact preflight, sync, smoke, calibration, and
+  `connected_run_handoff` commands without touching the network or printing
+  secrets. Ready handoffs preserve selected platforms, source ids, query, live
+  scope, and browser `link_pattern` in the one-command
+  `calibration connected-run --mode live --allow-network` route. Stepik launch
+  plans default to bounded live smoke/sync commands, with
+  full-course/source-enrichment commands gated behind explicit options.
 - GetCourse and Skillspace connected plans now include browser auth handoff
   packets that group registered sources by host, show state-file readiness, and
   provide capture, redacted inspect, and recheck commands before live sync is
   allowed.
 - Connected-source plans can write a redacted Markdown runbook under runtime
   artifact storage, giving operators and agents a concrete setup, sync, smoke,
-  and calibration checklist without committing private source state. Generated
-  preflight, smoke, and calibration packet commands use the portable
+  calibration, and connected-run checklist without committing private source
+  state. Generated preflight, smoke, connected-run, and calibration packet
+  commands use the portable
   `${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}` fallback and the
-  real `runs/<run>/calibration/...` artifact layout.
+  real `runs/<run>/connected/...` and `runs/<run>/calibration/...` artifact
+  layouts.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.

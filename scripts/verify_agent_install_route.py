@@ -68,6 +68,15 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError("connected_source_plan stdio response did not prove read-only plan")
     if plan_payload.get("live_scope") != "bounded":
         raise StdioVerificationError("connected_source_plan stdio response did not preserve live_scope=bounded")
+    handoff = plan_payload.get("connected_run_handoff")
+    if not isinstance(handoff, dict) or handoff.get("kind") != "connected_run":
+        raise StdioVerificationError("connected_source_plan stdio response missing connected_run_handoff")
+    if handoff.get("network_touched") is not True:
+        raise StdioVerificationError("connected_run_handoff did not declare network-touching execution")
+    if handoff.get("ready") is True and "calibration connected-run --mode live --allow-network" not in str(handoff.get("command") or ""):
+        raise StdioVerificationError("connected_run_handoff ready command did not expose executable live route")
+    if handoff.get("ready") is False and not handoff.get("blocked_by"):
+        raise StdioVerificationError("blocked connected_run_handoff did not explain blockers")
 
 
 def main(argv: list[str] | None = None) -> int:
