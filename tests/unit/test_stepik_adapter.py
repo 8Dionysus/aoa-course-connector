@@ -142,3 +142,79 @@ def test_stepik_client_iter_pages_uses_meta_has_next(monkeypatch) -> None:
 
     assert client.iter_pages("courses") == [{"id": 1}, {"id": 2}]
     assert calls == [{"page": 1}, {"page": 2}]
+
+
+def test_stepik_account_discovery_uses_current_user_enrollments(monkeypatch) -> None:
+    class FakeStepikClient:
+        def __init__(self, **_kwargs: object) -> None:
+            self.calls: list[tuple[str, object]] = []
+
+        def get_resource(self, resource: str, resource_id: int) -> dict[str, object]:
+            self.calls.append((resource, resource_id))
+            assert (resource, resource_id) == ("stepics", 1)
+            return {"users": [{"id": 501, "full_name": "Fixture Learner"}]}
+
+        def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
+            self.calls.append((resource, params or {}, max_pages))
+            assert resource == "enrollments"
+            return [
+                {"id": 7001, "user": 501, "course": 67, "is_active": True},
+                {"id": 7002, "user": 501, "course": 100, "is_active": True},
+            ]
+
+        def get_objects(self, resource: str, resource_ids: list[int], *, batch_size: int = 20) -> list[dict[str, object]]:
+            self.calls.append((resource, tuple(resource_ids), batch_size))
+            assert resource == "courses"
+            return [
+                {"id": 67, "title": "Stepik API Fixture", "canonical_url": "https://stepik.org/course/67"},
+                {"id": 100, "title": "Connected Account Fixture", "canonical_url": "https://stepik.org/course/100"},
+            ]
+
+    instances: list[FakeStepikClient] = []
+
+    def fake_client(**kwargs: object) -> FakeStepikClient:
+        instance = FakeStepikClient(**kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(stepik_client, "StepikClient", fake_client)
+
+    raw = stepik_client.fetch_stepik_account_courses(token="token", max_pages=3, batch_size=10)
+
+    assert raw["schema"] == "aoa_course_stepik_account_discovery_v1"
+    assert raw["account"]["user_id"] == 501
+    assert [course["source_ref"] for course in raw["courses"]] == ["67", "100"]
+    assert raw["courses"][0]["enrollment"]["id"] == 7001
+    assert ("enrollments", {"user": 501}, 3) in instances[0].calls
+    assert ("courses", (67, 100), 10) in instances[0].calls
+
+
+def test_stepik_account_discovery_side_loaded_fallback_keeps_only_enrolled_courses(monkeypatch) -> None:
+    class FakeStepikClient:
+        def get_resource(self, resource: str, resource_id: int) -> dict[str, object]:
+            assert (resource, resource_id) == ("stepics", 1)
+            return {"users": [{"id": 501, "full_name": "Fixture Learner"}]}
+
+        def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
+            assert resource == "enrollments"
+            return []
+
+        def iter_payloads(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
+            assert resource == "courses"
+            return [
+                {
+                    "courses": [
+                        {"id": 67, "title": "Enrolled Course"},
+                        {"id": 200, "title": "Public But Not Enrolled"},
+                    ],
+                    "enrollments": [{"id": 7001, "user": 501, "course": 67, "is_active": True}],
+                    "meta": {"page": 1, "has_next": False},
+                }
+            ]
+
+    monkeypatch.setattr(stepik_client, "StepikClient", lambda **_kwargs: FakeStepikClient())
+
+    raw = stepik_client.fetch_stepik_account_courses(token="token")
+
+    assert [course["source_ref"] for course in raw["courses"]] == ["67"]
+    assert raw["diagnostics"]["side_loaded_page_count"] == 1

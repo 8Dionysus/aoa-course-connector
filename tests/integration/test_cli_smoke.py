@@ -95,6 +95,24 @@ def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     assert answer["evidence_chain"]
 
 
+def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
+    receipt = run_cli(
+        tmp_path,
+        "discover",
+        "stepik-account",
+        "--from-fixture",
+        "--run",
+        "stepik-account-discovery-fixture",
+        "--register",
+    )
+
+    assert receipt["status"] == "ok"
+    assert receipt["course_count"] == 2
+    assert len(receipt["registered_sources"]) == 2
+    registry = run_cli(tmp_path, "sources", "list")["registry"]
+    assert {source["source_ref"] for source in registry["sources"]} == {"67", "100"}
+
+
 def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [
         ("getcourse", "GetCourse bootloader rollback evidence"),

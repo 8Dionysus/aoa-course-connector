@@ -69,6 +69,32 @@ aoa-course sync status --run stepik-sync-fixture --platform stepik
 aoa-course eval stepik-sync
 ```
 
+## Account Discovery Route
+
+When the connected account can expose enrolled courses, discover those course
+refs and register them as local Stepik sources:
+
+```bash
+export STEPIK_API_TOKEN=...
+aoa-course discover stepik-account \
+  --run stepik-account-discovery-live \
+  --token-env STEPIK_API_TOKEN \
+  --register \
+  --max-pages 5
+```
+
+The live route reads the current account through Stepik API auth, discovers
+course IDs from enrollment data, and writes only local source-registry entries.
+It does not store or print the token value.
+
+Safe fixture discovery proves the same registration route without network
+access:
+
+```bash
+aoa-course discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register
+aoa-course sources list
+```
+
 Live source-registry sync uses the registered course refs:
 
 ```bash

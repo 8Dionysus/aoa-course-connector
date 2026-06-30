@@ -45,20 +45,26 @@ class StepikClient:
         return [objects[item] for item in ordered_ids if item in objects]
 
     def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, Any]]:
-        page = 1
         collected: list[dict[str, Any]] = []
-        while True:
-            payload = self.get_collection(resource, {**(params or {}), "page": page})
+        for payload in self.iter_payloads(resource, params, max_pages=max_pages):
             items = payload.get(resource, [])
             if isinstance(items, list):
                 collected.extend(dict(item) for item in items if isinstance(item, dict))
+        return collected
+
+    def iter_payloads(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, Any]]:
+        page = 1
+        payloads: list[dict[str, Any]] = []
+        while True:
+            payload = self.get_collection(resource, {**(params or {}), "page": page})
+            payloads.append(payload)
             meta = payload.get("meta", {}) if isinstance(payload.get("meta"), dict) else {}
             if not meta.get("has_next"):
                 break
             page += 1
             if max_pages is not None and page > max_pages:
                 break
-        return collected
+        return payloads
 
     def _get_json(self, url: str) -> dict[str, Any]:
         request = Request(url, headers=self._headers())
@@ -132,6 +138,62 @@ def fetch_stepik_course(
     }
 
 
+def fetch_stepik_account_courses(
+    *,
+    token: str | None,
+    base_url: str = DEFAULT_STEPIK_API_BASE,
+    timeout: float = 30.0,
+    max_pages: int = 5,
+    batch_size: int = 20,
+) -> dict[str, Any]:
+    if not token:
+        raise ValueError("Stepik account discovery requires an OAuth/API bearer token")
+    client = StepikClient(base_url=base_url, token=token, timeout=timeout)
+    current_user = _current_stepik_user(client)
+    user_id = _int_or_none(current_user.get("id"))
+    enrollment_error = ""
+    enrollments: list[dict[str, Any]] = []
+    if user_id is not None:
+        try:
+            enrollments = client.iter_pages("enrollments", {"user": user_id}, max_pages=max_pages)
+        except Exception as exc:  # pragma: no cover - Stepik account scopes vary.
+            enrollment_error = str(exc)
+    course_ids = _course_ids_from_enrollments(enrollments)
+    courses_by_id: dict[int, dict[str, Any]] = {}
+    if course_ids:
+        courses_by_id.update({int(course["id"]): course for course in client.get_objects("courses", course_ids, batch_size=batch_size) if course.get("id") is not None})
+    side_loaded_payloads = []
+    if not courses_by_id:
+        for payload in client.iter_payloads("courses", max_pages=max_pages):
+            side_loaded_payloads.append(_payload_summary(payload))
+            for enrollment in _payload_items(payload, "enrollments"):
+                if user_id is None or _int_or_none(enrollment.get("user")) == user_id:
+                    enrollments.append(enrollment)
+            wanted = set(_course_ids_from_enrollments(enrollments))
+            for course in _payload_items(payload, "courses"):
+                course_id = _int_or_none(course.get("id"))
+                if course_id is not None and course_id in wanted:
+                    courses_by_id[course_id] = course
+    courses = [_course_discovery_record(courses_by_id[course_id], enrollments) for course_id in sorted(courses_by_id)]
+    return {
+        "schema": "aoa_course_stepik_account_discovery_v1",
+        "fetched_at": _now(),
+        "account": {
+            "user_id": user_id,
+            "profile": {key: current_user.get(key) for key in ["id", "first_name", "last_name", "full_name", "profile"] if key in current_user},
+        },
+        "courses": courses,
+        "enrollment_count": len(enrollments),
+        "limits": {"max_pages": max_pages, "batch_size": batch_size},
+        "diagnostics": {
+            "enrollment_error": enrollment_error,
+            "side_loaded_page_count": len(side_loaded_payloads),
+            "side_loaded_pages": side_loaded_payloads,
+        },
+        "network_touched": True,
+    }
+
+
 def _dedupe_ids(values: list[int]) -> list[int]:
     seen: set[int] = set()
     ids = []
@@ -142,6 +204,67 @@ def _dedupe_ids(values: list[int]) -> list[int]:
         seen.add(item)
         ids.append(item)
     return ids
+
+
+def _current_stepik_user(client: StepikClient) -> dict[str, Any]:
+    payload = client.get_resource("stepics", 1)
+    for key in ["users", "stepics"]:
+        items = payload.get(key)
+        if isinstance(items, list) and items and isinstance(items[0], dict):
+            return dict(items[0])
+    raise ValueError("Stepik response did not include current user from stepics/1")
+
+
+def _course_ids_from_enrollments(enrollments: list[dict[str, Any]]) -> list[int]:
+    ids = []
+    for enrollment in enrollments:
+        course_id = _int_or_none(enrollment.get("course") or enrollment.get("course_id"))
+        if course_id is not None:
+            ids.append(course_id)
+    return _dedupe_ids(ids)
+
+
+def _course_discovery_record(course: dict[str, Any], enrollments: list[dict[str, Any]]) -> dict[str, Any]:
+    course_id = int(course["id"])
+    enrollment = next(
+        (item for item in enrollments if _int_or_none(item.get("course") or item.get("course_id")) == course_id),
+        {},
+    )
+    return {
+        "course_id": course_id,
+        "source_ref": str(course_id),
+        "title": course.get("title") or f"Stepik course {course_id}",
+        "slug": course.get("slug"),
+        "canonical_url": course.get("canonical_url") or f"https://stepik.org/course/{course_id}",
+        "update_date": course.get("update_date"),
+        "enrollment": {
+            key: enrollment.get(key)
+            for key in ["id", "user", "course", "is_active", "is_deleted", "create_date", "update_date"]
+            if key in enrollment
+        },
+    }
+
+
+def _payload_items(payload: dict[str, Any], key: str) -> list[dict[str, Any]]:
+    items = payload.get(key)
+    return [dict(item) for item in items if isinstance(item, dict)] if isinstance(items, list) else []
+
+
+def _payload_summary(payload: dict[str, Any]) -> dict[str, object]:
+    meta = payload.get("meta") if isinstance(payload.get("meta"), dict) else {}
+    return {
+        "page": meta.get("page"),
+        "has_next": bool(meta.get("has_next")),
+        "course_count": len(_payload_items(payload, "courses")),
+        "enrollment_count": len(_payload_items(payload, "enrollments")),
+    }
+
+
+def _int_or_none(value: object) -> int | None:
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
 
 
 def _limited_ids(values: object, limit: int | None) -> list[int]:

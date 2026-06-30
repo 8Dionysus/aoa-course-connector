@@ -11,12 +11,15 @@
 8. Register a Stepik course with `discover stepik 67 --register`, then run
    `sync stepik-fixture --build-artifacts` to prove clean API source-registry
    checkpoints without network access.
-9. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
+9. Run `discover stepik-account --from-fixture --register --source-limit 1` to
+   prove connected-account course discovery can write Stepik sources without
+   live credentials.
+10. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
    sync, index/graph, answer, and privacy-safe report route.
-10. Run browser fixture discovery with `--register` to prove the local source
+11. Run browser fixture discovery with `--register` to prove the local source
    registry route.
-11. Before live browser sources, run `auth plan-browser-state`, capture the
+12. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-12. Add live sources only after auth-state and storage roots are local and
+13. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

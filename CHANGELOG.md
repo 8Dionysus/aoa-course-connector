@@ -54,3 +54,5 @@
   can still satisfy expected-origin checks.
 - Hardened browser progress parsing for aria-valuenow-only progress bars and
   explicit not-started states.
+- Added Stepik account-level course discovery with fixture/live routes and
+  optional source-registry registration for connected accounts.
