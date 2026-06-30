@@ -344,6 +344,8 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert plan["plan"]["link_pattern"] == "*/lessons/*"
     assert any("smoke browser-live" in command for command in plan["plan"]["next_commands"])
     assert any("--link-pattern '*/lessons/*'" in command for command in plan["plan"]["next_commands"])
+    assert "calibration connected-run --mode live --allow-network" in plan["plan"]["connected_run_handoff"]["command"]
+    assert "--link-pattern '*/lessons/*'" in plan["plan"]["connected_run_handoff"]["command"]
     handoff = plan["plan"]["browser_auth_handoffs"][0]
     assert handoff["ready"] is True
     assert handoff["source_hosts"] == ["school.example"]

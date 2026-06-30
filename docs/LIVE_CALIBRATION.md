@@ -36,15 +36,16 @@ aoa-course preflight connected-plan \
 
 The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
 result and lists exact commands for preflight report capture, auth/source
-unblocking, live sync, per-source smoke reports, and `calibration build`. It is
-the safest first handoff when connected-source state is unknown. Its default
-platform set covers GetCourse, Skillspace, and Stepik together, and its default
-`bounded` scope keeps Stepik live sync/smoke under smoke limits. Pass
-`--platform` only to narrow a diagnostic run; switch to `--live-scope
-full-course --include-step-sources` only for an explicit operator-selected
-full-course calibration. For browser-session sources, `--link-pattern` is
-optional and narrows the course/lesson URL glob used by generated live sync and
-smoke commands.
+unblocking, live sync, per-source smoke reports, `calibration build`, and a
+`connected_run_handoff` for `calibration connected-run --mode live
+--allow-network`. It is the safest first handoff when connected-source state is
+unknown. Its default platform set covers GetCourse, Skillspace, and Stepik
+together, and its default `bounded` scope keeps Stepik live sync/smoke under
+smoke limits. Pass `--platform` only to narrow a diagnostic run; switch to
+`--live-scope full-course --include-step-sources` only for an explicit
+operator-selected full-course calibration. For browser-session sources,
+`--link-pattern` is optional and narrows the course/lesson URL glob used by
+generated live sync, smoke, and connected-run commands.
 
 For GetCourse and Skillspace, inspect `browser_auth_handoffs` before running
 any live browser command. The handoff packet groups source readiness by host,
@@ -69,7 +70,9 @@ and a calibration intake report. Fixture mode does not touch the network.
 
 After reviewing `preflight connected-plan` and confirming local auth/source
 readiness, the same route can execute selected live sources only with an
-explicit network gate:
+explicit network gate. Prefer the plan's ready `connected_run_handoff` command
+because it preserves the same platforms, source ids, query, live scope, and
+browser `--link-pattern` selected during preflight:
 
 ```bash
 aoa-course calibration connected-run \

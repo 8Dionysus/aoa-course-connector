@@ -100,12 +100,16 @@ Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the
 connected run receipt all write to portable runtime artifact storage. Use
 `--mode live --allow-network` only after `preflight connected-plan` shows the
-selected sources are ready.
+selected sources are ready; when the plan is ready, its `connected_run_handoff`
+contains the exact `calibration connected-run --mode live --allow-network`
+command for the same platforms, source ids, query, live scope, and browser
+`--link-pattern`.
 By default, `preflight connected-plan` and the MCP `connected_source_plan` route
 cover GetCourse, Skillspace, and Stepik together; pass `--platform` or
 `platforms` only to narrow a diagnostic run.
 For browser-session sources, pass `--link-pattern` or MCP `link_pattern` when a
-school needs a narrower course/lesson URL glob for live sync and smoke.
+school needs a narrower course/lesson URL glob for live sync, smoke, and the
+connected-run handoff.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network.
 

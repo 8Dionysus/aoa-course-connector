@@ -329,9 +329,28 @@ def connected_source_plan(
     blocked_smoke_actions = [action for action in smoke_actions if not action.get("ready")]
     ready = len(ready_platforms) == len(selected_platforms) and not blocked_smoke_actions
     status = "ok" if ready else "partial" if ready_platforms else "warning"
+    connected_run_actions = _connected_run_actions(
+        selected_platforms,
+        source_checks,
+        platform_plans,
+        blocked_smoke_actions,
+        ready=ready,
+        calibration_run=calibration_run,
+        query=query,
+        stepik_token_env=stepik_token_env,
+        browser_state_file=browser_state_file,
+        expect_origin_contains=expect_origin_contains,
+        max_lessons=max_lessons,
+        max_pages=max_pages,
+        max_sources=max_sources,
+        link_pattern=link_pattern,
+        live_scope=selected_live_scope,
+        include_step_sources=include_step_sources,
+    )
     stages = [
         {"name": "preflight_reports", "ready": True, "actions": preflight_actions},
         {"name": "setup_or_unblock", "ready": not setup_actions, "actions": setup_actions},
+        {"name": "connected_run", "ready": ready and bool(connected_run_actions) and bool(connected_run_actions[0].get("ready")), "actions": connected_run_actions},
         {"name": "live_sync", "ready": bool(sync_actions), "actions": sync_actions},
         {"name": "live_smoke", "ready": bool(smoke_actions) and not blocked_smoke_actions, "actions": smoke_actions},
         {"name": "calibration_packet", "ready": bool(calibration_actions), "actions": calibration_actions},
@@ -352,6 +371,7 @@ def connected_source_plan(
         "link_pattern": link_pattern or "",
         "platform_plans": platform_plans,
         "browser_auth_handoffs": browser_auth_handoffs,
+        "connected_run_handoff": connected_run_actions[0] if connected_run_actions else {},
         "source_plans": source_plans,
         "stages": stages,
         "next_commands": _dedupe(
@@ -594,6 +614,105 @@ def _calibration_actions(
             "artifact_path": f"{ARTIFACT_ROOT_EXPR}/runs/{calibration_run}/calibration/live_calibration_packet.json",
         }
     ]
+
+
+def _connected_run_actions(
+    platforms: list[str],
+    source_checks: list[dict[str, object]],
+    platform_plans: list[dict[str, object]],
+    blocked_smoke_actions: list[dict[str, object]],
+    *,
+    ready: bool,
+    calibration_run: str,
+    query: str | None,
+    stepik_token_env: str,
+    browser_state_file: Path | None,
+    expect_origin_contains: str | None,
+    max_lessons: int,
+    max_pages: int,
+    max_sources: int,
+    link_pattern: str | None,
+    live_scope: str,
+    include_step_sources: bool,
+) -> list[dict[str, object]]:
+    ready_source_ids = [
+        str(source.get("source_id"))
+        for source in source_checks
+        if source.get("ready") and source.get("source_id")
+    ]
+    blockers = _connected_run_blockers(platform_plans, blocked_smoke_actions, ready_source_ids=ready_source_ids)
+    if not ready or blockers:
+        return [
+            {
+                "kind": "connected_run",
+                "ready": False,
+                "network_touched": True,
+                "blocked_by": blockers or ["connected source plan is not ready"],
+            }
+        ]
+    parts = [
+        "aoa-course calibration connected-run",
+        f"--mode live",
+        f"--allow-network",
+        f"--run {shlex.quote(calibration_run)}",
+        f"--live-scope {shlex.quote(live_scope)}",
+    ]
+    for platform in platforms:
+        parts.append(f"--platform {shlex.quote(platform)}")
+    for source_id in ready_source_ids:
+        parts.append(f"--source-id {shlex.quote(source_id)}")
+    if query:
+        parts.append(f"--query {shlex.quote(query)}")
+    if "stepik" in platforms:
+        parts.append(f"--stepik-token-env {shlex.quote(stepik_token_env)}")
+    if browser_state_file:
+        parts.append(f"--state-file {shlex.quote(str(browser_state_file.expanduser()))}")
+    if expect_origin_contains:
+        parts.append(f"--expect-origin {shlex.quote(expect_origin_contains)}")
+    parts.extend(
+        [
+            f"--max-lessons {max_lessons}",
+            f"--max-pages {max_pages}",
+            f"--max-sources {max_sources}",
+        ]
+    )
+    if link_pattern:
+        parts.append(f"--link-pattern {shlex.quote(link_pattern)}")
+    if include_step_sources:
+        parts.append("--include-step-sources")
+    command = " ".join(parts)
+    return [
+        {
+            "kind": "connected_run",
+            "ready": True,
+            "network_touched": True,
+            "source_ids": ready_source_ids,
+            "command": command,
+            "artifact_path": f"{ARTIFACT_ROOT_EXPR}/runs/{calibration_run}/connected/connected_calibration_receipt.json",
+        }
+    ]
+
+
+def _connected_run_blockers(
+    platform_plans: list[dict[str, object]],
+    blocked_smoke_actions: list[dict[str, object]],
+    *,
+    ready_source_ids: list[str],
+) -> list[str]:
+    blockers: list[str] = []
+    if not ready_source_ids:
+        blockers.append("no ready sources matched this connected plan")
+    for plan in platform_plans:
+        platform = str(plan.get("platform") or "platform")
+        if not plan.get("ready"):
+            blockers.append(f"{platform} workflow is not ready")
+        for blocker in plan.get("blockers", []):
+            blockers.append(f"{platform}: {blocker}")
+    for action in blocked_smoke_actions:
+        platform = str(action.get("platform") or "platform")
+        for blocker in action.get("blocked_by", []):
+            blockers.append(f"{platform}: {blocker}")
+    return _dedupe(blockers)
 
 
 def _source_plan(source: dict[str, object], sync_actions: list[dict[str, object]], smoke_actions: list[dict[str, object]]) -> dict[str, object]:

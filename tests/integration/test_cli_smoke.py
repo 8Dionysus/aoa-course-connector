@@ -259,8 +259,12 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert any("sync browser-live" in command for command in plan["next_commands"])
     assert any("smoke browser-live" in command for command in plan["next_commands"])
     assert any("--link-pattern '*/lessons/*'" in command for command in plan["next_commands"])
+    assert any("calibration connected-run --mode live --allow-network" in command for command in plan["next_commands"])
+    assert any("--link-pattern '*/lessons/*'" in command for command in plan["next_commands"] if "calibration connected-run" in command)
     assert any("calibration build" in command for command in plan["next_commands"])
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke" in command for command in plan["next_commands"])
+    assert plan["connected_run_handoff"]["ready"] is True
+    assert plan["connected_run_handoff"]["source_ids"] == [plan["source_plans"][0]["source_id"]]
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in action["artifact_path"] for stage in plan["stages"] for action in stage["actions"] if action["kind"] == "calibration")
     handoff = plan["browser_auth_handoffs"][0]
     assert handoff["ready"] is True
@@ -291,6 +295,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert "Browser Auth Handoffs" in runbook
     assert "capture-browser-state getcourse account" in runbook
     assert "preflight connected-plan --platform getcourse" in runbook
+    assert "calibration connected-run --mode live --allow-network" in runbook
     assert "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in runbook
     assert "secret" not in runbook
 

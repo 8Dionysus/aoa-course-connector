@@ -130,12 +130,14 @@ not included in `structuredContent`.
 
 `connected_source_plan` is also read-only and returns `network_touched: false`.
 It wraps the live preflight report into an operator handoff plan with exact
-preflight-report, source sync, per-source smoke, and `calibration build`
-commands. Agents should use it before connected live work so blocked sources,
-missing auth state, missing Stepik token env, runtime report paths, and
-calibration packet inputs are explicit before network-touching commands run.
+preflight-report, source sync, per-source smoke, `calibration build`, and
+`connected_run_handoff` commands. Agents should use it before connected live
+work so blocked sources, missing auth state, missing Stepik token env, runtime
+report paths, and calibration packet inputs are explicit before
+network-touching commands run.
 For browser-session platforms, pass `link_pattern` when a school needs a
-narrower course/lesson URL glob in live sync and smoke commands.
+narrower course/lesson URL glob in live sync, smoke, and connected-run
+commands.
 For browser-session platforms, read `browser_auth_handoffs` first: it groups
 GetCourse/Skillspace sources by host, reports missing or mismatched
 storage-state, and provides the exact auth capture, redacted inspect, and

@@ -70,8 +70,9 @@
 27. Run `preflight connected-plan --write-runbook
     "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`
     to produce the redacted setup/sync/smoke/calibration handoff with portable
-    runtime artifact paths.
-28. Run `calibration connected-run --mode live --allow-network` only after the
-    connected plan shows the selected sources are ready.
+    runtime artifact paths and a `connected_run_handoff`.
+28. Run the plan's exact
+    `calibration connected-run --mode live --allow-network` handoff only after
+    the connected plan shows the selected sources are ready.
 29. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

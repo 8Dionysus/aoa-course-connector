@@ -139,7 +139,7 @@ TOOLS = [
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
-    {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
+    {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, connected-run, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
     {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
     {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
