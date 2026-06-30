@@ -68,6 +68,7 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert hint["source_refresh"]["access_mode"] == "public_api"
     assert "preflight connected-plan --platform stepik" in hint["source_refresh"]["preflight_command"]
     assert "sync stepik-live" in hint["source_refresh"]["sync_command"]
+    assert f"--source-id {source['source_id']}" in hint["source_refresh"]["sync_command"]
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
 
 
@@ -80,6 +81,26 @@ def test_stepik_fixture_sync_records_bad_source_ref(tmp_path: Path) -> None:
     checkpoint = receipt["failed_sources"][0]
     assert checkpoint["platform"] == "stepik"
     assert "cannot parse Stepik course id" in checkpoint["error"]
+
+
+def test_stepik_fixture_sync_can_target_one_source_id(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    first, _path, _state = upsert_source(storage.data, "stepik", "67", "Fixture Stepik Source", access_mode="public_api")
+    second, _path, _state = upsert_source(storage.data, "stepik", "not-a-course", "Broken Stepik Source", access_mode="public_api")
+
+    receipt = sync_stepik_fixture_sources(
+        storage,
+        sync_run_id="stepik-source-scoped-sync",
+        source_ids=[str(first["source_id"])],
+        build_artifacts=True,
+    )
+
+    assert receipt["status"] == "ok"
+    assert receipt["source_count"] == 1
+    assert receipt["synced_count"] == 1
+    assert receipt["failed_count"] == 0
+    assert receipt["synced_sources"][0]["source_id"] == first["source_id"]
+    assert receipt["synced_sources"][0]["source_id"] != second["source_id"]
 
 
 def test_stepik_fixture_sync_rejects_parseable_non_fixture_course(tmp_path: Path) -> None:

@@ -133,3 +133,6 @@
   hints into a refresh cycle plan, execute fixture-backed source refreshes, pick
   the new checkpoint run, rebuild indexes/graphs, and compare refreshed answer
   evidence before gated live execution.
+- Added `--source-id` scoped sync support and source-scoped connected-plan
+  commands so incremental refresh can target one registry source instead of a
+  whole platform batch.

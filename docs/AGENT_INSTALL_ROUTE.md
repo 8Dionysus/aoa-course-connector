@@ -9,8 +9,8 @@
 7. Build the semantic index with `build-semantic-index` and run at least one
    `--mode hybrid` answer to prove the vector contract.
 8. Register a Stepik course with `discover stepik 67 --register`, then run
-   `sync stepik-fixture --build-artifacts` to prove clean API source-registry
-   checkpoints without network access.
+   `sync stepik-fixture --source-id "<registered-source-id>" --build-artifacts`
+   to prove source-scoped clean API checkpoints without network access.
 9. Run `discover stepik-account --from-fixture --register --source-limit 1` to
    prove connected-account course discovery can write Stepik sources without
    live credentials.

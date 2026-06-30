@@ -286,6 +286,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_fixture = sync_sub.add_parser("browser-fixture")
     sync_fixture.add_argument("--run", default="browser-sync-fixture")
     sync_fixture.add_argument("--platform", choices=["getcourse", "skillspace"], action="append")
+    sync_fixture.add_argument("--source-id", action="append")
     sync_fixture.add_argument("--max-lessons", type=int, default=20)
     sync_fixture.add_argument("--link-pattern")
     sync_fixture.add_argument("--source-limit", type=int)
@@ -294,6 +295,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_live = sync_sub.add_parser("browser-live")
     sync_live.add_argument("--run", default="browser-live-sync")
     sync_live.add_argument("--platform", choices=["getcourse", "skillspace"], action="append")
+    sync_live.add_argument("--source-id", action="append")
     sync_live.add_argument("--state-file", type=Path)
     sync_live.add_argument("--wait-until", default="networkidle")
     sync_live.add_argument("--max-lessons", type=int, default=20)
@@ -303,11 +305,13 @@ def build_parser() -> argparse.ArgumentParser:
     sync_live.set_defaults(func=cmd_sync_browser_live)
     sync_stepik_fixture = sync_sub.add_parser("stepik-fixture")
     sync_stepik_fixture.add_argument("--run", default="stepik-sync-fixture")
+    sync_stepik_fixture.add_argument("--source-id", action="append")
     sync_stepik_fixture.add_argument("--source-limit", type=int)
     sync_stepik_fixture.add_argument("--build-artifacts", action="store_true")
     sync_stepik_fixture.set_defaults(func=cmd_sync_stepik_fixture)
     sync_stepik_live = sync_sub.add_parser("stepik-live")
     sync_stepik_live.add_argument("--run", default="stepik-live-sync")
+    sync_stepik_live.add_argument("--source-id", action="append")
     sync_stepik_live.add_argument("--token-env", default="STEPIK_API_TOKEN")
     sync_stepik_live.add_argument("--max-sections", type=int, default=1)
     sync_stepik_live.add_argument("--max-units-per-section", type=int, default=2)
@@ -929,6 +933,7 @@ def cmd_sync_browser_fixture(args: argparse.Namespace) -> int:
         roots,
         sync_run_id=args.run,
         platforms=args.platform,
+        source_ids=args.source_id,
         max_lessons=args.max_lessons,
         link_pattern=args.link_pattern,
         source_limit=args.source_limit,
@@ -944,6 +949,7 @@ def cmd_sync_browser_live(args: argparse.Namespace) -> int:
         roots,
         sync_run_id=args.run,
         platforms=args.platform,
+        source_ids=args.source_id,
         state_file=args.state_file,
         wait_until=args.wait_until,
         max_lessons=args.max_lessons,
@@ -960,6 +966,7 @@ def cmd_sync_stepik_fixture(args: argparse.Namespace) -> int:
     receipt = sync_stepik_fixture_sources(
         roots,
         sync_run_id=args.run,
+        source_ids=args.source_id,
         source_limit=args.source_limit,
         build_artifacts=args.build_artifacts,
     )
@@ -981,6 +988,7 @@ def cmd_sync_stepik_live(args: argparse.Namespace) -> int:
         max_steps_per_lesson=max_steps,
         batch_size=args.batch_size,
         include_step_sources=args.include_step_sources,
+        source_ids=args.source_id,
         source_limit=args.source_limit,
         build_artifacts=args.build_artifacts,
     )

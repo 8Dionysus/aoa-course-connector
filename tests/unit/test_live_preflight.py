@@ -180,10 +180,11 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
         for stage in plan["stages"]
     }
     assert any("preflight live --platform getcourse" in action["command"] for action in stage_actions["preflight_reports"])
-    assert any("sync browser-live" in action["command"] for action in stage_actions["live_sync"])
+    assert any("sync browser-live" in action["command"] and "--source-id" in action["command"] for action in stage_actions["live_sync"])
     assert any("smoke browser-live" in action["command"] for action in stage_actions["live_smoke"])
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
     assert plan["source_plans"][0]["smoke_report_path"].startswith("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/")
+    assert "--source-id" in plan["source_plans"][0]["sync_command"]
     assert stage_actions["preflight_reports"][0]["artifact_path"] == "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
     assert stage_actions["calibration_packet"][0]["artifact_path"] == "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
     assert "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in stage_actions["calibration_packet"][0]["artifact_path"]
@@ -277,8 +278,9 @@ def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path
     assert plan["live_scope"] == "bounded"
     assert plan["include_step_sources"] is False
     assert plan["platform_plans"][0]["ready_source_count"] == 1
-    assert any("sync stepik-live" in command for command in plan["next_commands"])
+    assert any("sync stepik-live" in command and "--source-id" in command for command in plan["next_commands"])
     assert any("smoke stepik-live 67" in command for command in plan["next_commands"])
+    assert "--source-id" in plan["source_plans"][0]["sync_command"]
     assert any("--access-mode public_api" in command for command in plan["next_commands"])
     assert not any("--full-course" in command for command in plan["next_commands"])
     assert not any("--include-step-sources" in command for command in plan["next_commands"])

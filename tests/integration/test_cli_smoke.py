@@ -229,8 +229,20 @@ def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
 
 
 def test_cli_refresh_query_fixture_cycle(tmp_path: Path) -> None:
-    run_cli(tmp_path, "sources", "add", "67", "--platform", "stepik", "--title", "Stepik Refresh Fixture")
-    sync = run_cli(tmp_path, "sync", "stepik-fixture", "--run", "stepik-refresh-initial", "--build-artifacts")
+    source = run_cli(tmp_path, "sources", "add", "67", "--platform", "stepik", "--title", "Stepik Refresh Fixture")["source"]
+    run_cli(tmp_path, "sources", "add", "not-a-course", "--platform", "stepik", "--title", "Broken Stepik Fixture")
+    sync = run_cli(
+        tmp_path,
+        "sync",
+        "stepik-fixture",
+        "--run",
+        "stepik-refresh-initial",
+        "--source-id",
+        str(source["source_id"]),
+        "--build-artifacts",
+    )
+    assert sync["source_count"] == 1
+    assert sync["failed_count"] == 0
     initial_run = sync["synced_sources"][0]["run_id"]
     run_cli(tmp_path, "build-semantic-index", "--run", str(initial_run))
 

@@ -314,6 +314,7 @@ def _refresh_hint(
         f"aoa-course build-graph --run {shlex.quote(run_id)}",
     ]
     source_refresh = _source_refresh_hint(
+        source_id=source_id,
         platform=platform,
         source_ref=source_ref,
         access_mode=access_mode,
@@ -337,6 +338,7 @@ def _refresh_hint(
 
 def _source_refresh_hint(
     *,
+    source_id: str,
     platform: str,
     source_ref: str,
     access_mode: str,
@@ -362,7 +364,7 @@ def _source_refresh_hint(
         "blocked_by": [] if registry_match else ["source_not_found_in_local_registry"],
     }
     if registry_match:
-        payload["sync_command"] = _sync_command(platform, access_mode)
+        payload["sync_command"] = _sync_command(platform, access_mode, source_id=source_id)
         payload["commands_touch_network"] = True
         payload["post_sync_guidance"] = "read sync status, pick the synced checkpoint run_id, then rerun answer/evidence_report against that run"
     elif platform in BROWSER_REFRESH_PLATFORMS and source_ref:
@@ -372,11 +374,12 @@ def _source_refresh_hint(
     return payload
 
 
-def _sync_command(platform: str, access_mode: str) -> str:
+def _sync_command(platform: str, access_mode: str, *, source_id: str) -> str:
+    source_arg = f" --source-id {shlex.quote(source_id)}" if source_id else ""
     if platform in BROWSER_REFRESH_PLATFORMS:
-        return f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform} --build-artifacts"
+        return f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform}{source_arg} --build-artifacts"
     if platform == "stepik":
-        command = "aoa-course sync stepik-live --run stepik-live-sync --build-artifacts"
+        command = f"aoa-course sync stepik-live --run stepik-live-sync{source_arg} --build-artifacts"
         if access_mode in {"api_token", "oauth"}:
             command += " --token-env STEPIK_API_TOKEN"
         return command

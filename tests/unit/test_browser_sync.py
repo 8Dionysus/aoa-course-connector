@@ -5,6 +5,7 @@ from pathlib import Path
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.discover import discover_browser_fixture
 from aoa_course_connector.query import render_answer_packet
+from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.sync import load_sync_status, sync_browser_fixture_sources
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
@@ -47,6 +48,7 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert hint["source_refresh"]["registry_match"] is True
     assert "preflight connected-plan --platform getcourse" in hint["source_refresh"]["preflight_command"]
     assert "sync browser-live" in hint["source_refresh"]["sync_command"]
+    assert f"--source-id {checkpoint['source_id']}" in hint["source_refresh"]["sync_command"]
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
 
 
@@ -85,3 +87,23 @@ def test_sync_checkpoints_keep_per_run_source_history(tmp_path: Path) -> None:
     assert sync_b["ok_count"] == 1
     assert sync_b["checkpoints"][0]["run_id"] == "sync-b-source"
     assert all_status["checkpoint_count"] == 2
+
+
+def test_browser_fixture_sync_can_target_one_source_id(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    first, _path, _state = upsert_source(storage.data, "getcourse", "https://school.example/one", "One")
+    second, _path, _state = upsert_source(storage.data, "getcourse", "https://school.example/two", "Two")
+
+    receipt = sync_browser_fixture_sources(
+        storage,
+        sync_run_id="browser-source-scoped-sync",
+        platforms=["getcourse"],
+        source_ids=[str(second["source_id"])],
+        build_artifacts=True,
+    )
+
+    assert receipt["status"] == "ok"
+    assert receipt["source_count"] == 1
+    assert receipt["synced_count"] == 1
+    assert receipt["synced_sources"][0]["source_id"] == second["source_id"]
+    assert receipt["synced_sources"][0]["source_id"] != first["source_id"]

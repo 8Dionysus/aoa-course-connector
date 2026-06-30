@@ -289,6 +289,7 @@ def connected_source_plan(
     setup_actions = _setup_actions(preflight)
     sync_actions = _sync_actions(
         selected_platforms,
+        source_checks,
         workflow_by_key,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
@@ -312,7 +313,7 @@ def connected_source_plan(
         smoke_actions,
         calibration_run=calibration_run,
     )
-    source_plans = [_source_plan(check, smoke_actions) for check in source_checks]
+    source_plans = [_source_plan(check, sync_actions, smoke_actions) for check in source_checks]
     platform_plans = _platform_plans(selected_platforms, source_checks, workflow_by_key)
     browser_auth_handoffs = _browser_auth_handoffs(
         selected_platforms,
@@ -436,6 +437,7 @@ def _setup_kind(command: str) -> str:
 
 def _sync_actions(
     platforms: list[str],
+    source_checks: list[dict[str, object]],
     workflow_by_key: dict[tuple[str, str], dict[str, object]],
     *,
     stepik_token_env: str,
@@ -449,20 +451,48 @@ def _sync_actions(
         workflow = workflow_by_key.get(("browser_live_sync", platform), {})
         if not workflow.get("ready"):
             continue
-        command = (
-            f"aoa-course sync browser-live --run {platform}-live-sync --platform {platform} "
-            f"--state-file {_state_file_arg(platform, browser_state_file)} --max-lessons {max_lessons} --build-artifacts"
-        )
-        actions.append({"kind": "sync", "platform": platform, "ready": True, "network_touched": True, "command": command})
+        for source in [item for item in source_checks if item.get("platform") == platform and item.get("ready")]:
+            slug = _source_slug(source)
+            source_id = str(source.get("source_id") or "")
+            command = (
+                f"aoa-course sync browser-live --run {platform}-live-sync-{slug} --platform {platform} "
+                f"--source-id {shlex.quote(source_id)} --state-file {_state_file_arg(platform, browser_state_file)} "
+                f"--max-lessons {max_lessons} --build-artifacts"
+            )
+            actions.append(
+                {
+                    "kind": "sync",
+                    "platform": platform,
+                    "source_id": source_id,
+                    "source_ref": source.get("source_ref"),
+                    "ready": True,
+                    "network_touched": True,
+                    "command": command,
+                }
+            )
     if "stepik" in platforms:
         workflow = workflow_by_key.get(("stepik_source_sync", "stepik"), {})
         if workflow.get("ready"):
-            command = _stepik_sync_command(
-                stepik_token_env=stepik_token_env,
-                live_scope=live_scope,
-                include_step_sources=include_step_sources,
-            )
-            actions.append({"kind": "sync", "platform": "stepik", "ready": True, "network_touched": True, "command": command})
+            for source in [item for item in source_checks if item.get("platform") == "stepik" and item.get("ready")]:
+                source_id = str(source.get("source_id") or "")
+                command = _stepik_sync_command(
+                    stepik_token_env=stepik_token_env,
+                    live_scope=live_scope,
+                    include_step_sources=include_step_sources,
+                    source_id=source_id,
+                    run_suffix=_source_slug(source),
+                )
+                actions.append(
+                    {
+                        "kind": "sync",
+                        "platform": "stepik",
+                        "source_id": source_id,
+                        "source_ref": source.get("source_ref"),
+                        "ready": True,
+                        "network_touched": True,
+                        "command": command,
+                    }
+                )
     return actions
 
 
@@ -560,8 +590,9 @@ def _calibration_actions(
     ]
 
 
-def _source_plan(source: dict[str, object], smoke_actions: list[dict[str, object]]) -> dict[str, object]:
+def _source_plan(source: dict[str, object], sync_actions: list[dict[str, object]], smoke_actions: list[dict[str, object]]) -> dict[str, object]:
     source_id = source.get("source_id")
+    sync = next((action for action in sync_actions if action.get("source_id") == source_id), None)
     smoke = next((action for action in smoke_actions if action.get("source_id") == source_id), None)
     return {
         "platform": source.get("platform"),
@@ -572,6 +603,7 @@ def _source_plan(source: dict[str, object], smoke_actions: list[dict[str, object
         "enabled": source.get("enabled"),
         "ready": source.get("ready"),
         "blockers": source.get("blockers", []),
+        "sync_command": sync.get("command") if sync else None,
         "smoke_command": smoke.get("command") if smoke else None,
         "smoke_report_path": smoke.get("artifact_path") if smoke else None,
     }
@@ -747,11 +779,16 @@ def _stepik_sync_command(
     stepik_token_env: str,
     live_scope: str,
     include_step_sources: bool,
+    source_id: str | None = None,
+    run_suffix: str | None = None,
 ) -> str:
+    run_id = f"stepik-live-sync-{run_suffix}" if run_suffix else "stepik-live-sync"
     command = (
-        "aoa-course sync stepik-live --run stepik-live-sync "
+        f"aoa-course sync stepik-live --run {shlex.quote(run_id)} "
         f"--token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
     )
+    if source_id:
+        command += f"--source-id {shlex.quote(source_id)} "
     if live_scope == "full-course":
         command += "--full-course "
     else:

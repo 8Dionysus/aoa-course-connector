@@ -70,10 +70,13 @@ Safe fixture sync proves the same registry/checkpoint/artifact route without
 touching the network:
 
 ```bash
-aoa-course sync stepik-fixture --run stepik-sync-fixture --build-artifacts
+aoa-course sync stepik-fixture --run stepik-sync-fixture --source-id "source:stepik:..." --build-artifacts
 aoa-course sync status --run stepik-sync-fixture --platform stepik
 aoa-course eval stepik-sync
 ```
+
+Use `--source-id` for agent refresh of one selected course. Omit it only for an
+intentional batch sync across all matching registered Stepik sources.
 
 ## Account Discovery Route
 
@@ -133,7 +136,7 @@ aoa-course sources list
 Live source-registry sync uses the registered course refs:
 
 ```bash
-aoa-course sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
+aoa-course sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
 aoa-course mcp call sync_status '{"sync_run":"stepik-live-sync","platform":"stepik"}'
 ```
 
