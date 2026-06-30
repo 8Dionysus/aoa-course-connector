@@ -98,6 +98,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "refresh_plan", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "keyword"}}},
         {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -112,7 +113,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
@@ -120,6 +121,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[4]["result"]["structuredContent"]["refresh"]["network_touched"] is False
     assert responses[5]["result"]["structuredContent"]["preflight"]["network_touched"] is False
     assert responses[6]["result"]["structuredContent"]["plan"]["network_touched"] is False
+    assert responses[7]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -450,6 +452,13 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert Path(str(connected["artifacts"]["packet_path"])).is_file()
     assert Path(str(connected["artifacts"]["intake_path"])).is_file()
     assert Path(str(connected["receipt_path"])).is_file()
+    connected_status = run_cli(tmp_path, "calibration", "status", "--run", "connected-fixture-cli")
+    assert connected_status["schema"] == "aoa_course_connected_calibration_run_status_v1"
+    assert connected_status["status"] == "ok"
+    assert connected_status["read_only"] is True
+    mcp_connected_status = run_cli(tmp_path, "mcp", "call", "connected_run_status", '{"run":"connected-fixture-cli"}')
+    assert mcp_connected_status["result"]["connected_run"]["status"] == "ok"
+    assert mcp_connected_status["result"]["connected_run"]["network_touched"] is False
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

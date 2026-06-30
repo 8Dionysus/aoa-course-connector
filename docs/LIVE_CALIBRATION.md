@@ -56,6 +56,7 @@ connected calibration route:
 
 ```bash
 aoa-course calibration connected-run --mode fixture --run connected-fixture-proof
+aoa-course calibration status --run connected-fixture-proof
 ```
 
 It writes an `aoa_course_connected_calibration_run_receipt_v1` under
@@ -83,6 +84,12 @@ the resulting local receipt and calibration packet were `ok`, contained answer
 evidence and timestamps, and kept raw payloads and secret values out of the
 packet. Treat that as route proof, not a guarantee that every authenticated or
 full-course Stepik source behaves the same.
+
+After any connected run, use `calibration status --run <run>` or MCP
+`connected_run_status` to read the receipt summary without executing network
+work. The `aoa_course_connected_calibration_run_status_v1` status packet
+includes stage summaries, packet quality, privacy flags, failures, next steps,
+and runtime artifact paths.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"

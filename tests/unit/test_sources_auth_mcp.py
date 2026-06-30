@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 
 from aoa_course_connector.auth import browser_state_plan, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
@@ -156,6 +157,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "connected_run_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
@@ -188,6 +190,14 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert plan["plan"]["network_touched"] is False
     assert plan["plan"]["live_scope"] == "bounded"
     assert plan["plan"]["source_plans"]
+    missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
+    assert missing_connected_run["tool"] == "connected_run_status"
+    assert missing_connected_run["connected_run"]["status"] == "missing"
+    run_connected_calibration(storage, run_id="mcp-connected-fixture", mode="fixture", platforms=["stepik"])
+    connected_run = call_tool("connected_run_status", {"run": "mcp-connected-fixture"})
+    assert connected_run["connected_run"]["schema"] == "aoa_course_connected_calibration_run_status_v1"
+    assert connected_run["connected_run"]["status"] == "ok"
+    assert connected_run["connected_run"]["network_touched"] is False
     refresh = call_tool("refresh_plan", {"query": "rollback", "run": "starter-fixture", "mode": "keyword"})
     assert refresh["tool"] == "refresh_plan"
     assert refresh["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
@@ -284,6 +294,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
+    connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
     assert search_tool["inputSchema"]["required"] == ["query"]
@@ -291,6 +302,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
+    assert connected_run_tool["inputSchema"]["required"] == []
     assert evidence_tool["inputSchema"]["required"] == ["query"]
     assert refresh_tool["inputSchema"]["required"] == ["query"]
 
@@ -344,3 +356,11 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_plan["result"]["structuredContent"]["plan"]["network_touched"] is False
     assert connected_plan["result"]["structuredContent"]["plan"]["live_scope"] == "full-course"
     assert connected_plan["result"]["structuredContent"]["plan"]["include_step_sources"] is True
+    connected_status = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 42,
+        "method": "tools/call",
+        "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}},
+    })
+    assert connected_status["result"]["structuredContent"]["tool"] == "connected_run_status"
+    assert connected_status["result"]["structuredContent"]["connected_run"]["status"] == "missing"

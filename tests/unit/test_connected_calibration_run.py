@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 import aoa_course_connector.calibration.connected_run as connected_run_module
-from aoa_course_connector.calibration.connected_run import run_connected_calibration
+from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.smoke.stepik import smoke_stepik_fixture
 from aoa_course_connector.sources import upsert_source
@@ -41,6 +41,25 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET" not in rendered
     assert "gho_" not in rendered
+    status = load_connected_calibration_status(storage, run_id="connected-fixture-proof")
+    assert status["schema"] == "aoa_course_connected_calibration_run_status_v1"
+    assert status["status"] == "ok"
+    assert status["exists"] is True
+    assert status["receipt_schema"] == "aoa_course_connected_calibration_run_receipt_v1"
+    assert status["network_touched"] is False
+    assert status["artifacts"]["packet_path"] == receipt["artifacts"]["packet_path"]
+    assert status["privacy"]["contains_secret_values"] is False
+
+
+def test_connected_calibration_status_reports_missing_receipt(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+
+    status = load_connected_calibration_status(storage, run_id="missing-connected-run")
+
+    assert status["schema"] == "aoa_course_connected_calibration_run_status_v1"
+    assert status["status"] == "missing"
+    assert status["exists"] is False
+    assert status["network_touched"] is False
 
 
 def test_connected_calibration_live_requires_explicit_network_gate(tmp_path: Path) -> None:

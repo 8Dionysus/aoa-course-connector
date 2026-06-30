@@ -37,6 +37,74 @@ BROWSER_PLATFORMS = {"getcourse", "skillspace"}
 CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 RUN_MODES = {"fixture", "live"}
 LIVE_SCOPES = {"bounded", "full-course"}
+CONNECTED_RECEIPT_NAME = "connected_calibration_receipt.json"
+
+
+def connected_calibration_receipt_path(roots: StorageRoots, run_id: str) -> Path:
+    """Return the runtime receipt path for a connected calibration run."""
+
+    return _connected_dir(roots, run_id) / CONNECTED_RECEIPT_NAME
+
+
+def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> dict[str, object]:
+    """Load a redacted status packet for a connected calibration receipt."""
+
+    path = connected_calibration_receipt_path(roots, run_id)
+    if not path.exists():
+        return {
+            "schema": "aoa_course_connected_calibration_run_status_v1",
+            "status": "missing",
+            "exists": False,
+            "run_id": run_id,
+            "receipt_path": str(path),
+            "network_touched": False,
+            "read_only": True,
+        }
+    try:
+        receipt = json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        return {
+            "schema": "aoa_course_connected_calibration_run_status_v1",
+            "status": "error",
+            "exists": True,
+            "run_id": run_id,
+            "receipt_path": str(path),
+            "error": f"invalid connected calibration receipt JSON: {exc}",
+            "network_touched": False,
+            "read_only": True,
+        }
+    artifacts = receipt.get("artifacts") if isinstance(receipt.get("artifacts"), dict) else {}
+    return {
+        "schema": "aoa_course_connected_calibration_run_status_v1",
+        "status": receipt.get("status") or "unknown",
+        "exists": True,
+        "run_id": receipt.get("run_id") or run_id,
+        "receipt_schema": receipt.get("schema"),
+        "receipt_path": str(path),
+        "mode": receipt.get("mode"),
+        "platforms": receipt.get("platforms", []),
+        "source_ids": receipt.get("source_ids", []),
+        "live_scope": receipt.get("live_scope"),
+        "include_step_sources": bool(receipt.get("include_step_sources")),
+        "allow_network": bool(receipt.get("allow_network")),
+        "network_touched": bool(receipt.get("network_touched")),
+        "stage_count": receipt.get("stage_count"),
+        "stages": receipt.get("stages", []),
+        "quality": receipt.get("quality") if isinstance(receipt.get("quality"), dict) else {},
+        "privacy": receipt.get("privacy") if isinstance(receipt.get("privacy"), dict) else {},
+        "failures": receipt.get("failures", []),
+        "next_steps": receipt.get("next_steps", []),
+        "artifacts": {
+            "plan_path": artifacts.get("plan_path"),
+            "runbook_path": artifacts.get("runbook_path"),
+            "preflight_report_paths": artifacts.get("preflight_report_paths", []),
+            "smoke_report_paths": artifacts.get("smoke_report_paths", []),
+            "packet_path": artifacts.get("packet_path"),
+            "intake_path": artifacts.get("intake_path"),
+            "sync_receipt_paths": artifacts.get("sync_receipt_paths", []),
+        },
+        "read_only": True,
+    }
 
 
 def run_connected_calibration(
@@ -800,7 +868,7 @@ def _write_json(path: Path, payload: dict[str, object]) -> Path:
 
 
 def _write_receipt(roots: StorageRoots, run_id: str, receipt: dict[str, object]) -> Path:
-    path = _connected_dir(roots, run_id) / "connected_calibration_receipt.json"
+    path = connected_calibration_receipt_path(roots, run_id)
     _write_json(path, {**receipt, "receipt_path": str(path)})
     return path
 

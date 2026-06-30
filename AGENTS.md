@@ -85,6 +85,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval browser-transcripts
 PYTHONPATH=src python -m aoa_course_connector.cli eval semantic-index
 PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run --mode fixture --run connected-fixture-proof
+PYTHONPATH=src python -m aoa_course_connector.cli calibration status --run connected-fixture-proof
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build --help
 PYTHONPATH=src python -m aoa_course_connector.cli calibration intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/live-calibration-fixture/calibration/live_calibration_packet.json" --run live-calibration-intake
 PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcourse https://school.example
@@ -105,6 +106,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call graph_neighbors '{"no
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-agent","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | PYTHONPATH=src python -m aoa_course_connector.mcp.server
 ```
