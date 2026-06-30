@@ -156,6 +156,67 @@ def write_live_calibration_packet(roots: StorageRoots, packet: dict[str, object]
     return path
 
 
+def build_live_calibration_intake(*, packet: dict[str, object], run_id: str) -> dict[str, object]:
+    """Turn a live calibration packet into redacted repair/eval intake pressure."""
+
+    failures = [failure for failure in packet.get("failures", []) if isinstance(failure, dict)]
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    privacy = packet.get("privacy") if isinstance(packet.get("privacy"), dict) else {}
+    action_items = [_intake_action(failure) for failure in failures]
+    action_items = _dedupe_actions([item for item in action_items if item])
+    candidates = _eval_intake_candidates(action_items)
+    return {
+        "schema": "aoa_course_live_calibration_intake_v1",
+        "status": "actionable" if action_items else "ok",
+        "run_id": run_id,
+        "generated_at": _now(),
+        "source_packet": {
+            "schema": packet.get("schema"),
+            "status": packet.get("status"),
+            "run_id": packet.get("run_id"),
+            "packet_path": packet.get("packet_path"),
+            "network_touched": bool(packet.get("network_touched")),
+            "platforms": packet.get("platforms", []),
+            "report_count": packet.get("report_count"),
+            "preflight_count": packet.get("preflight_count"),
+        },
+        "quality": {
+            "answer_result_count_total": quality.get("answer_result_count_total"),
+            "answer_evidence_count_total": quality.get("answer_evidence_count_total"),
+            "transcript_count_total": quality.get("transcript_count_total"),
+            "caption_sidecar_count_total": quality.get("caption_sidecar_count_total"),
+            "caption_resource_error_count_total": quality.get("caption_resource_error_count_total"),
+            "all_answered_reports_have_evidence": quality.get("all_answered_reports_have_evidence"),
+            "all_answered_reports_have_timestamps": quality.get("all_answered_reports_have_timestamps"),
+        },
+        "privacy": {
+            "contains_raw_payloads": bool(privacy.get("contains_raw_payloads")),
+            "contains_secret_values": bool(privacy.get("contains_secret_values")),
+            "raw_paths_are_local_runtime_state": bool(privacy.get("raw_paths_are_local_runtime_state")),
+            "do_not_commit_live_packets": bool(privacy.get("do_not_commit_live_packets")),
+            "shareable_after_review": not bool(privacy.get("contains_raw_payloads")) and not bool(privacy.get("contains_secret_values")),
+        },
+        "action_count": len(action_items),
+        "actions": action_items,
+        "eval_intake_candidates": candidates,
+        "next_steps": _intake_next_steps(action_items),
+        "authority": {
+            "repo_local_only": True,
+            "central_proof_owner": "aoa-evals",
+            "do_not_treat_as_verdict": True,
+        },
+    }
+
+
+def write_live_calibration_intake(roots: StorageRoots, intake: dict[str, object], *, run_id: str) -> Path:
+    output_dir = run_artifact_dir(roots, run_id) / "calibration"
+    output_dir.mkdir(parents=True, exist_ok=True)
+    path = output_dir / "live_calibration_intake.json"
+    intake_with_path = {**intake, "intake_path": str(path)}
+    path.write_text(json.dumps(intake_with_path, indent=2, sort_keys=True), encoding="utf-8")
+    return path
+
+
 def _smoke_summary(report: dict[str, object]) -> dict[str, object]:
     artifacts = report.get("artifacts") if isinstance(report.get("artifacts"), dict) else {}
     answer = artifacts.get("answer") if isinstance(artifacts.get("answer"), dict) else {}
@@ -251,6 +312,128 @@ def _preflight_failures(summary: dict[str, object]) -> list[dict[str, object]]:
     if summary.get("network_touched"):
         return [{"surface": "preflight", "reason": "preflight touched network"}]
     return []
+
+
+def _intake_action(failure: dict[str, object]) -> dict[str, object]:
+    surface = str(failure.get("surface") or "unknown")
+    reason = str(failure.get("reason") or "unknown failure")
+    context = {
+        "platform": failure.get("platform"),
+        "source_mode": failure.get("source_mode"),
+        "run_id": failure.get("run_id"),
+        "surface": surface,
+        "reason": reason,
+    }
+    if surface == "privacy":
+        lane = "privacy_guard"
+        title = "Remove raw or secret-bearing fields before sharing calibration evidence"
+        follow_up = "regenerate smoke/preflight reports with privacy-safe summaries only"
+        eval_hint = "privacy guard fixture covering the rejected key or marker"
+        severity = "blocker"
+    elif surface == "transcripts":
+        lane = "caption_or_transcript_collection"
+        title = "Repair caption/transcript collection for connected browser smoke"
+        follow_up = "capture a minimal redacted fixture for the failing caption resource shape"
+        eval_hint = "browser-transcripts fixture covering caption resource error reason"
+        severity = "high"
+    elif surface in {"course", "evidence"}:
+        lane = "browser_or_api_structure_discovery"
+        title = "Repair course structure or evidence extraction for connected smoke"
+        follow_up = "inspect selector/API mapping with a redacted snapshot or safe fixture"
+        eval_hint = "adapter contract fixture for missing lesson/evidence extraction"
+        severity = "high"
+    elif surface == "answer":
+        lane = "retrieval_quality"
+        title = "Repair source-backed answer retrieval for connected smoke"
+        follow_up = "compare normalized bundle, index docs, graph edges, and answer packet evidence"
+        eval_hint = "answer-quality fixture for connected-source query failure"
+        severity = "medium"
+    elif surface == "preflight":
+        lane = "readiness_preflight"
+        title = "Repair read-only preflight safety/readiness behavior"
+        follow_up = "fix preflight report status, network boundary, or readiness messaging"
+        eval_hint = "live-preflight contract case"
+        severity = "medium"
+    else:
+        lane = "calibration_packet"
+        title = "Inspect unresolved live calibration failure"
+        follow_up = "classify the failure into an adapter, retrieval, privacy, or eval lane"
+        eval_hint = "local eval intake after classification"
+        severity = "medium"
+    return {
+        **context,
+        "lane": lane,
+        "severity": severity,
+        "title": title,
+        "follow_up": follow_up,
+        "eval_hint": eval_hint,
+    }
+
+
+def _eval_intake_candidates(actions: list[dict[str, object]]) -> list[dict[str, object]]:
+    candidates: list[dict[str, object]] = []
+    for action in actions:
+        candidate_id = "-".join(
+            item
+            for item in [
+                "live-calibration",
+                str(action.get("lane") or "follow-up").replace("_", "-"),
+                str(action.get("platform") or "platform").replace("_", "-"),
+            ]
+            if item
+        )
+        candidates.append(
+            {
+                "candidate_id": candidate_id,
+                "target_surface": action.get("surface"),
+                "lane": action.get("lane"),
+                "repo_local_path_hint": f"evals/intake/{candidate_id}.md",
+                "summary": action.get("title"),
+                "evidence_needed": [
+                    "redacted calibration packet",
+                    "minimal safe fixture or snapshot when selector/API behavior changed",
+                    "expected answer/evidence behavior that should become a local eval",
+                ],
+                "central_owner_note": "aoa-evals owns promotion, scoring, regression meaning, and central verdicts",
+            }
+        )
+    return candidates
+
+
+def _intake_next_steps(actions: list[dict[str, object]]) -> list[str]:
+    if not actions:
+        return [
+            "packet is healthy; choose the next bounded live expansion such as full-course sync or broader authenticated Stepik calibration",
+            "keep packet and source reports in runtime artifact storage",
+        ]
+    steps = [
+        "keep live packet, smoke reports, raw captures, and auth state outside Git",
+        "fix blocker/high severity actions before widening live scope",
+    ]
+    if any(action.get("lane") == "privacy_guard" for action in actions):
+        steps.append("do not share or promote this packet until privacy guard failures are removed")
+    if any(action.get("lane") == "caption_or_transcript_collection" for action in actions):
+        steps.append("add a redacted caption/transcript fixture before repairing browser transcript selectors")
+    if any(action.get("lane") == "retrieval_quality" for action in actions):
+        steps.append("compare normalized bundle, keyword/semantic indexes, graph edges, and answer packet evidence")
+    return steps
+
+
+def _dedupe_actions(actions: list[dict[str, object]]) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[tuple[str, str, str, str]] = set()
+    for action in actions:
+        key = (
+            str(action.get("lane") or ""),
+            str(action.get("platform") or ""),
+            str(action.get("surface") or ""),
+            str(action.get("reason") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(action)
+    return deduped
 
 
 def _secret_failures(reports: list[dict[str, object]]) -> list[dict[str, object]]:

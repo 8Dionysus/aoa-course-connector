@@ -91,6 +91,22 @@ aoa-course calibration build \
 Do not commit live packets, raw smoke reports, browser state, private snapshots,
 tokens, cookies, raw API payloads, or course pages.
 
+Turn a packet into a local repair/eval-intake plan:
+
+```bash
+aoa-course calibration intake \
+  --run connected-live-calibration-intake \
+  --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
+```
+
+`calibration intake` writes an `aoa_course_live_calibration_intake_v1` artifact at
+`$AOA_COURSE_ARTIFACT_ROOT/<run>/calibration/live_calibration_intake.json`.
+It classifies packet failures into repair lanes such as privacy guard,
+caption/transcript collection, course/evidence extraction, retrieval quality,
+or readiness preflight. It also suggests repo-local `evals/intake/*.md`
+candidates, but those are pressure notes only; `aoa-evals` owns promotion,
+scoring, regression meaning, and central verdicts.
+
 ## Packet Meaning
 
 The packet summarizes report health without embedding raw private payloads:
@@ -118,6 +134,8 @@ The packet summarizes report health without embedding raw private payloads:
 If a smoke report has no lessons, no evidence, no answer chain, caption-resource
 errors, a missing privacy guard, or a secret-like marker, packet `status`
 becomes `partial` and the `failures` list tells the next agent what to repair.
+Run `calibration intake` against such packets before selector or query repairs
+so the failure is routed to a concrete lane and fixture/eval follow-up.
 
 ## Next Work From A Packet
 

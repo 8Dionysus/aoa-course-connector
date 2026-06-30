@@ -334,6 +334,20 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert build_result["status"] == "ok"
     assert build_result["report_count"] == 3
     assert Path(str(build_result["packet_path"])).is_file()
+    intake_result = run_cli(
+        tmp_path,
+        "calibration",
+        "intake",
+        "--run",
+        "manual-calibration-intake-cli",
+        "--packet",
+        str(build_result["packet_path"]),
+    )
+
+    assert intake_result["schema"] == "aoa_course_live_calibration_intake_v1"
+    assert intake_result["status"] == "ok"
+    assert intake_result["authority"]["central_proof_owner"] == "aoa-evals"
+    assert Path(str(intake_result["intake_path"])).is_file()
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

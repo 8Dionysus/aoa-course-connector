@@ -83,6 +83,9 @@
 - Added live calibration packets plus `eval live-calibration` and
   `calibration build` so GetCourse, Skillspace, and Stepik smoke/preflight
   reports can be summarized without committing private payloads.
+- Added `calibration intake` so live calibration packets can be turned into
+  repo-local repair lanes and eval-intake candidates while keeping central proof
+  authority in `aoa-evals`.
 - Added MCP `evidence_report` and strengthened graph/freshness/evidence MCP
   validation so agents can inspect source-backed results, freshness, authority,
   and graph context through structured tool output.

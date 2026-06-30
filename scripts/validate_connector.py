@@ -261,8 +261,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
-    if "eval live-calibration" not in agents or "calibration build" not in agents:
-        errors.append("AGENTS route missing live calibration packet validation")
+    if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents:
+        errors.append("AGENTS route missing live calibration packet/intake validation")
     if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "eval browser-transcripts" not in agents:
@@ -319,11 +319,13 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in [
         "aoa_course_live_calibration_packet_v1",
         "aoa_course_connected_source_plan_v1",
+        "aoa_course_live_calibration_intake_v1",
         "preflight connected-plan",
         "live-scope bounded",
         "full-course",
         "include-step-sources",
         "calibration build",
+        "calibration intake",
         "eval live-calibration",
         "smoke browser-live",
         "smoke stepik-live",

@@ -114,6 +114,9 @@ This proves:
   `calibration build`, covering GetCourse, Skillspace, and Stepik smoke reports,
   answer evidence/timestamps, transcript/caption health, caption-resource
   errors, local raw-path handling, and secret/raw-payload privacy guards.
+- Live calibration intake reports through `calibration intake`, turning partial
+  calibration packet failures into repair lanes and repo-local eval-intake
+  candidates while leaving central proof authority in `aoa-evals`.
 
 ## Remaining Goal Work
 
@@ -132,8 +135,9 @@ The next layer is live connected-source work:
   courses, account discovery output, and full-course source-registry runs after
   `preflight live --platform stepik` confirms token/source readiness;
 - collect connected-source live calibration packets from real GetCourse,
-  Skillspace, and Stepik accounts and use their failures to drive selector,
-  sync, and eval-intake follow-up work;
+  Skillspace, and Stepik accounts and run `calibration intake` against partial
+  packets to drive selector, sync, retrieval, privacy, and eval-intake follow-up
+  work;
 - external embedding provider integration behind the existing semantic index
   contract;
 - live-calibrated authority tiers from adapter/source metadata beyond current

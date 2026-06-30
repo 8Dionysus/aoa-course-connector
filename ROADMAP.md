@@ -54,6 +54,9 @@
 - Prove live calibration packets that summarize GetCourse, Skillspace, and
   Stepik smoke/preflight reports, answer evidence, transcript/caption health,
   and caption-resource errors without committing private payloads.
+- Prove live calibration intake reports that classify partial packet failures
+  into repair lanes and local eval-intake candidates without taking over
+  `aoa-evals` central proof authority.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -87,7 +90,8 @@
 - Calibrate adapter-provided authority tiers against live GetCourse,
   Skillspace, and Stepik source metadata beyond fixture-safe role/API signals.
 - Broaden answer-quality evals against live-calibrated GetCourse, Skillspace,
-  and Stepik runs once operator credentials are connected.
+  and Stepik runs once operator credentials are connected and
+  `calibration intake` identifies recurring local eval pressure.
 
 ## Later
 

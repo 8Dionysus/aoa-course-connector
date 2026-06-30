@@ -229,11 +229,16 @@ PYTHONPATH=src python -m aoa_course_connector.cli calibration build \
   --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" \
   --report "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json" \
   --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
+PYTHONPATH=src python -m aoa_course_connector.cli calibration intake \
+  --run connected-live-calibration-intake \
+  --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 ```
 
 The packet uses `aoa_course_live_calibration_packet_v1`, checks answer evidence,
 timestamps, local raw-path handling, and secret/raw-payload guards, and should
-not be committed when it comes from live private sources. See
+not be committed when it comes from live private sources. `calibration intake`
+classifies packet failures into repair lanes and repo-local eval-intake
+candidates without promoting them into central proof. See
 `docs/LIVE_CALIBRATION.md` for the full route.
 
 ## Answer Quality Eval
