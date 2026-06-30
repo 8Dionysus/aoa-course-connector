@@ -46,6 +46,10 @@ aoa-course query "rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
 aoa-course eval answer-quality
+aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
+aoa-course build-index --run freshness-ranking-fixture
+aoa-course build-semantic-index --run freshness-ranking-fixture
+aoa-course eval freshness-ranking
 aoa-course eval browser-progress-comments
 aoa-course eval semantic-index
 aoa-course mcp tools

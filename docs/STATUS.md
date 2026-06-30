@@ -62,6 +62,9 @@ This proves:
 - Answer-quality eval coverage that checks top-result source id, platform,
   lesson path, snippet terms, freshness timestamps, evidence fields, and
   connector-local eval-port boundaries instead of only JSON term presence.
+- Freshness-aware result ranking with visible `rank_score`/`rank_features` and
+  a conflict fixture proving current source-backed material beats stale material
+  when base relevance is tied.
 
 ## Remaining Goal Work
 
@@ -79,4 +82,6 @@ The next layer is live connected-source work:
   `preflight live --platform stepik` confirms token/source readiness;
 - external embedding provider integration behind the existing semantic index
   contract;
+- richer authority tiers from adapter/source metadata, beyond the current
+  freshness/provenance ranking factors;
 - richer live smoke routes gated away from CI secrets.

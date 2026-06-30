@@ -28,6 +28,8 @@
 - Prove connector-local answer-quality evals that validate source identity,
   evidence fields, lesson path, snippets, freshness, and platform nuance beyond
   simple term presence.
+- Prove freshness-aware ranking so current source-backed course material wins
+  over stale material when base relevance is tied or close.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -56,6 +58,8 @@
   and source readiness where official scopes expose enough catalog data.
 - Add optional external embedding providers behind the stable semantic index
   contract.
+- Add richer adapter-provided authority tiers for official lessons, mentor
+  comments, learner comments, generated transcripts, and asset metadata.
 - Broaden answer-quality evals against live-calibrated GetCourse, Skillspace,
   and Stepik runs once operator credentials are connected.
 

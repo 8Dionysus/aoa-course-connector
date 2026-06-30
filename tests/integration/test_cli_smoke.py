@@ -183,6 +183,19 @@ def test_cli_answer_quality_eval_proves_source_path_freshness_and_evidence(tmp_p
     assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 
+def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Path) -> None:
+    fixture = Path("connector/fixtures/course/freshness_conflict_course.json")
+    run_cli(tmp_path, "materialize", "fixture", "--run", "freshness-ranking-fixture", "--fixture", str(fixture))
+    run_cli(tmp_path, "build-index", "--run", "freshness-ranking-fixture")
+    run_cli(tmp_path, "build-semantic-index", "--run", "freshness-ranking-fixture")
+
+    result = run_cli(tmp_path, "eval", "freshness-ranking")
+
+    assert result["status"] == "ok"
+    assert result["suite_id"] == "freshness-ranking"
+    assert {case["failure_count"] for case in result["case_results"]} == {0}
+
+
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [
         ("getcourse", "GetCourse bootloader rollback evidence"),

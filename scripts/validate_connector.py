@@ -28,6 +28,7 @@ REQUIRED_FILES = [
     "connector/manifests/artifact_classes.yaml",
     "connector/profiles/starter-course.yaml",
     "connector/fixtures/course/starter_course.json",
+    "connector/fixtures/course/freshness_conflict_course.json",
     "connector/fixtures/browser/getcourse_starter_snapshot.json",
     "connector/fixtures/browser/skillspace_starter_snapshot.json",
     "connector/fixtures/browser/getcourse_catalog_snapshot.json",
@@ -64,6 +65,8 @@ REQUIRED_FILES = [
     "evals/suites/README.md",
     "evals/suites/answer-quality.suite.md",
     "evals/suites/answer_quality_packets.json",
+    "evals/suites/freshness-ranking.suite.md",
+    "evals/suites/freshness_ranking.json",
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/browser_progress_comments_answer_packets.json",
@@ -261,11 +264,22 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
-    for token in ["build-semantic-index", "semantic", "hybrid", "local_hashing_v1", "semantic_search", "hybrid_search", "source id", "answer-quality"]:
+    for token in [
+        "build-semantic-index",
+        "semantic",
+        "hybrid",
+        "local_hashing_v1",
+        "semantic_search",
+        "hybrid_search",
+        "source id",
+        "answer-quality",
+        "rank_score",
+        "freshness-ranking",
+    ]:
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
-    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality"]:
+    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking"]:
         if token not in eval_readme:
             errors.append(f"Eval README missing token: {token}")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()

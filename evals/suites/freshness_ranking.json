@@ -1,0 +1,33 @@
+{
+  "schema": "aoa_course_freshness_ranking_eval_suite_v1",
+  "suite_id": "freshness-ranking",
+  "cases": [
+    {
+      "query": "firmware rollback policy",
+      "run": "freshness-ranking-fixture",
+      "mode": "keyword",
+      "limit": 2,
+      "min_results": 2,
+      "expected_top_doc_id": "step:step:freshness:zzz-current-policy",
+      "expected_top_freshness_state": "current",
+      "current_doc_id": "step:step:freshness:zzz-current-policy",
+      "stale_doc_id": "step:step:freshness:aaa-stale-policy",
+      "expect_equal_relevance_score": true,
+      "expect_current_ranked_above_stale": true,
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    },
+    {
+      "query": "firmware rollback policy",
+      "run": "freshness-ranking-fixture",
+      "mode": "hybrid",
+      "limit": 2,
+      "min_results": 2,
+      "expected_top_doc_id": "step:step:freshness:zzz-current-policy",
+      "expected_top_freshness_state": "current",
+      "current_doc_id": "step:step:freshness:zzz-current-policy",
+      "stale_doc_id": "step:step:freshness:aaa-stale-policy",
+      "expect_current_ranked_above_stale": true,
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+    }
+  ]
+}
