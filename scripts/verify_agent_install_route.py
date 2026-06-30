@@ -4,12 +4,70 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import shutil
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
+
+
+class StdioVerificationError(ValueError):
+    pass
+
+
+def _parse_stdio_responses(stdout: str) -> dict[int, dict[str, object]]:
+    responses: dict[int, dict[str, object]] = {}
+    for line in stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            payload = json.loads(line)
+        except json.JSONDecodeError as exc:
+            raise StdioVerificationError(f"invalid JSON-RPC response line: {line}") from exc
+        if not isinstance(payload, dict):
+            raise StdioVerificationError(f"JSON-RPC response must be an object: {payload!r}")
+        response_id = payload.get("id")
+        if isinstance(response_id, int):
+            responses[response_id] = payload
+    return responses
+
+
+def _require_tool_success(responses: dict[int, dict[str, object]], request_id: int, tool_name: str) -> dict[str, object]:
+    response = responses.get(request_id)
+    if response is None:
+        raise StdioVerificationError(f"missing JSON-RPC response for request id {request_id}")
+    if "error" in response:
+        raise StdioVerificationError(f"{tool_name} JSON-RPC error: {response['error']}")
+    result = response.get("result")
+    if not isinstance(result, dict):
+        raise StdioVerificationError(f"{tool_name} response missing result object")
+    if result.get("isError") is not False:
+        raise StdioVerificationError(f"{tool_name} returned MCP tool error: {result.get('structuredContent')}")
+    structured = result.get("structuredContent")
+    if not isinstance(structured, dict):
+        raise StdioVerificationError(f"{tool_name} response missing structuredContent")
+    if structured.get("tool") != tool_name:
+        raise StdioVerificationError(f"{tool_name} response reported wrong tool: {structured.get('tool')!r}")
+    return structured
+
+
+def _verify_stdio_tool_responses(stdout: str) -> None:
+    responses = _parse_stdio_responses(stdout)
+    search = _require_tool_success(responses, 3, "search")
+    if not search.get("results"):
+        raise StdioVerificationError("search stdio response did not return results")
+    preflight = _require_tool_success(responses, 4, "live_preflight")
+    preflight_payload = preflight.get("preflight")
+    if not isinstance(preflight_payload, dict) or preflight_payload.get("network_touched") is not False:
+        raise StdioVerificationError("live_preflight stdio response did not prove read-only preflight")
+    plan = _require_tool_success(responses, 5, "connected_source_plan")
+    plan_payload = plan.get("plan")
+    if not isinstance(plan_payload, dict) or plan_payload.get("network_touched") is not False:
+        raise StdioVerificationError("connected_source_plan stdio response did not prove read-only plan")
+    if plan_payload.get("live_scope") != "bounded":
+        raise StdioVerificationError("connected_source_plan stdio response did not preserve live_scope=bounded")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -129,11 +187,19 @@ def main(argv: list[str] | None = None) -> int:
             capture_output=True,
             text=True,
         )
-        if result.returncode != 0 or '"structuredContent"' not in result.stdout:
+        try:
+            _verify_stdio_tool_responses(result.stdout)
+        except StdioVerificationError as exc:
             print("failed MCP stdio route", file=sys.stderr)
+            print(str(exc), file=sys.stderr)
             print(result.stdout, file=sys.stderr)
             print(result.stderr, file=sys.stderr)
             return result.returncode or 1
+        if result.returncode != 0:
+            print("failed MCP stdio route", file=sys.stderr)
+            print(result.stdout, file=sys.stderr)
+            print(result.stderr, file=sys.stderr)
+            return result.returncode
     print("agent install route ok")
     return 0
 
