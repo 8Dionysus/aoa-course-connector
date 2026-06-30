@@ -452,6 +452,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_connected_calibration_run_receipt_v1",
         "aoa_course_connected_calibration_run_status_v1",
         "source_selection",
+        "execution_options",
         "query_handoff",
         "connected_run_handoff",
         "link-pattern",

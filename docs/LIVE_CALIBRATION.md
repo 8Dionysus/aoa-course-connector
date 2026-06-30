@@ -99,9 +99,12 @@ After any connected run, use `calibration status --run <run>` or MCP
 `connected_run_status` to read the receipt summary without executing network
 work. The `aoa_course_connected_calibration_run_status_v1` status packet
 includes `source_selection`, stage summaries, packet quality, privacy flags,
-failures, next steps, runtime artifact paths, and `query_handoff` entries for
-the sync/smoke runs that already have local indexes, graphs, answer packets, and
-CLI `query`/`answer` commands.
+failures, next steps, runtime artifact paths, `execution_options`, and
+`query_handoff` entries for the sync/smoke runs that already have local
+indexes, graphs, answer packets, and CLI `query`/`answer` commands.
+`execution_options` records the course-specific query, browser `link_pattern`,
+source limit, and live traversal limits used for the run, so later selector or
+retrieval work can tell how broad the calibration actually was.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"

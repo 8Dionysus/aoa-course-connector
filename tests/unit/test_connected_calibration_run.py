@@ -31,6 +31,9 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert receipt["mode"] == "fixture"
     assert receipt["platforms"] == ["getcourse", "skillspace", "stepik"]
     assert receipt["network_touched"] is False
+    assert receipt["execution_options"]["query"] == ""
+    assert receipt["execution_options"]["max_lessons"] == 50
+    assert receipt["execution_options"]["link_pattern"] == ""
     assert receipt["quality"]["answer_evidence_count_total"] >= 3
     assert receipt["privacy"]["contains_secret_values"] is False
     assert receipt["privacy"]["contains_raw_payloads"] is False
@@ -64,6 +67,7 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["receipt_schema"] == "aoa_course_connected_calibration_run_receipt_v1"
     assert status["network_touched"] is False
     assert status["artifacts"]["packet_path"] == receipt["artifacts"]["packet_path"]
+    assert status["execution_options"] == receipt["execution_options"]
     assert status["query_handoff"]["entry_count"] == receipt["query_handoff"]["entry_count"]
     assert status["query_handoff"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
     assert status["privacy"]["contains_secret_values"] is False
@@ -90,6 +94,8 @@ def test_connected_calibration_live_requires_explicit_network_gate(tmp_path: Pat
     assert receipt["mode"] == "live"
     assert receipt["allow_network"] is False
     assert receipt["network_touched"] is False
+    assert receipt["execution_options"]["max_lessons"] == 50
+    assert receipt["execution_options"]["link_pattern"] == ""
     assert receipt["artifacts"]["packet_path"] is None
     assert any(failure["reason"] == "live mode requires --allow-network" for failure in receipt["failures"])
     assert Path(str(receipt["artifacts"]["plan_path"])).is_file()
@@ -217,12 +223,27 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
         mode="live",
         platforms=["getcourse"],
         allow_network=True,
+        query="GetCourse bootloader rollback evidence",
+        max_lessons=7,
+        max_pages=3,
+        max_sources=4,
         link_pattern="*/lessons/*",
+        source_limit=1,
     )
     status = load_connected_calibration_status(storage, run_id="connected-live-browser-default-state")
 
     assert receipt["status"] == "ok"
     assert receipt["network_touched"] is True
+    assert receipt["execution_options"] == {
+        "query": "GetCourse bootloader rollback evidence",
+        "max_lessons": 7,
+        "max_pages": 3,
+        "max_sources": 4,
+        "link_pattern": "*/lessons/*",
+        "source_limit": 1,
+        "stepik_token_env": "STEPIK_API_TOKEN",
+        "browser_state_file": "",
+    }
     assert receipt["source_selection"]["ready_source_ids"] == [source["source_id"]]
     assert receipt["source_selection"]["selected_source_count"] == 1
     assert sync_calls == [{"source_ids": [source["source_id"]], "state_file": state_file.resolve(), "link_pattern": "*/lessons/*"}]
@@ -235,6 +256,7 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     assert receipt["query_handoff"]["ready"] is True
     assert any(entry["kind"] == "smoke" and entry["platform"] == "getcourse" for entry in receipt["query_handoff"]["entries"])
     assert status["source_selection"]["ready_source_ids"] == [source["source_id"]]
+    assert status["execution_options"] == receipt["execution_options"]
     assert status["query_handoff"]["ready"] is True
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET_COOKIE" not in rendered
