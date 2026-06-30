@@ -53,6 +53,34 @@ ADAPTERS: dict[str, dict[str, object]] = {
         "coverage": ["courses", "modules", "pages", "files"],
         "notes": "Official LMS REST route.",
     },
+    "coursera": {
+        "platform": "coursera",
+        "status": "future_platform_adapter",
+        "auth_modes": ["browser_session", "oauth"],
+        "coverage": ["courses", "modules", "lessons", "asset_metadata", "assignments_when_accessible"],
+        "notes": "Future adapter; route depends on operator-owned access and available export/API surfaces.",
+    },
+    "teachable": {
+        "platform": "teachable",
+        "status": "future_platform_adapter",
+        "auth_modes": ["browser_session", "api_token"],
+        "coverage": ["courses", "sections", "lectures", "asset_metadata", "comments_when_visible"],
+        "notes": "Future adapter with API/browser-session split depending on school configuration.",
+    },
+    "thinkific": {
+        "platform": "thinkific",
+        "status": "future_platform_adapter",
+        "auth_modes": ["browser_session", "api_token"],
+        "coverage": ["courses", "chapters", "lessons", "asset_metadata", "comments_when_visible"],
+        "notes": "Future adapter with API/browser-session split depending on school configuration.",
+    },
+    "kajabi": {
+        "platform": "kajabi",
+        "status": "future_platform_adapter",
+        "auth_modes": ["browser_session", "api_token"],
+        "coverage": ["products", "modules", "posts", "asset_metadata", "comments_when_visible"],
+        "notes": "Future adapter with API/browser-session split depending on site configuration.",
+    },
 }
 
 

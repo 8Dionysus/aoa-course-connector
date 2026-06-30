@@ -15,5 +15,9 @@
 - `mcp`: agent-facing tool surface.
 
 Platform glue must not leak into the core schema. GetCourse and Skillspace are
-browser-session hard adapters. Stepik, Moodle, and Canvas are clean API reference
-targets.
+browser-session hard adapters. Stepik, Moodle, and Canvas are clean API/LMS
+reference targets. Coursera, Teachable, Thinkific, and Kajabi are future
+platform adapters and should enter through the same source registry, auth,
+normalization, evidence, index, graph, query, and MCP ports rather than adding
+platform-shaped shortcuts to the core model. Treat them as future platform
+routes until working adapter implementations land.

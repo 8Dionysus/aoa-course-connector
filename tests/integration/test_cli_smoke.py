@@ -28,6 +28,19 @@ def run_cli(tmp_path: Path, *args: str) -> dict[str, object]:
 
 def test_cli_starter_flow(tmp_path: Path) -> None:
     assert run_cli(tmp_path, "doctor")["status"] == "ok"
+    adapters = run_cli(tmp_path, "adapters", "list")
+    platforms = {str(adapter["platform"]) for adapter in adapters["adapters"]}
+    assert {
+        "getcourse",
+        "skillspace",
+        "stepik",
+        "moodle",
+        "canvas",
+        "coursera",
+        "teachable",
+        "thinkific",
+        "kajabi",
+    } <= platforms
     run_cli(tmp_path, "init")
     run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
     run_cli(tmp_path, "build-index", "--run", "starter-fixture")

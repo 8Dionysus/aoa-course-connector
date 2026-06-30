@@ -23,6 +23,13 @@ Reference clean adapters:
 - Stepik via official API.
 - Moodle or Canvas via official LMS APIs.
 
+Future platform adapters:
+
+- Coursera through an operator-owned browser session or available OAuth/export
+  route.
+- Teachable, Thinkific, and Kajabi through an API/browser-session split
+  depending on school or site configuration.
+
 Denied by default:
 
 - unauthorized access;

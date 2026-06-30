@@ -4,6 +4,7 @@ import json
 import os
 from pathlib import Path
 
+from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, default_browser_state_path, inspect_browser_state
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
@@ -27,6 +28,35 @@ def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
     assert "capture-browser-state" in plan["capture_command"]
     assert "inspect-browser-state" in plan["inspect_command"]
     assert plan["git_safe"] is False
+
+
+def test_adapter_registry_covers_goal_platform_topology(tmp_path: Path) -> None:
+    adapters = {str(adapter["platform"]): adapter for adapter in adapter_list()}
+    expected = {
+        "getcourse",
+        "skillspace",
+        "stepik",
+        "moodle",
+        "canvas",
+        "coursera",
+        "teachable",
+        "thinkific",
+        "kajabi",
+    }
+
+    assert expected <= set(adapters)
+    assert adapters["getcourse"]["status"].startswith("working_")
+    assert adapters["skillspace"]["status"].startswith("working_")
+    assert adapters["stepik"]["status"] == "working_clean_api_adapter"
+    for platform in ["moodle", "canvas", "coursera", "teachable", "thinkific", "kajabi"]:
+        assert str(adapters[platform]["status"]).startswith("future_")
+
+    for platform in ["coursera", "teachable", "thinkific", "kajabi"]:
+        source, path, state = upsert_source(tmp_path / "data", platform, f"https://{platform}.example/course/demo", platform.title())
+        assert state == "added"
+        assert source["platform"] == platform
+        assert source["access_mode"] == "browser_session"
+        assert path.exists()
 
 
 def test_browser_state_inspect_redacts_secret_material(tmp_path: Path) -> None:

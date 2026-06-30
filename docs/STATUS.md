@@ -150,6 +150,10 @@ This proves:
 - Adapter-derived authority metadata for browser-session comments and Stepik
   official API objects, with `adapter-authority` eval coverage proving the
   signal survives normalized bundles, indexes, and query packets.
+- The machine-readable adapter and source registries cover the full planned
+  platform topology from the goal: working GetCourse, Skillspace, and Stepik;
+  future Moodle, Canvas, Coursera, Teachable, Thinkific, and Kajabi entries
+  without claiming their ingestion routes are implemented yet.
 - Browser live preflight rejects unsafe origin substring matches and withholds
   the live sync command until registered source hosts match the saved browser
   storage state.

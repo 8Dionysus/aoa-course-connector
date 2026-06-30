@@ -345,7 +345,7 @@ evidence; central proof verdicts and scoring stay with `aoa-evals`.
 | Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Stepik | Working clean API reference adapter with fixture/live smoke reports, source-registry sync checkpoints, batched full-course materialization, and optional authenticated step-source enrichment |
 | Moodle / Canvas | Future clean LMS adapters |
-| Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
+| Coursera / Teachable / Thinkific / Kajabi | Future platform adapters with OAuth/API/browser-session split |
 
 ## Storage
 
