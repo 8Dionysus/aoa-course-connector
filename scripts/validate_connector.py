@@ -59,7 +59,11 @@ REQUIRED_FILES = [
     "evals/AGENTS.md",
     "evals/PORT.yaml",
     "evals/README.md",
+    "evals/intake/README.md",
+    "evals/reports/README.md",
     "evals/suites/README.md",
+    "evals/suites/answer-quality.suite.md",
+    "evals/suites/answer_quality_packets.json",
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/browser_progress_comments_answer_packets.json",
@@ -120,6 +124,8 @@ REQUIRED_DIRS = [
     "tests/unit",
     "tests/contract",
     "tests/integration",
+    "evals/intake",
+    "evals/reports",
 ]
 
 REQUIRED_SCHEMAS = [
@@ -255,9 +261,13 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
-    for token in ["build-semantic-index", "semantic", "hybrid", "local_hashing_v1", "semantic_search", "hybrid_search"]:
+    for token in ["build-semantic-index", "semantic", "hybrid", "local_hashing_v1", "semantic_search", "hybrid_search", "source id", "answer-quality"]:
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
+    eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
+    for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality"]:
+        if token not in eval_readme:
+            errors.append(f"Eval README missing token: {token}")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()
     for token in [
         "stepik-live",

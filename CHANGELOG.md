@@ -61,3 +61,5 @@
   and secret-redacted operator handoff.
 - Added MCP `live_preflight` so agents can inspect connected-source readiness
   through structuredContent without touching the network or printing secrets.
+- Repaired the local eval-port contract and added `eval answer-quality` for
+  source id, path, snippet, freshness, and evidence-field checks.

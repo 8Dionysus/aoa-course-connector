@@ -20,11 +20,14 @@
    sync, index/graph, answer, and privacy-safe report route.
 12. Run browser fixture discovery with `--register` to prove the local source
    registry route.
-13. Before live browser sources, run `auth plan-browser-state`, capture the
+13. After starter, Stepik fixture, and GetCourse browser fixture artifacts are
+    built, run `eval answer-quality` to prove top-result path, source id,
+    freshness, snippet, and evidence-field quality.
+14. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`.
-14. Run `preflight live --platform getcourse` or
+15. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.
-15. Add live sources only after auth-state and storage roots are local and
+16. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

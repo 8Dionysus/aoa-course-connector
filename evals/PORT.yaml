@@ -1,6 +1,16 @@
-schema: aoa_eval_port_v1
-repo: aoa-course-connector
-owner: connector-local
+schema_version: local_eval_port_v1
+owner_repo: aoa-course-connector
+status: active
+proof_owner_repo: aoa-evals
+default_intake_schema: eval_need_v1
+local_role: >-
+  Repo-local eval pressure, fixture-safe suites, smoke reports, and connector
+  behavior checks for course ingestion, retrieval, evidence, and MCP surfaces.
+central_boundary: >-
+  Local repo has no verdict authority, no scoring authority, no regression
+  authority, and no proof doctrine authority. Verdict authority, scoring
+  authority, regression authority, and proof doctrine authority route to
+  aoa-evals for central proof adoption, promotion, and central bundles.
 suites:
   - evals/suites/starter_course_answer_packets.json
   - evals/suites/stepik_clean_api_answer_packets.json
@@ -9,3 +19,4 @@ suites:
   - evals/suites/browser_discovery_sources.json
   - evals/suites/browser_sync_checkpoints.json
   - evals/suites/browser_crawl_answer_packets.json
+  - evals/suites/answer_quality_packets.json
