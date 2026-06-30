@@ -296,7 +296,10 @@ work. Live receipts and status packets include `source_selection`, so agents can
 see requested, selected, ready, and blocked source ids before deciding the next
 sync or repair. Partial receipts include `repair_lanes`, classifying network
 gate, source readiness, source selection, sync, smoke/selector, and packet
-intake failures into concrete next commands. They also include `query_handoff`,
+intake failures into concrete next commands. CLI `readiness` and MCP
+`connector_readiness` surface those lane commands at the top-level when a
+selected connected-run receipt is partial, while a missing receipt still points
+to fixture bootstrap. They also include `query_handoff`,
 a compact list of queryable sync/smoke run ids with index, semantic index,
 graph, answer packet paths, and ready-to-run CLI `query`/`answer` commands plus
 MCP `search`, `lesson_context`, and `evidence_report` commands for agents that

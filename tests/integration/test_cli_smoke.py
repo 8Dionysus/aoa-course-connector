@@ -123,6 +123,59 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert connected_status["status"] == "ok"
 
 
+def test_cli_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path) -> None:
+    run_cli(
+        tmp_path,
+        "bootstrap",
+        "fixture",
+        "--run",
+        "starter-fixture",
+        "--connected-run",
+        "connected-calibration",
+        "--platform",
+        "stepik",
+    )
+    partial = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "aoa_course_connector.cli",
+            "calibration",
+            "connected-run",
+            "--mode",
+            "live",
+            "--platform",
+            "stepik",
+            "--run",
+            "partial-connected-run",
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=cli_env(tmp_path),
+    )
+    assert partial.returncode == 1
+    partial_receipt = json.loads(partial.stdout)
+    assert partial_receipt["status"] == "partial"
+    assert partial_receipt["repair_lanes"][0]["lane"] == "network_gate"
+
+    readiness = run_cli(
+        tmp_path,
+        "readiness",
+        "--run",
+        "starter-fixture",
+        "--platform",
+        "stepik",
+        "--connected-run",
+        "partial-connected-run",
+    )
+
+    assert readiness["connected_run"]["status"] == "partial"
+    assert any(command.startswith("aoa-course preflight connected-plan --platform stepik") for command in readiness["next_commands"])
+    assert any("aoa-course calibration connected-run --mode live --allow-network --run partial-connected-run" in command for command in readiness["next_commands"])
+    assert not any(command == "aoa-course bootstrap fixture --connected-run partial-connected-run" for command in readiness["next_commands"])
+
+
 def test_cli_http_json_semantic_provider_flow(tmp_path: Path, monkeypatch) -> None:
     server = _EmbeddingServer()
     monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")

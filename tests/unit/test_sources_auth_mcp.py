@@ -8,7 +8,7 @@ from aoa_course_connector.auth import browser_state_plan, default_browser_state_
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
 from aoa_course_connector.sources import load_registry, upsert_source
@@ -292,6 +292,37 @@ def test_connector_readiness_uses_selected_connected_run_in_remediation(tmp_path
         for command in readiness["next_commands"]
     )
     assert not any("--connected-run connected-calibration" in command for command in readiness["next_commands"])
+
+
+def test_connector_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    materialize_fixture(storage, run_id="starter-fixture")
+    build_keyword_index(storage, run_id="starter-fixture")
+    build_semantic_index(storage, run_id="starter-fixture")
+    build_graph(storage, run_id="starter-fixture")
+    run_connected_calibration(storage, run_id="partial-connected-run", mode="live", platforms=["stepik"])
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    readiness = call_tool(
+        "connector_readiness",
+        {"runs": ["starter-fixture"], "platforms": ["stepik"], "connected_run": "partial-connected-run"},
+    )
+
+    assert readiness["connected_run"]["status"] == "partial"
+    assert readiness["connected_run"]["repair_lanes"][0]["lane"] == "network_gate"
+    assert readiness["lanes"]["connected_run_receipt_ready"] is False
+    assert any(command.startswith("aoa-course preflight connected-plan --platform stepik") for command in readiness["next_commands"])
+    assert any("aoa-course calibration connected-run --mode live --allow-network --run partial-connected-run" in command for command in readiness["next_commands"])
+    assert not any(command == "aoa-course bootstrap fixture --connected-run partial-connected-run" for command in readiness["next_commands"])
 
 
 def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Path, monkeypatch) -> None:

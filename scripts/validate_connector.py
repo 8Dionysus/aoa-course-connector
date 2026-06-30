@@ -405,7 +405,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     connected_run_raw = (repo_root / "src" / "aoa_course_connector" / "calibration" / "connected_run.py").read_text(encoding="utf-8")
@@ -428,6 +428,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "live_scope",
         "include_step_sources",
         "network_touched",
+        "_connected_run_repair_commands",
+        "repair_lanes",
+        "calibration status --run",
     ]:
         if token not in status_raw:
             errors.append(f"Connector status code missing readiness token: {token}")

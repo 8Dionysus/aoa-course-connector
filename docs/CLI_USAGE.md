@@ -127,5 +127,11 @@ plan and its ready connected-run handoff. `--max-lessons`, `--max-pages`,
 `--max-sources`, `--live-scope`, and `--include-step-sources` also flow into
 the embedded connected plan, so a readiness packet can preserve either a bounded
 browser crawl or an explicit Stepik full-course/source-enrichment handoff.
+If the selected connected-run receipt is missing, `next_commands` still points
+to fixture bootstrap. If the selected receipt exists as a partial connected-run
+with `repair_lanes`, `readiness` surfaces those repair lane commands directly,
+for example the read-only `preflight connected-plan` check and the gated
+`calibration connected-run --mode live --allow-network` rerun, instead of
+suggesting a blind fixture bootstrap.
 `--require-ready` exits non-zero only when `operational_ready` is false; live
 source execution remains gated behind the separate `--allow-network` commands.
