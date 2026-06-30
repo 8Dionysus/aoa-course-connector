@@ -179,6 +179,31 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-crawl-fixture
 ```
 
+## Live Calibration Packet
+
+Before expanding connected-source work, run the fixture-safe calibration eval:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
+```
+
+For operator-connected sources, save `preflight live`, `smoke browser-live`,
+and `smoke stepik-live` JSON reports under runtime artifact storage, then build
+one redacted handoff packet:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli calibration build \
+  --run connected-live-calibration \
+  --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" \
+  --report "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json" \
+  --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
+```
+
+The packet uses `aoa_course_live_calibration_packet_v1`, checks answer evidence,
+timestamps, local raw-path handling, and secret/raw-payload guards, and should
+not be committed when it comes from live private sources. See
+`docs/LIVE_CALIBRATION.md` for the full route.
+
 ## Answer Quality Eval
 
 After the starter, Stepik fixture, and GetCourse browser fixture artifacts have

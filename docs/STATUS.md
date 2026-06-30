@@ -80,6 +80,10 @@ This proves:
 - Browser live preflight rejects unsafe origin substring matches and withholds
   the live sync command until registered source hosts match the saved browser
   storage state.
+- Fixture-safe live calibration packets through `eval live-calibration` and
+  `calibration build`, covering GetCourse, Skillspace, and Stepik smoke reports,
+  answer evidence/timestamps, local raw-path handling, and secret/raw-payload
+  privacy guards.
 
 ## Remaining Goal Work
 
@@ -95,6 +99,9 @@ The next layer is live connected-source work:
 - broader Stepik live smoke calibration against operator-selected authenticated
   courses, account discovery output, and full-course source-registry runs after
   `preflight live --platform stepik` confirms token/source readiness;
+- collect connected-source live calibration packets from real GetCourse,
+  Skillspace, and Stepik accounts and use their failures to drive selector,
+  sync, and eval-intake follow-up work;
 - external embedding provider integration behind the existing semantic index
   contract;
 - live-calibrated authority tiers from adapter/source metadata beyond current

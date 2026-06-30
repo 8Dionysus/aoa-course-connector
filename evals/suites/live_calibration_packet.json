@@ -1,0 +1,19 @@
+{
+  "schema": "aoa_course_live_calibration_eval_suite_v1",
+  "suite_id": "live-calibration",
+  "expected_report_count": 3,
+  "expected_platforms": ["getcourse", "skillspace", "stepik"],
+  "min_answer_result_count_total": 3,
+  "min_answer_evidence_count_total": 3,
+  "required_quality_true_fields": [
+    "all_answered_reports_have_evidence",
+    "all_answered_reports_have_timestamps"
+  ],
+  "required_privacy_false_fields": [
+    "contains_raw_payloads",
+    "contains_secret_values"
+  ],
+  "required_privacy_true_fields": [
+    "raw_paths_are_local_runtime_state"
+  ]
+}

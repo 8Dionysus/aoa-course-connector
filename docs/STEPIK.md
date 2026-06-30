@@ -134,6 +134,11 @@ aoa-course smoke stepik-live 67 --run stepik-live-public-smoke --query "Python c
 not touch the network. `smoke stepik-live` is an operator action and returns an
 `aoa_course_stepik_smoke_report_v1` payload with `network_touched: true`.
 
+Use `eval live-calibration` for fixture-safe packet proof, then use
+`calibration build` with saved `smoke stepik-live` and `preflight live` JSON
+reports when calibrating connected Stepik courses. See
+`docs/LIVE_CALIBRATION.md`.
+
 Live materialization stores raw API responses and normalized bundles under
 `AOA_COURSE_DATA_ROOT`; generated indexes and graphs go under
 `AOA_COURSE_ARTIFACT_ROOT`.
