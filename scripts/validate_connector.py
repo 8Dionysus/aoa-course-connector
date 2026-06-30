@@ -59,11 +59,13 @@ REQUIRED_FILES = [
     "evals/suites/README.md",
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
+    "evals/suites/browser_crawl_answer_packets.json",
     "evals/suites/stepik_clean_api_answer_packets.json",
     "kag/AGENTS.md",
     "kag/README.md",
     "kag/manifest.json",
     "src/aoa_course_connector/cli.py",
+    "src/aoa_course_connector/adapters/browser/crawl.py",
     "src/aoa_course_connector/adapters/browser/snapshot.py",
     "src/aoa_course_connector/adapters/stepik/client.py",
     "src/aoa_course_connector/ingest/browser_session.py",
@@ -232,7 +234,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in stepik_doc:
             errors.append(f"Stepik doc missing token: {token}")
     browser_doc = (repo_root / "docs" / "BROWSER_SESSION.md").read_text(encoding="utf-8").casefold()
-    for token in ["browser-fixture", "browser-snapshot", "browser-live", "getcourse", "skillspace", "playwright"]:
+    for token in ["browser-fixture", "browser-snapshot", "browser-live", "crawl browser-fixture", "crawl browser-live", "max-lessons", "getcourse", "skillspace", "playwright"]:
         if token not in browser_doc:
             errors.append(f"Browser session doc missing token: {token}")
 

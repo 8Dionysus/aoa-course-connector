@@ -9,3 +9,5 @@
 - Added Stepik clean API adapter with fixture and bounded live materialization.
 - Added shared GetCourse/Skillspace browser-session snapshot adapters with
   fixture materialization and optional Playwright live capture.
+- Added bounded GetCourse/Skillspace course-tree crawl routes with fixture,
+  snapshot, live Playwright CLI commands, CI smoke checks, and answer evals.

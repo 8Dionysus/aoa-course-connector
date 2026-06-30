@@ -1,3 +1,8 @@
 # Suites
 
-Fixture-safe suites for local course connector behavior.
+Fixture-safe suites for local course connector behavior:
+
+- `starter_course_answer_packets.json`
+- `stepik_clean_api_answer_packets.json`
+- `browser_hard_adapter_answer_packets.json`
+- `browser_crawl_answer_packets.json`

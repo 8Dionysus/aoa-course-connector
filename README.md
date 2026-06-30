@@ -51,7 +51,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run st
 
 GetCourse and Skillspace now have a shared browser-session snapshot route. CI
 uses safe synthetic snapshots; live operator-owned pages can be captured with
-the optional Playwright browser extra.
+the optional Playwright browser extra. The `crawl` route starts from a course
+index and expands visible lesson links into a course-tree snapshot.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
@@ -63,14 +64,24 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
+
+PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-crawl-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli answer "GetCourse bootloader rollback evidence" --run getcourse-browser-crawl-fixture
+
+PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform skillspace --run skillspace-browser-crawl-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-crawl-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-crawl-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugreport evidence" --run skillspace-browser-crawl-fixture
 ```
 
 ## Priority Platforms
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Working browser-session snapshot adapter; live Playwright capture gated by local auth state |
-| Skillspace | Working browser-session snapshot adapter; live Playwright capture gated by local auth state |
+| GetCourse | Working browser-session snapshot and bounded course-tree crawl adapter; live Playwright crawl gated by local auth state |
+| Skillspace | Working browser-session snapshot and bounded course-tree crawl adapter; live Playwright crawl gated by local auth state |
 | Stepik | Working clean API reference adapter |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
