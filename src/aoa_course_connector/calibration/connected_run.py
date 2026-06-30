@@ -1070,7 +1070,17 @@ def _query_handoff_entry(
             "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {answer_mode}",
             "graph": f"aoa-course build-graph --run {shlex.quote(run_id)}",
         },
+        "mcp_commands": {
+            "search": _mcp_call_command("search", {"query": query_text, "run": run_id, "mode": answer_mode}),
+            "lesson_context": _mcp_call_command("lesson_context", {"query": query_text, "run": run_id, "mode": answer_mode}),
+            "evidence_report": _mcp_call_command("evidence_report", {"query": query_text, "run": run_id, "mode": answer_mode}),
+        },
     }
+
+
+def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:
+    encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    return f"aoa-course mcp call {tool} {shlex.quote(encoded)}"
 
 
 def _payload_summary(payload: dict[str, object]) -> dict[str, object]:

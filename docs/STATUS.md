@@ -175,7 +175,9 @@ This proves:
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, privacy flags, failures, next steps, artifact paths,
   `execution_options`, and `query_handoff` entries after fixture or gated live
-  runs.
+  runs. Query handoff entries now include CLI commands and MCP `mcp_commands`
+  for `search`, `lesson_context`, and `evidence_report`, so agents can stay on
+  the MCP surface after a connected run.
 
 ## Remaining Goal Work
 

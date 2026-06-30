@@ -296,7 +296,9 @@ work. Live receipts and status packets include `source_selection`, so agents can
 see requested, selected, ready, and blocked source ids before deciding the next
 sync or repair. They also include `query_handoff`, a compact list of queryable
 sync/smoke run ids with index, semantic index, graph, answer packet paths, and
-ready-to-run `query`/`answer` commands.
+ready-to-run CLI `query`/`answer` commands plus MCP `search`,
+`lesson_context`, and `evidence_report` commands for agents that should stay on
+the MCP surface.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
