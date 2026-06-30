@@ -94,6 +94,8 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "quality": receipt.get("quality") if isinstance(receipt.get("quality"), dict) else {},
         "privacy": receipt.get("privacy") if isinstance(receipt.get("privacy"), dict) else {},
         "failures": receipt.get("failures", []),
+        "repair_lane_count": receipt.get("repair_lane_count", 0),
+        "repair_lanes": receipt.get("repair_lanes", []),
         "next_steps": receipt.get("next_steps", []),
         "source_selection": receipt.get("source_selection", {}),
         "execution_options": receipt.get("execution_options") if isinstance(receipt.get("execution_options"), dict) else {},
@@ -741,6 +743,18 @@ def _receipt(
     status = _receipt_status(failures, packet=packet, stages=stages)
     query_handoff = _query_handoff(stages)
     registry = load_registry(roots.data)
+    repair_lanes = _repair_lanes(
+        failures,
+        intake=intake,
+        run_id=run_id,
+        mode=mode,
+        allow_network=allow_network,
+        platforms=platforms,
+        live_scope=live_scope,
+        source_selection=source_selection,
+        execution_options=execution_options,
+        packet_path=packet_path,
+    )
     return {
         "schema": "aoa_course_connected_calibration_run_receipt_v1",
         "status": status,
@@ -777,6 +791,8 @@ def _receipt(
             "sources": [],
         },
         "execution_options": execution_options or {},
+        "repair_lane_count": len(repair_lanes),
+        "repair_lanes": repair_lanes,
         "stage_count": len(stages),
         "stages": [_stage_without_full_payload(stage) for stage in stages],
         "artifacts": {
@@ -796,7 +812,7 @@ def _receipt(
         "quality": packet.get("quality") if isinstance(packet, dict) else {},
         "privacy": packet.get("privacy") if isinstance(packet, dict) else {"contains_raw_payloads": False, "contains_secret_values": False},
         "failures": failures,
-        "next_steps": _next_steps(status, mode, allow_network, failures, intake),
+        "next_steps": _next_steps(status, mode, allow_network, failures, intake, repair_lanes),
     }
 
 
@@ -1132,12 +1148,290 @@ def _stage_touched_network(stage: dict[str, object]) -> bool:
     return any(bool(action.get("network_touched")) for action in stage.get("actions", []) if isinstance(action, dict))
 
 
+def _repair_lanes(
+    failures: list[dict[str, object]],
+    *,
+    intake: dict[str, object] | None,
+    run_id: str,
+    mode: str,
+    allow_network: bool,
+    platforms: list[str],
+    live_scope: str,
+    source_selection: dict[str, object] | None,
+    execution_options: dict[str, object] | None,
+    packet_path: Path | None,
+) -> list[dict[str, object]]:
+    lanes: list[dict[str, object]] = []
+    source_selection = source_selection or {}
+    execution_options = execution_options or {}
+    rerun_command = _connected_rerun_command(
+        run_id,
+        platforms=platforms,
+        live_scope=live_scope,
+        source_ids=[str(item) for item in source_selection.get("ready_source_ids", []) if str(item)],
+        execution_options=execution_options,
+    )
+    preflight_command = _connected_preflight_command(platforms, live_scope=live_scope, execution_options=execution_options)
+
+    for failure in failures:
+        reason = str(failure.get("reason") or "inspect connected run failure")
+        stage = str(failure.get("stage") or "")
+        platform = str(failure.get("platform") or "")
+        source_id = str(failure.get("source_id") or "")
+        source_ref = str(failure.get("source_ref") or "")
+        if reason == "live mode requires --allow-network":
+            lanes.append(
+                _lane(
+                    lane="network_gate",
+                    severity="blocker",
+                    title="Review connected-source plan before network execution",
+                    reason=reason,
+                    next_commands=[preflight_command, rerun_command],
+                    evidence_needed=["connected-source plan", "operator approval for --allow-network"],
+                    source="connected_run_failure",
+                )
+            )
+        elif stage == "source_readiness" or reason == "source is not ready":
+            lanes.append(
+                _lane(
+                    lane="source_auth_or_readiness",
+                    severity="high",
+                    title="Repair source auth or readiness before live sync",
+                    reason=reason,
+                    platform=platform,
+                    source_id=source_id,
+                    source_ref=source_ref,
+                    blockers=[str(item) for item in failure.get("blockers", [])] if isinstance(failure.get("blockers"), list) else [],
+                    next_commands=_source_repair_commands(platform, preflight_command=preflight_command),
+                    evidence_needed=["redacted preflight report", "source registry entry", "auth-state or token readiness proof"],
+                    source="connected_run_failure",
+                )
+            )
+        elif reason == "no ready sources matched this connected run":
+            lanes.append(
+                _lane(
+                    lane="source_selection",
+                    severity="high",
+                    title="Select or register at least one ready connected source",
+                    reason=reason,
+                    next_commands=["aoa-course sources list", preflight_command],
+                    evidence_needed=["source registry with enabled sources", "read-only connected plan with ready source ids"],
+                    source="connected_run_failure",
+                )
+            )
+        elif stage == "sync":
+            lanes.append(
+                _lane(
+                    lane="source_sync",
+                    severity="high",
+                    title="Repair connected-source sync action",
+                    reason=reason,
+                    platform=platform,
+                    next_commands=[preflight_command, rerun_command],
+                    evidence_needed=["sync receipt", "redacted normalized bundle path", "source checkpoint status"],
+                    source="connected_run_failure",
+                )
+            )
+        elif stage == "smoke":
+            lanes.append(
+                _lane(
+                    lane="live_smoke_or_selector",
+                    severity="high",
+                    title="Repair live smoke, selector, or API smoke route",
+                    reason=reason,
+                    platform=platform,
+                    source_id=source_id,
+                    source_ref=source_ref,
+                    next_commands=[rerun_command],
+                    evidence_needed=["redacted smoke report", "minimal safe fixture or snapshot", "expected answer evidence"],
+                    source="connected_run_failure",
+                )
+            )
+        elif stage == "calibration_packet":
+            command = _calibration_intake_command(run_id, packet_path)
+            lanes.append(
+                _lane(
+                    lane="calibration_packet_intake",
+                    severity="medium",
+                    title="Run calibration intake for packet-level failures",
+                    reason=reason,
+                    next_commands=[command] if command else [],
+                    evidence_needed=["live calibration packet", "intake report actions"],
+                    source="connected_run_failure",
+                )
+            )
+        else:
+            lanes.append(
+                _lane(
+                    lane="connected_run_failure",
+                    severity="medium",
+                    title="Classify unresolved connected-run failure",
+                    reason=reason,
+                    platform=platform,
+                    source_id=source_id,
+                    source_ref=source_ref,
+                    next_commands=[rerun_command],
+                    evidence_needed=["connected run receipt", "stage payload summary", "redacted runtime artifacts"],
+                    source="connected_run_failure",
+                )
+            )
+
+    if intake and isinstance(intake.get("actions"), list):
+        for action in intake["actions"]:
+            if not isinstance(action, dict):
+                continue
+            command = _calibration_intake_command(run_id, packet_path)
+            lanes.append(
+                _lane(
+                    lane=str(action.get("lane") or "calibration_intake"),
+                    severity=str(action.get("severity") or "medium"),
+                    title=str(action.get("title") or "Follow calibration intake action"),
+                    reason=str(action.get("reason") or "calibration intake action"),
+                    platform=str(action.get("platform") or ""),
+                    next_commands=[command] if command else [],
+                    evidence_needed=[
+                        "redacted calibration packet",
+                        "minimal safe fixture or snapshot when source behavior changed",
+                        "repo-local eval intake candidate",
+                    ],
+                    eval_hint=str(action.get("eval_hint") or ""),
+                    source="calibration_intake",
+                )
+            )
+    return _dedupe_repair_lanes(lanes)
+
+
+def _lane(
+    *,
+    lane: str,
+    severity: str,
+    title: str,
+    reason: str,
+    next_commands: list[str],
+    evidence_needed: list[str],
+    source: str,
+    platform: str = "",
+    source_id: str = "",
+    source_ref: str = "",
+    blockers: list[str] | None = None,
+    eval_hint: str = "",
+) -> dict[str, object]:
+    payload: dict[str, object] = {
+        "lane": lane,
+        "severity": severity,
+        "title": title,
+        "reason": reason,
+        "source": source,
+        "next_commands": [command for command in next_commands if command],
+        "evidence_needed": evidence_needed,
+    }
+    if platform:
+        payload["platform"] = platform
+    if source_id:
+        payload["source_id"] = source_id
+    if source_ref:
+        payload["source_ref"] = source_ref
+    if blockers:
+        payload["blockers"] = blockers
+    if eval_hint:
+        payload["eval_hint"] = eval_hint
+    return payload
+
+
+def _dedupe_repair_lanes(lanes: list[dict[str, object]]) -> list[dict[str, object]]:
+    deduped: list[dict[str, object]] = []
+    seen: set[tuple[str, str, str, str, str]] = set()
+    for lane in lanes:
+        key = (
+            str(lane.get("lane") or ""),
+            str(lane.get("platform") or ""),
+            str(lane.get("source_id") or ""),
+            str(lane.get("reason") or ""),
+            str(lane.get("source") or ""),
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        deduped.append(lane)
+    return deduped
+
+
+def _connected_preflight_command(platforms: list[str], *, live_scope: str, execution_options: dict[str, object]) -> str:
+    parts = ["aoa-course preflight connected-plan"]
+    for platform in platforms:
+        parts.append(f"--platform {shlex.quote(platform)}")
+    if live_scope:
+        parts.append(f"--live-scope {shlex.quote(live_scope)}")
+    if execution_options.get("query"):
+        parts.append(f"--query {shlex.quote(str(execution_options.get('query')))}")
+    if execution_options.get("link_pattern"):
+        parts.append(f"--link-pattern {shlex.quote(str(execution_options.get('link_pattern')))}")
+    return " ".join(parts)
+
+
+def _connected_rerun_command(
+    run_id: str,
+    *,
+    platforms: list[str],
+    live_scope: str,
+    source_ids: list[str],
+    execution_options: dict[str, object],
+) -> str:
+    parts = [
+        "aoa-course calibration connected-run",
+        "--mode live",
+        "--allow-network",
+        f"--run {shlex.quote(run_id)}",
+    ]
+    for platform in platforms:
+        parts.append(f"--platform {shlex.quote(platform)}")
+    for source_id in source_ids:
+        parts.append(f"--source-id {shlex.quote(source_id)}")
+    if live_scope:
+        parts.append(f"--live-scope {shlex.quote(live_scope)}")
+    for option, flag in [
+        ("query", "--query"),
+        ("link_pattern", "--link-pattern"),
+        ("stepik_token_env", "--stepik-token-env"),
+        ("browser_state_file", "--state-file"),
+    ]:
+        value = execution_options.get(option)
+        if value:
+            parts.append(f"{flag} {shlex.quote(str(value))}")
+    for option, flag in [
+        ("max_lessons", "--max-lessons"),
+        ("max_pages", "--max-pages"),
+        ("max_sources", "--max-sources"),
+        ("source_limit", "--source-limit"),
+    ]:
+        value = execution_options.get(option)
+        if value is not None:
+            parts.append(f"{flag} {int(value)}")
+    return " ".join(parts)
+
+
+def _source_repair_commands(platform: str, *, preflight_command: str) -> list[str]:
+    commands = [preflight_command]
+    if platform in BROWSER_PLATFORMS:
+        commands.insert(0, f"aoa-course auth plan-browser-state {platform} account")
+    elif platform == "stepik":
+        commands.insert(0, "export STEPIK_API_TOKEN=<stepik-api-token>")
+    return commands
+
+
+def _calibration_intake_command(run_id: str, packet_path: Path | None) -> str:
+    if not packet_path:
+        return ""
+    return f"aoa-course calibration intake --run {shlex.quote(run_id + '-intake')} --packet {shlex.quote(str(packet_path))}"
+
+
 def _next_steps(
     status: str,
     mode: str,
     allow_network: bool,
     failures: list[dict[str, object]],
     intake: dict[str, object] | None,
+    repair_lanes: list[dict[str, object]],
 ) -> list[str]:
     if mode == "live" and not allow_network:
         return ["rerun with --allow-network after reviewing the connected-source plan and auth/source readiness"]
@@ -1147,6 +1441,8 @@ def _next_steps(
         return ["connect operator-owned credentials, run preflight connected-plan, then rerun calibration connected-run --mode live --allow-network"]
     if status == "ok":
         return ["use the calibration packet as field evidence for selector, sync, retrieval, and eval follow-up"]
+    if repair_lanes:
+        return [str(command) for lane in repair_lanes for command in lane.get("next_commands", []) if str(command)]
     return [str(failure.get("reason") or "inspect connected run failure") for failure in failures]
 
 

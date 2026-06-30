@@ -104,8 +104,15 @@ def test_connected_calibration_live_requires_explicit_network_gate(tmp_path: Pat
     assert receipt["execution_options"]["link_pattern"] == ""
     assert receipt["artifacts"]["packet_path"] is None
     assert any(failure["reason"] == "live mode requires --allow-network" for failure in receipt["failures"])
+    assert receipt["repair_lane_count"] == 1
+    assert receipt["repair_lanes"][0]["lane"] == "network_gate"
+    assert receipt["repair_lanes"][0]["severity"] == "blocker"
+    assert any("preflight connected-plan --platform stepik" in command for command in receipt["repair_lanes"][0]["next_commands"])
+    assert any("calibration connected-run --mode live --allow-network" in command for command in receipt["repair_lanes"][0]["next_commands"])
     assert Path(str(receipt["artifacts"]["plan_path"])).is_file()
     assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
+    status = load_connected_calibration_status(storage, run_id="connected-live-blocked")
+    assert status["repair_lanes"][0]["lane"] == "network_gate"
 
 
 def test_connected_calibration_live_source_limit_ignores_unselected_blocked_sources(
@@ -292,3 +299,80 @@ def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Pa
         failure["reason"] == "source is not ready" and failure["source_id"] == blocked["source_id"]
         for failure in receipt["failures"]
     )
+    lanes = {lane["lane"]: lane for lane in receipt["repair_lanes"]}
+    assert "source_auth_or_readiness" in lanes
+    assert "source_selection" in lanes
+    assert lanes["source_auth_or_readiness"]["source_id"] == blocked["source_id"]
+    assert any(command.startswith("export STEPIK_API_TOKEN=") for command in lanes["source_auth_or_readiness"]["next_commands"])
+    status = load_connected_calibration_status(storage, run_id="connected-live-explicit-blocked")
+    assert status["repair_lane_count"] == receipt["repair_lane_count"]
+    assert {lane["lane"] for lane in status["repair_lanes"]} == {"source_auth_or_readiness", "source_selection"}
+
+
+def test_connected_calibration_live_packet_failures_promote_intake_repair_lanes(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(
+        storage.data,
+        "getcourse",
+        "https://school.example/teach/control/stream",
+        "School",
+        access_mode="browser_session",
+    )
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": []}],
+        }),
+        encoding="utf-8",
+    )
+
+    def fake_sync(roots_arg, *, sync_run_id: str, source_ids=None, **_kwargs):
+        return {
+            "schema": "aoa_course_sync_receipt_v1",
+            "status": "ok",
+            "sync_run_id": sync_run_id,
+            "source_count": len(source_ids or []),
+            "synced_sources": [],
+            "failed_sources": [],
+            "network_touched": True,
+        }
+
+    def fake_smoke(roots_arg, *, platform: str, run_id: str, query=None, build_artifacts: bool = True, **_kwargs):
+        report = smoke_browser_fixture(
+            roots_arg,
+            platform=platform,
+            run_id=run_id,
+            query=query,
+            build_artifacts=build_artifacts,
+        )
+        report["artifacts"]["answer"]["result_count"] = 0
+        report["artifacts"]["answer"]["evidence_count"] = 0
+        return {**report, "source_mode": "browser_live_smoke", "network_touched": True}
+
+    monkeypatch.setattr(connected_run_module, "sync_browser_live_sources", fake_sync)
+    monkeypatch.setattr(connected_run_module, "smoke_browser_live", fake_smoke)
+
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-packet-partial",
+        mode="live",
+        platforms=["getcourse"],
+        source_ids=[str(source["source_id"])],
+        allow_network=True,
+        query="GetCourse bootloader rollback evidence",
+    )
+
+    assert receipt["status"] == "partial"
+    assert receipt["artifacts"]["intake_path"]
+    lanes = {lane["lane"]: lane for lane in receipt["repair_lanes"]}
+    assert "calibration_packet_intake" in lanes
+    assert "retrieval_quality" in lanes
+    assert lanes["retrieval_quality"]["source"] == "calibration_intake"
+    assert any("calibration intake" in command for command in lanes["retrieval_quality"]["next_commands"])
+    status = load_connected_calibration_status(storage, run_id="connected-live-packet-partial")
+    assert "retrieval_quality" in {lane["lane"] for lane in status["repair_lanes"]}
