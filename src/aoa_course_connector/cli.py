@@ -11,7 +11,7 @@ from aoa_course_connector.auth import browser_state_plan
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
-from aoa_course_connector.ingest import materialize_fixture
+from aoa_course_connector.ingest import materialize_fixture, materialize_stepik_fixture, materialize_stepik_live
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet, write_answer_packet
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
@@ -70,6 +70,10 @@ def build_parser() -> argparse.ArgumentParser:
     discover_fixture = discover_sub.add_parser("fixture")
     discover_fixture.add_argument("--run", default=DEFAULT_RUN)
     discover_fixture.set_defaults(func=cmd_discover_fixture)
+    discover_stepik = discover_sub.add_parser("stepik")
+    discover_stepik.add_argument("course_id", type=int)
+    discover_stepik.add_argument("--from-fixture", action="store_true")
+    discover_stepik.set_defaults(func=cmd_discover_stepik)
 
     materialize = sub.add_parser("materialize")
     materialize_sub = materialize.add_subparsers(dest="materialize_command", required=True)
@@ -77,6 +81,18 @@ def build_parser() -> argparse.ArgumentParser:
     fixture.add_argument("--run", default=DEFAULT_RUN)
     fixture.add_argument("--fixture", type=Path)
     fixture.set_defaults(func=cmd_materialize_fixture)
+    stepik_fixture = materialize_sub.add_parser("stepik-fixture")
+    stepik_fixture.add_argument("--run", default="stepik-fixture")
+    stepik_fixture.add_argument("--fixture", type=Path)
+    stepik_fixture.set_defaults(func=cmd_materialize_stepik_fixture)
+    stepik_live = materialize_sub.add_parser("stepik-live")
+    stepik_live.add_argument("course_id", type=int)
+    stepik_live.add_argument("--run")
+    stepik_live.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    stepik_live.add_argument("--max-sections", type=int, default=1)
+    stepik_live.add_argument("--max-units-per-section", type=int, default=2)
+    stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
+    stepik_live.set_defaults(func=cmd_materialize_stepik_live)
 
     ingest = sub.add_parser("ingest")
     ingest_sub = ingest.add_subparsers(dest="ingest_command", required=True)
@@ -84,6 +100,10 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_fixture.add_argument("--run", default=DEFAULT_RUN)
     ingest_fixture.add_argument("--fixture", type=Path)
     ingest_fixture.set_defaults(func=cmd_materialize_fixture)
+    ingest_stepik_fixture = ingest_sub.add_parser("stepik-fixture")
+    ingest_stepik_fixture.add_argument("--run", default="stepik-fixture")
+    ingest_stepik_fixture.add_argument("--fixture", type=Path)
+    ingest_stepik_fixture.set_defaults(func=cmd_materialize_stepik_fixture)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -123,6 +143,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser = sub.add_parser("eval")
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
+    eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -231,9 +252,65 @@ def cmd_discover_fixture(args: argparse.Namespace) -> int:
     return 0
 
 
+def cmd_discover_stepik(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    if args.from_fixture:
+        fixture_path = repo_root / "connector/fixtures/stepik/starter_stepik_course.json"
+        fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
+        course = fixture.get("course", {})
+        sections = fixture.get("sections", [])
+        _emit(
+            {
+                "schema": "aoa_course_stepik_discovery_receipt_v1",
+                "status": "ok",
+                "source_mode": "stepik_fixture",
+                "course_id": args.course_id,
+                "course_title": course.get("title") if isinstance(course, dict) else None,
+                "section_count": len(sections) if isinstance(sections, list) else 0,
+                "fixture": str(fixture_path),
+                "network_touched": False,
+            }
+        )
+        return 0
+    _emit(
+        {
+            "schema": "aoa_course_stepik_discovery_receipt_v1",
+            "status": "planned",
+            "source_mode": "stepik_live",
+            "course_id": args.course_id,
+            "next_command": f"aoa-course materialize stepik-live {args.course_id} --run stepik-course-{args.course_id}",
+            "network_touched": False,
+        }
+    )
+    return 0
+
+
 def cmd_materialize_fixture(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     receipt = materialize_fixture(roots, run_id=args.run, fixture=args.fixture)
+    _emit(receipt)
+    return 0
+
+
+def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = materialize_stepik_fixture(roots, run_id=args.run, fixture=args.fixture)
+    _emit(receipt)
+    return 0
+
+
+def cmd_materialize_stepik_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    run_id = args.run or f"stepik-course-{args.course_id}"
+    receipt = materialize_stepik_live(
+        roots,
+        course_id=args.course_id,
+        run_id=run_id,
+        token_env=args.token_env,
+        max_sections=args.max_sections,
+        max_units_per_section=args.max_units_per_section,
+        max_steps_per_lesson=args.max_steps_per_lesson,
+    )
     _emit(receipt)
     return 0
 
@@ -292,6 +369,20 @@ def cmd_eval_answer_packets(_args: argparse.Namespace) -> int:
         if missing_terms or not packet.get("evidence_chain"):
             failures.append({"query": query, "missing_terms": missing_terms, "has_evidence": bool(packet.get("evidence_chain"))})
     _emit({"schema": "aoa_course_eval_answer_packets_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_clean_api(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    failures = []
+    packet = render_answer_packet(roots, "Stepik public API source evidence", "stepik-fixture", 5)
+    text = json.dumps(packet).casefold()
+    for term in ["stepik", "api", "evidence"]:
+        if term not in text:
+            failures.append({"missing_term": term})
+    if not packet.get("evidence_chain"):
+        failures.append({"missing": "evidence_chain"})
+    _emit({"schema": "aoa_course_eval_clean_api_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 

@@ -22,6 +22,7 @@ This proves:
 - answer packets with evidence chains and freshness timestamps;
 - initial MCP tool surface;
 - fresh-copy agent install route.
+- Stepik clean API adapter through fixture and bounded live public API smoke.
 
 ## Remaining Goal Work
 
@@ -29,5 +30,5 @@ The next layer is live connected-source work:
 
 - GetCourse browser-session discovery;
 - Skillspace browser-session discovery;
-- Stepik clean API adapter;
+- broader Stepik sync coverage beyond bounded smoke slices;
 - richer live smoke routes gated away from CI secrets.

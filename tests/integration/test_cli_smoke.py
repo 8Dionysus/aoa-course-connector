@@ -30,3 +30,12 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert answer["evidence_chain"]
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
+
+
+def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
+    run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")
+    run_cli(tmp_path, "build-index", "--run", "stepik-fixture")
+    run_cli(tmp_path, "build-graph", "--run", "stepik-fixture")
+    answer = run_cli(tmp_path, "answer", "Stepik public API evidence", "--run", "stepik-fixture")
+    assert answer["result_count"] >= 1
+    assert answer["evidence_chain"]

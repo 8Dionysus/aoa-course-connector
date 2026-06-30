@@ -27,13 +27,33 @@ The starter path creates:
 - a course graph;
 - an answer packet with source-backed evidence.
 
+## Stepik Clean API Proof
+
+The first clean API adapter is Stepik. CI uses a safe Stepik-shaped fixture:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli answer "Stepik public API evidence" --run stepik-fixture
+```
+
+For a bounded live public API smoke:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live 67 --run stepik-live-smoke --max-sections 1 --max-units-per-section 1 --max-steps-per-lesson 2
+PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-live-smoke
+PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-live-smoke
+PYTHONPATH=src python -m aoa_course_connector.cli query "Python course" --run stepik-live-smoke
+```
+
 ## Priority Platforms
 
 | Platform | Route |
 | --- | --- |
 | GetCourse | Hard browser-session adapter for authorized course pages |
 | Skillspace | Hard browser-session adapter for authorized course pages |
-| Stepik | Clean API reference adapter target |
+| Stepik | Working clean API reference adapter |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
 

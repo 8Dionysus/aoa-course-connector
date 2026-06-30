@@ -28,6 +28,7 @@ REQUIRED_FILES = [
     "connector/manifests/artifact_classes.yaml",
     "connector/profiles/starter-course.yaml",
     "connector/fixtures/course/starter_course.json",
+    "connector/fixtures/stepik/starter_stepik_course.json",
     "docs/ARCHITECTURE.md",
     "docs/INSTALL.md",
     "docs/AGENT_INSTALL_ROUTE.md",
@@ -37,6 +38,7 @@ REQUIRED_FILES = [
     "docs/GETCOURSE.md",
     "docs/SKILLSPACE.md",
     "docs/CLEAN_API_ADAPTERS.md",
+    "docs/STEPIK.md",
     "docs/CLI_USAGE.md",
     "docs/MCP_USAGE.md",
     "docs/QUERY_MODEL.md",
@@ -53,10 +55,14 @@ REQUIRED_FILES = [
     "evals/README.md",
     "evals/suites/README.md",
     "evals/suites/starter_course_answer_packets.json",
+    "evals/suites/stepik_clean_api_answer_packets.json",
     "kag/AGENTS.md",
     "kag/README.md",
     "kag/manifest.json",
     "src/aoa_course_connector/cli.py",
+    "src/aoa_course_connector/adapters/stepik/client.py",
+    "src/aoa_course_connector/ingest/stepik.py",
+    "src/aoa_course_connector/normalize/stepik.py",
     "src/aoa_course_connector/mcp/server.py",
     "scripts/validate_connector.py",
     "scripts/verify_agent_install_route.py",
@@ -71,6 +77,7 @@ REQUIRED_DIRS = [
     ".github/workflows",
     "connector/schemas",
     "src/aoa_course_connector/adapters",
+    "src/aoa_course_connector/adapters/stepik",
     "src/aoa_course_connector/auth",
     "src/aoa_course_connector/core",
     "src/aoa_course_connector/evidence",
@@ -207,11 +214,15 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for var in ["AOA_COURSE_DATA_ROOT", "AOA_COURSE_CACHE_ROOT", "AOA_COURSE_AUTH_ROOT", "AOA_COURSE_ARTIFACT_ROOT"]:
         if var not in storage_policy:
             errors.append(f"storage policy missing variable: {var}")
-    for token in ["index", "graph", "evidence", "mcp", "getcourse", "skillspace"]:
+    for token in ["index", "graph", "evidence", "mcp", "getcourse", "skillspace", "stepik"]:
         if token not in readme:
             warnings.append(f"README weakly covers token: {token}")
     if "aoa-course-connector-mcp" not in mcp:
         errors.append("MCP usage missing server package name")
+    stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()
+    for token in ["stepik-live", "stepik-fixture", "course -> sections -> units -> lessons -> steps", "stepik_api_token"]:
+        if token not in stepik_doc:
+            errors.append(f"Stepik doc missing token: {token}")
 
 
 def _is_allowed_kag_indexes(rel_parts: tuple[str, ...]) -> bool:

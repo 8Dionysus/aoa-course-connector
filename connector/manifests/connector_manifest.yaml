@@ -7,6 +7,8 @@ source_family: course-platforms
 priority_adapters:
   - getcourse
   - skillspace
+working_adapters:
+  - stepik
 reference_adapters:
   - stepik
   - moodle
