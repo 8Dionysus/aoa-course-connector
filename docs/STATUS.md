@@ -25,6 +25,9 @@ This proves:
 - Stepik clean API adapter through fixture and bounded live public API smoke.
 - GetCourse and Skillspace browser-session snapshot adapters through fixtures
   and optional Playwright live capture route.
+- GetCourse and Skillspace account-level browser discovery into the local source
+  registry through fixtures, snapshot input, optional Playwright live discovery,
+  and source-registry evals.
 - GetCourse and Skillspace bounded course-tree crawlers through fixtures,
   snapshot input, optional Playwright live traversal, and answer evals.
 
@@ -32,9 +35,9 @@ This proves:
 
 The next layer is live connected-source work:
 
-- GetCourse account-level training discovery, pagination, progress, and visible
-  comment extraction beyond bounded course-index crawl;
-- Skillspace account-level course discovery, pagination, progress, and visible
-  comment extraction beyond bounded course-index crawl;
+- GetCourse pagination, progress, checkpoints, and visible comment extraction
+  beyond bounded account catalog and course-index crawl;
+- Skillspace pagination, progress, checkpoints, and visible comment extraction
+  beyond bounded account catalog and course-index crawl;
 - broader Stepik sync coverage beyond bounded smoke slices;
 - richer live smoke routes gated away from CI secrets.

@@ -16,9 +16,12 @@ the first live route should be browser-session discovery.
 ## Current Working Route
 
 `aoa-course-connector` supports Skillspace through the shared browser-session
-snapshot and course-tree crawl adapters:
+discovery, snapshot, and course-tree crawl adapters:
 
 ```bash
+aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register --max-sources 50
+aoa-course sources list
+
 aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
 aoa-course build-index --run skillspace-browser-fixture
 aoa-course build-graph --run skillspace-browser-fixture
@@ -30,11 +33,19 @@ aoa-course build-graph --run skillspace-browser-crawl-fixture
 aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-crawl-fixture
 ```
 
-For live operator-owned pages, use `crawl browser-live` with a local Playwright
-storage-state file under `AOA_COURSE_AUTH_ROOT` and start from a visible course
-index page:
+For live operator-owned pages, use `discover browser-live` or
+`crawl browser-live` with a local Playwright storage-state file under
+`AOA_COURSE_AUTH_ROOT`. Start discovery from a visible course catalog page, then
+crawl the selected course entrypoint:
 
 ```bash
+aoa-course discover browser-live "https://academy.example/courses" \
+  --platform skillspace \
+  --run skillspace-live-discovery \
+  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
+  --register \
+  --max-sources 50
+
 aoa-course crawl browser-live "https://academy.example/course/mobile-debugging" \
   --platform skillspace \
   --run skillspace-live-crawl \

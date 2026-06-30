@@ -1,0 +1,21 @@
+{
+  "schema": "aoa_course_browser_snapshot_v1",
+  "platform": "skillspace",
+  "captured_at": "2026-06-30T01:50:00Z",
+  "source": {
+    "source_id": "source:skillspace:catalog-fixture",
+    "platform": "skillspace",
+    "source_ref": "https://academy.example/courses",
+    "access_mode": "browser_session",
+    "title": "Skillspace Account Catalog Fixture"
+  },
+  "pages": [
+    {
+      "page_id": "skillspace-account-catalog",
+      "kind": "account_catalog",
+      "url": "https://academy.example/courses",
+      "title": "Skillspace Account Catalog Fixture",
+      "html": "<html><head><title>Skillspace Account Catalog Fixture</title></head><body><main><h1>My courses</h1><a data-aoa-kind=\"course\" href=\"/course/mobile-debugging\">Mobile Debugging</a><a data-aoa-kind=\"course\" href=\"/course/firmware-audit\">Firmware Audit</a><a href=\"/course/mobile-debugging/lesson/logcat\">Do not register lesson as source</a></main></body></html>"
+    }
+  ]
+}

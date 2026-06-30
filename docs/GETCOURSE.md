@@ -17,9 +17,12 @@ The connector should not depend on media download to deliver useful knowledge.
 ## Current Working Route
 
 `aoa-course-connector` supports GetCourse through the shared browser-session
-snapshot and course-tree crawl adapters:
+discovery, snapshot, and course-tree crawl adapters:
 
 ```bash
+aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
+aoa-course sources list
+
 aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
 aoa-course build-index --run getcourse-browser-fixture
 aoa-course build-graph --run getcourse-browser-fixture
@@ -31,11 +34,19 @@ aoa-course build-graph --run getcourse-browser-crawl-fixture
 aoa-course answer "GetCourse bootloader rollback evidence" --run getcourse-browser-crawl-fixture
 ```
 
-For live operator-owned pages, use `crawl browser-live` with a local Playwright
-storage-state file under `AOA_COURSE_AUTH_ROOT` and start from a visible stream
-or course index page:
+For live operator-owned pages, use `discover browser-live` or
+`crawl browser-live` with a local Playwright storage-state file under
+`AOA_COURSE_AUTH_ROOT`. Start discovery from a visible stream/catalog page, then
+crawl the selected course entrypoint:
 
 ```bash
+aoa-course discover browser-live "https://school.example/teach/control/stream" \
+  --platform getcourse \
+  --run getcourse-live-discovery \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --register \
+  --max-sources 50
+
 aoa-course crawl browser-live "https://school.example/teach/control/stream" \
   --platform getcourse \
   --run getcourse-live-crawl \

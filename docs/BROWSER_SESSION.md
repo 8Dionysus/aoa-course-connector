@@ -2,7 +2,7 @@
 
 GetCourse and Skillspace are hard browser-session adapters.
 
-The connector supports four browser-session routes:
+The connector supports five browser-session routes:
 
 1. `browser-fixture`: safe synthetic snapshots used by CI.
 2. `browser-snapshot`: operator-provided JSON snapshot captured outside Git.
@@ -10,6 +10,8 @@ The connector supports four browser-session routes:
    browser storage state.
 4. `crawl`: bounded course-tree traversal from an index page to visible lesson
    pages.
+5. `discover`: account/catalog discovery that finds visible course entrypoints
+   and can register them as local sources.
 
 ## Fixture Proof
 
@@ -25,6 +27,22 @@ aoa-course build-graph --run skillspace-browser-fixture
 aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
 aoa-course eval browser-hard-adapters
 ```
+
+## Account Discovery Proof
+
+Use `discover browser-fixture` to prove the source-registration route without
+private account data:
+
+```bash
+aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
+aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register --max-sources 50
+aoa-course sources list
+aoa-course eval browser-discovery
+```
+
+`--register` writes discovered course entrypoints into the local source registry
+under `AOA_COURSE_DATA_ROOT`. Without `--register`, discovery is read-only and
+emits a receipt only.
 
 ## Course-Tree Crawl Proof
 
@@ -53,6 +71,7 @@ from the snapshot.
 
 ```bash
 aoa-course materialize browser-snapshot /path/to/snapshot.json --platform getcourse --run my-getcourse-run
+aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run my-getcourse-discovery --register --max-sources 50
 aoa-course crawl browser-snapshot /path/to/snapshot.json --platform getcourse --run my-getcourse-crawl --max-lessons 50
 ```
 
@@ -91,5 +110,18 @@ aoa-course crawl browser-live "https://school.example/teach/control/stream" \
   --max-lessons 50
 ```
 
+To start from an account catalog page and register visible course entrypoints,
+use `discover browser-live`:
+
+```bash
+aoa-course discover browser-live "https://school.example/teach/control/stream" \
+  --platform getcourse \
+  --run getcourse-live-discovery \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --register \
+  --max-sources 50
+```
+
 `--max-lessons` bounds the live traversal. `--link-pattern` can narrow discovery
 when a platform or school theme emits noisy navigation links.
+`--max-sources` bounds account-level source discovery.

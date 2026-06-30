@@ -9,6 +9,11 @@ from pathlib import Path
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan
 from aoa_course_connector.config import StorageRoots, find_repo_root
+from aoa_course_connector.discover import (
+    discover_browser_fixture as discover_browser_fixture_route,
+    discover_browser_live as discover_browser_live_route,
+    discover_browser_snapshot as discover_browser_snapshot_route,
+)
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
 from aoa_course_connector.ingest import (
@@ -86,7 +91,30 @@ def build_parser() -> argparse.ArgumentParser:
     discover_stepik.set_defaults(func=cmd_discover_stepik)
     discover_browser = discover_sub.add_parser("browser-fixture")
     discover_browser.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    discover_browser.add_argument("--run")
+    discover_browser.add_argument("--fixture", type=Path)
+    discover_browser.add_argument("--max-sources", type=int, default=50)
+    discover_browser.add_argument("--link-pattern")
+    discover_browser.add_argument("--register", action="store_true")
     discover_browser.set_defaults(func=cmd_discover_browser_fixture)
+    discover_browser_snapshot = discover_sub.add_parser("browser-snapshot")
+    discover_browser_snapshot.add_argument("snapshot", type=Path)
+    discover_browser_snapshot.add_argument("--platform", choices=["getcourse", "skillspace"])
+    discover_browser_snapshot.add_argument("--run")
+    discover_browser_snapshot.add_argument("--max-sources", type=int, default=50)
+    discover_browser_snapshot.add_argument("--link-pattern")
+    discover_browser_snapshot.add_argument("--register", action="store_true")
+    discover_browser_snapshot.set_defaults(func=cmd_discover_browser_snapshot)
+    discover_browser_live = discover_sub.add_parser("browser-live")
+    discover_browser_live.add_argument("url")
+    discover_browser_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
+    discover_browser_live.add_argument("--run")
+    discover_browser_live.add_argument("--state-file", type=Path)
+    discover_browser_live.add_argument("--wait-until", default="networkidle")
+    discover_browser_live.add_argument("--max-sources", type=int, default=50)
+    discover_browser_live.add_argument("--link-pattern")
+    discover_browser_live.add_argument("--register", action="store_true")
+    discover_browser_live.set_defaults(func=cmd_discover_browser_live)
 
     materialize = sub.add_parser("materialize")
     materialize_sub = materialize.add_subparsers(dest="materialize_command", required=True)
@@ -207,6 +235,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("clean-api").set_defaults(func=cmd_eval_clean_api)
     eval_sub.add_parser("browser-hard-adapters").set_defaults(func=cmd_eval_browser_hard_adapters)
     eval_sub.add_parser("browser-crawl").set_defaults(func=cmd_eval_browser_crawl)
+    eval_sub.add_parser("browser-discovery").set_defaults(func=cmd_eval_browser_discovery)
 
     mcp = sub.add_parser("mcp")
     mcp_sub = mcp.add_subparsers(dest="mcp_command", required=True)
@@ -349,21 +378,54 @@ def cmd_discover_stepik(args: argparse.Namespace) -> int:
 
 
 def cmd_discover_browser_fixture(args: argparse.Namespace) -> int:
-    repo_root = find_repo_root()
-    fixture_path = repo_root / "connector" / "fixtures" / "browser" / f"{args.platform}_starter_snapshot.json"
-    fixture = json.loads(fixture_path.read_text(encoding="utf-8"))
-    pages = fixture.get("pages", [])
-    _emit(
-        {
-            "schema": "aoa_course_browser_discovery_receipt_v1",
-            "status": "ok",
-            "platform": args.platform,
-            "source_mode": f"{args.platform}_browser_fixture",
-            "page_count": len(pages) if isinstance(pages, list) else 0,
-            "fixture": str(fixture_path),
-            "network_touched": False,
-        }
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = discover_browser_fixture_route(
+        roots,
+        platform=args.platform,
+        run_id=args.run,
+        fixture=args.fixture,
+        max_sources=args.max_sources,
+        link_pattern=args.link_pattern,
+        register=args.register,
     )
+    _emit(receipt)
+    return 0
+
+
+def cmd_discover_browser_snapshot(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    receipt = discover_browser_snapshot_route(
+        roots,
+        snapshot_path=args.snapshot,
+        platform=args.platform,
+        run_id=args.run,
+        max_sources=args.max_sources,
+        link_pattern=args.link_pattern,
+        register=args.register,
+    )
+    _emit(receipt)
+    return 0
+
+
+def cmd_discover_browser_live(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    run_id = args.run or f"{args.platform}-browser-live-discovery"
+    try:
+        receipt = discover_browser_live_route(
+            roots,
+            url=args.url,
+            platform=args.platform,
+            run_id=run_id,
+            state_file=args.state_file,
+            wait_until=args.wait_until,
+            max_sources=args.max_sources,
+            link_pattern=args.link_pattern,
+            register=args.register,
+        )
+    except RuntimeError as exc:
+        _emit({"schema": "aoa_course_browser_discovery_receipt_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    _emit(receipt)
     return 0
 
 
@@ -574,6 +636,26 @@ def cmd_eval_browser_crawl(_args: argparse.Namespace) -> int:
         if missing_terms or not packet.get("evidence_chain"):
             failures.append({"run_id": run_id, "query": query, "missing_terms": missing_terms, "has_evidence": bool(packet.get("evidence_chain"))})
     _emit({"schema": "aoa_course_eval_browser_crawl_v1", "status": "ok" if not failures else "error", "failures": failures})
+    return 0 if not failures else 1
+
+
+def cmd_eval_browser_discovery(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    registry = load_registry(roots.data)
+    sources = registry.get("sources", [])
+    failures = []
+    for platform, term in [("getcourse", "stream/view"), ("skillspace", "/course/")]:
+        matches = [
+            source
+            for source in sources
+            if isinstance(source, dict)
+            and source.get("platform") == platform
+            and source.get("access_mode") == "browser_session"
+            and term in str(source.get("source_ref") or "")
+        ]
+        if not matches:
+            failures.append({"platform": platform, "missing_registered_source_hint": term})
+    _emit({"schema": "aoa_course_eval_browser_discovery_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
 

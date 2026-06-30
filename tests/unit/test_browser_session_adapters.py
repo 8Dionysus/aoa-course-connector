@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from aoa_course_connector.adapters.browser import parse_html_snapshot
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
@@ -43,3 +44,26 @@ def test_skillspace_browser_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert results[0]["platform"] == "skillspace"
     packet = render_answer_packet(storage, "Skillspace logcat bugreport evidence", run_id="skillspace-browser-fixture")
     assert packet["evidence_chain"]
+
+
+def test_browser_snapshot_preserves_unannotated_asset_links() -> None:
+    snapshot = parse_html_snapshot(
+        """
+        <main>
+          <a href="/lesson">ordinary lesson link</a>
+          <a href="/files/intro.pdf">Intro PDF</a>
+          <a href="/files/archive.zip" download>Archive</a>
+        </main>
+        """,
+        "https://school.example/course/",
+    )
+
+    assert [link["href"] for link in snapshot.links] == [
+        "https://school.example/lesson",
+        "https://school.example/files/intro.pdf",
+        "https://school.example/files/archive.zip",
+    ]
+    assert {asset["url"] for asset in snapshot.assets} == {
+        "https://school.example/files/intro.pdf",
+        "https://school.example/files/archive.zip",
+    }

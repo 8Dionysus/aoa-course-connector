@@ -6,8 +6,8 @@ the connected user is authorized to access.
 Allowed source modes:
 
 - `browser_session`: operator logs in locally, exports or reuses browser auth
-  state under `AOA_COURSE_AUTH_ROOT`, and the connector reads visible course
-  pages.
+  state under `AOA_COURSE_AUTH_ROOT`, discovers visible course entrypoints into
+  the local source registry, and reads visible course pages.
 - `api_token`: platform token or OAuth route for official APIs.
 - `offline_export`: operator-provided course export or safe fixture.
 - `public_api`: public catalog or LMS API content that does not require private

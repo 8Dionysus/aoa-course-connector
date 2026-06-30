@@ -30,6 +30,8 @@ REQUIRED_FILES = [
     "connector/fixtures/course/starter_course.json",
     "connector/fixtures/browser/getcourse_starter_snapshot.json",
     "connector/fixtures/browser/skillspace_starter_snapshot.json",
+    "connector/fixtures/browser/getcourse_catalog_snapshot.json",
+    "connector/fixtures/browser/skillspace_catalog_snapshot.json",
     "connector/fixtures/stepik/starter_stepik_course.json",
     "docs/ARCHITECTURE.md",
     "docs/INSTALL.md",
@@ -60,13 +62,16 @@ REQUIRED_FILES = [
     "evals/suites/starter_course_answer_packets.json",
     "evals/suites/browser_hard_adapter_answer_packets.json",
     "evals/suites/browser_crawl_answer_packets.json",
+    "evals/suites/browser_discovery_sources.json",
     "evals/suites/stepik_clean_api_answer_packets.json",
     "kag/AGENTS.md",
     "kag/README.md",
     "kag/manifest.json",
     "src/aoa_course_connector/cli.py",
     "src/aoa_course_connector/adapters/browser/crawl.py",
+    "src/aoa_course_connector/adapters/browser/discovery.py",
     "src/aoa_course_connector/adapters/browser/snapshot.py",
+    "src/aoa_course_connector/discover/browser_session.py",
     "src/aoa_course_connector/adapters/stepik/client.py",
     "src/aoa_course_connector/ingest/browser_session.py",
     "src/aoa_course_connector/ingest/stepik.py",
@@ -90,6 +95,7 @@ REQUIRED_DIRS = [
     "src/aoa_course_connector/adapters/stepik",
     "src/aoa_course_connector/auth",
     "src/aoa_course_connector/core",
+    "src/aoa_course_connector/discover",
     "src/aoa_course_connector/evidence",
     "src/aoa_course_connector/graph",
     "src/aoa_course_connector/index",
@@ -234,7 +240,21 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in stepik_doc:
             errors.append(f"Stepik doc missing token: {token}")
     browser_doc = (repo_root / "docs" / "BROWSER_SESSION.md").read_text(encoding="utf-8").casefold()
-    for token in ["browser-fixture", "browser-snapshot", "browser-live", "crawl browser-fixture", "crawl browser-live", "max-lessons", "getcourse", "skillspace", "playwright"]:
+    for token in [
+        "browser-fixture",
+        "browser-snapshot",
+        "browser-live",
+        "crawl browser-fixture",
+        "crawl browser-live",
+        "discover browser-fixture",
+        "discover browser-live",
+        "--register",
+        "max-lessons",
+        "max-sources",
+        "getcourse",
+        "skillspace",
+        "playwright",
+    ]:
         if token not in browser_doc:
             errors.append(f"Browser session doc missing token: {token}")
 
