@@ -101,6 +101,7 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/adapters/browser/snapshot.py",
     "src/aoa_course_connector/discover/browser_session.py",
     "src/aoa_course_connector/discover/stepik.py",
+    "src/aoa_course_connector/goal_audit.py",
     "src/aoa_course_connector/adapters/stepik/client.py",
     "src/aoa_course_connector/ingest/browser_session.py",
     "src/aoa_course_connector/ingest/stepik.py",
@@ -346,8 +347,12 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing default all-priority MCP connected-source validation")
     if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
         errors.append("AGENTS route missing connector readiness validation")
+    if "goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection" not in agents:
+        errors.append("AGENTS route missing goal audit ready-for-connection validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
+    if "goal audit --run starter-fixture --connected-run" not in agent_install_raw or "ready_for_operator_connection" not in agent_install_raw:
+        errors.append("Agent install route missing goal audit handoff")
     _check_agent_install_route_commands(agent_install_raw, errors)
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
@@ -422,9 +427,16 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "goal audit", "aoa_course_goal_audit_v1", "ready_for_operator_connection", "remaining_live_requirements", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
+    goal_audit_raw = (repo_root / "src" / "aoa_course_connector" / "goal_audit.py").read_text(encoding="utf-8")
+    for token in ["aoa_course_goal_audit_v1", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "requires_operator_live_access", "connector_readiness"]:
+        if token not in goal_audit_raw:
+            errors.append(f"Goal audit code missing token: {token}")
+    verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")
+    if "goal" not in verifier_raw or "audit" not in verifier_raw or "--require-ready-for-connection" not in verifier_raw:
+        errors.append("Agent install verifier missing goal audit command")
     connected_run_raw = (repo_root / "src" / "aoa_course_connector" / "calibration" / "connected_run.py").read_text(encoding="utf-8")
     for token in ["repair_lanes", "repair_lane_count", "network_gate", "source_auth_or_readiness", "source_selection", "source_sync", "live_smoke_or_selector", "calibration_packet_intake"]:
         if token not in connected_run_raw:

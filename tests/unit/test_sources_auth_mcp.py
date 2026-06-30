@@ -6,14 +6,19 @@ from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.goal_audit import goal_audit
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
 from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
+
+
+REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
@@ -28,6 +33,46 @@ def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
     assert "capture-browser-state" in plan["capture_command"]
     assert "inspect-browser-state" in plan["inspect_command"]
     assert plan["git_safe"] is False
+
+
+def test_goal_audit_reports_ready_for_operator_connection_after_bootstrap(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
+    bootstrap_fixture(
+        REPO_ROOT,
+        storage,
+        run_id="starter-fixture",
+        connected_run="connected-calibration",
+        mcp_tool_names=tools,
+    )
+
+    report = goal_audit(
+        REPO_ROOT,
+        storage,
+        runs=["starter-fixture"],
+        connected_run="connected-calibration",
+        mcp_tool_names=tools,
+    )
+
+    assert report["schema"] == "aoa_course_goal_audit_v1"
+    assert report["status"] == "ready_for_operator_connection"
+    assert report["ready_for_operator_connection"] is True
+    assert report["goal_complete"] is False
+    assert report["summary"]["blocking_action_required_count"] == 0
+    assert {item["id"] for item in report["remaining_live_requirements"]} >= {
+        "getcourse_live_calibration",
+        "skillspace_live_calibration",
+        "stepik_authenticated_full_course",
+    }
+    requirements = {item["id"]: item for item in report["requirements"]}
+    assert requirements["local_index_graph_query"]["status"] == "proved"
+    assert requirements["mcp_surface"]["status"] == "proved"
 
 
 def test_adapter_registry_covers_goal_platform_topology(tmp_path: Path) -> None:
