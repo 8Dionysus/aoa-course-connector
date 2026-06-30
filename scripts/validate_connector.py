@@ -4,9 +4,13 @@
 from __future__ import annotations
 
 import json
+import re
 import sys
 from pathlib import Path
 
+
+BOOTSTRAP_FIXTURE_INSTALL_COMMAND = "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration"
+COMMAND_SPAN_RE = re.compile(r"`([^`\n]+)`")
 
 REQUIRED_FILES = [
     "AGENTS.md",
@@ -194,6 +198,26 @@ FORBIDDEN_HEAVY_ROOTS = {"data", "cache", "auth", "artifacts", "raw", "indexes",
 IGNORED_LOCAL_CACHE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv"}
 
 
+def _documented_commands(text: str) -> list[str]:
+    commands = [match.strip() for match in COMMAND_SPAN_RE.findall(text)]
+    commands.extend(line.strip() for line in text.splitlines() if line.strip().startswith("aoa-course "))
+    return commands
+
+
+def _has_exact_documented_command(text: str, command: str) -> bool:
+    return command in _documented_commands(text)
+
+
+def _check_agent_install_route_commands(agent_install_raw: str, errors: list[str]) -> None:
+    if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
+        errors.append("Agent install route missing connector readiness audit handoff")
+    if not _has_exact_documented_command(agent_install_raw, BOOTSTRAP_FIXTURE_INSTALL_COMMAND):
+        errors.append("Agent install route missing exact fixture bootstrap handoff")
+    for command in _documented_commands(agent_install_raw):
+        if command.startswith(BOOTSTRAP_FIXTURE_INSTALL_COMMAND) and " --platform" in command:
+            errors.append("Agent install route must not narrow fixture bootstrap handoff with --platform")
+
+
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     errors: list[str] = []
@@ -304,10 +328,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing connector readiness validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
-    if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
-        errors.append("Agent install route missing connector readiness audit handoff")
-    if "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agent_install_raw:
-        errors.append("Agent install route missing fixture bootstrap handoff")
+    _check_agent_install_route_commands(agent_install_raw, errors)
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
     if "eval browser-transcripts" not in agents:
