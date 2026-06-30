@@ -79,6 +79,10 @@ aoa-course calibration connected-run \
 ```
 
 Live connected-run receipts are runtime evidence and must stay out of Git.
+For GetCourse and Skillspace live runs, `calibration connected-run` uses the
+same default browser storage-state path checked by preflight,
+`${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`,
+unless `--browser-state-file` is supplied.
 The bounded public Stepik route has been field-smoked with this command shape:
 the resulting local receipt and calibration packet were `ok`, contained answer
 evidence and timestamps, and kept raw payloads and secret values out of the
@@ -88,8 +92,8 @@ full-course Stepik source behaves the same.
 After any connected run, use `calibration status --run <run>` or MCP
 `connected_run_status` to read the receipt summary without executing network
 work. The `aoa_course_connected_calibration_run_status_v1` status packet
-includes stage summaries, packet quality, privacy flags, failures, next steps,
-and runtime artifact paths.
+includes `source_selection`, stage summaries, packet quality, privacy flags,
+failures, next steps, and runtime artifact paths.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"

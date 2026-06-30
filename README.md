@@ -248,7 +248,10 @@ packet, an intake report, and one
 `aoa_course_connected_calibration_run_receipt_v1` under runtime artifact
 storage. `--mode live` refuses to touch connected sources unless
 `--allow-network` is present; use it only after reviewing the connected plan and
-local auth/source readiness:
+local auth/source readiness. For GetCourse and Skillspace, ready sources use the
+same default browser state file checked by preflight,
+`${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`,
+unless `--browser-state-file` overrides it:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run \
@@ -266,7 +269,9 @@ plan, live sync, live smoke, calibration packet, and intake while keeping raw
 API payloads and secret values out of shareable output.
 After a run, inspect the same receipt through `calibration status --run <run>`
 or MCP `connected_run_status`; both are read-only and do not repeat network
-work.
+work. Live receipts and status packets include `source_selection`, so agents can
+see requested, selected, ready, and blocked source ids before deciding the next
+sync or repair.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"

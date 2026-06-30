@@ -94,6 +94,7 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "privacy": receipt.get("privacy") if isinstance(receipt.get("privacy"), dict) else {},
         "failures": receipt.get("failures", []),
         "next_steps": receipt.get("next_steps", []),
+        "source_selection": receipt.get("source_selection", {}),
         "artifacts": {
             "plan_path": artifacts.get("plan_path"),
             "runbook_path": artifacts.get("runbook_path"),
@@ -404,6 +405,17 @@ def _run_live(
         }
     )
 
+    selected_sources = _selected_source_checks(plan, source_ids=source_ids, source_limit=source_limit)
+    ready_sources = _ready_source_checks(selected_sources)
+    blocked_sources = _blocked_source_checks(selected_sources)
+    source_selection = _source_selection(
+        requested_source_ids=source_ids or [],
+        selected_sources=selected_sources,
+        ready_sources=ready_sources,
+        blocked_sources=blocked_sources,
+        source_limit=source_limit,
+    )
+
     if not allow_network:
         failures.append({"stage": "live_execution", "reason": "live mode requires --allow-network"})
         return _receipt(
@@ -427,11 +439,9 @@ def _run_live(
             plan_path=plan_path,
             runbook_path=Path(str(runbook.get("path"))),
             sync_receipts=[],
+            source_selection=source_selection,
         )
 
-    selected_sources = _selected_source_checks(plan, source_ids=source_ids, source_limit=source_limit)
-    ready_sources = _ready_source_checks(selected_sources)
-    blocked_sources = _blocked_source_checks(selected_sources)
     for source in blocked_sources:
         failures.append(
             {
@@ -451,6 +461,7 @@ def _run_live(
         ids = [str(source.get("source_id")) for source in ready_sources if source.get("platform") == platform]
         if not ids:
             continue
+        state_file = _resolved_browser_state_file(roots, platform=platform, browser_state_file=browser_state_file)
         action = _capture_action(
             "sync",
             platform,
@@ -459,13 +470,15 @@ def _run_live(
                 sync_run_id=f"{run_id}-{platform}-live-sync",
                 platforms=[platform],
                 source_ids=ids,
-                state_file=browser_state_file,
+                state_file=state_file,
                 max_lessons=max_lessons,
                 source_limit=source_limit,
                 build_artifacts=True,
             ),
             network_touched=True,
         )
+        action["source_ids"] = ids
+        action["state_file"] = str(state_file)
         sync_receipts.append(action["payload"] if isinstance(action.get("payload"), dict) else {})
         sync_actions.append(action)
         _collect_action_failure(failures, action)
@@ -491,6 +504,7 @@ def _run_live(
             ),
             network_touched=True,
         )
+        action["source_ids"] = stepik_ids
         sync_receipts.append(action["payload"] if isinstance(action.get("payload"), dict) else {})
         sync_actions.append(action)
         _collect_action_failure(failures, action)
@@ -501,6 +515,7 @@ def _run_live(
         platform = str(source.get("platform") or "")
         slug = _slug(source.get("source_id") or source.get("source_ref"))
         if platform in BROWSER_PLATFORMS:
+            state_file = _resolved_browser_state_file(roots, platform=platform, browser_state_file=browser_state_file)
             action = _capture_action(
                 "smoke",
                 platform,
@@ -509,7 +524,7 @@ def _run_live(
                     platform=platform,
                     run_id=f"{run_id}-{platform}-live-smoke-{slug}",
                     course_url=str(source.get("source_ref") or ""),
-                    state_file=browser_state_file,
+                    state_file=state_file,
                     max_sources=max_sources,
                     max_pages=max_pages,
                     max_lessons=max_lessons,
@@ -518,6 +533,7 @@ def _run_live(
                 ),
                 network_touched=True,
             )
+            action["state_file"] = str(state_file)
         elif platform == "stepik":
             try:
                 course_id = parse_stepik_course_id(str(source.get("source_ref") or ""))
@@ -547,6 +563,8 @@ def _run_live(
                 )
         else:
             continue
+        action["source_id"] = source.get("source_id")
+        action["source_ref"] = source.get("source_ref")
         payload = action.get("payload") if isinstance(action.get("payload"), dict) else {}
         if payload:
             smoke_path = _write_json(run_dir / f"{platform}-live-smoke-{slug}.json", payload)
@@ -591,6 +609,7 @@ def _run_live(
         plan_path=plan_path,
         runbook_path=Path(str(runbook.get("path"))),
         sync_receipts=sync_receipts,
+        source_selection=source_selection,
     )
 
 
@@ -654,6 +673,7 @@ def _receipt(
     plan_path: Path | None,
     runbook_path: Path | None,
     sync_receipts: list[dict[str, object]],
+    source_selection: dict[str, object] | None = None,
 ) -> dict[str, object]:
     status = _receipt_status(failures, packet=packet, stages=stages)
     registry = load_registry(roots.data)
@@ -680,6 +700,17 @@ def _receipt(
         "source_registry": {
             "path": str(registry_path(roots.data)),
             "source_count": len([item for item in registry.get("sources", []) if isinstance(item, dict)]),
+        },
+        "source_selection": source_selection or {
+            "requested_source_ids": source_ids,
+            "selected_source_ids": [],
+            "ready_source_ids": [],
+            "blocked_source_ids": [],
+            "selected_source_count": 0,
+            "ready_source_count": 0,
+            "blocked_source_count": 0,
+            "source_limit": None,
+            "sources": [],
         },
         "stage_count": len(stages),
         "stages": [_stage_without_full_payload(stage) for stage in stages],
@@ -792,6 +823,48 @@ def _blocked_source_checks(sources: list[dict[str, object]]) -> list[dict[str, o
         for source in sources
         if not bool(source.get("ready"))
     ]
+
+
+def _source_selection(
+    *,
+    requested_source_ids: list[str],
+    selected_sources: list[dict[str, object]],
+    ready_sources: list[dict[str, object]],
+    blocked_sources: list[dict[str, object]],
+    source_limit: int | None,
+) -> dict[str, object]:
+    return {
+        "requested_source_ids": [str(source_id) for source_id in requested_source_ids],
+        "selected_source_ids": _source_ids(selected_sources),
+        "ready_source_ids": _source_ids(ready_sources),
+        "blocked_source_ids": _source_ids(blocked_sources),
+        "selected_source_count": len(selected_sources),
+        "ready_source_count": len(ready_sources),
+        "blocked_source_count": len(blocked_sources),
+        "source_limit": source_limit,
+        "sources": [_source_summary(source) for source in selected_sources],
+    }
+
+
+def _source_ids(sources: list[dict[str, object]]) -> list[str]:
+    return [str(source.get("source_id") or "") for source in sources if source.get("source_id")]
+
+
+def _source_summary(source: dict[str, object]) -> dict[str, object]:
+    return {
+        "platform": source.get("platform"),
+        "source_id": source.get("source_id"),
+        "source_ref": source.get("source_ref"),
+        "title": source.get("title"),
+        "access_mode": source.get("access_mode"),
+        "enabled": bool(source.get("enabled", True)),
+        "ready": bool(source.get("ready")),
+        "blockers": source.get("blockers", []),
+    }
+
+
+def _resolved_browser_state_file(roots: StorageRoots, *, platform: str, browser_state_file: Path | None) -> Path:
+    return (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
 
 
 def _payload_summary(payload: dict[str, object]) -> dict[str, object]:

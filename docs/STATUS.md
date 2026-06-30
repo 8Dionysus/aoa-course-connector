@@ -138,6 +138,9 @@ This proves:
 - Executable connected-source calibration receipts through `calibration
   connected-run`: fixture mode proves source-registry sync, smoke reports,
   connected plan/runbook, calibration packet, and intake without network access;
+  live browser runs reuse the same default account storage-state path that
+  preflight checked and record `source_selection` plus per-stage source ids in
+  receipts/status packets;
   live mode is gated by explicit `--allow-network`.
 - Bounded public Stepik live connected-run has been exercised end to end through
   `calibration connected-run --mode live --allow-network`: the runtime receipt
