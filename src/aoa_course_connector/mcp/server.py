@@ -15,6 +15,7 @@ from typing import Any, TextIO
 
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
 from aoa_course_connector.config import StorageRoots, find_repo_root
+from aoa_course_connector.goal_audit import goal_audit
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
@@ -70,6 +71,19 @@ def _connector_readiness_schema() -> dict[str, object]:
             "link_pattern": _string_schema("Optional browser lesson/course link glob for connected browser live commands."),
             "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
             "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to planned commands."},
+        }
+    )
+
+
+def _goal_audit_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "runs": {
+                "type": "array",
+                "items": {"type": "string"},
+                "description": "Optional run ids to audit.",
+            },
+            "connected_run": _string_schema("Connected calibration run id to inspect."),
         }
     )
 
@@ -142,6 +156,7 @@ def _integer_schema(description: str, minimum: int) -> dict[str, Any]:
 TOOLS = [
     {"name": "list_sources", "description": "List configured course sources.", "inputSchema": _object_schema({})},
     {"name": "connector_readiness", "description": "Inspect install, storage, source, run, connected-run, and MCP readiness without touching the network.", "inputSchema": _connector_readiness_schema()},
+    {"name": "goal_audit", "description": "Inspect DoD-oriented goal readiness and remaining live prerequisites without touching the network.", "inputSchema": _goal_audit_schema()},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
@@ -171,6 +186,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "registry": load_registry(roots.data)}
     if name == "connector_readiness":
         return _call_connector_readiness(roots, args)
+    if name == "goal_audit":
+        return _call_goal_audit(roots, args)
     if name == "ingest_status":
         return ingest_status(roots, run_id)
     if name == "sync_status":
@@ -299,6 +316,23 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
         link_pattern=str(args.get("link_pattern") or "") or None,
         live_scope=str(args.get("live_scope") or "bounded"),
         include_step_sources=bool(args.get("include_step_sources", False)),
+        mcp_tool_names=TOOL_NAMES,
+    )
+
+
+def _call_goal_audit(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    run_values = args.get("runs")
+    if run_values is None:
+        runs = None
+    elif isinstance(run_values, list) and all(isinstance(item, str) for item in run_values):
+        runs = run_values
+    else:
+        raise ValueError("goal_audit runs must be an array of strings")
+    return goal_audit(
+        find_repo_root(),
+        roots,
+        runs=runs,
+        connected_run=str(args.get("connected_run") or DEFAULT_CONNECTED_RUN),
         mcp_tool_names=TOOL_NAMES,
     )
 

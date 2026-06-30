@@ -42,6 +42,8 @@ Stepik tokens or browser storage-state capture.
 bootstrap it should report `ready_for_operator_connection: true` while keeping
 `goal_complete: false` until live GetCourse, Skillspace, Stepik, and external
 embedding calibration are performed with operator-owned access.
+MCP `goal_audit` exposes the same DoD-oriented packet for agents that stay on
+the MCP surface after install and readiness checks.
 
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser

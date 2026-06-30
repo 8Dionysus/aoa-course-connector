@@ -307,6 +307,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     agent_install_raw = (repo_root / "docs" / "AGENT_INSTALL_ROUTE.md").read_text(encoding="utf-8")
     readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
     status_raw = (repo_root / "src" / "aoa_course_connector" / "status.py").read_text(encoding="utf-8")
+    mcp_server_raw = (repo_root / "src" / "aoa_course_connector" / "mcp" / "server.py").read_text(encoding="utf-8")
     bootstrap_raw = (repo_root / "src" / "aoa_course_connector" / "bootstrap.py").read_text(encoding="utf-8")
     adapters_raw = (repo_root / "src" / "aoa_course_connector" / "adapters" / "__init__.py").read_text(encoding="utf-8").casefold()
     sources_raw = (repo_root / "src" / "aoa_course_connector" / "sources.py").read_text(encoding="utf-8").casefold()
@@ -349,6 +350,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing connector readiness validation")
     if "goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection" not in agents:
         errors.append("AGENTS route missing goal audit ready-for-connection validation")
+    if "mcp call goal_audit" not in agents:
+        errors.append("AGENTS route missing MCP goal_audit validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
     if "goal audit --run starter-fixture --connected-run" not in agent_install_raw or "ready_for_operator_connection" not in agent_install_raw:
@@ -358,7 +361,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
     if "eval browser-transcripts" not in agents:
         errors.append("AGENTS route missing browser transcript/caption eval")
-    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status", "mcp call ingest_status"]:
+    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status", "mcp call ingest_status", "mcp call goal_audit"]:
         if token not in agents:
             errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
     for token in ["getcourse", "skillspace", "coursera", "teachable", "thinkific", "kajabi", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
@@ -387,7 +390,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "operational_ready", "connected_live_ready", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set"]:
@@ -434,6 +437,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["aoa_course_goal_audit_v1", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "requires_operator_live_access", "connector_readiness"]:
         if token not in goal_audit_raw:
             errors.append(f"Goal audit code missing token: {token}")
+    for token in ["goal_audit", "_goal_audit_schema", "aoa_course_connector.goal_audit", "DEFAULT_CONNECTED_RUN", "mcp_tool_names=TOOL_NAMES"]:
+        if token not in mcp_server_raw:
+            errors.append(f"MCP server missing goal audit token: {token}")
     verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")
     if "goal" not in verifier_raw or "audit" not in verifier_raw or "--require-ready-for-connection" not in verifier_raw:
         errors.append("Agent install verifier missing goal audit command")

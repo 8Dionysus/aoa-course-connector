@@ -236,8 +236,7 @@ def test_cli_http_json_semantic_provider_flow(tmp_path: Path, monkeypatch) -> No
 
 
 def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
-    run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
-    run_cli(tmp_path, "build-index", "--run", "starter-fixture")
+    run_cli(tmp_path, "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration")
     requests = [
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "pytest", "version": "0"}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
@@ -249,6 +248,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
         {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "goal_audit", "arguments": {"runs": ["starter-fixture"], "connected_run": "connected-calibration"}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -263,9 +263,10 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
+    assert any(tool["name"] == "goal_audit" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
     assert responses[3]["result"]["structuredContent"]["evidence_chain"]
     assert responses[4]["result"]["structuredContent"]["refresh"]["network_touched"] is False
@@ -274,6 +275,9 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[7]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
     assert responses[8]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
     assert responses[8]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[9]["result"]["structuredContent"]["schema"] == "aoa_course_goal_audit_v1"
+    assert responses[9]["result"]["structuredContent"]["ready_for_operator_connection"] is True
+    assert responses[9]["result"]["structuredContent"]["goal_complete"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
