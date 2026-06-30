@@ -68,7 +68,7 @@ def fetch_stepik_course(
             steps = []
             step_ids = _limited_ids(lesson.get("steps", []), max_steps_per_lesson)
             for step_id in step_ids:
-                steps.append(client.first("steps", step_id))
+                steps.append(_step_with_block(client, step_id))
             units.append({"unit": unit, "lesson": lesson, "steps": steps})
         sections.append({"section": section, "units": units})
     return {
@@ -94,6 +94,19 @@ def fetch_stepik_course(
 def _limited_ids(values: object, limit: int | None) -> list[int]:
     ids = [int(value) for value in values] if isinstance(values, list) else []
     return ids[:limit] if limit is not None else ids
+
+
+def _step_with_block(client: StepikClient, step_id: int) -> dict[str, Any]:
+    step = client.first("steps", step_id)
+    block_ref = step.get("block")
+    if isinstance(block_ref, dict) or block_ref is None:
+        return step
+    try:
+        block_id = int(block_ref)
+    except (TypeError, ValueError):
+        return step
+    step["block"] = client.first("blocks", block_id)
+    return step
 
 
 def _now() -> str:

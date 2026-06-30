@@ -6,5 +6,7 @@
 4. Configure `AOA_COURSE_*` roots or `AOA_COURSE_INSTANCE_ROOT`.
 5. Run `aoa-course doctor`.
 6. Run the offline starter proof.
-7. Add live sources only after auth-state and storage roots are local and
+7. Run browser fixture discovery with `--register` to prove the local source
+   registry route.
+8. Add live sources only after auth-state and storage roots are local and
    ignored by Git.

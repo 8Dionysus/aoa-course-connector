@@ -6,17 +6,17 @@ from __future__ import annotations
 ADAPTERS: dict[str, dict[str, object]] = {
     "getcourse": {
         "platform": "getcourse",
-        "status": "working_browser_session_snapshot_adapter",
+        "status": "working_browser_session_discovery_and_crawl_adapter",
         "auth_modes": ["browser_session"],
-        "coverage": ["course_tree", "lesson_page", "asset_metadata", "transcripts_when_visible", "comments_when_visible"],
-        "notes": "Working browser snapshot adapter; live Playwright capture is optional and local-auth gated.",
+        "coverage": ["account_discovery", "source_registry", "course_tree", "lesson_page", "asset_metadata", "transcripts_when_visible", "comments_when_visible"],
+        "notes": "Working browser discovery, snapshot, and bounded crawl adapter; live Playwright routes are optional and local-auth gated.",
     },
     "skillspace": {
         "platform": "skillspace",
-        "status": "working_browser_session_snapshot_adapter",
+        "status": "working_browser_session_discovery_and_crawl_adapter",
         "auth_modes": ["browser_session"],
-        "coverage": ["course_tree", "lesson_page", "asset_metadata", "assignments_when_visible", "comments_when_visible"],
-        "notes": "Working browser snapshot adapter; live Playwright capture is optional and local-auth gated.",
+        "coverage": ["account_discovery", "source_registry", "course_tree", "lesson_page", "asset_metadata", "assignments_when_visible", "comments_when_visible"],
+        "notes": "Working browser discovery, snapshot, and bounded crawl adapter; live Playwright routes are optional and local-auth gated.",
     },
     "stepik": {
         "platform": "stepik",

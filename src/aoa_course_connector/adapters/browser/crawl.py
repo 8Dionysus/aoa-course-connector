@@ -105,8 +105,8 @@ def is_lesson_link(link: dict[str, str], *, link_pattern: str | None = None) -> 
     href = str(link.get("href") or "")
     if not href:
         return False
-    if link_pattern and fnmatch(href, link_pattern):
-        return True
+    if link_pattern:
+        return fnmatch(href, link_pattern)
     if str(link.get("kind") or "").casefold() == "lesson":
         return True
     lowered = href.casefold()

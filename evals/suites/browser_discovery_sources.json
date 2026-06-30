@@ -1,0 +1,18 @@
+{
+  "schema": "aoa_course_source_discovery_eval_suite_v1",
+  "suite_id": "browser-discovery-sources",
+  "cases": [
+    {
+      "platform": "getcourse",
+      "run": "getcourse-browser-discovery-fixture",
+      "must_register_source_ref_terms": ["stream/view"],
+      "must_use_access_mode": "browser_session"
+    },
+    {
+      "platform": "skillspace",
+      "run": "skillspace-browser-discovery-fixture",
+      "must_register_source_ref_terms": ["/course/"],
+      "must_use_access_mode": "browser_session"
+    }
+  ]
+}

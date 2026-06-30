@@ -72,3 +72,23 @@ def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
         assert answer["evidence_chain"]
     eval_result = run_cli(tmp_path, "eval", "browser-crawl")
     assert eval_result["status"] == "ok"
+
+
+def test_cli_browser_account_discovery_registers_sources(tmp_path: Path) -> None:
+    for platform in ["getcourse", "skillspace"]:
+        receipt = run_cli(
+            tmp_path,
+            "discover",
+            "browser-fixture",
+            "--platform",
+            platform,
+            "--run",
+            f"{platform}-browser-discovery-fixture",
+            "--register",
+        )
+        assert receipt["course_count"] == 2
+        assert len(receipt["registered_sources"]) == 2
+    registry = run_cli(tmp_path, "sources", "list")["registry"]
+    assert len(registry["sources"]) == 4
+    eval_result = run_cli(tmp_path, "eval", "browser-discovery")
+    assert eval_result["status"] == "ok"

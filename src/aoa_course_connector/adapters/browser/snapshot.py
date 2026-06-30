@@ -5,11 +5,38 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from html import unescape
 from html.parser import HTMLParser
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 
 BLOCK_TAGS = {"title", "h1", "h2", "h3", "h4", "p", "li", "div", "section", "article", "main"}
 ASSET_TAGS = {"video", "audio", "source", "iframe", "img", "a"}
+ASSET_LINK_EXTENSIONS = {
+    ".avi",
+    ".csv",
+    ".doc",
+    ".docx",
+    ".gif",
+    ".jpeg",
+    ".jpg",
+    ".m4a",
+    ".mkv",
+    ".mov",
+    ".mp3",
+    ".mp4",
+    ".pdf",
+    ".png",
+    ".ppt",
+    ".pptx",
+    ".srt",
+    ".txt",
+    ".vtt",
+    ".wav",
+    ".webm",
+    ".webp",
+    ".xls",
+    ".xlsx",
+    ".zip",
+}
 
 
 @dataclass
@@ -50,8 +77,10 @@ class _SnapshotParser(HTMLParser):
             src = attr.get("src") or attr.get("href")
             if src:
                 kind = attr.get("data-aoa-kind") or tag
-                if tag == "a" and kind != "asset":
+                if tag == "a" and kind != "asset" and not _looks_like_asset_link(attr, src):
                     return
+                if tag == "a" and kind != "asset":
+                    kind = "asset"
                 self.assets.append(
                     {
                         "kind": kind,
@@ -97,3 +126,10 @@ def parse_html_snapshot(html: str, base_url: str) -> HtmlSnapshot:
 
 def _clean(value: str) -> str:
     return " ".join(value.split())
+
+
+def _looks_like_asset_link(attrs: dict[str, str], href: str) -> bool:
+    if "download" in attrs:
+        return True
+    path = urlparse(href).path.lower()
+    return any(path.endswith(extension) for extension in ASSET_LINK_EXTENSIONS)

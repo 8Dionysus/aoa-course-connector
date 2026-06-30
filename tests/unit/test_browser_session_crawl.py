@@ -35,6 +35,19 @@ def test_crawler_expands_getcourse_index_links() -> None:
     assert crawled["pages"][1]["title"] == "Bootloader recovery lesson"
 
 
+def test_link_pattern_rejects_nonmatching_lesson_hints() -> None:
+    html = """
+    <main>
+      <a href="/course/allowed/lesson-1">Allowed lesson</a>
+      <a href="/course/noisy/lesson-2">Noisy lesson</a>
+    </main>
+    """
+
+    links = discover_lesson_links(html, "https://school.example/", max_lessons=10, link_pattern="*/allowed/*")
+
+    assert [link["href"] for link in links] == ["https://school.example/course/allowed/lesson-1"]
+
+
 def test_getcourse_browser_crawl_fixture_to_answer_packet(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     receipt = crawl_browser_fixture(storage, "getcourse", run_id="getcourse-browser-crawl-fixture")
