@@ -40,6 +40,7 @@ from aoa_course_connector.ingest import (
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, write_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, write_connected_source_runbook
+from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.smoke import (
     smoke_browser_fixture as smoke_browser_fixture_route,
     smoke_browser_live as smoke_browser_live_route,
@@ -439,6 +440,28 @@ def build_parser() -> argparse.ArgumentParser:
     inspect.add_argument("--limit", type=int, default=5)
     inspect.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
     inspect.set_defaults(func=cmd_evidence_inspect)
+
+    refresh = sub.add_parser("refresh")
+    refresh_sub = refresh.add_subparsers(dest="refresh_command", required=True)
+    refresh_query = refresh_sub.add_parser("query")
+    refresh_query.add_argument("query")
+    refresh_query.add_argument("--run", default=DEFAULT_RUN)
+    refresh_query.add_argument("--limit", type=int, default=5)
+    refresh_query.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
+    refresh_query.add_argument("--strategy", choices=["plan", "fixture", "live"], default="plan")
+    refresh_query.add_argument("--execute", action="store_true")
+    refresh_query.add_argument("--source-id")
+    refresh_query.add_argument("--sync-run")
+    refresh_query.add_argument("--allow-network", action="store_true")
+    refresh_query.add_argument("--state-file", type=Path)
+    refresh_query.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
+    refresh_query.add_argument("--max-lessons", type=int, default=20)
+    refresh_query.add_argument("--max-sections", type=int, default=1)
+    refresh_query.add_argument("--max-units-per-section", type=int, default=2)
+    refresh_query.add_argument("--max-steps-per-lesson", type=int, default=5)
+    refresh_query.add_argument("--batch-size", type=int, default=20)
+    refresh_query.add_argument("--include-step-sources", action="store_true")
+    refresh_query.set_defaults(func=cmd_refresh_query)
 
     eval_parser = sub.add_parser("eval")
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
@@ -1203,6 +1226,36 @@ def cmd_evidence_inspect(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def cmd_refresh_query(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    try:
+        report = refresh_query_cycle(
+            roots,
+            args.query,
+            run_id=args.run,
+            mode=args.mode,
+            limit=args.limit,
+            strategy=args.strategy,
+            execute=args.execute,
+            source_id=args.source_id,
+            sync_run_id=args.sync_run,
+            allow_network=args.allow_network,
+            state_file=args.state_file,
+            stepik_token_env=args.stepik_token_env,
+            max_lessons=args.max_lessons,
+            max_sections=args.max_sections,
+            max_units_per_section=args.max_units_per_section,
+            max_steps_per_lesson=args.max_steps_per_lesson,
+            batch_size=args.batch_size,
+            include_step_sources=args.include_step_sources,
+        )
+    except ValueError as exc:
+        _emit({"schema": "aoa_course_refresh_cycle_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    _emit(report)
+    return 0 if report.get("status") in {"ok", "planned"} else 1
 
 
 def cmd_eval_answer_packets(_args: argparse.Namespace) -> int:

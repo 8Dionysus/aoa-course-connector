@@ -46,6 +46,9 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert freshness["result"]["freshness"]["states"]
     evidence = run_cli(tmp_path, "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}')
     assert evidence["result"]["evidence_chain"]
+    refresh = run_cli(tmp_path, "mcp", "call", "refresh_plan", '{"query":"rollback","run":"starter-fixture","mode":"keyword"}')
+    assert refresh["result"]["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
+    assert refresh["result"]["refresh"]["network_touched"] is False
     preflight = run_cli(tmp_path, "mcp", "call", "live_preflight", '{"platforms":["stepik"]}')
     assert preflight["result"]["preflight"]["network_touched"] is False
     plan = run_cli(tmp_path, "mcp", "call", "connected_source_plan", '{"platforms":["stepik"]}')
@@ -92,8 +95,9 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "evidence_report", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
-        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
-        {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "refresh_plan", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "keyword"}}},
+        {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -108,13 +112,14 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
     assert responses[3]["result"]["structuredContent"]["evidence_chain"]
-    assert responses[4]["result"]["structuredContent"]["preflight"]["network_touched"] is False
-    assert responses[5]["result"]["structuredContent"]["plan"]["network_touched"] is False
+    assert responses[4]["result"]["structuredContent"]["refresh"]["network_touched"] is False
+    assert responses[5]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[6]["result"]["structuredContent"]["plan"]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -221,6 +226,47 @@ def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     answer = run_cli(tmp_path, "answer", "Stepik public API evidence", "--run", "stepik-fixture")
     assert answer["result_count"] >= 1
     assert answer["evidence_chain"]
+
+
+def test_cli_refresh_query_fixture_cycle(tmp_path: Path) -> None:
+    run_cli(tmp_path, "sources", "add", "67", "--platform", "stepik", "--title", "Stepik Refresh Fixture")
+    sync = run_cli(tmp_path, "sync", "stepik-fixture", "--run", "stepik-refresh-initial", "--build-artifacts")
+    initial_run = sync["synced_sources"][0]["run_id"]
+    run_cli(tmp_path, "build-semantic-index", "--run", str(initial_run))
+
+    plan = run_cli(
+        tmp_path,
+        "refresh",
+        "query",
+        "Stepik public API evidence",
+        "--run",
+        str(initial_run),
+        "--mode",
+        "hybrid",
+    )
+    assert plan["schema"] == "aoa_course_refresh_cycle_v1"
+    assert plan["status"] == "planned"
+    assert plan["network_touched"] is False
+
+    refreshed = run_cli(
+        tmp_path,
+        "refresh",
+        "query",
+        "Stepik public API evidence",
+        "--run",
+        str(initial_run),
+        "--mode",
+        "hybrid",
+        "--strategy",
+        "fixture",
+        "--execute",
+        "--sync-run",
+        "stepik-refresh-cycle",
+    )
+    assert refreshed["status"] == "ok"
+    assert refreshed["network_touched"] is False
+    assert refreshed["refreshed_answer_packet"]["result_count"] >= 1
+    assert refreshed["comparison"]["source_id_preserved"] is True
 
 
 def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:

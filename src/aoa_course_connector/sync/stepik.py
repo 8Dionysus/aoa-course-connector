@@ -25,11 +25,12 @@ def sync_stepik_fixture_sources(
     *,
     sync_run_id: str = "stepik-sync-fixture",
     source_refs: list[str] | None = None,
+    source_ids: list[str] | None = None,
     source_limit: int | None = None,
     build_artifacts: bool = False,
 ) -> dict[str, object]:
     create_storage_roots(roots)
-    sources = _selected_stepik_sources(roots, source_refs=source_refs, source_limit=source_limit)
+    sources = _selected_stepik_sources(roots, source_refs=source_refs, source_ids=source_ids, source_limit=source_limit)
     receipt = _base_receipt(sync_run_id, "stepik_fixture_sync", sources, network_touched=False)
     for source in sources:
         child_run = _child_run_id(sync_run_id, source)
@@ -74,11 +75,12 @@ def sync_stepik_live_sources(
     batch_size: int = 20,
     include_step_sources: bool = False,
     source_refs: list[str] | None = None,
+    source_ids: list[str] | None = None,
     source_limit: int | None = None,
     build_artifacts: bool = False,
 ) -> dict[str, object]:
     create_storage_roots(roots)
-    sources = _selected_stepik_sources(roots, source_refs=source_refs, source_limit=source_limit)
+    sources = _selected_stepik_sources(roots, source_refs=source_refs, source_ids=source_ids, source_limit=source_limit)
     receipt = _base_receipt(sync_run_id, "stepik_live_sync", sources, network_touched=True)
     for source in sources:
         child_run = _child_run_id(sync_run_id, source)
@@ -126,10 +128,12 @@ def _selected_stepik_sources(
     roots: StorageRoots,
     *,
     source_refs: list[str] | None,
+    source_ids: list[str] | None,
     source_limit: int | None,
 ) -> list[dict[str, Any]]:
     registry = load_registry(roots.data)
     wanted_refs = {str(source_ref) for source_ref in source_refs or []}
+    wanted_ids = {str(source_id) for source_id in source_ids or []}
     sources = [
         source
         for source in registry.get("sources", [])
@@ -138,6 +142,7 @@ def _selected_stepik_sources(
         and source.get("platform") == "stepik"
         and source.get("access_mode") in STEPIK_ACCESS_MODES
         and (not wanted_refs or str(source.get("source_ref") or "") in wanted_refs)
+        and (not wanted_ids or str(source.get("source_id") or "") in wanted_ids)
     ]
     sources = sorted(sources, key=lambda item: str(item.get("source_id") or item.get("source_ref") or ""))
     return sources[:source_limit] if source_limit is not None else sources

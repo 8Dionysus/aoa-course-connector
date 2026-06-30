@@ -4,8 +4,10 @@ import json
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.index import build_semantic_index
 from aoa_course_connector.mcp.server import call_tool
 from aoa_course_connector.query import render_answer_packet
+from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.sync import load_sync_status, sync_stepik_fixture_sources
 from aoa_course_connector.sync.stepik import parse_stepik_course_id
@@ -100,3 +102,36 @@ def test_stepik_fixture_sync_rejects_parseable_non_fixture_course(tmp_path: Path
     assert checkpoint["platform"] == "stepik"
     assert "stepik-fixture sync only supports fixture course 67" in checkpoint["error"]
     assert "stepik-live sync for course 100" in checkpoint["error"]
+
+
+def test_refresh_fixture_cycle_executes_selected_stepik_source(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "stepik", "67", "Stepik Refresh Fixture", access_mode="public_api")
+    initial = sync_stepik_fixture_sources(
+        storage,
+        sync_run_id="stepik-refresh-initial",
+        source_ids=[str(source["source_id"])],
+        build_artifacts=True,
+    )
+    initial_run = initial["synced_sources"][0]["run_id"]
+    build_semantic_index(storage, run_id=str(initial_run))
+
+    report = refresh_query_cycle(
+        storage,
+        "Stepik public API evidence",
+        run_id=str(initial_run),
+        mode="hybrid",
+        strategy="fixture",
+        execute=True,
+        sync_run_id="stepik-refresh-cycle",
+    )
+
+    assert report["schema"] == "aoa_course_refresh_cycle_v1"
+    assert report["status"] == "ok"
+    assert report["network_touched"] is False
+    assert report["selected_result"]["source_id"] == source["source_id"]
+    assert report["checkpoint"]["source_id"] == source["source_id"]
+    assert report["refreshed_run_id"]
+    assert report["rebuilt_artifacts"]["semantic_index_path"]
+    assert report["refreshed_answer_packet"]["result_count"] >= 1
+    assert report["comparison"]["source_id_preserved"] is True

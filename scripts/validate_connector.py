@@ -100,6 +100,7 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/normalize/browser_session.py",
     "src/aoa_course_connector/normalize/stepik.py",
     "src/aoa_course_connector/mcp/server.py",
+    "src/aoa_course_connector/refresh.py",
     "src/aoa_course_connector/readiness.py",
     "src/aoa_course_connector/smoke/__init__.py",
     "src/aoa_course_connector/smoke/browser_session.py",
@@ -165,6 +166,7 @@ REQUIRED_SCHEMAS = [
     "graph_node.schema.json",
     "graph_edge.schema.json",
     "answer_packet.schema.json",
+    "refresh_cycle.schema.json",
     "source_registry.schema.json",
 ]
 
@@ -287,6 +289,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Connected-source plan code missing runs/<run> calibration artifact path")
     if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
+    if "refresh query" not in agents or "refresh_plan" not in agents:
+        errors.append("AGENTS route missing refresh query/refresh_plan validation")
     if "eval browser-transcripts" not in agents:
         errors.append("AGENTS route missing browser transcript/caption eval")
     for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report"]:
@@ -306,7 +310,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "source url", "authority report", "refresh report", "refresh_hint"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "connected_source_plan", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
@@ -336,6 +340,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "authority_tier",
         "refresh_hint",
         "refresh_report",
+        "refresh query",
+        "aoa_course_refresh_cycle_v1",
         "local_rebuild_commands",
         "preflight connected-plan",
         "registry_match",

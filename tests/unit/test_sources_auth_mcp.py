@@ -156,6 +156,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "evidence_report" for tool in tools_manifest()["tools"])
@@ -187,6 +188,11 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert plan["plan"]["network_touched"] is False
     assert plan["plan"]["live_scope"] == "bounded"
     assert plan["plan"]["source_plans"]
+    refresh = call_tool("refresh_plan", {"query": "rollback", "run": "starter-fixture", "mode": "keyword"})
+    assert refresh["tool"] == "refresh_plan"
+    assert refresh["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
+    assert refresh["refresh"]["status"] == "planned"
+    assert refresh["refresh"]["network_touched"] is False
 
 
 def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Path, monkeypatch) -> None:
@@ -279,12 +285,14 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
+    refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
+    assert refresh_tool["inputSchema"]["required"] == ["query"]
 
     called = handle_jsonrpc_message({
         "jsonrpc": "2.0",
@@ -305,6 +313,15 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     })
     assert evidence["result"]["structuredContent"]["tool"] == "evidence_report"
     assert evidence["result"]["structuredContent"]["evidence_chain"]
+
+    refresh = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 32,
+        "method": "tools/call",
+        "params": {"name": "refresh_plan", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "keyword"}},
+    })
+    assert refresh["result"]["structuredContent"]["tool"] == "refresh_plan"
+    assert refresh["result"]["structuredContent"]["refresh"]["network_touched"] is False
 
     preflight = handle_jsonrpc_message({
         "jsonrpc": "2.0",

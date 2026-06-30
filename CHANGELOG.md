@@ -129,3 +129,7 @@
 - Added per-result `refresh_hint` and answer/MCP `refresh_report` metadata so
   agents can rebuild local artifacts, run bounded connected-source preflight,
   and identify registry-matched live sync routes for source freshness handoff.
+- Added `refresh query` and MCP `refresh_plan` so agents can turn evidence
+  hints into a refresh cycle plan, execute fixture-backed source refreshes, pick
+  the new checkpoint run, rebuild indexes/graphs, and compare refreshed answer
+  evidence before gated live execution.
