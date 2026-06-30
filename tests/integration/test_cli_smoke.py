@@ -154,6 +154,28 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert "SUPER_PRIVATE_COOKIE" not in rendered_plan
     assert "SUPER_PRIVATE_TOKEN" not in rendered_plan
 
+    runbook_path = tmp_path / "artifacts" / "connected-source-runbook.md"
+    plan_with_runbook = run_cli(
+        tmp_path,
+        "preflight",
+        "connected-plan",
+        "--platform",
+        "getcourse",
+        "--expect-origin",
+        "school.example",
+        "--write-runbook",
+        str(runbook_path),
+    )
+
+    assert plan_with_runbook["runbook"]["written"] is True
+    assert Path(str(plan_with_runbook["runbook"]["path"])).is_file()
+    runbook = runbook_path.read_text(encoding="utf-8")
+    assert "# Connected Source Runbook" in runbook
+    assert "Browser Auth Handoffs" in runbook
+    assert "capture-browser-state getcourse account" in runbook
+    assert "preflight connected-plan --platform getcourse" in runbook
+    assert "secret" not in runbook
+
 
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")

@@ -31,7 +31,8 @@ aoa-course preflight connected-plan \
   --platform getcourse \
   --platform stepik \
   --live-scope bounded \
-  --query "course-specific question"
+  --query "course-specific question" \
+  --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/connected-source-runbook.md"
 ```
 
 The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
@@ -46,7 +47,9 @@ For GetCourse and Skillspace, inspect `browser_auth_handoffs` before running
 any live browser command. The handoff packet groups source readiness by host,
 shows the storage-state file, and gives the auth capture, redacted inspect, and
 recheck commands required before the plan will emit browser live sync/smoke
-commands.
+commands. The optional runbook is a Markdown rendering of the same redacted
+packet plus execution stages; store it in `AOA_COURSE_ARTIFACT_ROOT` and keep it
+out of Git.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"

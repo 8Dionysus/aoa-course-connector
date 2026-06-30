@@ -77,6 +77,9 @@ This proves:
   packets that group registered sources by host, show state-file readiness, and
   provide capture, redacted inspect, and recheck commands before live sync is
   allowed.
+- Connected-source plans can write a redacted Markdown runbook under runtime
+  artifact storage, giving operators and agents a concrete setup, sync, smoke,
+  and calibration checklist without committing private source state.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.

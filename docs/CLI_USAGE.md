@@ -22,7 +22,7 @@ aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
-aoa-course preflight connected-plan --platform getcourse --platform stepik --live-scope bounded --query "course-specific question"
+aoa-course preflight connected-plan --platform getcourse --platform stepik --live-scope bounded --query "course-specific question" --write-runbook "$AOA_COURSE_ARTIFACT_ROOT/connected-source-runbook.md"
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5

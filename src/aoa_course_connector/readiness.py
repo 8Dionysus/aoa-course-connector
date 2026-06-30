@@ -18,6 +18,149 @@ CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 LIVE_SCOPES = {"bounded", "full-course"}
 
 
+def render_connected_source_runbook(plan: dict[str, object]) -> str:
+    """Render a redacted Markdown runbook from a connected-source plan."""
+
+    lines = [
+        "# Connected Source Runbook",
+        "",
+        "This runbook is generated from `aoa_course_connected_source_plan_v1`.",
+        "It is runtime operator state: keep it outside Git and do not paste it into public issues.",
+        "",
+        "## Summary",
+        "",
+        f"- status: `{plan.get('status')}`",
+        f"- ready: `{bool(plan.get('ready'))}`",
+        f"- network_touched: `{bool(plan.get('network_touched'))}`",
+        f"- live_scope: `{plan.get('live_scope')}`",
+        f"- include_step_sources: `{bool(plan.get('include_step_sources'))}`",
+    ]
+    source_registry = plan.get("source_registry") if isinstance(plan.get("source_registry"), dict) else {}
+    if source_registry:
+        lines.extend(
+            [
+                f"- source_registry: `{source_registry.get('path')}`",
+                f"- selected_source_count: `{source_registry.get('selected_source_count')}`",
+            ]
+        )
+    lines.extend(["", "## Platform Readiness", ""])
+    for platform in _dict_items(plan.get("platform_plans")):
+        lines.extend(
+            [
+                f"### {platform.get('platform')}",
+                "",
+                f"- ready: `{bool(platform.get('ready'))}`",
+                f"- source_count: `{platform.get('source_count')}`",
+                f"- ready_source_count: `{platform.get('ready_source_count')}`",
+                f"- blocked_source_count: `{platform.get('blocked_source_count')}`",
+                f"- required_workflow: `{platform.get('required_workflow')}`",
+            ]
+        )
+        blockers = [str(item) for item in platform.get("blockers", [])] if isinstance(platform.get("blockers"), list) else []
+        if blockers:
+            lines.extend(["- blockers:"])
+            lines.extend([f"  - {blocker}" for blocker in blockers])
+        lines.append("")
+
+    handoffs = _dict_items(plan.get("browser_auth_handoffs"))
+    if handoffs:
+        lines.extend(["## Browser Auth Handoffs", ""])
+        for handoff in handoffs:
+            lines.extend(
+                [
+                    f"### {handoff.get('platform')}",
+                    "",
+                    f"- ready: `{bool(handoff.get('ready'))}`",
+                    f"- state_file: `{handoff.get('state_file')}`",
+                    f"- state_status: `{handoff.get('state_status')}`",
+                    f"- expected_origin_contains: `{handoff.get('expected_origin_contains')}`",
+                    f"- source_hosts: `{', '.join([str(host) for host in handoff.get('source_hosts', [])])}`",
+                    f"- blocked_source_hosts: `{', '.join([str(host) for host in handoff.get('blocked_source_hosts', [])])}`",
+                ]
+            )
+            host_readiness = _dict_items(handoff.get("host_readiness"))
+            if host_readiness:
+                lines.extend(["", "Host readiness:"])
+                for host in host_readiness:
+                    lines.append(
+                        f"- `{host.get('host')}`: {host.get('ready_source_count')}/{host.get('source_count')} ready, "
+                        f"{host.get('blocked_source_count')} blocked"
+                    )
+                    blockers = [str(item) for item in host.get("blockers", [])] if isinstance(host.get("blockers"), list) else []
+                    lines.extend([f"  - {blocker}" for blocker in blockers])
+            commands = handoff.get("commands") if isinstance(handoff.get("commands"), dict) else {}
+            if commands:
+                lines.extend(["", "Commands:"])
+                for label in ["plan", "capture", "inspect", "recheck"]:
+                    command = str(commands.get(label) or "")
+                    if command:
+                        lines.extend([f"- {label}:", "  ```bash", f"  {command}", "  ```"])
+                inspect_hosts = commands.get("inspect_source_hosts")
+                if isinstance(inspect_hosts, list) and inspect_hosts:
+                    lines.extend(["- inspect source hosts:"])
+                    for command in inspect_hosts:
+                        lines.extend(["  ```bash", f"  {command}", "  ```"])
+            notes = [str(item) for item in handoff.get("notes", [])] if isinstance(handoff.get("notes"), list) else []
+            if notes:
+                lines.extend(["", "Notes:"])
+                lines.extend([f"- {note}" for note in notes])
+            lines.append("")
+
+    lines.extend(["## Execution Stages", ""])
+    for stage in _dict_items(plan.get("stages")):
+        lines.extend(
+            [
+                f"### {stage.get('name')}",
+                "",
+                f"- ready: `{bool(stage.get('ready'))}`",
+            ]
+        )
+        actions = _dict_items(stage.get("actions"))
+        if not actions:
+            lines.extend(["- actions: none", ""])
+            continue
+        for action in actions:
+            lines.extend(
+                [
+                    f"- {action.get('kind')} `{action.get('platform') or ''}`".rstrip(),
+                    f"  - ready: `{bool(action.get('ready'))}`",
+                    f"  - network_touched: `{bool(action.get('network_touched'))}`",
+                ]
+            )
+            blocked_by = action.get("blocked_by")
+            if isinstance(blocked_by, list) and blocked_by:
+                lines.extend([f"  - blocked_by: {', '.join([str(item) for item in blocked_by])}"])
+            artifact_path = str(action.get("artifact_path") or "")
+            if artifact_path:
+                lines.append(f"  - artifact_path: `{artifact_path}`")
+            command = str(action.get("command") or "")
+            if command:
+                lines.extend(["  ```bash", f"  {command}", "  ```"])
+        lines.append("")
+
+    next_commands = [str(item) for item in plan.get("next_commands", [])] if isinstance(plan.get("next_commands"), list) else []
+    if next_commands:
+        lines.extend(["## Next Commands", ""])
+        for command in next_commands:
+            lines.extend(["```bash", command, "```", ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def write_connected_source_runbook(plan: dict[str, object], path: Path) -> dict[str, object]:
+    """Write a connected-source runbook to a runtime path."""
+
+    target = path.expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_connected_source_runbook(plan), encoding="utf-8")
+    return {
+        "path": str(target),
+        "written": True,
+        "format": "markdown",
+        "network_touched": False,
+        "redacted": True,
+    }
+
+
 def live_preflight(
     roots: StorageRoots,
     *,
@@ -91,6 +234,10 @@ def live_preflight(
         "workflows": workflows,
         "next_commands": _dedupe(next_commands),
     }
+
+
+def _dict_items(value: object) -> list[dict[str, object]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
 def connected_source_plan(

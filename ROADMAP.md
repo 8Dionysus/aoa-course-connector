@@ -40,6 +40,8 @@
 - Prove browser auth handoff packets for GetCourse and Skillspace so blocked
   source hosts turn into exact storage-state capture, redacted inspection, and
   connected-plan recheck steps instead of vague missing-auth blockers.
+- Prove connected-source runbook generation so the redacted plan becomes a
+  runtime Markdown checklist for setup, sync, smoke, and calibration.
 - Prove connector-local answer-quality evals that validate source identity,
   evidence fields, lesson path, snippets, freshness, and platform nuance beyond
   simple term presence.

@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
-from aoa_course_connector.readiness import connected_source_plan, live_preflight
+from aoa_course_connector.readiness import connected_source_plan, live_preflight, render_connected_source_runbook
 from aoa_course_connector.sources import upsert_source
 
 
@@ -234,6 +234,32 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     assert "--expect-origin school.skillspace.example" in handoff["commands"]["recheck"]
     assert not any("sync browser-live" in command for command in plan["next_commands"])
     assert any("capture-browser-state" in command for command in plan["next_commands"])
+
+
+def test_connected_source_runbook_renders_handoff_without_secret_values(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    plan = connected_source_plan(storage, platforms=["getcourse"], query="course-specific question")
+
+    runbook = render_connected_source_runbook(plan)
+
+    assert "# Connected Source Runbook" in runbook
+    assert "## Browser Auth Handoffs" in runbook
+    assert "school.example" in runbook
+    assert "capture-browser-state getcourse account" in runbook
+    assert "smoke browser-live" in runbook
+    assert "calibration build" in runbook
+    assert "SUPER_SECRET_COOKIE" not in runbook
+    assert "SUPER_SECRET_TOKEN" not in runbook
 
 
 def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path, monkeypatch) -> None:
