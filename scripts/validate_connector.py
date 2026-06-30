@@ -269,7 +269,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if "build-semantic-index --help" not in agents:
         errors.append("AGENTS route missing semantic provider option help check")
-    if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents or "calibration connected-run" not in agents:
+    if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents or "calibration connected-run" not in agents or "calibration status" not in agents:
         errors.append("AGENTS route missing live calibration packet/intake validation")
     for line in agents.splitlines():
         if "calibration connected-run --mode live" in line and "--allow-network" in line:
@@ -298,7 +298,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
     if "eval browser-transcripts" not in agents:
         errors.append("AGENTS route missing browser transcript/caption eval")
-    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report"]:
+    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status"]:
         if token not in agents:
             errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
     for token in ["getcourse", "skillspace", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
@@ -318,7 +318,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "live_scope", "full-course", "network_touched", "secret values", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -355,7 +355,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "--mode fixture", "--allow-network"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
@@ -373,8 +373,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_connected_source_plan_v1",
         "aoa_course_live_calibration_intake_v1",
         "aoa_course_connected_calibration_run_receipt_v1",
+        "aoa_course_connected_calibration_run_status_v1",
         "preflight connected-plan",
         "calibration connected-run",
+        "connected_run_status",
         "allow-network",
         "live-scope bounded",
         "full-course",

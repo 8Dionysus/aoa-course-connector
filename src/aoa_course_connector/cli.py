@@ -16,7 +16,7 @@ from aoa_course_connector.calibration import (
     write_live_calibration_intake,
     write_live_calibration_packet,
 )
-from aoa_course_connector.calibration.connected_run import run_connected_calibration
+from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
@@ -412,6 +412,9 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_connected.add_argument("--max-sources", type=int, default=50)
     calibration_connected.add_argument("--source-limit", type=int)
     calibration_connected.set_defaults(func=cmd_calibration_connected_run)
+    calibration_status = calibration_sub.add_parser("status")
+    calibration_status.add_argument("--run", default="connected-calibration")
+    calibration_status.set_defaults(func=cmd_calibration_status)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -1163,6 +1166,13 @@ def cmd_calibration_connected_run(args: argparse.Namespace) -> int:
         return 2
     _emit(receipt)
     return 0 if receipt.get("status") == "ok" else 1
+
+
+def cmd_calibration_status(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    status = load_connected_calibration_status(roots, run_id=args.run)
+    _emit(status)
+    return 0 if status.get("status") not in {"missing", "error"} else 1
 
 
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:

@@ -9,6 +9,7 @@ Initial tools:
 - `sync_status`
 - `live_preflight`
 - `connected_source_plan`
+- `connected_run_status`
 - `refresh_plan`
 - `search`
 - `semantic_search`
@@ -35,6 +36,7 @@ aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
+aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 ```
 
 `semantic_search` follows the semantic index artifact for the requested run. If
@@ -69,6 +71,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"refresh_plan","arguments":{"query":"rollback","run":"starter-fixture","mode":"keyword"}}}' \
   '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
   | aoa-course-connector-mcp
 ```
 
@@ -119,3 +122,11 @@ Markdown checklist as runtime-only artifact state.
 The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
 `include_step_sources: true` only when the operator intentionally wants the
 larger Stepik full-course/source-enrichment route.
+
+`connected_run_status` is the read-only MCP handoff after a CLI
+`calibration connected-run`. It returns
+`aoa_course_connected_calibration_run_status_v1` with status, stages,
+artifact paths, packet quality, privacy flags, failures, and next steps from
+`connected_calibration_receipt.json`. It never executes network work; missing
+receipts return `status: "missing"` so agents can ask for the fixture or live
+connected-run command instead of guessing from the filesystem.

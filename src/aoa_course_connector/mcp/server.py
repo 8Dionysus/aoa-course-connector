@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, TextIO
 
+from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight
@@ -111,6 +112,7 @@ TOOLS = [
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
     {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
+    {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
     {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
@@ -141,6 +143,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_live_preflight(roots, args)}
     if name == "connected_source_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "plan": _call_connected_source_plan(roots, args)}
+    if name == "connected_run_status":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=run_id)}
     if name == "refresh_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "refresh": _call_refresh_plan(roots, args)}
     if name == "search":

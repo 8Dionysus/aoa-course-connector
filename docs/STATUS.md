@@ -144,6 +144,10 @@ This proves:
   produced an `ok` connected-source plan, live sync, live smoke, calibration
   packet, and intake with source-backed answer evidence, timestamps, and clean
   raw/secret privacy guards.
+- Connected-run receipts are inspectable through CLI `calibration status` and
+  MCP `connected_run_status`, giving agents read-only access to stage summaries,
+  packet quality, privacy flags, failures, next steps, and artifact paths after
+  fixture or gated live runs.
 
 ## Remaining Goal Work
 

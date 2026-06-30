@@ -143,3 +143,5 @@
 - Verified the bounded public Stepik live connected-run route end to end through
   a local runtime receipt with live sync, live smoke, calibration packet,
   intake, answer evidence, timestamps, and privacy guards.
+- Added read-only connected-run receipt inspection through CLI
+  `calibration status` and MCP `connected_run_status`.

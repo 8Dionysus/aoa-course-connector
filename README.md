@@ -207,6 +207,7 @@ Before expanding connected-source work, run the fixture-safe calibration eval:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run --mode fixture --run connected-fixture-proof
+PYTHONPATH=src python -m aoa_course_connector.cli calibration status --run connected-fixture-proof
 ```
 
 For operator-connected sources, save `preflight live`, `smoke browser-live`,
@@ -263,6 +264,9 @@ The bounded public Stepik path has been field-smoked through this route without
 private credentials: a local runtime receipt produced an `ok` connected-source
 plan, live sync, live smoke, calibration packet, and intake while keeping raw
 API payloads and secret values out of shareable output.
+After a run, inspect the same receipt through `calibration status --run <run>`
+or MCP `connected_run_status`; both are read-only and do not repeat network
+work.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
