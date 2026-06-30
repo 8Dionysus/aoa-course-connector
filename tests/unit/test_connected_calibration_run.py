@@ -3,8 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import aoa_course_connector.calibration.connected_run as connected_run_module
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.smoke.stepik import smoke_stepik_fixture
 from aoa_course_connector.sources import upsert_source
 
 
@@ -55,3 +57,74 @@ def test_connected_calibration_live_requires_explicit_network_gate(tmp_path: Pat
     assert any(failure["reason"] == "live mode requires --allow-network" for failure in receipt["failures"])
     assert Path(str(receipt["artifacts"]["plan_path"])).is_file()
     assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
+
+
+def test_connected_calibration_live_source_limit_ignores_unselected_blocked_sources(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    storage = roots(tmp_path)
+    ready, _path, _state = upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
+    blocked, _path, _state = upsert_source(storage.data, "stepik", "68", "Stepik Token", access_mode="api_token")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+    selected_ids: list[str] = []
+
+    def fake_sync(*_args, source_ids=None, **kwargs):
+        selected_ids.extend([str(source_id) for source_id in source_ids or []])
+        return {
+            "schema": "aoa_course_sync_receipt_v1",
+            "status": "ok",
+            "sync_run_id": kwargs.get("sync_run_id"),
+            "source_count": len(source_ids or []),
+            "synced_sources": [],
+            "failed_sources": [],
+            "network_touched": True,
+        }
+
+    def fake_smoke(roots_arg, *, run_id: str, query=None, build_artifacts: bool = True, **_kwargs):
+        report = smoke_stepik_fixture(
+            roots_arg,
+            course_id=67,
+            run_id=run_id,
+            query=query,
+            build_artifacts=build_artifacts,
+        )
+        return {**report, "source_mode": "stepik_live_smoke", "network_touched": True}
+
+    monkeypatch.setattr(connected_run_module, "sync_stepik_live_sources", fake_sync)
+    monkeypatch.setattr(connected_run_module, "smoke_stepik_live", fake_smoke)
+
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-limited",
+        mode="live",
+        platforms=["stepik"],
+        allow_network=True,
+        source_limit=1,
+    )
+
+    assert receipt["status"] == "ok"
+    assert selected_ids == [ready["source_id"]]
+    assert not any(failure.get("source_id") == blocked["source_id"] for failure in receipt["failures"])
+
+
+def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    blocked, _path, _state = upsert_source(storage.data, "stepik", "68", "Stepik Token", access_mode="api_token")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-explicit-blocked",
+        mode="live",
+        platforms=["stepik"],
+        source_ids=[str(blocked["source_id"])],
+        allow_network=True,
+    )
+
+    assert receipt["status"] == "partial"
+    assert receipt["network_touched"] is False
+    assert any(
+        failure["reason"] == "source is not ready" and failure["source_id"] == blocked["source_id"]
+        for failure in receipt["failures"]
+    )

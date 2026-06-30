@@ -115,6 +115,34 @@ def test_refresh_live_cycle_uses_selected_source_readiness_and_default_browser_s
     assert report["rebuilt_artifacts"]["semantic_index_path"]
 
 
+def test_refresh_live_ready_requires_selected_smoke_ready() -> None:
+    plan = {
+        "ready": False,
+        "source_plans": [
+            {
+                "source_id": "source:stepik:broken",
+                "ready": True,
+                "sync_command": "aoa-course sync stepik-live --source-id source:stepik:broken",
+                "smoke_command": None,
+            }
+        ],
+        "stages": [
+            {
+                "name": "live_smoke",
+                "actions": [
+                    {
+                        "source_id": "source:stepik:broken",
+                        "ready": False,
+                        "blocked_by": ["cannot parse Stepik course id from source_ref"],
+                    }
+                ],
+            }
+        ],
+    }
+
+    assert refresh_module._selected_source_live_ready(plan, "source:stepik:broken") is False
+
+
 def test_sync_checkpoints_keep_per_run_source_history(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     source = {

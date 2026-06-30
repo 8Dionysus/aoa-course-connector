@@ -271,6 +271,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing semantic provider option help check")
     if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents or "calibration connected-run" not in agents:
         errors.append("AGENTS route missing live calibration packet/intake validation")
+    for line in agents.splitlines():
+        if "calibration connected-run --mode live" in line and "--allow-network" in line:
+            errors.append("AGENTS validation must not require live connected-run --allow-network")
     portable_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
     fixture_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/live-calibration-fixture/calibration/live_calibration_packet.json"
     if fixture_packet_path not in agents:
