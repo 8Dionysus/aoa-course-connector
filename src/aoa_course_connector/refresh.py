@@ -81,8 +81,11 @@ def refresh_query_cycle(
         return {**base, "status": "blocked", "blocked_by": ["unsupported_refresh_platform"]}
     if selected_strategy == "live" and not allow_network:
         return {**base, "status": "blocked", "blocked_by": ["live_refresh_requires_allow_network"]}
-    if selected_strategy == "live" and isinstance(base.get("connected_plan"), dict) and not base["connected_plan"].get("ready"):
-        return {**base, "status": "blocked", "blocked_by": ["live_refresh_requires_ready_connected_plan"]}
+    if selected_strategy == "live" and not _selected_source_live_ready(
+        base.get("connected_plan"),
+        selected_source_id,
+    ):
+        return {**base, "status": "blocked", "blocked_by": ["live_refresh_requires_ready_selected_source"]}
 
     sync_run = sync_run_id or _default_sync_run(selected_strategy, platform, run_id)
     sync_receipt = _execute_sync(
@@ -276,7 +279,7 @@ def _execute_sync(
             sync_run_id=sync_run_id,
             platforms=[platform],
             source_ids=[source_id],
-            state_file=state_file,
+            state_file=_browser_live_state_file(roots, platform, state_file),
             max_lessons=max_lessons,
             build_artifacts=True,
         )
@@ -310,6 +313,23 @@ def _synced_checkpoint(sync_receipt: dict[str, object], source_id: str) -> dict[
         if isinstance(checkpoint, dict) and checkpoint.get("status") == "ok" and str(checkpoint.get("source_id") or "") == source_id:
             return checkpoint
     return None
+
+
+def _selected_source_live_ready(plan: object, source_id: str) -> bool:
+    if not isinstance(plan, dict):
+        return False
+    source_plans = plan.get("source_plans")
+    if isinstance(source_plans, list):
+        for source_plan in source_plans:
+            if not isinstance(source_plan, dict):
+                continue
+            if str(source_plan.get("source_id") or "") == source_id:
+                return bool(source_plan.get("ready")) and bool(source_plan.get("sync_command"))
+    return bool(plan.get("ready"))
+
+
+def _browser_live_state_file(roots: StorageRoots, platform: str, state_file: Path | None) -> Path:
+    return (state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
 
 
 def _rebuild_artifacts(roots: StorageRoots, run_id: str, *, mode: str) -> dict[str, object]:
