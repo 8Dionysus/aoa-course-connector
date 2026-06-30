@@ -84,6 +84,7 @@ aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","m
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
+aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
@@ -146,3 +147,6 @@ fixture connected-run receipt, MCP surface, docs, schemas, storage contract,
 and source/privacy boundaries are in place. The audit is read-only and does not
 mark the global goal complete; it keeps live GetCourse, Skillspace, Stepik,
 and external embedding calibration as explicit operator-access prerequisites.
+The same packet is exposed through MCP `goal_audit`, so an MCP-only agent can
+inspect the DoD handoff without switching back to shell commands or touching
+the network.

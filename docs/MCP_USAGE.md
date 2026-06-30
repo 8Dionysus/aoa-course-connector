@@ -6,6 +6,7 @@ Initial tools:
 
 - `list_sources`
 - `connector_readiness`
+- `goal_audit`
 - `ingest_status`
 - `sync_status`
 - `live_preflight`
@@ -41,6 +42,7 @@ aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
+aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 ```
 
 `semantic_search` follows the semantic index artifact for the requested run. If
@@ -80,6 +82,15 @@ When `platforms` is omitted, `live_preflight`, `connected_source_plan`, and
 `connector_readiness` use the full priority set: GetCourse, Skillspace, and
 Stepik. Pass `platforms` only to narrow a diagnostic or platform-specific run.
 
+`goal_audit` is the MCP equivalent of CLI `goal audit`. It returns
+`aoa_course_goal_audit_v1` with `requirements`,
+`ready_for_operator_connection`, `goal_complete`,
+`remaining_live_requirements`, and `network_touched: false`. Use it after
+`bootstrap fixture` and `connector_readiness` when an MCP-only agent needs the
+DoD-oriented handoff: the offline connector can be ready for operator
+connection while live GetCourse, Skillspace, Stepik, and external embedding
+calibration remain explicit operator-access prerequisites.
+
 ## JSON-RPC Stdio
 
 The package entrypoint `aoa-course-connector-mcp` also speaks MCP-style
@@ -108,6 +119,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
   '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
+  '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"goal_audit","arguments":{"runs":["starter-fixture"],"connected_run":"connected-calibration"}}}' \
   | aoa-course-connector-mcp
 ```
 

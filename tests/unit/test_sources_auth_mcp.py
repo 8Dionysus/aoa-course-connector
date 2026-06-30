@@ -229,6 +229,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
     monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
     assert any(tool["name"] == "connector_readiness" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "goal_audit" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
@@ -545,6 +546,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
 
     listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     readiness_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connector_readiness")
+    goal_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "goal_audit")
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
@@ -558,6 +560,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "max_lessons" in readiness_tool["inputSchema"]["properties"]
     assert "max_pages" in readiness_tool["inputSchema"]["properties"]
     assert "max_sources" in readiness_tool["inputSchema"]["properties"]
+    assert "runs" in goal_audit_tool["inputSchema"]["properties"]
+    assert "connected_run" in goal_audit_tool["inputSchema"]["properties"]
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
@@ -661,3 +665,19 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "--max-lessons 9" in compact_plan["connected_run_handoff"]["command"]
     assert "--max-pages 4" in compact_plan["connected_run_handoff"]["command"]
     assert "--max-sources 2" in compact_plan["connected_run_handoff"]["command"]
+
+    goal = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 44,
+        "method": "tools/call",
+        "params": {
+            "name": "goal_audit",
+            "arguments": {"runs": ["starter-fixture"], "connected_run": "connected-calibration"},
+        },
+    })
+    goal_content = goal["result"]["structuredContent"]
+    assert goal_content["tool"] == "goal_audit"
+    assert goal_content["schema"] == "aoa_course_goal_audit_v1"
+    assert goal_content["ready_for_operator_connection"] is False
+    assert goal_content["goal_complete"] is False
+    assert goal_content["network_touched"] is False

@@ -29,6 +29,7 @@ REQUIRED_ROUTE_FILES = [
 ]
 REQUIRED_MCP_TOOLS = [
     "connector_readiness",
+    "goal_audit",
     "list_sources",
     "ingest_status",
     "sync_status",

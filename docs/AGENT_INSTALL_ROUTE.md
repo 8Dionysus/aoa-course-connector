@@ -36,11 +36,12 @@
 16. After starter, Stepik fixture, and GetCourse browser fixture artifacts are
     built, run `eval answer-quality` to prove top-result path, source id,
     freshness, snippet, and evidence-field quality.
-17. Run MCP calls for `connector_readiness`, `graph_neighbors`,
+17. Run MCP calls for `connector_readiness`, `goal_audit`, `graph_neighbors`,
     `freshness_report`, `evidence_report`, and `refresh_plan` against
-    `starter-fixture` to prove agents can audit connector readiness, traverse
-    graph neighborhoods, inspect source evidence/freshness, and plan a refresh
-    cycle without shelling into lower-level CLI internals.
+    `starter-fixture` to prove agents can audit connector readiness, inspect
+    the DoD-oriented remaining live prerequisites, traverse graph
+    neighborhoods, inspect source evidence/freshness, and plan a refresh cycle
+    without shelling into lower-level CLI internals.
 18. After a registry-backed Stepik fixture sync, run `refresh query
     "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid
     --strategy fixture --execute` to prove the agent refresh loop can sync,

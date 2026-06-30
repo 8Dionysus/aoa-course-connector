@@ -385,6 +385,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_r
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 ```
 
 Runtime deployment in the full Abyss stack belongs in `abyss-stack`; this repo
