@@ -70,6 +70,12 @@ fixture calibration, or move into gated live work.
 On a fresh state, its `next_commands` can point to CLI `bootstrap fixture`,
 which creates the local starter artifacts and default fixture connected-run
 receipt before the agent returns to MCP queries.
+When the selected connected-run receipt already exists but is partial or
+otherwise non-ok, `connector_readiness` lifts its `repair_lanes` into the
+top-level `next_commands`. Agents should follow those lane commands, such as
+`preflight connected-plan` and the gated
+`calibration connected-run --mode live --allow-network` rerun, instead of
+treating the receipt as missing and running fixture bootstrap again.
 When `platforms` is omitted, `live_preflight`, `connected_source_plan`, and
 `connector_readiness` use the full priority set: GetCourse, Skillspace, and
 Stepik. Pass `platforms` only to narrow a diagnostic or platform-specific run.

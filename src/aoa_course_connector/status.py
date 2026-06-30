@@ -305,8 +305,14 @@ def _next_commands(
     connected_run_id = str(connected_run.get("run_id") or DEFAULT_CONNECTED_RUN)
     if not all(bool(storage_exists.get(name)) for name in ["data", "cache", "auth", "artifact"]):
         commands.append("aoa-course init")
-    if any(run_status.get("status") != "ready" for run_status in run_statuses) or connected_run.get("status") != "ok":
+    runs_ready = not any(run_status.get("status") != "ready" for run_status in run_statuses)
+    connected_run_status = str(connected_run.get("status") or "")
+    if not runs_ready:
         commands.append(f"aoa-course bootstrap fixture --connected-run {connected_run_id}")
+    elif connected_run_status == "missing":
+        commands.append(f"aoa-course bootstrap fixture --connected-run {connected_run_id}")
+    elif connected_run_status != "ok":
+        commands.extend(_connected_run_repair_commands(connected_run, connected_run_id))
     for run_status in run_statuses:
         commands.extend([str(command) for command in run_status.get("next_commands", []) if str(command)])
     if int(source_summary.get("enabled_source_count", 0)) == 0:
@@ -334,6 +340,18 @@ def _next_commands(
         readiness_command = f"{readiness_command} --connected-run {connected_run_id}"
     commands.append(readiness_command)
     return _dedupe(commands)
+
+
+def _connected_run_repair_commands(connected_run: dict[str, object], connected_run_id: str) -> list[str]:
+    commands: list[str] = []
+    lanes = connected_run.get("repair_lanes") if isinstance(connected_run.get("repair_lanes"), list) else []
+    for lane in lanes:
+        if not isinstance(lane, dict):
+            continue
+        commands.extend([str(command) for command in lane.get("next_commands", []) if str(command)])
+    if commands:
+        return commands
+    return [f"aoa-course calibration status --run {connected_run_id}"]
 
 
 def _normalized_bundle_status(path: Path) -> dict[str, object]:
