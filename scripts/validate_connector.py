@@ -300,11 +300,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
         errors.append("AGENTS route missing connector readiness validation")
-    if "bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik" not in agents:
+    if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
     if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
         errors.append("Agent install route missing connector readiness audit handoff")
-    if "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik" not in agent_install_raw:
+    if "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agent_install_raw:
         errors.append("Agent install route missing fixture bootstrap handoff")
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
@@ -367,7 +367,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     for token in [

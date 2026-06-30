@@ -4,7 +4,7 @@ Run:
 
 ```bash
 aoa-course doctor
-aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik
+aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
 aoa-course storage status --measure
 python scripts/validate_connector.py
@@ -16,7 +16,8 @@ rerunning lower-level sync, index, graph, or MCP commands.
 
 If `readiness` reports missing starter artifacts or a missing default
 connected-run receipt, rerun `bootstrap fixture`. The command is fixture-only,
-does not use secrets, and writes only local runtime state.
+does not use secrets, proves GetCourse/Skillspace/Stepik fixture routes by
+default, and writes only local runtime state.
 
 If query returns no results, rebuild:
 
