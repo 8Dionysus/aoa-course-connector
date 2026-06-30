@@ -20,10 +20,12 @@ Answers should be built from query results rather than free-floating summaries.
 
 - `keyword`: deterministic inverted-index search over normalized course
   knowledge items.
-- `semantic`: deterministic local sparse vector search using the
-  `local_hashing_v1` provider. It hashes text tokens, title/path tokens,
-  adjacent bigrams, kind, platform, and authority tier features into normalized
-  vectors.
+- `semantic`: sparse vector search using the semantic provider declared by the
+  index artifact. The default `local_hashing_v1` provider hashes text tokens,
+  title/path tokens, adjacent bigrams, kind, platform, and authority tier
+  features into normalized vectors. The optional `http_json_v1` provider calls
+  an operator-configured JSON embedding endpoint for both document indexing and
+  query vectors.
 - `hybrid`: combines normalized keyword score and semantic vector score while
   preserving the same evidence-bearing result shape.
 
@@ -48,11 +50,17 @@ When adapters provide explicit `authority_tier`, `authority_label`, `role`, or
 `source_authority` metadata, the index preserves those adapter-derived signals
 before falling back to kind/label heuristics.
 
-The local semantic index is a portable baseline, not a claim that the repo has
-external model embeddings configured. Future embedding providers must keep this
+The local semantic index is the portable baseline, not a claim that a clone has
+external model credentials configured. External providers must keep this
 contract stable: source-backed snippets, path, URL, fetched timestamp, evidence
 IDs, source id, freshness, authority tier, rank features, and score components
 remain visible.
+
+`http_json_v1` stores endpoint/model metadata and the token environment variable
+name in `provider_config`, but never stores the token value. The query route
+reads the semantic index provider and uses the same provider for query
+vectorization, so MCP `semantic_search` and `hybrid_search` stay in the same
+vector space as the indexed course documents.
 
 `aoa-course eval answer-quality` checks this shape for fixture-safe starter,
 Stepik, and GetCourse runs: top-result source identity, path, snippet terms,
@@ -70,6 +78,7 @@ Commands:
 
 ```bash
 aoa-course build-semantic-index --run starter-fixture
+aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
 aoa-course query "bootloader rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json

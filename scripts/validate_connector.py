@@ -261,6 +261,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
+    if "build-semantic-index --help" not in agents:
+        errors.append("AGENTS route missing semantic provider option help check")
     if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents:
         errors.append("AGENTS route missing live calibration packet/intake validation")
     if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
@@ -299,6 +301,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "semantic",
         "hybrid",
         "local_hashing_v1",
+        "http_json_v1",
+        "provider_config",
+        "embedding-token-env",
+        "token value",
         "semantic_search",
         "hybrid_search",
         "source id",

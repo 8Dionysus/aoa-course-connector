@@ -41,6 +41,9 @@
 - Added deterministic `local_hashing_v1` semantic/vector index, semantic and
   hybrid query modes, CLI build/query/answer support, MCP semantic/hybrid search
   tools, and semantic index eval coverage.
+- Added optional `http_json_v1` semantic embedding provider support, keeping
+  provider metadata in the semantic index artifact, using the same provider for
+  query/MCP vectors, and redacting token values from artifacts.
 - Hardened smoke/sync guardrails so catalog-only browser smoke queries report a
   partial blocked answer and Stepik fixture sync refuses non-fixture course IDs.
 - Added browser-session auth-state onboarding commands for Playwright state

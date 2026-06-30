@@ -27,9 +27,24 @@ The starter path creates:
 - normalized course objects from a safe fixture;
 - a local keyword index;
 - a deterministic local semantic/vector index (`local_hashing_v1`);
+- an optional HTTP JSON semantic provider (`http_json_v1`) for
+  operator-configured embedding endpoints;
 - a course graph;
 - an answer packet with source-backed evidence.
 - answer packets with source-backed evidence.
+
+To build the same semantic index contract through an external embedding
+endpoint, keep the token in the environment and pass only the env var name:
+
+```bash
+export AOA_COURSE_EMBEDDING_TOKEN=...
+PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
+PYTHONPATH=src python -m aoa_course_connector.cli query "bootloader rollback" --run starter-fixture --mode semantic
+```
+
+The semantic index artifact records provider metadata and the token environment
+variable name, but not the token value. MCP `semantic_search` reads the same
+provider contract as the CLI query route.
 
 The retrieval loop also exposes a base relevance `score`,
 `authority_tier`, and a freshness/authority/provenance adjusted `rank_score`.

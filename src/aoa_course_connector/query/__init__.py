@@ -8,6 +8,7 @@ from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import (
+    LOCAL_HASHING_PROVIDER,
     semantic_doc_feature_keys,
     semantic_query_feature_keys,
     sparse_vector_from_json,
@@ -76,9 +77,18 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
     index_path = run_artifact_dir(roots, run_id) / "indexes" / "semantic_index.json"
     index = json.loads(index_path.read_text(encoding="utf-8"))
     dimensions = int(index.get("dimensions") or 256)
-    query_vector = vectorize_semantic_query(query, dimensions=dimensions)
-    query_features = semantic_query_feature_keys(query)
-    if not query_vector or not query_features:
+    provider = str(index.get("provider") or LOCAL_HASHING_PROVIDER)
+    provider_config = index.get("provider_config") if isinstance(index.get("provider_config"), dict) else {}
+    query_vector = vectorize_semantic_query(
+        query,
+        dimensions=dimensions,
+        provider=provider,
+        provider_config=provider_config,
+    )
+    query_features = semantic_query_feature_keys(query) if provider == LOCAL_HASHING_PROVIDER else set()
+    if not query_vector:
+        return []
+    if provider == LOCAL_HASHING_PROVIDER and not query_features:
         return []
     query_terms = tokenize(query)
     ranked = []
@@ -89,7 +99,7 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
         score = vector_dot(query_vector, vector)
         if score <= 0:
             continue
-        if not (query_features & semantic_doc_feature_keys(doc)):
+        if provider == LOCAL_HASHING_PROVIDER and not (query_features & semantic_doc_feature_keys(doc)):
             continue
         result = {key: value for key, value in doc.items() if key != "vector"}
         rank_features = _rank_features(result)
@@ -100,6 +110,7 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
                 "rank_score": _rank_score(score, rank_features),
                 "rank_features": rank_features,
                 "score_mode": "semantic_vector",
+                "semantic_provider": provider,
                 "snippet": _snippet(str(doc.get("text") or ""), query_terms),
             }
         )

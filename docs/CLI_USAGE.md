@@ -44,6 +44,7 @@ aoa-course calibration build --run connected-live-calibration --report "$AOA_COU
 aoa-course calibration intake --run connected-live-calibration-intake --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
 aoa-course build-semantic-index --run starter-fixture
+aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
 aoa-course build-graph --run starter-fixture
 aoa-course query "rollback" --run starter-fixture
 aoa-course query "rollback" --run starter-fixture --mode semantic

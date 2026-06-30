@@ -85,8 +85,8 @@
 - Calibrate Stepik account-level discovery against operator-selected
   authenticated accounts after `preflight live --platform stepik` reports token
   and source readiness where official scopes expose enough catalog data.
-- Add optional external embedding providers behind the stable semantic index
-  contract.
+- Calibrate operator-selected external embedding endpoints against real course
+  runs now that the stable `http_json_v1` semantic index contract exists.
 - Calibrate adapter-provided authority tiers against live GetCourse,
   Skillspace, and Stepik source metadata beyond fixture-safe role/API signals.
 - Broaden answer-quality evals against live-calibrated GetCourse, Skillspace,

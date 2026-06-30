@@ -25,7 +25,7 @@ from aoa_course_connector.discover import (
     discover_stepik_account_live as discover_stepik_account_live_route,
 )
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index, build_semantic_index
+from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER, build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import (
     capture_browser_live,
     crawl_browser_fixture,
@@ -397,6 +397,12 @@ def build_parser() -> argparse.ArgumentParser:
     build_semantic = sub.add_parser("build-semantic-index")
     build_semantic.add_argument("--run", default=DEFAULT_RUN)
     build_semantic.add_argument("--dimensions", type=int, default=256)
+    build_semantic.add_argument("--provider", choices=[LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], default=LOCAL_HASHING_PROVIDER)
+    build_semantic.add_argument("--embedding-endpoint")
+    build_semantic.add_argument("--embedding-model")
+    build_semantic.add_argument("--embedding-token-env")
+    build_semantic.add_argument("--embedding-batch-size", type=int, default=32)
+    build_semantic.add_argument("--embedding-timeout-seconds", type=float, default=30.0)
     build_semantic.set_defaults(func=cmd_build_semantic_index)
 
     build_graph_parser = sub.add_parser("build-graph")
@@ -1119,8 +1125,29 @@ def cmd_build_index(args: argparse.Namespace) -> int:
 
 def cmd_build_semantic_index(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
-    path = build_semantic_index(roots, run_id=args.run, dimensions=args.dimensions)
-    _emit({"schema": "aoa_course_build_semantic_index_receipt_v1", "status": "ok", "run_id": args.run, "semantic_index_path": str(path)})
+    path = build_semantic_index(
+        roots,
+        run_id=args.run,
+        dimensions=args.dimensions,
+        provider=args.provider,
+        embedding_endpoint=args.embedding_endpoint,
+        embedding_model=args.embedding_model,
+        embedding_token_env=args.embedding_token_env,
+        embedding_batch_size=args.embedding_batch_size,
+        embedding_timeout_seconds=args.embedding_timeout_seconds,
+    )
+    payload = json.loads(path.read_text(encoding="utf-8"))
+    _emit(
+        {
+            "schema": "aoa_course_build_semantic_index_receipt_v1",
+            "status": "ok",
+            "run_id": args.run,
+            "semantic_index_path": str(path),
+            "provider": payload.get("provider"),
+            "dimensions": payload.get("dimensions"),
+            "provider_config": payload.get("provider_config"),
+        }
+    )
     return 0
 
 

@@ -35,6 +35,12 @@ aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
 ```
 
+`semantic_search` follows the semantic index artifact for the requested run. If
+that artifact was built with `http_json_v1`, the MCP route uses the same
+operator-configured endpoint and token environment variable name for query
+vectors; token values are read from the environment and are not written to the
+artifact or tool result.
+
 ## JSON-RPC Stdio
 
 The package entrypoint `aoa-course-connector-mcp` also speaks MCP-style
