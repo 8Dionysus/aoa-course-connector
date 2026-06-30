@@ -40,8 +40,8 @@ aoa-course smoke browser-fixture --platform getcourse --run getcourse-browser-sm
 aoa-course smoke browser-snapshot --platform getcourse --catalog-snapshot /path/to/catalog.json --course-snapshot /path/to/course.json --query "course-specific question"
 aoa-course smoke browser-live --platform getcourse --catalog-url "https://school.example/teach/control/stream" --course-url "https://school.example/teach/control/stream/view/id/201" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --query "course-specific question"
 aoa-course eval live-calibration
-aoa-course calibration build --run connected-live-calibration --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" --report "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json" --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
-aoa-course calibration intake --run connected-live-calibration-intake --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
+aoa-course calibration build --run connected-live-calibration --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
+aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
 aoa-course build-semantic-index --run starter-fixture
 aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN

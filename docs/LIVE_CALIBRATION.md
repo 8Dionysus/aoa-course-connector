@@ -52,8 +52,8 @@ packet plus execution stages; store it in `AOA_COURSE_ARTIFACT_ROOT` and keep it
 out of Git.
 
 ```bash
-aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
-aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN > "$AOA_COURSE_ARTIFACT_ROOT/stepik-preflight.json"
+aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
+aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-preflight.json"
 ```
 
 Then run bounded smoke commands against sources the connected account is allowed
@@ -67,12 +67,12 @@ aoa-course smoke browser-live \
   --course-url "https://school.example/teach/control/stream/view/id/201" \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --query "course-specific question" \
-  > "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json"
+  > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json"
 
 aoa-course smoke stepik-live 67 \
   --run stepik-live-smoke \
   --query "course-specific question" \
-  > "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json"
+  > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json"
 ```
 
 Build the packet from the reports:
@@ -80,14 +80,14 @@ Build the packet from the reports:
 ```bash
 aoa-course calibration build \
   --run connected-live-calibration \
-  --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" \
-  --report "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json" \
-  --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json" \
-  --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/stepik-preflight.json"
+  --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" \
+  --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" \
+  --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json" \
+  --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-preflight.json"
 ```
 
 `calibration build` writes
-`$AOA_COURSE_ARTIFACT_ROOT/<run>/calibration/live_calibration_packet.json`.
+`${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/calibration/live_calibration_packet.json`.
 Do not commit live packets, raw smoke reports, browser state, private snapshots,
 tokens, cookies, raw API payloads, or course pages.
 
@@ -96,11 +96,11 @@ Turn a packet into a local repair/eval-intake plan:
 ```bash
 aoa-course calibration intake \
   --run connected-live-calibration-intake \
-  --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
+  --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 ```
 
 `calibration intake` writes an `aoa_course_live_calibration_intake_v1` artifact at
-`$AOA_COURSE_ARTIFACT_ROOT/<run>/calibration/live_calibration_intake.json`.
+`${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/calibration/live_calibration_intake.json`.
 It classifies packet failures into repair lanes such as privacy guard,
 caption/transcript collection, course/evidence extraction, retrieval quality,
 or readiness preflight. It also suggests repo-local `evals/intake/*.md`

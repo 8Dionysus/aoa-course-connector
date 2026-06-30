@@ -239,14 +239,15 @@ those hosts, and gives the exact `auth plan-browser-state`,
 commands needed before live sync can start.
 
 ```bash
+ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
 PYTHONPATH=src python -m aoa_course_connector.cli calibration build \
   --run connected-live-calibration \
-  --report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-live-smoke.json" \
-  --report "$AOA_COURSE_ARTIFACT_ROOT/stepik-live-smoke.json" \
-  --preflight-report "$AOA_COURSE_ARTIFACT_ROOT/getcourse-preflight.json"
+  --report "$ARTIFACT_ROOT/getcourse-live-smoke.json" \
+  --report "$ARTIFACT_ROOT/stepik-live-smoke.json" \
+  --preflight-report "$ARTIFACT_ROOT/getcourse-preflight.json"
 PYTHONPATH=src python -m aoa_course_connector.cli calibration intake \
   --run connected-live-calibration-intake \
-  --packet "$AOA_COURSE_ARTIFACT_ROOT/runs/connected-live-calibration/calibration/live_calibration_packet.json"
+  --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 ```
 
 The packet uses `aoa_course_live_calibration_packet_v1`, checks answer evidence,

@@ -51,5 +51,9 @@
     redacted browser-state readiness before live discovery or sync.
 22. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-23. Add live sources only after auth-state and storage roots are local and
+23. Run `preflight connected-plan --write-runbook
+    "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`
+    to produce the redacted setup/sync/smoke/calibration handoff with portable
+    runtime artifact paths.
+24. Add live sources only after auth-state and storage roots are local and
     ignored by Git.

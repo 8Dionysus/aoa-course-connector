@@ -257,7 +257,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     agents = (repo_root / "AGENTS.md").read_text(encoding="utf-8")
     source_policy = (repo_root / "connector" / "SOURCE_POLICY.md").read_text(encoding="utf-8").casefold()
     storage_policy = (repo_root / "connector" / "STORAGE_POLICY.md").read_text(encoding="utf-8")
-    readme = (repo_root / "README.md").read_text(encoding="utf-8").casefold()
+    readme_raw = (repo_root / "README.md").read_text(encoding="utf-8")
+    readme = readme_raw.casefold()
+    cli_usage_raw = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8")
+    agent_install_raw = (repo_root / "docs" / "AGENT_INSTALL_ROUTE.md").read_text(encoding="utf-8")
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
@@ -265,6 +268,18 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing semantic provider option help check")
     if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents:
         errors.append("AGENTS route missing live calibration packet/intake validation")
+    portable_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
+    fixture_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/live-calibration-fixture/calibration/live_calibration_packet.json"
+    if fixture_packet_path not in agents:
+        errors.append("AGENTS route missing portable fixture live-calibration packet path")
+    for label, text in [
+        ("README live calibration route", readme_raw),
+        ("CLI usage live calibration route", cli_usage_raw),
+    ]:
+        if portable_packet_path not in text:
+            errors.append(f"{label} missing portable connected-live-calibration packet path")
+    if "preflight connected-plan --write-runbook" not in agent_install_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md" not in agent_install_raw:
+        errors.append("Agent install route missing portable connected-source runbook handoff")
     if "preflight connected-plan" not in agents or "connected_source_plan" not in agents or "--live-scope bounded" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "eval browser-transcripts" not in agents:
@@ -321,7 +336,12 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration", "browser-transcripts"]:
         if token not in eval_readme:
             errors.append(f"Eval README missing token: {token}")
-    live_calibration_doc = (repo_root / "docs" / "LIVE_CALIBRATION.md").read_text(encoding="utf-8").casefold()
+    live_calibration_raw = (repo_root / "docs" / "LIVE_CALIBRATION.md").read_text(encoding="utf-8")
+    live_calibration_doc = live_calibration_raw.casefold()
+    if portable_packet_path not in live_calibration_raw:
+        errors.append("Live calibration doc missing portable connected-live-calibration packet path")
+    if "$AOA_COURSE_ARTIFACT_ROOT/<run>" in live_calibration_raw:
+        errors.append("Live calibration doc uses non-runtime artifact path without runs/<run>")
     for token in [
         "aoa_course_live_calibration_packet_v1",
         "aoa_course_connected_source_plan_v1",
