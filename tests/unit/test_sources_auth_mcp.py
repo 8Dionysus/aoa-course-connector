@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 
@@ -122,6 +123,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     result = call_tool("search", {"query": "rollback", "run": "starter-fixture"})
     assert result["results"]
     checkpoint = make_checkpoint(
@@ -133,6 +135,42 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     upsert_checkpoint(storage, checkpoint)
     sync_status = call_tool("sync_status", {"sync_run": "browser-sync-fixture"})
     assert sync_status["sync"]["ok_count"] == 1
+
+
+def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    result = call_tool(
+        "live_preflight",
+        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.example"},
+    )
+
+    assert result["tool"] == "live_preflight"
+    assert result["preflight"]["ready"] is True
+    assert result["preflight"]["network_touched"] is False
+    rendered = json.dumps(result)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
 
 
 def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> None:
@@ -162,7 +200,9 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
 
     listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
+    preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     assert search_tool["inputSchema"]["required"] == ["query"]
+    assert "platforms" in preflight_tool["inputSchema"]["properties"]
 
     called = handle_jsonrpc_message({
         "jsonrpc": "2.0",
@@ -174,3 +214,14 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert result["isError"] is False
     assert result["structuredContent"]["tool"] == "search"
     assert result["structuredContent"]["results"]
+
+    preflight = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}},
+    })
+    preflight_result = preflight["result"]
+    assert preflight_result["isError"] is False
+    assert preflight_result["structuredContent"]["tool"] == "live_preflight"
+    assert preflight_result["structuredContent"]["preflight"]["network_touched"] is False

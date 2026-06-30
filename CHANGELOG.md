@@ -59,3 +59,5 @@
 - Added read-only live preflight reports for Stepik token presence,
   browser-session storage-state readiness, registered sources, next commands,
   and secret-redacted operator handoff.
+- Added MCP `live_preflight` so agents can inspect connected-source readiness
+  through structuredContent without touching the network or printing secrets.

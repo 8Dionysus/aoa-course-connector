@@ -50,7 +50,8 @@ This proves:
 - Browser-session auth-state onboarding through CLI planning, optional
   Playwright capture, and redacted storage-state inspection.
 - Read-only live preflight reports for Stepik tokens, browser storage-state
-  usability, source-registry readiness, next commands, and secret redaction.
+  usability, source-registry readiness, next commands, secret redaction, and
+  MCP `live_preflight` structuredContent.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
   index/graph builds, CLI status, MCP status, and eval coverage.
 - Stepik fixture/live smoke report routes that combine source registration,

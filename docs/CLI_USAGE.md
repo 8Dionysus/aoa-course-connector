@@ -48,4 +48,5 @@ aoa-course answer "bootloader unlock rollback" --run starter-fixture
 aoa-course eval browser-progress-comments
 aoa-course eval semantic-index
 aoa-course mcp tools
+aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 ```
