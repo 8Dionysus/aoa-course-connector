@@ -41,3 +41,5 @@
 - Added deterministic `local_hashing_v1` semantic/vector index, semantic and
   hybrid query modes, CLI build/query/answer support, MCP semantic/hybrid search
   tools, and semantic index eval coverage.
+- Hardened smoke/sync guardrails so catalog-only browser smoke queries report a
+  partial blocked answer and Stepik fixture sync refuses non-fixture course IDs.

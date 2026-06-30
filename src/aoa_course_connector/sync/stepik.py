@@ -17,6 +17,7 @@ from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpo
 
 
 STEPIK_ACCESS_MODES = {"public_api", "api_token", "oauth"}
+STEPIK_FIXTURE_COURSE_ID = 67
 
 
 def sync_stepik_fixture_sources(
@@ -33,7 +34,12 @@ def sync_stepik_fixture_sources(
     for source in sources:
         child_run = _child_run_id(sync_run_id, source)
         try:
-            _parse_stepik_course_id(str(source.get("source_ref") or ""))
+            course_id = _parse_stepik_course_id(str(source.get("source_ref") or ""))
+            if course_id != STEPIK_FIXTURE_COURSE_ID:
+                raise ValueError(
+                    f"stepik-fixture sync only supports fixture course {STEPIK_FIXTURE_COURSE_ID}; "
+                    f"use stepik-live sync for course {course_id}"
+                )
             materialized = materialize_stepik_fixture(roots, run_id=child_run, source=source)
             checkpoint = _checkpoint_from_materialized(
                 roots,
