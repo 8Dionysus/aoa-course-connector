@@ -98,6 +98,11 @@ PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --run 
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
 ```
 
+`preflight live --platform stepik` treats registered `public_api` sources as
+sync-ready without `STEPIK_API_TOKEN`; token-gated `api_token` and `oauth`
+sources still require the token. Account discovery ignores inactive or deleted
+enrollments before registering sources.
+
 For a single Stepik operator smoke report:
 
 ```bash
@@ -127,6 +132,10 @@ PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state get
 PYTHONPATH=src python -m aoa_course_connector.cli auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
 ```
+
+Browser preflight checks saved storage state against each registered source
+host before marking live sync ready. A state file captured for one school host
+does not make another registered host ready.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register

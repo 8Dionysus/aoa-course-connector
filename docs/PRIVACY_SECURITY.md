@@ -10,3 +10,5 @@
 - Use `preflight live` before live discovery/sync when possible; it checks local
   token presence and browser-state usability without touching the network or
   printing secret values.
+- Browser preflight checks storage state against each registered source host so
+  an auth state from one host is not treated as proof of access to another host.

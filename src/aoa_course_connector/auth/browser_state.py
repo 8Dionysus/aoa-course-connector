@@ -185,7 +185,6 @@ def _host_domain_matches(expected_host: str, cookie_domain: str) -> bool:
     return (
         expected_host == cookie_domain
         or expected_host.endswith(f".{cookie_domain}")
-        or cookie_domain.endswith(f".{expected_host}")
     )
 
 
