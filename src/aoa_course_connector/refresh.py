@@ -324,8 +324,32 @@ def _selected_source_live_ready(plan: object, source_id: str) -> bool:
             if not isinstance(source_plan, dict):
                 continue
             if str(source_plan.get("source_id") or "") == source_id:
-                return bool(source_plan.get("ready")) and bool(source_plan.get("sync_command"))
+                return (
+                    bool(source_plan.get("ready"))
+                    and bool(source_plan.get("sync_command"))
+                    and bool(source_plan.get("smoke_command"))
+                    and _selected_source_stage_ready(plan, source_id, "live_smoke")
+                )
     return bool(plan.get("ready"))
+
+
+def _selected_source_stage_ready(plan: dict[str, object], source_id: str, stage_name: str) -> bool:
+    stages = plan.get("stages")
+    if not isinstance(stages, list):
+        return False
+    for stage in stages:
+        if not isinstance(stage, dict) or stage.get("name") != stage_name:
+            continue
+        actions = stage.get("actions")
+        if not isinstance(actions, list):
+            return False
+        matched = [
+            action
+            for action in actions
+            if isinstance(action, dict) and str(action.get("source_id") or "") == source_id
+        ]
+        return bool(matched) and all(bool(action.get("ready")) for action in matched)
+    return False
 
 
 def _browser_live_state_file(roots: StorageRoots, platform: str, state_file: Path | None) -> Path:

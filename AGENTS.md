@@ -91,7 +91,6 @@ PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcou
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --platform getcourse --platform stepik --live-scope bounded
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --platform getcourse --platform stepik --live-scope bounded --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
-PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run --mode live --platform stepik --allow-network --live-scope bounded --source-limit 1 --run connected-stepik-live-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"platforms":["getcourse","stepik"]}'
 PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture

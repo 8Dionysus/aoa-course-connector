@@ -361,8 +361,9 @@ def _run_live(
             sync_receipts=[],
         )
 
-    ready_sources = _ready_source_checks(plan, source_ids=source_ids, source_limit=source_limit)
-    blocked_sources = _blocked_source_checks(plan, source_ids=source_ids)
+    selected_sources = _selected_source_checks(plan, source_ids=source_ids, source_limit=source_limit)
+    ready_sources = _ready_source_checks(selected_sources)
+    blocked_sources = _blocked_source_checks(selected_sources)
     for source in blocked_sources:
         failures.append(
             {
@@ -698,26 +699,30 @@ def _collect_action_failure(failures: list[dict[str, object]], action: dict[str,
     )
 
 
-def _ready_source_checks(plan: dict[str, object], *, source_ids: list[str] | None, source_limit: int | None) -> list[dict[str, object]]:
+def _selected_source_checks(plan: dict[str, object], *, source_ids: list[str] | None, source_limit: int | None) -> list[dict[str, object]]:
     wanted = {str(source_id) for source_id in source_ids or []}
     sources = [
         source
         for source in plan.get("source_plans", [])
         if isinstance(source, dict)
-        and bool(source.get("ready"))
         and (not wanted or str(source.get("source_id") or "") in wanted)
     ]
     return sources[:source_limit] if source_limit is not None else sources
 
 
-def _blocked_source_checks(plan: dict[str, object], *, source_ids: list[str] | None) -> list[dict[str, object]]:
-    wanted = {str(source_id) for source_id in source_ids or []}
+def _ready_source_checks(sources: list[dict[str, object]]) -> list[dict[str, object]]:
     return [
         source
-        for source in plan.get("source_plans", [])
-        if isinstance(source, dict)
-        and not bool(source.get("ready"))
-        and (not wanted or str(source.get("source_id") or "") in wanted)
+        for source in sources
+        if bool(source.get("ready"))
+    ]
+
+
+def _blocked_source_checks(sources: list[dict[str, object]]) -> list[dict[str, object]]:
+    return [
+        source
+        for source in sources
+        if not bool(source.get("ready"))
     ]
 
 
