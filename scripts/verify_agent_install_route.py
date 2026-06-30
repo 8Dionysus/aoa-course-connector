@@ -93,6 +93,9 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "tools"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_search", '{"query":"rollback","run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "hybrid_search", '{"query":"rollback","run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "graph_neighbors", '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "freshness_report", '{"run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}'],
         ]
         if not args.skip_pytest:
             commands.insert(1, [sys.executable, "-m", "pytest", "-q"])

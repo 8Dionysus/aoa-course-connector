@@ -23,6 +23,9 @@ This proves:
 - answer packets with evidence chains and freshness timestamps;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
   `tools/call` responses;
+- MCP agent routes for graph neighborhoods, freshness reports, and compact
+  evidence reports with source URL, course path, fetched timestamp, freshness
+  state, authority tier, and rank score;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,

@@ -33,8 +33,17 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     answer = run_cli(tmp_path, "answer", "bootloader unlock rollback", "--run", "starter-fixture")
     assert answer["result_count"] >= 1
     assert answer["evidence_chain"]
+    evidence_inspect = run_cli(tmp_path, "evidence", "inspect", "rollback", "--run", "starter-fixture")
+    assert evidence_inspect["evidence_chain"]
+    assert evidence_inspect["freshness_report"]["has_source_timestamps"] is True
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
+    graph = run_cli(tmp_path, "mcp", "call", "graph_neighbors", '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}')
+    assert graph["result"]["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
+    freshness = run_cli(tmp_path, "mcp", "call", "freshness_report", '{"run":"starter-fixture"}')
+    assert freshness["result"]["freshness"]["states"]
+    evidence = run_cli(tmp_path, "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}')
+    assert evidence["result"]["evidence_chain"]
     preflight = run_cli(tmp_path, "mcp", "call", "live_preflight", '{"platforms":["stepik"]}')
     assert preflight["result"]["preflight"]["network_touched"] is False
 
@@ -47,7 +56,8 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
-        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "evidence_report", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
+        {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -62,11 +72,12 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
-    assert responses[3]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[3]["result"]["structuredContent"]["evidence_chain"]
+    assert responses[4]["result"]["structuredContent"]["preflight"]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

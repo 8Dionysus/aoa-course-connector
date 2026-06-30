@@ -261,6 +261,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if "eval live-calibration" not in agents or "calibration build" not in agents:
         errors.append("AGENTS route missing live calibration packet validation")
+    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report"]:
+        if token not in agents:
+            errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
     for token in ["getcourse", "skillspace", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
         if token not in source_policy:
             errors.append(f"source policy missing boundary token: {token}")
@@ -275,6 +278,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "source url", "authority report"]:
+        if token not in mcp.casefold():
+            errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "network_touched", "secret values", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")

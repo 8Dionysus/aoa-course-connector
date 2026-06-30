@@ -47,6 +47,8 @@ aoa-course query "rollback" --run starter-fixture
 aoa-course query "rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
+aoa-course graph neighbors lesson:starter:unlock-risk --run starter-fixture
+aoa-course evidence inspect "rollback" --run starter-fixture --mode hybrid
 aoa-course eval answer-quality
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 aoa-course build-index --run freshness-ranking-fixture
@@ -60,5 +62,8 @@ aoa-course eval adapter-authority
 aoa-course eval browser-progress-comments
 aoa-course eval semantic-index
 aoa-course mcp tools
+aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
+aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
+aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 ```

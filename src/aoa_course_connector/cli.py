@@ -404,6 +404,8 @@ def build_parser() -> argparse.ArgumentParser:
     inspect = evidence_sub.add_parser("inspect")
     inspect.add_argument("query")
     inspect.add_argument("--run", default=DEFAULT_RUN)
+    inspect.add_argument("--limit", type=int, default=5)
+    inspect.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
     inspect.set_defaults(func=cmd_evidence_inspect)
 
     eval_parser = sub.add_parser("eval")
@@ -1100,8 +1102,19 @@ def cmd_graph_neighbors(args: argparse.Namespace) -> int:
 
 def cmd_evidence_inspect(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
-    packet = render_answer_packet(roots, args.query, args.run, 5)
-    _emit({"schema": "aoa_course_evidence_inspect_v1", "run_id": args.run, "query": args.query, "evidence_chain": packet["evidence_chain"]})
+    packet = render_answer_packet(roots, args.query, args.run, args.limit, args.mode)
+    _emit(
+        {
+            "schema": "aoa_course_evidence_inspect_v1",
+            "run_id": args.run,
+            "query": args.query,
+            "mode": args.mode,
+            "result_count": packet["result_count"],
+            "evidence_chain": packet["evidence_chain"],
+            "freshness_report": packet["freshness_report"],
+            "authority_report": packet["authority_report"],
+        }
+    )
     return 0
 
 
