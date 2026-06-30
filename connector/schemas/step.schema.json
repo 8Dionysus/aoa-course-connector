@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_step.schema.json","title":"Step","type":"object","required":["step_id","lesson_id","kind","text"],"properties":{"step_id":{"type":"string"},"lesson_id":{"type":"string"},"kind":{"type":"string"},"text":{"type":"string"},"order":{"type":"integer"},"evidence":{"$ref":"evidence.schema.json"}}}

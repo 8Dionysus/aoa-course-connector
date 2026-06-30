@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_index_manifest.schema.json","title":"IndexManifest","type":"object","required":["schema","run_id","doc_count","term_count"],"properties":{"schema":{"const":"aoa_course_keyword_index_v1"},"run_id":{"type":"string"},"doc_count":{"type":"integer"},"term_count":{"type":"integer"}}}

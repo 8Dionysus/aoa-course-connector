@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_entity.schema.json","title":"Entity","type":"object","required":["entity_id","kind","value"],"properties":{"entity_id":{"type":"string"},"kind":{"type":"string"},"value":{"type":"string"},"evidence_refs":{"type":"array","items":{"type":"string"}}}}

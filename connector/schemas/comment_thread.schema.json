@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_comment_thread.schema.json","title":"CommentThread","type":"object","required":["thread_id","lesson_id"],"properties":{"thread_id":{"type":"string"},"lesson_id":{"type":"string"},"comments":{"type":"array"},"evidence":{"$ref":"evidence.schema.json"}}}

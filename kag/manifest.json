@@ -1,0 +1,7 @@
+{
+  "schema": "aoa_kag_manifest_v1",
+  "repo": "aoa-course-connector",
+  "role": "course-platform connector source home",
+  "nodes": ["kag/nodes/source_home.json", "kag/nodes/storage_boundary.json"],
+  "edges": ["kag/edges/source_routes_to_storage_boundary.json"]
+}

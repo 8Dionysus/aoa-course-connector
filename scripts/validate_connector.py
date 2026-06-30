@@ -1,0 +1,221 @@
+#!/usr/bin/env python3
+"""Validate the GitHub-publishable course connector repository."""
+
+from __future__ import annotations
+
+import json
+import sys
+from pathlib import Path
+
+
+REQUIRED_FILES = [
+    "AGENTS.md",
+    "README.md",
+    "CHARTER.md",
+    "BOUNDARIES.md",
+    "ROADMAP.md",
+    "CHANGELOG.md",
+    "pyproject.toml",
+    ".env.example",
+    ".gitignore",
+    ".github/workflows/validate.yml",
+    ".connector-state/AGENTS.md",
+    ".connector-state/README.md",
+    "connector/SOURCE_POLICY.md",
+    "connector/STORAGE_POLICY.md",
+    "connector/manifests/connector_manifest.yaml",
+    "connector/manifests/route_allowlist.yaml",
+    "connector/manifests/artifact_classes.yaml",
+    "connector/profiles/starter-course.yaml",
+    "connector/fixtures/course/starter_course.json",
+    "docs/ARCHITECTURE.md",
+    "docs/INSTALL.md",
+    "docs/AGENT_INSTALL_ROUTE.md",
+    "docs/STORAGE_CONTRACT.md",
+    "docs/AUTH_SESSION.md",
+    "docs/ADAPTER_GUIDE.md",
+    "docs/GETCOURSE.md",
+    "docs/SKILLSPACE.md",
+    "docs/CLEAN_API_ADAPTERS.md",
+    "docs/CLI_USAGE.md",
+    "docs/MCP_USAGE.md",
+    "docs/QUERY_MODEL.md",
+    "docs/GRAPH_MODEL.md",
+    "docs/RUNTIME_CONTRACT.md",
+    "docs/PRIVACY_SECURITY.md",
+    "docs/TROUBLESHOOTING.md",
+    "docs/STARTER_PROOF.md",
+    "docs/decisions/README.md",
+    "docs/decisions/AOA-COURSE-D-0001-course-knowledge-not-downloader.md",
+    "evals/AGENTS.md",
+    "evals/PORT.yaml",
+    "evals/README.md",
+    "evals/suites/README.md",
+    "evals/suites/starter_course_answer_packets.json",
+    "kag/AGENTS.md",
+    "kag/README.md",
+    "kag/manifest.json",
+    "src/aoa_course_connector/cli.py",
+    "src/aoa_course_connector/mcp/server.py",
+    "scripts/validate_connector.py",
+    "scripts/verify_agent_install_route.py",
+]
+
+REQUIRED_DIRS = [
+    ".connector-state",
+    ".connector-state/data",
+    ".connector-state/cache",
+    ".connector-state/auth",
+    ".connector-state/artifacts",
+    ".github/workflows",
+    "connector/schemas",
+    "src/aoa_course_connector/adapters",
+    "src/aoa_course_connector/auth",
+    "src/aoa_course_connector/core",
+    "src/aoa_course_connector/evidence",
+    "src/aoa_course_connector/graph",
+    "src/aoa_course_connector/index",
+    "src/aoa_course_connector/ingest",
+    "src/aoa_course_connector/mcp",
+    "src/aoa_course_connector/normalize",
+    "src/aoa_course_connector/query",
+    "src/aoa_course_connector/storage",
+    "tests/unit",
+    "tests/contract",
+    "tests/integration",
+]
+
+REQUIRED_SCHEMAS = [
+    "course.schema.json",
+    "course_source.schema.json",
+    "module.schema.json",
+    "lesson.schema.json",
+    "step.schema.json",
+    "asset.schema.json",
+    "transcript.schema.json",
+    "assignment.schema.json",
+    "comment_thread.schema.json",
+    "comment.schema.json",
+    "progress.schema.json",
+    "entity.schema.json",
+    "topic.schema.json",
+    "evidence.schema.json",
+    "ingest_run.schema.json",
+    "sync_checkpoint.schema.json",
+    "normalized_course_bundle.schema.json",
+    "index_manifest.schema.json",
+    "graph_node.schema.json",
+    "graph_edge.schema.json",
+    "answer_packet.schema.json",
+    "source_registry.schema.json",
+]
+
+REQUIRED_GITIGNORE = [
+    ".connector-state/*",
+    "!.connector-state/auth/",
+    "AOA_COURSE_AUTH_ROOT",
+    "data/",
+    "cache/",
+    "auth/",
+    "artifacts/",
+    "raw/",
+    "indexes/",
+    "vectors/",
+    "graphs/",
+    "*.sqlite",
+    "*.parquet",
+    "*.storage-state.json",
+    "*.cookies.json",
+]
+
+FORBIDDEN_HEAVY_ROOTS = {"data", "cache", "auth", "artifacts", "raw", "indexes", "vectors", "graphs", "exports"}
+IGNORED_LOCAL_CACHE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv"}
+
+
+def main() -> int:
+    repo_root = Path(__file__).resolve().parents[1]
+    errors: list[str] = []
+    warnings: list[str] = []
+    for rel in REQUIRED_FILES:
+        if not (repo_root / rel).is_file():
+            errors.append(f"missing required file: {rel}")
+    for rel in REQUIRED_DIRS:
+        if not (repo_root / rel).is_dir():
+            errors.append(f"missing required directory: {rel}")
+    for name in REQUIRED_SCHEMAS:
+        path = repo_root / "connector" / "schemas" / name
+        if not path.is_file():
+            errors.append(f"missing schema: connector/schemas/{name}")
+        else:
+            _load_json(path, errors)
+    for path in [*repo_root.glob("connector/fixtures/**/*.json"), *repo_root.glob("evals/suites/**/*.json"), *repo_root.glob("kag/**/*.json")]:
+        _load_json(path, errors)
+    gitignore = (repo_root / ".gitignore").read_text(encoding="utf-8") if (repo_root / ".gitignore").exists() else ""
+    env_example = (repo_root / ".env.example").read_text(encoding="utf-8") if (repo_root / ".env.example").exists() else ""
+    for pattern in REQUIRED_GITIGNORE:
+        if pattern.startswith("AOA_"):
+            if pattern not in env_example:
+                errors.append(f".env.example missing storage variable: {pattern}")
+        elif pattern not in gitignore:
+            errors.append(f".gitignore missing heavy/private pattern: {pattern}")
+    for rel in FORBIDDEN_HEAVY_ROOTS:
+        if (repo_root / rel).exists():
+            errors.append(f"heavy/private artifact path exists inside repository root: {rel}")
+    for path in repo_root.rglob("*"):
+        if ".git" in path.parts:
+            continue
+        rel_parts = path.relative_to(repo_root).parts
+        if any(part in IGNORED_LOCAL_CACHE_DIR_NAMES for part in rel_parts):
+            continue
+        if rel_parts and rel_parts[0] == ".connector-state":
+            continue
+        if path.is_dir() and rel_parts and rel_parts[0] in FORBIDDEN_HEAVY_ROOTS and not _is_allowed_kag_indexes(rel_parts):
+            errors.append(f"forbidden generated/private directory exists inside repository: {path.relative_to(repo_root)}")
+    _check_text(repo_root, errors, warnings)
+    payload = {
+        "schema": "aoa_course_connector_validation_v1",
+        "status": "ok" if not errors else "error",
+        "repo_root": str(repo_root),
+        "errors": errors,
+        "warnings": warnings,
+        "checked": {
+            "required_files": len(REQUIRED_FILES),
+            "required_dirs": len(REQUIRED_DIRS),
+            "schemas": len(REQUIRED_SCHEMAS),
+        },
+    }
+    print(json.dumps(payload, indent=2, sort_keys=True))
+    return 0 if not errors else 1
+
+
+def _load_json(path: Path, errors: list[str]) -> None:
+    try:
+        json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"invalid json {path}: {exc}")
+
+
+def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None:
+    source_policy = (repo_root / "connector" / "SOURCE_POLICY.md").read_text(encoding="utf-8").casefold()
+    storage_policy = (repo_root / "connector" / "STORAGE_POLICY.md").read_text(encoding="utf-8")
+    readme = (repo_root / "README.md").read_text(encoding="utf-8").casefold()
+    mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
+    for token in ["getcourse", "skillspace", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
+        if token not in source_policy:
+            errors.append(f"source policy missing boundary token: {token}")
+    for var in ["AOA_COURSE_DATA_ROOT", "AOA_COURSE_CACHE_ROOT", "AOA_COURSE_AUTH_ROOT", "AOA_COURSE_ARTIFACT_ROOT"]:
+        if var not in storage_policy:
+            errors.append(f"storage policy missing variable: {var}")
+    for token in ["index", "graph", "evidence", "mcp", "getcourse", "skillspace"]:
+        if token not in readme:
+            warnings.append(f"README weakly covers token: {token}")
+    if "aoa-course-connector-mcp" not in mcp:
+        errors.append("MCP usage missing server package name")
+
+
+def _is_allowed_kag_indexes(rel_parts: tuple[str, ...]) -> bool:
+    return len(rel_parts) == 2 and rel_parts[0] == "kag" and rel_parts[1] == "indexes"
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_module.schema.json","title":"Module","type":"object","required":["module_id","course_id","title"],"properties":{"module_id":{"type":"string"},"course_id":{"type":"string"},"title":{"type":"string"},"order":{"type":"integer"},"lessons":{"type":"array"}}}

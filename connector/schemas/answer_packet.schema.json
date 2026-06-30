@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_answer_packet.schema.json","title":"AnswerPacket","type":"object","required":["schema","query","results","evidence_chain"],"properties":{"schema":{"const":"aoa_course_answer_packet_v1"},"query":{"type":"string"},"results":{"type":"array"},"evidence_chain":{"type":"array"}}}

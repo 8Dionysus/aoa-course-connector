@@ -1,0 +1,123 @@
+{
+  "schema": "aoa_course_raw_fixture_v1",
+  "captured_at": "2026-06-29T12:00:00Z",
+  "source": {
+    "source_id": "source:offline:starter-course",
+    "platform": "offline_export",
+    "source_ref": "starter-course",
+    "access_mode": "offline_export",
+    "title": "Starter Course Fixture"
+  },
+  "courses": [
+    {
+      "course_id": "course:starter:android-firmware",
+      "title": "Android Firmware Recovery",
+      "description": "Safe synthetic course fixture for proving course knowledge retrieval.",
+      "url": "https://example.invalid/courses/android-firmware",
+      "progress": {"state": "in_progress", "updated_at": "2026-06-29T12:00:00Z"},
+      "modules": [
+        {
+          "module_id": "module:starter:bootloader",
+          "title": "Bootloader And Unlocking",
+          "order": 1,
+          "lessons": [
+            {
+              "lesson_id": "lesson:starter:unlock-risk",
+              "title": "Unlock Risk And Rollback Windows",
+              "url": "https://example.invalid/courses/android-firmware/lessons/unlock-risk",
+              "order": 1,
+              "freshness_state": "current",
+              "steps": [
+                {
+                  "step_id": "step:starter:unlock-risk:intro",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Before unlocking the bootloader, record the current firmware build, security patch, rollback index, and region. Do not flash older firmware when anti-rollback is active."
+                },
+                {
+                  "step_id": "step:starter:unlock-risk:source-chain",
+                  "kind": "lesson_text",
+                  "order": 2,
+                  "text": "A good recovery chain preserves the original boot image, vendor boot image, recovery image, and exact OTA package source. Keep links and checksums with every local artifact."
+                }
+              ],
+              "assets": [
+                {
+                  "asset_id": "asset:starter:unlock-checklist",
+                  "kind": "attachment",
+                  "title": "Bootloader unlock checklist",
+                  "url": "https://example.invalid/assets/unlock-checklist.pdf",
+                  "download_state": "metadata_only"
+                }
+              ],
+              "transcripts": [
+                {
+                  "transcript_id": "transcript:starter:unlock-risk",
+                  "language": "en",
+                  "text": "The lesson warns that rollback index and region must be checked before flashing images or OTA packages."
+                }
+              ],
+              "assignments": [
+                {
+                  "assignment_id": "assignment:starter:record-baseline",
+                  "prompt": "Write down firmware build, region, rollback index, and backup artifact paths before making changes.",
+                  "status": "available"
+                }
+              ],
+              "comment_threads": [
+                {
+                  "thread_id": "thread:starter:unlock-risk",
+                  "comments": [
+                    {
+                      "comment_id": "comment:starter:mentor-warning",
+                      "author_label": "mentor",
+                      "posted_at": "2026-06-29T12:15:00Z",
+                      "text": "If the device has a newer rollback index, use same-or-newer firmware only."
+                    }
+                  ]
+                }
+              ],
+              "topics": ["bootloader", "rollback", "firmware recovery"],
+              "entities": [
+                {"kind": "concept", "value": "anti-rollback"},
+                {"kind": "artifact", "value": "vendor_boot.img"},
+                {"kind": "artifact", "value": "boot.img"}
+              ]
+            }
+          ]
+        },
+        {
+          "module_id": "module:starter:indexing",
+          "title": "Course Knowledge Indexing",
+          "order": 2,
+          "lessons": [
+            {
+              "lesson_id": "lesson:starter:evidence-search",
+              "title": "Evidence-Backed Search",
+              "url": "https://example.invalid/courses/android-firmware/lessons/evidence-search",
+              "order": 1,
+              "freshness_state": "current",
+              "steps": [
+                {
+                  "step_id": "step:starter:evidence-search:packet",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Every answer packet must include lesson path, source URL, fetched timestamp, and evidence identifiers. Search results without source evidence are incomplete."
+                }
+              ],
+              "assets": [],
+              "transcripts": [],
+              "assignments": [],
+              "comment_threads": [],
+              "topics": ["evidence", "search", "course graph"],
+              "entities": [
+                {"kind": "concept", "value": "evidence_chain"},
+                {"kind": "concept", "value": "course_graph"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

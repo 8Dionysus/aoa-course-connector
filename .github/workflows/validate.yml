@@ -1,0 +1,28 @@
+name: Validate
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: python -m pip install -e ".[dev]"
+      - run: python scripts/validate_connector.py
+      - run: python -m pytest -q
+      - run: python -m compileall -q src scripts
+      - run: aoa-course doctor
+      - run: aoa-course materialize fixture --run starter-fixture
+      - run: aoa-course build-index --run starter-fixture
+      - run: aoa-course build-graph --run starter-fixture
+      - run: aoa-course answer "bootloader unlock rollback" --run starter-fixture
+      - run: aoa-course eval answer-packets
+      - run: aoa-course mcp tools
+      - run: python scripts/verify_agent_install_route.py --skip-pytest

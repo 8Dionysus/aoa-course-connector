@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_source_registry.schema.json","title":"SourceRegistry","type":"object","required":["schema","sources"],"properties":{"schema":{"const":"aoa_course_source_registry_v1"},"sources":{"type":"array"}}}

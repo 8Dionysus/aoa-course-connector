@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aoa-course-connector"
+version = "0.1.0"
+description = "AoA course-platform knowledge connector for authorized course sources."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "Apache-2.0" }
+authors = [{ name = "8Dionysus" }]
+dependencies = []
+
+[project.optional-dependencies]
+browser = ["playwright>=1.45"]
+mcp = []
+dev = ["pytest>=8"]
+
+[project.scripts]
+aoa-course = "aoa_course_connector.cli:main"
+aoa-course-connector-mcp = "aoa_course_connector.mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]

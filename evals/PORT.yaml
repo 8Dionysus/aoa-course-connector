@@ -1,0 +1,5 @@
+schema: aoa_eval_port_v1
+repo: aoa-course-connector
+owner: connector-local
+suites:
+  - evals/suites/starter_course_answer_packets.json

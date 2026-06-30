@@ -1,0 +1,12 @@
+schema: aoa_course_profile_v1
+profile_id: starter-course
+description: Offline safe fixture profile proving course normalization, index, graph, and query.
+source_modes:
+  - offline_export
+adapter_targets:
+  hard:
+    - getcourse
+    - skillspace
+  reference:
+    - stepik
+storage: portable-env-roots

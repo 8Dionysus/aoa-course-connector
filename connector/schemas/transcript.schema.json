@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_transcript.schema.json","title":"Transcript","type":"object","required":["transcript_id","lesson_id","text"],"properties":{"transcript_id":{"type":"string"},"lesson_id":{"type":"string"},"language":{"type":"string"},"text":{"type":"string"},"evidence":{"$ref":"evidence.schema.json"}}}

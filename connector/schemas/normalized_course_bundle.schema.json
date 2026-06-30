@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_normalized_course_bundle.schema.json","title":"NormalizedCourseBundle","type":"object","required":["schema","run_id","courses","evidence"],"properties":{"schema":{"const":"aoa_course_normalized_bundle_v1"},"run_id":{"type":"string"},"courses":{"type":"array"},"evidence":{"type":"array"}}}

@@ -1,0 +1,17 @@
+schema: aoa_course_route_allowlist_v1
+allowed_modes:
+  browser_session:
+    platforms: [getcourse, skillspace, teachable, thinkific, kajabi]
+    boundary: connected-user authorized access only
+  api_token:
+    platforms: [stepik, moodle, canvas, teachable, thinkific, kajabi]
+    boundary: official API token or OAuth scope only
+  offline_export:
+    platforms: [generic]
+    boundary: operator-provided export or safe fixture
+denied_modes:
+  - unauthorized_access
+  - credential_commit
+  - drm_bypass
+  - default_media_download
+  - write_actions

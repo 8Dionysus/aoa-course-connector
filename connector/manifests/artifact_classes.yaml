@@ -1,0 +1,17 @@
+schema: aoa_course_artifact_classes_v1
+git_allowed:
+  - schemas
+  - safe_fixtures
+  - docs
+  - tests
+  - source_code
+external_only:
+  - raw_course_pages
+  - private_course_exports
+  - auth_state
+  - cookies
+  - media
+  - indexes
+  - graphs
+  - vectors
+  - full_reports

@@ -1,0 +1,44 @@
+from __future__ import annotations
+
+from pathlib import Path
+
+from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.graph import build_graph
+from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.ingest import materialize_fixture
+from aoa_course_connector.query import graph_neighbors, query_keyword_index, render_answer_packet
+
+
+def roots(tmp_path: Path) -> StorageRoots:
+    return StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+
+
+def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    receipt = materialize_fixture(storage, run_id="test-run")
+    assert receipt["status"] == "ok"
+    build_keyword_index(storage, run_id="test-run")
+    build_graph(storage, run_id="test-run")
+    results = query_keyword_index(storage, "bootloader rollback", run_id="test-run")
+    assert results
+    assert results[0]["evidence_id"]
+    packet = render_answer_packet(storage, "bootloader rollback", run_id="test-run")
+    assert packet["result_count"] >= 1
+    assert packet["evidence_chain"]
+
+
+def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(storage, run_id="test-run")
+    build_keyword_index(storage, run_id="test-run")
+    build_graph(storage, run_id="test-run")
+    packet = graph_neighbors(storage, "lesson:starter:unlock-risk", run_id="test-run")
+    kinds = {edge["kind"] for edge in packet["edges"]}
+    assert "module_contains_lesson" in kinds
+    assert "lesson_about_topic" in kinds

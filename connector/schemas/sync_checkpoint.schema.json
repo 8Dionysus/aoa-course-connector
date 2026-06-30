@@ -1,0 +1,1 @@
+{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_sync_checkpoint.schema.json","title":"SyncCheckpoint","type":"object","required":["checkpoint_id","source_id","updated_at"],"properties":{"checkpoint_id":{"type":"string"},"source_id":{"type":"string"},"cursor":{"type":"string"},"updated_at":{"type":"string"}}}

@@ -1,0 +1,1 @@
+{"schema":"aoa_kag_edge_v1","edge_id":"aoa-course-connector:source-home->storage-boundary","kind":"routes_to","from_node":"aoa-course-connector:source-home","to_node":"aoa-course-connector:storage-boundary"}

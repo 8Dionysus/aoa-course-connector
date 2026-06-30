@@ -1,0 +1,16 @@
+{
+  "schema": "aoa_course_answer_eval_suite_v1",
+  "suite_id": "starter-course-answer-packets",
+  "cases": [
+    {
+      "query": "bootloader unlock rollback",
+      "must_contain_terms": ["rollback", "bootloader"],
+      "must_have_evidence": true
+    },
+    {
+      "query": "answer packet source evidence",
+      "must_contain_terms": ["evidence", "source"],
+      "must_have_evidence": true
+    }
+  ]
+}

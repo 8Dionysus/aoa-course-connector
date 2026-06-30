@@ -1,0 +1,18 @@
+schema: aoa_course_connector_manifest_v1
+connector: aoa-course-connector
+package: aoa_course_connector
+cli: aoa-course
+mcp: aoa-course-connector-mcp
+source_family: course-platforms
+priority_adapters:
+  - getcourse
+  - skillspace
+reference_adapters:
+  - stepik
+  - moodle
+  - canvas
+storage_roots:
+  - AOA_COURSE_DATA_ROOT
+  - AOA_COURSE_CACHE_ROOT
+  - AOA_COURSE_AUTH_ROOT
+  - AOA_COURSE_ARTIFACT_ROOT
