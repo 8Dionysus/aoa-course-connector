@@ -173,7 +173,7 @@ For live operator-owned browser sessions, create and inspect auth state first:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcourse "https://school.example"
-PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 PYTHONPATH=src python -m aoa_course_connector.cli auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
 ```
@@ -181,6 +181,9 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getc
 Browser preflight checks saved storage state against each registered source
 host before marking live sync ready. A state file captured for one school host
 does not make another registered host ready.
+`auth capture-browser-state` also runs the same redacted origin check in its
+receipt and reports `expected_origin_matched`, so a wrong-login or redirect
+host mismatch is visible before discovery or sync.
 Fixture-discovered GetCourse and Skillspace entries use reserved example hosts
 to prove the install route. Live preflight marks those entries as
 `fixture_or_example_source` with `operator_live_candidate: false` and will not

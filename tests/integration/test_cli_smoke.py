@@ -283,6 +283,10 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
     plan = run_cli(tmp_path, "auth", "plan-browser-state", "getcourse", "https://school.example")
     assert "capture-browser-state" in plan["capture_command"]
+    assert plan["expected_origin_contains"] == "school.example"
+    assert "--state-file" in plan["capture_command"]
+    assert "--expect-origin-contains school.example" in plan["capture_command"]
+    assert "--expect-origin-contains school.example" in plan["inspect_command"]
     state_file = Path(str(plan["state_file"]))
     state_file.parent.mkdir(parents=True)
     state_file.write_text(

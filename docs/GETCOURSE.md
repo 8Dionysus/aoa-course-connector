@@ -51,7 +51,8 @@ crawl the selected course entrypoint:
 ```bash
 aoa-course auth capture-browser-state getcourse "https://school.example" \
   --login-url "https://school.example/cms/system/login" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
 
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --expect-origin-contains "school.example"

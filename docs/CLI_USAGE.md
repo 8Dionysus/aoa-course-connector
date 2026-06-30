@@ -23,7 +23,7 @@ aoa-course smoke stepik-live 67 --run stepik-live-public-smoke --query "Python c
 aoa-course discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
 aoa-course discover stepik-account --run stepik-account-discovery-live --token-env STEPIK_API_TOKEN --register --max-pages 5
 aoa-course auth plan-browser-state getcourse "https://school.example"
-aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
 aoa-course preflight connected-plan --live-scope bounded --source-id "source:getcourse:..." --query "course-specific question" --link-pattern "*/lessons/*" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
@@ -102,6 +102,12 @@ returns `aoa_course_fixture_bootstrap_receipt_v1` with embedded readiness. By
 default it proves GetCourse, Skillspace, and Stepik fixture routes; pass
 `--platform` only to narrow a diagnostic run. It is fixture-only and reports
 `network_touched: false`.
+
+Use `auth plan-browser-state` before browser live work. Its capture and inspect
+commands include `--expect-origin-contains` when the source ref has a host.
+`auth capture-browser-state` repeats that redacted check in the receipt through
+`expected_origin_matched`, so a state file captured from the wrong school host
+is caught before discovery or sync.
 
 Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the

@@ -8,6 +8,7 @@ dependencies.
 from __future__ import annotations
 
 import json
+import shlex
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -16,22 +17,29 @@ from urllib.parse import urlparse
 
 def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[str, object]:
     state_file = default_browser_state_path(auth_root, platform, source_ref)
+    expected_origin = _host_fragment(source_ref)
+    inspect_command = f"aoa-course auth inspect-browser-state {str(state_file)!r}"
+    capture_command = (
+        f"aoa-course auth capture-browser-state {platform} {source_ref!r} "
+        f"--login-url <login-or-account-url> --state-file {str(state_file)!r}"
+    )
+    if expected_origin:
+        inspect_command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
+        capture_command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
     return {
         "schema": "aoa_course_browser_state_plan_v1",
         "platform": platform,
         "source_ref": source_ref,
+        "expected_origin_contains": expected_origin or None,
         "auth_root": str(auth_root),
         "state_file": str(state_file),
         "created_at": _now(),
-        "capture_command": (
-            f"aoa-course auth capture-browser-state {platform} {source_ref!r} "
-            f"--login-url <login-or-account-url>"
-        ),
-        "inspect_command": f"aoa-course auth inspect-browser-state {str(state_file)!r}",
+        "capture_command": capture_command,
+        "inspect_command": inspect_command,
         "steps": [
             "install the browser extra when live capture is needed: python -m pip install -e '.[browser]'",
             "run capture-browser-state and log in through the local browser window",
-            "inspect the saved storage state without printing cookies or tokens",
+            "confirm the capture or inspect receipt matches the expected source origin without printing cookies or tokens",
             "run discovery, sync, or smoke against the authorized state file",
         ],
         "git_safe": False,
@@ -102,6 +110,7 @@ def capture_browser_state(
     headless: bool = False,
     wait_until: str = "domcontentloaded",
     timeout_ms: int = 120_000,
+    expect_origin_contains: str | None = None,
     pause: Callable[[dict[str, object]], None] | None = None,
 ) -> dict[str, object]:
     try:
@@ -124,13 +133,16 @@ def capture_browser_state(
             context.storage_state(path=str(resolved_state))
         finally:
             browser.close()
-    status = inspect_browser_state(resolved_state)
+    expected_origin = expect_origin_contains or _host_fragment(source_ref) or _host_fragment(login_url)
+    status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None)
     return {
         "schema": "aoa_course_browser_state_capture_receipt_v1",
         "status": "ok" if status.get("usable") else "warning",
         "platform": platform,
         "source_ref": source_ref,
         "login_url": login_url,
+        "expected_origin_contains": expected_origin or None,
+        "expected_origin_matched": status.get("expected_origin_matched"),
         "state_file": str(resolved_state),
         "headless": headless,
         "network_touched": True,

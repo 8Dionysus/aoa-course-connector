@@ -308,6 +308,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
     status_raw = (repo_root / "src" / "aoa_course_connector" / "status.py").read_text(encoding="utf-8")
     mcp_server_raw = (repo_root / "src" / "aoa_course_connector" / "mcp" / "server.py").read_text(encoding="utf-8")
+    browser_state_raw = (repo_root / "src" / "aoa_course_connector" / "auth" / "browser_state.py").read_text(encoding="utf-8")
     bootstrap_raw = (repo_root / "src" / "aoa_course_connector" / "bootstrap.py").read_text(encoding="utf-8")
     adapters_raw = (repo_root / "src" / "aoa_course_connector" / "adapters" / "__init__.py").read_text(encoding="utf-8").casefold()
     sources_raw = (repo_root / "src" / "aoa_course_connector" / "sources.py").read_text(encoding="utf-8").casefold()
@@ -356,6 +357,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing fixture bootstrap validation")
     if "goal audit --run starter-fixture --connected-run" not in agent_install_raw or "ready_for_operator_connection" not in agent_install_raw:
         errors.append("Agent install route missing goal audit handoff")
+    if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
+        errors.append("Agent install route missing capture expected-origin handoff")
     _check_agent_install_route_commands(agent_install_raw, errors)
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
@@ -430,7 +433,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "goal audit", "aoa_course_goal_audit_v1", "ready_for_operator_connection", "remaining_live_requirements", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "goal audit", "aoa_course_goal_audit_v1", "ready_for_operator_connection", "remaining_live_requirements", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     goal_audit_raw = (repo_root / "src" / "aoa_course_connector" / "goal_audit.py").read_text(encoding="utf-8")
@@ -471,6 +474,14 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     ]:
         if token not in status_raw:
             errors.append(f"Connector status code missing readiness token: {token}")
+    for token in [
+        "expected_origin_contains",
+        "expected_origin_matched",
+        "capture_command += f\" --expect-origin-contains",
+        "inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None)",
+    ]:
+        if token not in browser_state_raw:
+            errors.append(f"Browser auth state code missing expected-origin token: {token}")
     for token in [
         "def bootstrap_fixture",
         "aoa_course_fixture_bootstrap_receipt_v1",
@@ -604,6 +615,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "fixture_or_example_source",
         "operator_live_candidate",
         "connected_run_handoff.source_ids",
+        "expected_origin_matched",
     ]:
         if token not in browser_doc:
             errors.append(f"Browser session doc missing token: {token}")

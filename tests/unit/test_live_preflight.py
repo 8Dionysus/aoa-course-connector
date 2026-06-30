@@ -311,6 +311,7 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert handoff["blocked_source_count"] == 0
     assert handoff["host_readiness"][0]["ready_source_count"] == 1
     assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
+    assert "--expect-origin-contains school.operator.edu" in handoff["commands"]["capture"]
     assert "inspect-browser-state" in handoff["commands"]["inspect"]
     assert handoff["commands"]["inspect_source_hosts"] == [
         'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --expect-origin-contains school.operator.edu'

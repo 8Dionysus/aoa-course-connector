@@ -29,12 +29,16 @@ python -m pip install -e ".[browser]"
 
 aoa-course auth capture-browser-state getcourse "https://school.example" \
   --login-url "https://school.example/cms/system/login" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
 ```
 
 The command opens a local browser window. Log in normally, then press Enter in
 the terminal so the connector can save storage state under `AOA_COURSE_AUTH_ROOT`.
 For automation or already-authenticated browser contexts, use `--no-prompt`.
+The capture receipt is redacted and includes `expected_origin_contains` plus
+`expected_origin_matched`; if it reports `warning` or `false`, inspect the
+state before using it for live source discovery or sync.
 
 Inspect the state before using it for live discovery or sync:
 
