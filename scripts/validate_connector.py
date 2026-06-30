@@ -87,6 +87,7 @@ REQUIRED_FILES = [
     "kag/AGENTS.md",
     "kag/README.md",
     "kag/manifest.json",
+    "src/aoa_course_connector/bootstrap.py",
     "src/aoa_course_connector/cli.py",
     "src/aoa_course_connector/calibration/__init__.py",
     "src/aoa_course_connector/adapters/browser/crawl.py",
@@ -266,6 +267,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     agent_install_raw = (repo_root / "docs" / "AGENT_INSTALL_ROUTE.md").read_text(encoding="utf-8")
     readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
     status_raw = (repo_root / "src" / "aoa_course_connector" / "status.py").read_text(encoding="utf-8")
+    bootstrap_raw = (repo_root / "src" / "aoa_course_connector" / "bootstrap.py").read_text(encoding="utf-8")
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
@@ -298,8 +300,12 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
         errors.append("AGENTS route missing connector readiness validation")
+    if "bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik" not in agents:
+        errors.append("AGENTS route missing fixture bootstrap validation")
     if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
         errors.append("Agent install route missing connector readiness audit handoff")
+    if "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik" not in agent_install_raw:
+        errors.append("Agent install route missing fixture bootstrap handoff")
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
     if "eval browser-transcripts" not in agents:
@@ -361,7 +367,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "large source registry", "calibration connected-run", "calibration status", "--mode fixture", "--allow-network", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "readiness --run starter-fixture", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     for token in [
@@ -376,6 +382,19 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     ]:
         if token not in status_raw:
             errors.append(f"Connector status code missing readiness token: {token}")
+    for token in [
+        "def bootstrap_fixture",
+        "aoa_course_fixture_bootstrap_receipt_v1",
+        "materialize_fixture",
+        "build_keyword_index",
+        "build_semantic_index",
+        "build_graph",
+        "run_connected_calibration",
+        "connector_readiness",
+        "network_touched",
+    ]:
+        if token not in bootstrap_raw:
+            errors.append(f"Bootstrap code missing route token: {token}")
     eval_readme = (repo_root / "evals" / "README.md").read_text(encoding="utf-8").casefold()
     for token in ["aoa-evals", "verdict", "scoring", "regression", "proof doctrine", "answer-quality", "freshness-ranking", "authority-ranking", "adapter-authority", "live-calibration", "browser-transcripts"]:
         if token not in eval_readme:

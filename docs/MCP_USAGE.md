@@ -60,6 +60,9 @@ connected-run receipt status, MCP tool coverage, `operational_ready`,
 `connected_live_ready`, and next commands. It is the first MCP packet an agent
 should inspect when deciding whether to install, build starter artifacts,
 connect sources, run fixture calibration, or move into gated live work.
+On a fresh state, its `next_commands` can point to CLI `bootstrap fixture`,
+which creates the local starter artifacts and default fixture connected-run
+receipt before the agent returns to MCP queries.
 
 ## JSON-RPC Stdio
 

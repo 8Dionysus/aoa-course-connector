@@ -14,6 +14,7 @@ evidence.
 python scripts/validate_connector.py
 PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m aoa_course_connector.cli doctor
+PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
@@ -33,6 +34,11 @@ The starter path creates:
 - a course graph;
 - an answer packet with source-backed evidence.
 - answer packets with source-backed evidence.
+
+`bootstrap fixture` is the shortest fresh-install route. It creates storage,
+materializes the starter fixture, builds keyword/semantic indexes and the graph,
+runs fixture connected-source calibration, and returns the final readiness
+packet without touching the network.
 
 `readiness` is the read-only agent handoff for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry

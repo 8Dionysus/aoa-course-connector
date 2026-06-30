@@ -69,6 +69,53 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert plan["result"]["plan"]["network_touched"] is False
 
 
+def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> None:
+    initial = run_cli(tmp_path, "readiness", "--run", "starter-fixture", "--platform", "stepik")
+    assert initial["operational_ready"] is False
+    assert any(command.startswith("aoa-course bootstrap fixture") for command in initial["next_commands"])
+
+    receipt = run_cli(
+        tmp_path,
+        "bootstrap",
+        "fixture",
+        "--run",
+        "starter-fixture",
+        "--connected-run",
+        "connected-calibration",
+        "--platform",
+        "stepik",
+    )
+
+    assert receipt["schema"] == "aoa_course_fixture_bootstrap_receipt_v1"
+    assert receipt["status"] == "ok"
+    assert receipt["network_touched"] is False
+    assert receipt["materialize"]["status"] == "ok"
+    assert receipt["connected_receipt"]["status"] == "ok"
+    assert receipt["connected_receipt"]["network_touched"] is False
+    assert Path(str(receipt["artifacts"]["keyword_index_path"])).is_file()
+    assert Path(str(receipt["artifacts"]["semantic_index_path"])).is_file()
+    assert Path(str(receipt["artifacts"]["graph_path"])).is_file()
+    assert receipt["readiness"]["operational_ready"] is True
+    assert receipt["readiness"]["lanes"]["agent_query_ready"] is True
+    assert receipt["readiness"]["lanes"]["connected_run_receipt_ready"] is True
+
+    readiness = run_cli(
+        tmp_path,
+        "mcp",
+        "call",
+        "connector_readiness",
+        '{"runs":["starter-fixture"],"platforms":["stepik"],"connected_run":"connected-calibration"}',
+    )
+    assert readiness["result"]["operational_ready"] is True
+    assert readiness["result"]["connected_run"]["status"] == "ok"
+    assert readiness["result"]["lanes"]["connected_run_receipt_ready"] is True
+
+    answer = run_cli(tmp_path, "answer", "bootloader rollback", "--run", "starter-fixture", "--mode", "hybrid")
+    assert answer["result_count"] >= 1
+    connected_status = run_cli(tmp_path, "calibration", "status", "--run", "connected-calibration")
+    assert connected_status["status"] == "ok"
+
+
 def test_cli_http_json_semantic_provider_flow(tmp_path: Path, monkeypatch) -> None:
     server = _EmbeddingServer()
     monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")

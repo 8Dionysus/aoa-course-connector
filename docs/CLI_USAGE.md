@@ -2,6 +2,7 @@
 
 ```bash
 aoa-course doctor
+aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik
 aoa-course readiness --run starter-fixture
 aoa-course init
 aoa-course adapters list
@@ -86,6 +87,12 @@ aoa-course mcp call connector_readiness '{"runs":["starter-fixture"],"platforms"
 Use `--source-id` on sync commands when an agent is refreshing one result from a
 large source registry. Omitting it keeps the broader platform/source-ref sync
 behavior available for batch refreshes.
+
+Use `bootstrap fixture` as the one-command fresh-install starter route. It
+creates storage roots, materializes the starter fixture, builds the keyword
+index, semantic index, graph, and default fixture connected-run receipt, then
+returns `aoa_course_fixture_bootstrap_receipt_v1` with embedded readiness. It is
+fixture-only and reports `network_touched: false`.
 
 Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the
