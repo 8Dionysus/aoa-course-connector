@@ -179,6 +179,17 @@ Install the optional browser extra:
 python -m pip install -e ".[browser]"
 ```
 
+Create and verify a local Playwright storage-state file:
+
+```bash
+aoa-course auth capture-browser-state getcourse "https://school.example" \
+  --login-url "https://school.example/cms/system/login" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+
+aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
+```
+
 Then capture a visible page:
 
 ```bash

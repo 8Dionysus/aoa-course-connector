@@ -45,6 +45,13 @@ For live operator-owned pages, use `discover browser-live` or
 crawl the selected course entrypoint:
 
 ```bash
+aoa-course auth capture-browser-state skillspace "https://academy.example" \
+  --login-url "https://academy.example/login" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json"
+
+aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
+  --expect-origin-contains "academy.example"
+
 aoa-course discover browser-live "https://academy.example/courses" \
   --platform skillspace \
   --run skillspace-live-discovery \

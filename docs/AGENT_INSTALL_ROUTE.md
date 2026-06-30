@@ -15,5 +15,8 @@
    sync, index/graph, answer, and privacy-safe report route.
 10. Run browser fixture discovery with `--register` to prove the local source
    registry route.
-11. Add live sources only after auth-state and storage roots are local and
-   ignored by Git.
+11. Before live browser sources, run `auth plan-browser-state`, capture the
+    local Playwright state with `auth capture-browser-state`, and verify it with
+    `auth inspect-browser-state`.
+12. Add live sources only after auth-state and storage roots are local and
+    ignored by Git.

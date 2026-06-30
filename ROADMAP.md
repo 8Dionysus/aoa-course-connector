@@ -20,6 +20,8 @@
   unannotated DOM heuristics for progress/status/comments.
 - Prove fixture/snapshot/live browser smoke reports that combine discovery,
   ingestion, index/graph build, and optional answer evidence checks.
+- Prove browser-session auth-state planning, capture, and redacted inspection
+  so live GetCourse/Skillspace routes have a reproducible onboarding step.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
@@ -34,7 +36,7 @@
 ## Next
 
 - Run the gated live smoke route on connected GetCourse and Skillspace accounts to
-  calibrate pagination and DOM heuristics against real themes.
+  calibrate login redirects, pagination, and DOM heuristics against real themes.
 - Broaden GetCourse and Skillspace live DOM selectors for unusual progress,
   status, comments, and discussion markup found by live smoke.
 - Run gated live full-course Stepik sync on an operator-selected authenticated

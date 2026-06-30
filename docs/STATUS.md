@@ -44,6 +44,8 @@ This proves:
   visible comment/reply/discussion blocks.
 - Browser-session smoke route for fixture, operator snapshot, and gated live
   calibration reports without printing private raw HTML.
+- Browser-session auth-state onboarding through CLI planning, optional
+  Playwright capture, and redacted storage-state inspection.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
   index/graph builds, CLI status, MCP status, and eval coverage.
 - Stepik fixture/live smoke report routes that combine source registration,
@@ -57,7 +59,7 @@ This proves:
 The next layer is live connected-source work:
 
 - run gated live smoke with connected GetCourse and Skillspace accounts to
-  calibrate real theme selectors and pagination behavior;
+  calibrate real login redirects, theme selectors, and pagination behavior;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress and comment blocks use unusual markup;
 - gated live full-course Stepik runs against operator-selected authenticated

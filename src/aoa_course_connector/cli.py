@@ -4,10 +4,11 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
-from aoa_course_connector.auth import browser_state_plan
+from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
@@ -93,6 +94,22 @@ def build_parser() -> argparse.ArgumentParser:
     browser.add_argument("platform")
     browser.add_argument("source_ref")
     browser.set_defaults(func=cmd_auth_plan_browser_state)
+    capture = auth_sub.add_parser("capture-browser-state")
+    capture.add_argument("platform")
+    capture.add_argument("source_ref")
+    capture.add_argument("--login-url", required=True)
+    capture.add_argument("--state-file", type=Path)
+    capture.add_argument("--headless", action="store_true")
+    capture.add_argument("--no-prompt", action="store_true")
+    capture.add_argument("--wait-until", default="domcontentloaded")
+    capture.add_argument("--timeout-ms", type=int, default=120_000)
+    capture.set_defaults(func=cmd_auth_capture_browser_state)
+    inspect_state = auth_sub.add_parser("inspect-browser-state")
+    inspect_state.add_argument("state_file", nargs="?", type=Path)
+    inspect_state.add_argument("--platform")
+    inspect_state.add_argument("--source-ref")
+    inspect_state.add_argument("--expect-origin-contains")
+    inspect_state.set_defaults(func=cmd_auth_inspect_browser_state)
 
     discover = sub.add_parser("discover")
     discover_sub = discover.add_subparsers(dest="discover_command", required=True)
@@ -454,6 +471,69 @@ def cmd_auth_plan_browser_state(args: argparse.Namespace) -> int:
     create_storage_roots(roots)
     _emit(browser_state_plan(roots.auth, args.platform, args.source_ref))
     return 0
+
+
+def cmd_auth_capture_browser_state(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    create_storage_roots(roots)
+    pause = None if args.no_prompt else _prompt_for_browser_login
+    try:
+        receipt = capture_browser_state(
+            roots.auth,
+            args.platform,
+            args.source_ref,
+            args.login_url,
+            state_file=args.state_file,
+            headless=args.headless,
+            wait_until=args.wait_until,
+            timeout_ms=args.timeout_ms,
+            pause=pause,
+        )
+    except Exception as exc:
+        state_file = args.state_file or default_browser_state_path(roots.auth, args.platform, args.source_ref)
+        network_touched = "Install the browser extra first" not in str(exc)
+        _emit({
+            "schema": "aoa_course_browser_state_capture_receipt_v1",
+            "status": "error",
+            "platform": args.platform,
+            "source_ref": args.source_ref,
+            "state_file": str(state_file),
+            "error": str(exc),
+            "network_touched": network_touched,
+        })
+        return 2
+    _emit(receipt)
+    return 0 if receipt.get("status") in {"ok", "warning"} else 1
+
+
+def cmd_auth_inspect_browser_state(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    if args.state_file:
+        state_file = args.state_file
+    elif args.platform and args.source_ref:
+        state_file = default_browser_state_path(roots.auth, args.platform, args.source_ref)
+    else:
+        _emit({
+            "schema": "aoa_course_browser_state_status_v1",
+            "status": "error",
+            "error": "provide state_file or both --platform and --source-ref",
+            "usable": False,
+        })
+        return 2
+    status = inspect_browser_state(state_file, expect_origin_contains=args.expect_origin_contains)
+    _emit(status)
+    return 0 if status.get("usable") else 1
+
+
+def _prompt_for_browser_login(page_info: dict[str, object]) -> None:
+    print(
+        "Log in with your authorized account in the opened browser window, "
+        "then press Enter here to save Playwright storage state.",
+        file=sys.stderr,
+    )
+    print(f"Opened: {page_info.get('url')}", file=sys.stderr)
+    print(f"State file: {page_info.get('state_file')}", file=sys.stderr)
+    input()
 
 
 def cmd_discover_fixture(args: argparse.Namespace) -> int:
