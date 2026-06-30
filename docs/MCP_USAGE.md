@@ -149,8 +149,10 @@ larger Stepik full-course/source-enrichment route.
 `connected_run_status` is the read-only MCP handoff after a CLI
 `calibration connected-run`. It returns
 `aoa_course_connected_calibration_run_status_v1` with status, stages,
-artifact paths, `source_selection`, packet quality, privacy flags, failures,
-and next steps from `connected_calibration_receipt.json`. It never executes
-network work; missing receipts return `status: "missing"` so agents can ask for
-the fixture or live connected-run command instead of guessing from the
+artifact paths, `source_selection`, `query_handoff`, packet quality, privacy
+flags, failures, and next steps from `connected_calibration_receipt.json`.
+`query_handoff` gives agents the run ids, local index/graph/answer paths, and
+ready CLI `query`/`answer` commands produced by sync and smoke actions. It never
+executes network work; missing receipts return `status: "missing"` so agents can
+ask for the fixture or live connected-run command instead of guessing from the
 filesystem.

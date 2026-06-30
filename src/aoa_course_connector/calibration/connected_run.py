@@ -8,6 +8,7 @@ network access; live mode is gated behind explicit operator approval.
 from __future__ import annotations
 
 import json
+import shlex
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
@@ -95,6 +96,7 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "failures": receipt.get("failures", []),
         "next_steps": receipt.get("next_steps", []),
         "source_selection": receipt.get("source_selection", {}),
+        "query_handoff": receipt.get("query_handoff", {}),
         "artifacts": {
             "plan_path": artifacts.get("plan_path"),
             "runbook_path": artifacts.get("runbook_path"),
@@ -676,6 +678,7 @@ def _receipt(
     source_selection: dict[str, object] | None = None,
 ) -> dict[str, object]:
     status = _receipt_status(failures, packet=packet, stages=stages)
+    query_handoff = _query_handoff(stages)
     registry = load_registry(roots.data)
     return {
         "schema": "aoa_course_connected_calibration_run_receipt_v1",
@@ -727,6 +730,7 @@ def _receipt(
                 if isinstance(receipt, dict) and receipt.get("receipt_path")
             ],
         },
+        "query_handoff": query_handoff,
         "quality": packet.get("quality") if isinstance(packet, dict) else {},
         "privacy": packet.get("privacy") if isinstance(packet, dict) else {"contains_raw_payloads": False, "contains_secret_values": False},
         "failures": failures,
@@ -865,6 +869,144 @@ def _source_summary(source: dict[str, object]) -> dict[str, object]:
 
 def _resolved_browser_state_file(roots: StorageRoots, *, platform: str, browser_state_file: Path | None) -> Path:
     return (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
+
+
+def _query_handoff(stages: list[dict[str, object]]) -> dict[str, object]:
+    entries: list[dict[str, object]] = []
+    seen: set[tuple[str, str, str]] = set()
+    for stage in stages:
+        for action in stage.get("actions", []):
+            if not isinstance(action, dict) or not isinstance(action.get("payload"), dict):
+                continue
+            payload = action["payload"]
+            kind = str(action.get("kind") or "")
+            if kind == "sync":
+                for entry in _sync_query_handoff_entries(payload, action):
+                    key = (str(entry.get("kind")), str(entry.get("platform")), str(entry.get("run_id")))
+                    if key not in seen:
+                        entries.append(entry)
+                        seen.add(key)
+            elif kind == "smoke":
+                entry = _smoke_query_handoff_entry(payload, action)
+                if entry:
+                    key = (str(entry.get("kind")), str(entry.get("platform")), str(entry.get("run_id")))
+                    if key not in seen:
+                        entries.append(entry)
+                        seen.add(key)
+    return {
+        "schema": "aoa_course_connected_query_handoff_v1",
+        "ready": any(bool(entry.get("query_ready")) for entry in entries),
+        "entry_count": len(entries),
+        "entries": entries,
+    }
+
+
+def _sync_query_handoff_entries(payload: dict[str, object], action: dict[str, object]) -> list[dict[str, object]]:
+    checkpoints = payload.get("synced_sources") if isinstance(payload.get("synced_sources"), list) else []
+    entries: list[dict[str, object]] = []
+    for checkpoint in checkpoints:
+        if not isinstance(checkpoint, dict):
+            continue
+        run_id = str(checkpoint.get("run_id") or "")
+        if not run_id:
+            continue
+        paths = {
+            "normalized_path": str(checkpoint.get("normalized_path") or ""),
+            "index_path": str(checkpoint.get("index_path") or ""),
+            "semantic_index_path": "",
+            "graph_path": str(checkpoint.get("graph_path") or ""),
+            "answer_path": "",
+        }
+        entries.append(
+            _query_handoff_entry(
+                kind="sync",
+                platform=str(checkpoint.get("platform") or action.get("platform") or ""),
+                run_id=run_id,
+                status=str(checkpoint.get("status") or payload.get("status") or ""),
+                source_id=str(checkpoint.get("source_id") or ""),
+                source_ref=str(checkpoint.get("source_ref") or ""),
+                title=str(checkpoint.get("title") or ""),
+                query=None,
+                result_count=0,
+                evidence_count=0,
+                paths=paths,
+            )
+        )
+    return entries
+
+
+def _smoke_query_handoff_entry(payload: dict[str, object], action: dict[str, object]) -> dict[str, object] | None:
+    artifacts = payload.get("artifacts") if isinstance(payload.get("artifacts"), dict) else {}
+    course = payload.get("course") if isinstance(payload.get("course"), dict) else {}
+    source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
+    answer = artifacts.get("answer") if isinstance(artifacts.get("answer"), dict) else {}
+    run_id = str(course.get("run_id") or payload.get("run_id") or "")
+    if not run_id:
+        return None
+    paths = {
+        "normalized_path": str(course.get("normalized_path") or ""),
+        "index_path": str(artifacts.get("index_path") or ""),
+        "semantic_index_path": str(artifacts.get("semantic_index_path") or ""),
+        "graph_path": str(artifacts.get("graph_path") or ""),
+        "answer_path": str(answer.get("answer_path") or ""),
+    }
+    return _query_handoff_entry(
+        kind="smoke",
+        platform=str(payload.get("platform") or action.get("platform") or ""),
+        run_id=run_id,
+        status=str(payload.get("status") or ""),
+        source_id=str(action.get("source_id") or source.get("source_id") or ""),
+        source_ref=str(action.get("source_ref") or source.get("source_ref") or ""),
+        title=str(source.get("title") or ""),
+        query=str(answer.get("query") or "") or None,
+        result_count=int(answer.get("result_count") or 0),
+        evidence_count=int(answer.get("evidence_count") or 0),
+        paths=paths,
+    )
+
+
+def _query_handoff_entry(
+    *,
+    kind: str,
+    platform: str,
+    run_id: str,
+    status: str,
+    source_id: str,
+    source_ref: str,
+    title: str,
+    query: str | None,
+    result_count: int,
+    evidence_count: int,
+    paths: dict[str, str],
+) -> dict[str, object]:
+    query_text = query or "<course-specific question>"
+    index_ready = bool(paths.get("index_path"))
+    semantic_ready = bool(paths.get("semantic_index_path"))
+    graph_ready = bool(paths.get("graph_path"))
+    status_ready = status in {"ok", "ready"}
+    answer_ready = status_ready and bool(paths.get("answer_path")) and result_count > 0 and evidence_count > 0
+    return {
+        "kind": kind,
+        "platform": platform,
+        "run_id": run_id,
+        "status": status,
+        "source_id": source_id,
+        "source_ref": source_ref,
+        "title": title,
+        "query": query,
+        "query_ready": status_ready and index_ready,
+        "semantic_query_ready": status_ready and semantic_ready,
+        "graph_ready": status_ready and graph_ready,
+        "answer_ready": answer_ready,
+        "answer_result_count": result_count,
+        "answer_evidence_count": evidence_count,
+        "paths": paths,
+        "commands": {
+            "query": f"aoa-course query {shlex.quote(query_text)} --run {shlex.quote(run_id)}",
+            "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode hybrid",
+            "graph": f"aoa-course build-graph --run {shlex.quote(run_id)}",
+        },
+    }
 
 
 def _payload_summary(payload: dict[str, object]) -> dict[str, object]:
