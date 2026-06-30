@@ -16,6 +16,7 @@ from aoa_course_connector.calibration import (
     write_live_calibration_intake,
     write_live_calibration_packet,
 )
+from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
@@ -394,6 +395,23 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_intake.add_argument("--run", default="live-calibration-intake")
     calibration_intake.add_argument("--packet", type=Path, required=True)
     calibration_intake.set_defaults(func=cmd_calibration_intake)
+    calibration_connected = calibration_sub.add_parser("connected-run")
+    calibration_connected.add_argument("--run", default="connected-calibration")
+    calibration_connected.add_argument("--mode", choices=["fixture", "live"], default="fixture")
+    calibration_connected.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    calibration_connected.add_argument("--source-id", action="append")
+    calibration_connected.add_argument("--query")
+    calibration_connected.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
+    calibration_connected.add_argument("--include-step-sources", action="store_true")
+    calibration_connected.add_argument("--allow-network", action="store_true")
+    calibration_connected.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
+    calibration_connected.add_argument("--state-file", type=Path)
+    calibration_connected.add_argument("--expect-origin")
+    calibration_connected.add_argument("--max-lessons", type=int, default=50)
+    calibration_connected.add_argument("--max-pages", type=int, default=5)
+    calibration_connected.add_argument("--max-sources", type=int, default=50)
+    calibration_connected.add_argument("--source-limit", type=int)
+    calibration_connected.set_defaults(func=cmd_calibration_connected_run)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -1117,6 +1135,34 @@ def cmd_calibration_intake(args: argparse.Namespace) -> int:
     intake_path = write_live_calibration_intake(roots, intake, run_id=args.run)
     _emit({**intake, "intake_path": str(intake_path)})
     return 0
+
+
+def cmd_calibration_connected_run(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    try:
+        receipt = run_connected_calibration(
+            roots,
+            run_id=args.run,
+            mode=args.mode,
+            platforms=args.platform,
+            source_ids=args.source_id,
+            query=args.query,
+            live_scope=args.live_scope,
+            include_step_sources=args.include_step_sources,
+            allow_network=args.allow_network,
+            stepik_token_env=args.stepik_token_env,
+            browser_state_file=args.state_file,
+            expect_origin_contains=args.expect_origin,
+            max_lessons=args.max_lessons,
+            max_pages=args.max_pages,
+            max_sources=args.max_sources,
+            source_limit=args.source_limit,
+        )
+    except ValueError as exc:
+        _emit({"schema": "aoa_course_connected_calibration_run_receipt_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    _emit(receipt)
+    return 0 if receipt.get("status") == "ok" else 1
 
 
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:

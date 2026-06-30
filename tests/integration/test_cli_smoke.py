@@ -443,6 +443,14 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert intake_result["authority"]["central_proof_owner"] == "aoa-evals"
     assert Path(str(intake_result["intake_path"])).is_file()
 
+    connected = run_cli(tmp_path, "calibration", "connected-run", "--mode", "fixture", "--run", "connected-fixture-cli")
+    assert connected["schema"] == "aoa_course_connected_calibration_run_receipt_v1"
+    assert connected["status"] == "ok"
+    assert connected["network_touched"] is False
+    assert Path(str(connected["artifacts"]["packet_path"])).is_file()
+    assert Path(str(connected["artifacts"]["intake_path"])).is_file()
+    assert Path(str(connected["receipt_path"])).is_file()
+
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [

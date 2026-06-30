@@ -206,6 +206,7 @@ Before expanding connected-source work, run the fixture-safe calibration eval:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
+PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run --mode fixture --run connected-fixture-proof
 ```
 
 For operator-connected sources, save `preflight live`, `smoke browser-live`,
@@ -238,6 +239,25 @@ registered sources by host, reports whether the saved storage-state matches
 those hosts, and gives the exact `auth plan-browser-state`,
 `auth capture-browser-state`, `auth inspect-browser-state`, and recheck
 commands needed before live sync can start.
+
+`calibration connected-run` is the executable route over the same contract.
+`--mode fixture` runs safe GetCourse, Skillspace, and Stepik fixtures end to
+end, writes smoke reports, a connected-source plan, a runbook, a calibration
+packet, an intake report, and one
+`aoa_course_connected_calibration_run_receipt_v1` under runtime artifact
+storage. `--mode live` refuses to touch connected sources unless
+`--allow-network` is present; use it only after reviewing the connected plan and
+local auth/source readiness:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run \
+  --mode live \
+  --platform stepik \
+  --allow-network \
+  --live-scope bounded \
+  --source-limit 1 \
+  --run connected-stepik-live-calibration
+```
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"

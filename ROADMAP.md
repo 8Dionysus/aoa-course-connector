@@ -57,6 +57,10 @@
 - Prove live calibration intake reports that classify partial packet failures
   into repair lanes and local eval-intake candidates without taking over
   `aoa-evals` central proof authority.
+- Prove executable connected-source calibration receipts so agents can move from
+  read-only connected plans to a single fixture-safe proof command, then rerun
+  the same route against selected live sources only with explicit network
+  approval.
 - Prove Stepik batched full-course API materialization with optional
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional

@@ -51,6 +51,34 @@ commands. The optional runbook is a Markdown rendering of the same redacted
 packet plus execution stages; store it in `AOA_COURSE_ARTIFACT_ROOT` and keep it
 out of Git.
 
+For a one-command executable proof of the same contract, run the fixture-safe
+connected calibration route:
+
+```bash
+aoa-course calibration connected-run --mode fixture --run connected-fixture-proof
+```
+
+It writes an `aoa_course_connected_calibration_run_receipt_v1` under
+`${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/connected/`,
+plus smoke reports, a connected-source plan, a runbook, a calibration packet,
+and a calibration intake report. Fixture mode does not touch the network.
+
+After reviewing `preflight connected-plan` and confirming local auth/source
+readiness, the same route can execute selected live sources only with an
+explicit network gate:
+
+```bash
+aoa-course calibration connected-run \
+  --mode live \
+  --platform stepik \
+  --allow-network \
+  --live-scope bounded \
+  --source-limit 1 \
+  --run connected-stepik-live-calibration
+```
+
+Live connected-run receipts are runtime evidence and must stay out of Git.
+
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
 aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-preflight.json"
