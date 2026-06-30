@@ -18,6 +18,7 @@ CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 LIVE_SCOPES = {"bounded", "full-course"}
 ARTIFACT_ROOT_EXPR = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
 AUTH_ROOT_EXPR = "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}"
+EXAMPLE_HOSTS = {"example.com", "example.net", "example.org"}
 
 
 def render_connected_source_runbook(plan: dict[str, object]) -> str:
@@ -729,6 +730,8 @@ def _source_plan(source: dict[str, object], sync_actions: list[dict[str, object]
         "title": source.get("title"),
         "access_mode": source.get("access_mode"),
         "enabled": source.get("enabled"),
+        "operator_live_candidate": source.get("operator_live_candidate", True),
+        "fixture_or_example_source": source.get("fixture_or_example_source", False),
         "ready": source.get("ready"),
         "blockers": source.get("blockers", []),
         "sync_command": sync.get("command") if sync else None,
@@ -762,36 +765,44 @@ def _browser_auth_handoffs(
             for check in checks
             if check.get("kind") == "source" and check.get("platform") == platform
         ]
-        blocked_sources = [check for check in source_checks if not check.get("ready")]
-        source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in source_checks])
+        operator_source_checks = [check for check in source_checks if check.get("operator_live_candidate", True)]
+        fixture_sources = [check for check in source_checks if check.get("fixture_or_example_source")]
+        blocked_sources = [check for check in operator_source_checks if not check.get("ready")]
+        source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in operator_source_checks])
         blocked_source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in blocked_sources])
+        fixture_source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in fixture_sources])
         expected_origin = _handoff_expected_origin(
             state_check,
             source_hosts,
             expect_origin_contains=expect_origin_contains,
         )
+        blockers = _dedupe(
+            [
+                str(blocker)
+                for check in blocked_sources
+                for blocker in check.get("blockers", [])
+            ]
+            + (["no operator-owned live sources registered"] if fixture_sources and not operator_source_checks else [])
+        )
         handoffs.append(
             {
                 "platform": platform,
-                "ready": bool(state_check.get("ready")) and (not source_checks or not blocked_sources),
+                "ready": bool(state_check.get("ready")) and bool(operator_source_checks) and not blocked_sources,
                 "state_file": state_check.get("state_file"),
                 "state_status": state_check.get("status"),
                 "state_exists": state_check.get("exists"),
                 "state_usable": state_check.get("usable"),
                 "expected_origin_contains": expected_origin,
                 "source_count": len(source_checks),
-                "ready_source_count": len(source_checks) - len(blocked_sources),
+                "operator_source_count": len(operator_source_checks),
+                "fixture_or_example_source_count": len(fixture_sources),
+                "ready_source_count": len([check for check in operator_source_checks if check.get("ready")]),
                 "blocked_source_count": len(blocked_sources),
                 "source_hosts": source_hosts,
                 "blocked_source_hosts": blocked_source_hosts,
+                "fixture_or_example_source_hosts": fixture_source_hosts,
                 "host_readiness": _host_readiness(source_checks),
-                "blockers": _dedupe(
-                    [
-                        str(blocker)
-                        for check in blocked_sources
-                        for blocker in check.get("blockers", [])
-                    ]
-                ),
+                "blockers": blockers,
                 "commands": _browser_auth_handoff_commands(
                     platform,
                     browser_state_file=browser_state_file,
@@ -802,6 +813,7 @@ def _browser_auth_handoffs(
                     "capture auth state only from the connected user's legitimate course account",
                     "inspect commands redact cookie, token, localStorage, and sessionStorage values",
                     "re-run connected-plan after capture; live sync remains blocked until every registered source host matches auth state",
+                    "fixture/example hosts prove the install route only; register operator-owned course URLs before live sync",
                 ],
             }
         )
@@ -887,11 +899,15 @@ def _platform_plans(
         platform_sources = [check for check in source_checks if check.get("platform") == platform]
         sync_workflow = workflow_by_key.get(("stepik_source_sync" if platform == "stepik" else "browser_live_sync", platform), {})
         blocked = [check for check in platform_sources if not check.get("ready")]
+        operator_sources = [check for check in platform_sources if check.get("operator_live_candidate", True)]
+        fixture_sources = [check for check in platform_sources if check.get("fixture_or_example_source")]
         plans.append(
             {
                 "platform": platform,
                 "ready": bool(sync_workflow.get("ready")),
                 "source_count": len(platform_sources),
+                "operator_source_count": len(operator_sources),
+                "fixture_or_example_source_count": len(fixture_sources),
                 "ready_source_count": len([check for check in platform_sources if check.get("ready")]),
                 "blocked_source_count": len(blocked),
                 "required_workflow": sync_workflow.get("name"),
@@ -1058,25 +1074,36 @@ def _append_browser_preflight(
             "next_command": f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}",
         }
     )
-    source_ready_flags: list[bool] = []
+    operator_source_ready_flags: list[bool] = []
+    fixture_source_count = 0
     for source in sources:
-        source_host = _host(str(source.get("source_ref") or ""))
-        source_state = (
+        source_ref = str(source.get("source_ref") or "")
+        source_host = _host(source_ref)
+        fixture_or_example = _is_example_source_ref(source_ref)
+        source_state = state if fixture_or_example else (
             inspect_browser_state(state_file, expect_origin_contains=source_host)
             if source_host
             else state
         )
-        source_state_ready = bool(source_state.get("usable"))
+        source_state_ready = bool(source_state.get("usable")) and not fixture_or_example
         blockers = []
+        if fixture_or_example:
+            fixture_source_count += 1
+            blockers.append("source_ref uses an example/reserved host; register an operator-owned source before live sync")
         if not source_state_ready:
-            if source_host and state_ready:
+            if source_host and state_ready and not fixture_or_example:
                 blockers.append(f"browser storage state does not match source host {source_host}")
-            else:
+            elif not fixture_or_example:
                 blockers.append(f"browser storage state is {source_state.get('status')}")
         ready = source_state_ready and bool(source.get("enabled", True))
-        source_ready_flags.append(ready)
-        checks.append(_source_check(source, ready=ready, blockers=blockers))
-    all_sources_ready = bool(sources) and all(source_ready_flags)
+        if not fixture_or_example:
+            operator_source_ready_flags.append(ready)
+        source_check = _source_check(source, ready=ready, blockers=blockers)
+        source_check["operator_live_candidate"] = not fixture_or_example
+        source_check["fixture_or_example_source"] = fixture_or_example
+        checks.append(source_check)
+    operator_source_count = len(operator_source_ready_flags)
+    all_sources_ready = bool(operator_source_ready_flags) and all(operator_source_ready_flags)
 
     workflows.append(
         {
@@ -1085,6 +1112,8 @@ def _append_browser_preflight(
             "ready": state_ready,
             "required_for_ready": True,
             "source_count": len(sources),
+            "operator_source_count": operator_source_count,
+            "fixture_or_example_source_count": fixture_source_count,
             "next_command": (
                 f"aoa-course discover browser-live <catalog-url> --platform {platform} "
                 f"--state-file {str(state_file)!r} --register --max-sources 50 --max-pages 5"
@@ -1098,6 +1127,8 @@ def _append_browser_preflight(
             "ready": all_sources_ready,
             "required_for_ready": True,
             "source_count": len(sources),
+            "operator_source_count": operator_source_count,
+            "fixture_or_example_source_count": fixture_source_count,
             "next_command": (
                 f"aoa-course sync browser-live --platform {platform} "
                 f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
@@ -1108,7 +1139,11 @@ def _append_browser_preflight(
         next_commands.append(f"aoa-course auth plan-browser-state {platform} account")
         next_commands.append(f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}")
         next_commands.append(f"aoa-course auth inspect-browser-state {str(state_file)!r}")
-    elif not sources:
+    if fixture_source_count and not operator_source_ready_flags:
+        next_commands.append(f"aoa-course sources add <operator-course-url> --platform {platform} --title <course-title>")
+    if not state_ready:
+        return
+    if not sources or not operator_source_ready_flags:
         next_commands.append(
             f"aoa-course discover browser-live <catalog-url> --platform {platform} "
             f"--state-file {str(state_file)!r} --register --max-sources 50 --max-pages 5"
@@ -1141,6 +1176,8 @@ def _source_check(source: dict[str, object], *, ready: bool, blockers: list[str]
 def _origin_hint(sources: list[dict[str, object]]) -> str:
     for source in sources:
         ref = str(source.get("source_ref") or "")
+        if _is_example_source_ref(ref):
+            continue
         host = _host(ref)
         if host:
             return host
@@ -1150,6 +1187,18 @@ def _origin_hint(sources: list[dict[str, object]]) -> str:
 def _host(value: str) -> str:
     parsed = urlparse(value if "://" in value else f"//{value}")
     return parsed.hostname or ""
+
+
+def _is_example_source_ref(value: str) -> bool:
+    host = _host(value).casefold()
+    if not host:
+        return False
+    return (
+        host == "example"
+        or host.endswith(".example")
+        or host in EXAMPLE_HOSTS
+        or any(host.endswith(f".{example}") for example in EXAMPLE_HOSTS)
+    )
 
 
 def _state_file_arg(platform: str, state_file: Path | None) -> str:

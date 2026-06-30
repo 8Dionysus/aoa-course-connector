@@ -122,6 +122,11 @@ This proves:
   packets that group registered sources by host, show state-file readiness, and
   provide capture, redacted inspect, and recheck commands before live sync is
   allowed.
+- Browser connected plans distinguish fixture/example registry entries from
+  operator-owned live sources. Reserved hosts such as `*.example` are marked as
+  `fixture_or_example_source` with `operator_live_candidate: false`; live
+  browser sync and connected-run commands are withheld until a real
+  operator-owned course URL is registered and auth state matches that host.
 - Connected-source plans can write a redacted Markdown runbook under runtime
   artifact storage, giving operators and agents a concrete setup, sync, smoke,
   calibration, and connected-run checklist without committing private source

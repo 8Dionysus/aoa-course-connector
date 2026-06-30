@@ -409,13 +409,13 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
         artifact=tmp_path / "artifacts",
         mode="test",
     )
-    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
@@ -426,7 +426,7 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
 
     result = call_tool(
         "live_preflight",
-        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.example"},
+        {"platforms": ["getcourse"], "state_file": str(state_file), "expect_origin": "school.operator.edu"},
     )
 
     assert result["tool"] == "live_preflight"
@@ -441,7 +441,7 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
         {
             "platforms": ["getcourse"],
             "state_file": str(state_file),
-            "expect_origin": "school.example",
+            "expect_origin": "school.operator.edu",
             "link_pattern": "*/lessons/*",
             "max_lessons": 7,
             "max_pages": 3,
@@ -469,7 +469,7 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert "--max-sources 4" in plan["plan"]["connected_run_handoff"]["command"]
     handoff = plan["plan"]["browser_auth_handoffs"][0]
     assert handoff["ready"] is True
-    assert handoff["source_hosts"] == ["school.example"]
+    assert handoff["source_hosts"] == ["school.operator.edu"]
     assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered_plan
@@ -480,7 +480,7 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
         {
             "platforms": ["getcourse"],
             "state_file": str(state_file),
-            "expect_origin": "school.example",
+            "expect_origin": "school.operator.edu",
             "query": "course-specific question",
             "link_pattern": "*/lessons/*",
             "max_lessons": 7,

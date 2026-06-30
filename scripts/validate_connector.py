@@ -393,7 +393,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "operational_ready", "connected_live_ready", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -598,6 +598,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "playwright",
         "each source host",
         "pagination links before applying a custom",
+        "fixture_or_example_source",
+        "operator_live_candidate",
     ]:
         if token not in browser_doc:
             errors.append(f"Browser session doc missing token: {token}")

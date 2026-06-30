@@ -172,7 +172,7 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     source, _path, _state = upsert_source(
         storage.data,
         "getcourse",
-        "https://school.example/teach/control/stream",
+        "https://school.operator.edu/teach/control/stream",
         "School",
         access_mode="browser_session",
     )
@@ -180,8 +180,8 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
@@ -317,7 +317,7 @@ def test_connected_calibration_live_packet_failures_promote_intake_repair_lanes(
     source, _path, _state = upsert_source(
         storage.data,
         "getcourse",
-        "https://school.example/teach/control/stream",
+        "https://school.operator.edu/teach/control/stream",
         "School",
         access_mode="browser_session",
     )
@@ -325,8 +325,8 @@ def test_connected_calibration_live_packet_failures_promote_intake_repair_lanes(
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": []}],
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": []}],
         }),
         encoding="utf-8",
     )

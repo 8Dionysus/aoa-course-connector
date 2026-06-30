@@ -56,18 +56,18 @@ def test_live_preflight_allows_public_stepik_source_without_account_token(tmp_pa
 
 def test_live_preflight_browser_state_readiness_redacts_secret_material(tmp_path: Path) -> None:
     storage = roots(tmp_path)
-    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
 
-    report = live_preflight(storage, platforms=["getcourse"], expect_origin_contains="school.example")
+    report = live_preflight(storage, platforms=["getcourse"], expect_origin_contains="school.operator.edu")
 
     assert report["status"] == "ok"
     assert report["ready"] is True
@@ -81,16 +81,50 @@ def test_live_preflight_browser_state_readiness_redacts_secret_material(tmp_path
     assert "SUPER_SECRET_TOKEN" not in rendered
 
 
-def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_path: Path) -> None:
+def test_live_preflight_blocks_example_browser_sources_from_live_sync(tmp_path: Path) -> None:
     storage = roots(tmp_path)
-    upsert_source(storage.data, "getcourse", "https://a.example/teach/control/stream", "A")
-    upsert_source(storage.data, "getcourse", "https://b.example/teach/control/stream", "B")
+    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "Fixture School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".a.example", "path": "/"}],
-            "origins": [{"origin": "https://a.example", "localStorage": []}],
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    plan = connected_source_plan(storage, platforms=["getcourse"])
+
+    assert plan["ready"] is False
+    assert plan["platform_plans"][0]["operator_source_count"] == 0
+    assert plan["platform_plans"][0]["fixture_or_example_source_count"] == 1
+    source = plan["source_plans"][0]
+    assert source["operator_live_candidate"] is False
+    assert source["fixture_or_example_source"] is True
+    assert source["sync_command"] is None
+    assert "example/reserved host" in " ".join(source["blockers"])
+    handoff = plan["browser_auth_handoffs"][0]
+    assert handoff["operator_source_count"] == 0
+    assert handoff["fixture_or_example_source_hosts"] == ["school.example"]
+    assert "no operator-owned live sources registered" in handoff["blockers"]
+    assert not any("sync browser-live" in command for command in plan["next_commands"])
+    assert any("sources add <operator-course-url>" in command for command in plan["next_commands"])
+    rendered = json.dumps(plan)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
+
+
+def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "getcourse", "https://a.operator.edu/teach/control/stream", "A")
+    upsert_source(storage.data, "getcourse", "https://b.operator.edu/teach/control/stream", "B")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".a.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://a.operator.edu", "localStorage": []}],
         }),
         encoding="utf-8",
     )
@@ -102,9 +136,9 @@ def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_
         for check in report["checks"]
         if check["kind"] == "source"
     }
-    assert source_checks["https://a.example/teach/control/stream"]["ready"] is True
-    assert source_checks["https://b.example/teach/control/stream"]["ready"] is False
-    assert "b.example" in " ".join(source_checks["https://b.example/teach/control/stream"]["blockers"])
+    assert source_checks["https://a.operator.edu/teach/control/stream"]["ready"] is True
+    assert source_checks["https://b.operator.edu/teach/control/stream"]["ready"] is False
+    assert "b.operator.edu" in " ".join(source_checks["https://b.operator.edu/teach/control/stream"]["blockers"])
     workflows = {workflow["name"]: workflow for workflow in report["workflows"]}
     assert workflows["browser_live_sync"]["ready"] is False
     assert report["ready"] is False
@@ -114,29 +148,29 @@ def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_
 
 def test_live_preflight_rejects_source_host_substring_state_match(tmp_path: Path) -> None:
     storage = roots(tmp_path)
-    upsert_source(storage.data, "getcourse", "https://my-school.example/teach/control/stream", "My School")
-    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    upsert_source(storage.data, "getcourse", "https://my-school.operator.edu/teach/control/stream", "My School")
+    upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
             "cookies": [],
-            "origins": [{"origin": "https://my-school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+            "origins": [{"origin": "https://my-school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
 
-    report = live_preflight(storage, platforms=["getcourse"], expect_origin_contains="my-school.example")
+    report = live_preflight(storage, platforms=["getcourse"], expect_origin_contains="my-school.operator.edu")
 
     source_checks = {
         check["source_ref"]: check
         for check in report["checks"]
         if check["kind"] == "source"
     }
-    assert source_checks["https://my-school.example/teach/control/stream"]["ready"] is True
-    source_check = source_checks["https://school.example/teach/control/stream"]
+    assert source_checks["https://my-school.operator.edu/teach/control/stream"]["ready"] is True
+    source_check = source_checks["https://school.operator.edu/teach/control/stream"]
     assert source_check["ready"] is False
-    assert "school.example" in " ".join(source_check["blockers"])
+    assert "school.operator.edu" in " ".join(source_check["blockers"])
     workflows = {workflow["name"]: workflow for workflow in report["workflows"]}
     assert workflows["browser_live_sync"]["ready"] is False
     assert report["ready"] is False
@@ -183,13 +217,13 @@ def test_connected_source_plan_defaults_to_all_priority_platforms(tmp_path: Path
 
 def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration(tmp_path: Path) -> None:
     storage = roots(tmp_path)
-    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
@@ -236,13 +270,13 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     handoff = plan["browser_auth_handoffs"][0]
     assert handoff["platform"] == "getcourse"
     assert handoff["ready"] is True
-    assert handoff["source_hosts"] == ["school.example"]
+    assert handoff["source_hosts"] == ["school.operator.edu"]
     assert handoff["blocked_source_count"] == 0
     assert handoff["host_readiness"][0]["ready_source_count"] == 1
     assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
     assert "inspect-browser-state" in handoff["commands"]["inspect"]
     assert handoff["commands"]["inspect_source_hosts"] == [
-        'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --expect-origin-contains school.example'
+        'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --expect-origin-contains school.operator.edu'
     ]
     assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
     rendered = json.dumps(plan)
@@ -252,7 +286,7 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
 
 def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path) -> None:
     storage = roots(tmp_path)
-    upsert_source(storage.data, "skillspace", "https://school.skillspace.example/courses", "School")
+    upsert_source(storage.data, "skillspace", "https://school.skillspace.edu/courses", "School")
 
     plan = connected_source_plan(storage, platforms=["skillspace"])
 
@@ -270,11 +304,11 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     assert handoff["ready"] is False
     assert handoff["source_count"] == 1
     assert handoff["blocked_source_count"] == 1
-    assert handoff["source_hosts"] == ["school.skillspace.example"]
-    assert handoff["blocked_source_hosts"] == ["school.skillspace.example"]
+    assert handoff["source_hosts"] == ["school.skillspace.edu"]
+    assert handoff["blocked_source_hosts"] == ["school.skillspace.edu"]
     assert handoff["host_readiness"] == [
         {
-            "host": "school.skillspace.example",
+            "host": "school.skillspace.edu",
             "source_count": 1,
             "ready_source_count": 0,
             "blocked_source_count": 1,
@@ -284,20 +318,20 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     assert handoff["blockers"] == ["browser storage state is missing"]
     assert "capture-browser-state skillspace account" in handoff["commands"]["capture"]
     assert "--state-file" in handoff["commands"]["capture"]
-    assert "--expect-origin school.skillspace.example" in handoff["commands"]["recheck"]
+    assert "--expect-origin school.skillspace.edu" in handoff["commands"]["recheck"]
     assert not any("sync browser-live" in command for command in plan["next_commands"])
     assert any("capture-browser-state" in command for command in plan["next_commands"])
 
 
 def test_connected_source_runbook_renders_handoff_without_secret_values(tmp_path: Path) -> None:
     storage = roots(tmp_path)
-    upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
     state_file.parent.mkdir(parents=True)
     state_file.write_text(
         json.dumps({
-            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
-            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
         }),
         encoding="utf-8",
     )
@@ -307,7 +341,7 @@ def test_connected_source_runbook_renders_handoff_without_secret_values(tmp_path
 
     assert "# Connected Source Runbook" in runbook
     assert "## Browser Auth Handoffs" in runbook
-    assert "school.example" in runbook
+    assert "school.operator.edu" in runbook
     assert "capture-browser-state getcourse account" in runbook
     assert "smoke browser-live" in runbook
     assert "calibration connected-run --mode live --allow-network" in runbook
