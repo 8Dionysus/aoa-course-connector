@@ -88,6 +88,26 @@ def main(argv: list[str] | None = None) -> int:
                 print(result.stdout, file=sys.stderr)
                 print(result.stderr, file=sys.stderr)
                 return result.returncode
+        stdio_requests = "\n".join([
+            '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"install-route","version":"0"}}}',
+            '{"jsonrpc":"2.0","id":2,"method":"tools/list"}',
+            '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"rollback","run":"starter-fixture"}}}',
+            "",
+        ])
+        result = subprocess.run(
+            [sys.executable, "-m", "aoa_course_connector.mcp.server"],
+            input=stdio_requests,
+            cwd=copy_root,
+            env=env,
+            check=False,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode != 0 or '"structuredContent"' not in result.stdout:
+            print("failed MCP stdio route", file=sys.stderr)
+            print(result.stdout, file=sys.stderr)
+            print(result.stderr, file=sys.stderr)
+            return result.returncode or 1
     print("agent install route ok")
     return 0
 

@@ -11,6 +11,7 @@ import json
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
+from urllib.parse import urlparse
 
 
 def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[str, object]:
@@ -66,8 +67,11 @@ def inspect_browser_state(state_file: Path, expect_origin_contains: str | None =
     session_storage_count = sum(_entry_count(item, "sessionStorage") for item in origins if isinstance(item, dict))
     expect_match = None
     if expect_origin_contains:
-        needle = expect_origin_contains.casefold()
-        expect_match = any(needle in origin.casefold() for origin in origin_values)
+        expect_match = _storage_state_matches_expected_origin(
+            expect_origin_contains,
+            origin_values=origin_values,
+            cookies=cookies,
+        )
     has_session_material = bool(cookies or local_storage_count or session_storage_count)
     status = "ok" if has_session_material else "empty"
     if expect_match is False:
@@ -143,6 +147,46 @@ def _slug(value: str) -> str:
 def _entry_count(mapping: dict[str, object], key: str) -> int:
     entries = mapping.get(key)
     return len(entries) if isinstance(entries, list) else 0
+
+
+def _storage_state_matches_expected_origin(
+    expect_origin_contains: str,
+    *,
+    origin_values: list[str],
+    cookies: list[object],
+) -> bool:
+    needle = expect_origin_contains.casefold().strip()
+    if not needle:
+        return True
+    if any(needle in origin.casefold() for origin in origin_values):
+        return True
+    expected_host = _host_fragment(needle)
+    if not expected_host:
+        return False
+    for cookie in cookies:
+        if not isinstance(cookie, dict):
+            continue
+        domain = _host_fragment(str(cookie.get("domain") or ""))
+        if domain and _host_domain_matches(expected_host, domain):
+            return True
+    return False
+
+
+def _host_fragment(value: str) -> str:
+    raw = value.casefold().strip().lstrip(".")
+    if not raw:
+        return ""
+    parsed = urlparse(raw if "://" in raw else f"//{raw}")
+    host = parsed.hostname or raw.split("/", 1)[0]
+    return host.strip().lstrip(".")
+
+
+def _host_domain_matches(expected_host: str, cookie_domain: str) -> bool:
+    return (
+        expected_host == cookie_domain
+        or expected_host.endswith(f".{cookie_domain}")
+        or cookie_domain.endswith(f".{expected_host}")
+    )
 
 
 def _now() -> str:

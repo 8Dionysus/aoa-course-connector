@@ -8,7 +8,7 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
 from aoa_course_connector.ingest import materialize_fixture
-from aoa_course_connector.mcp.server import call_tool, tools_manifest
+from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
 from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
@@ -83,6 +83,22 @@ def test_browser_state_inspect_reports_missing_and_origin_mismatch(tmp_path: Pat
     assert mismatch["usable"] is False
 
 
+def test_browser_state_inspect_matches_expected_origin_from_cookie_domain(tmp_path: Path) -> None:
+    state_file = tmp_path / "account.storage-state.json"
+    state_file.write_text(
+        '{"cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}], "origins": []}',
+        encoding="utf-8",
+    )
+
+    status = inspect_browser_state(state_file, expect_origin_contains="https://school.example/dashboard")
+
+    assert status["status"] == "ok"
+    assert status["usable"] is True
+    assert status["cookie_count"] == 1
+    assert status["origin_count"] == 0
+    assert status["expected_origin_matched"] is True
+
+
 def test_stepik_source_defaults_to_public_api(tmp_path: Path) -> None:
     source, _path, state = upsert_source(tmp_path / "data", "stepik", "67", "Stepik Course")
     assert state == "added"
@@ -117,3 +133,44 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     upsert_checkpoint(storage, checkpoint)
     sync_status = call_tool("sync_status", {"sync_run": "browser-sync-fixture"})
     assert sync_status["sync"]["ok_count"] == 1
+
+
+def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    materialize_fixture(storage, run_id="starter-fixture")
+    build_keyword_index(storage, run_id="starter-fixture")
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    initialize = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "initialize",
+        "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "test", "version": "0"}},
+    })
+    assert initialize["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
+    assert initialize["result"]["capabilities"]["tools"]["listChanged"] is False
+    assert handle_jsonrpc_message({"jsonrpc": "2.0", "method": "notifications/initialized"}) is None
+
+    listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
+    search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
+    assert search_tool["inputSchema"]["required"] == ["query"]
+
+    called = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 3,
+        "method": "tools/call",
+        "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}},
+    })
+    result = called["result"]
+    assert result["isError"] is False
+    assert result["structuredContent"]["tool"] == "search"
+    assert result["structuredContent"]["results"]

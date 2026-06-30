@@ -173,8 +173,8 @@ That path is an example only, not a public default.
 
 ## MCP
 
-The MCP server package is named `aoa-course-connector-mcp` and exposes the same
-local artifacts used by the CLI:
+The MCP server package is named `aoa-course-connector-mcp`, speaks JSON-RPC over
+stdio, and exposes the same local artifacts used by the CLI:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
