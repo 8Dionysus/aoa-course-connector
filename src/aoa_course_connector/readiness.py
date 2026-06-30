@@ -166,19 +166,27 @@ def connected_source_plan(
     )
     source_plans = [_source_plan(check, smoke_actions) for check in source_checks]
     platform_plans = _platform_plans(selected_platforms, source_checks, workflow_by_key)
+    browser_auth_handoffs = _browser_auth_handoffs(
+        selected_platforms,
+        preflight,
+        browser_state_file=browser_state_file,
+        expect_origin_contains=expect_origin_contains,
+    )
     ready_platforms = [plan for plan in platform_plans if plan.get("ready")]
-    status = "ok" if len(ready_platforms) == len(selected_platforms) else "partial" if ready_platforms else "warning"
+    blocked_smoke_actions = [action for action in smoke_actions if not action.get("ready")]
+    ready = len(ready_platforms) == len(selected_platforms) and not blocked_smoke_actions
+    status = "ok" if ready else "partial" if ready_platforms else "warning"
     stages = [
         {"name": "preflight_reports", "ready": True, "actions": preflight_actions},
         {"name": "setup_or_unblock", "ready": not setup_actions, "actions": setup_actions},
         {"name": "live_sync", "ready": bool(sync_actions), "actions": sync_actions},
-        {"name": "live_smoke", "ready": bool(smoke_actions), "actions": smoke_actions},
+        {"name": "live_smoke", "ready": bool(smoke_actions) and not blocked_smoke_actions, "actions": smoke_actions},
         {"name": "calibration_packet", "ready": bool(calibration_actions), "actions": calibration_actions},
     ]
     return {
         "schema": "aoa_course_connected_source_plan_v1",
         "status": status,
-        "ready": status == "ok",
+        "ready": ready,
         "actionable": any(stage.get("actions") for stage in stages),
         "network_touched": False,
         "read_only": True,
@@ -189,6 +197,7 @@ def connected_source_plan(
         "live_scope": selected_live_scope,
         "include_step_sources": include_step_sources,
         "platform_plans": platform_plans,
+        "browser_auth_handoffs": browser_auth_handoffs,
         "source_plans": source_plans,
         "stages": stages,
         "next_commands": _dedupe(
@@ -353,6 +362,7 @@ def _smoke_actions(
             command = _stepik_smoke_command(
                 course_id,
                 slug=slug,
+                access_mode=str(source.get("access_mode") or "public_api"),
                 stepik_token_env=stepik_token_env,
                 live_scope=live_scope,
                 include_step_sources=include_step_sources,
@@ -419,6 +429,146 @@ def _source_plan(source: dict[str, object], smoke_actions: list[dict[str, object
     }
 
 
+def _browser_auth_handoffs(
+    platforms: list[str],
+    preflight: dict[str, object],
+    *,
+    browser_state_file: Path | None,
+    expect_origin_contains: str | None,
+) -> list[dict[str, object]]:
+    checks = [check for check in preflight.get("checks", []) if isinstance(check, dict)]
+    handoffs: list[dict[str, object]] = []
+    for platform in [item for item in platforms if item in BROWSER_PLATFORMS]:
+        state_check = next(
+            (
+                check
+                for check in checks
+                if check.get("kind") == "browser_state" and check.get("platform") == platform
+            ),
+            None,
+        )
+        if not state_check:
+            continue
+        source_checks = [
+            check
+            for check in checks
+            if check.get("kind") == "source" and check.get("platform") == platform
+        ]
+        blocked_sources = [check for check in source_checks if not check.get("ready")]
+        source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in source_checks])
+        blocked_source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in blocked_sources])
+        expected_origin = _handoff_expected_origin(
+            state_check,
+            source_hosts,
+            expect_origin_contains=expect_origin_contains,
+        )
+        handoffs.append(
+            {
+                "platform": platform,
+                "ready": bool(state_check.get("ready")) and (not source_checks or not blocked_sources),
+                "state_file": state_check.get("state_file"),
+                "state_status": state_check.get("status"),
+                "state_exists": state_check.get("exists"),
+                "state_usable": state_check.get("usable"),
+                "expected_origin_contains": expected_origin,
+                "source_count": len(source_checks),
+                "ready_source_count": len(source_checks) - len(blocked_sources),
+                "blocked_source_count": len(blocked_sources),
+                "source_hosts": source_hosts,
+                "blocked_source_hosts": blocked_source_hosts,
+                "host_readiness": _host_readiness(source_checks),
+                "blockers": _dedupe(
+                    [
+                        str(blocker)
+                        for check in blocked_sources
+                        for blocker in check.get("blockers", [])
+                    ]
+                ),
+                "commands": _browser_auth_handoff_commands(
+                    platform,
+                    browser_state_file=browser_state_file,
+                    source_hosts=source_hosts,
+                    expected_origin_contains=expected_origin,
+                ),
+                "notes": [
+                    "capture auth state only from the connected user's legitimate course account",
+                    "inspect commands redact cookie, token, localStorage, and sessionStorage values",
+                    "re-run connected-plan after capture; live sync remains blocked until every registered source host matches auth state",
+                ],
+            }
+        )
+    return handoffs
+
+
+def _host_readiness(source_checks: list[dict[str, object]]) -> list[dict[str, object]]:
+    groups: dict[str, list[dict[str, object]]] = {}
+    for source in source_checks:
+        host = _host(str(source.get("source_ref") or "")) or "<unparsed>"
+        groups.setdefault(host, []).append(source)
+    readiness: list[dict[str, object]] = []
+    for host, sources in groups.items():
+        blocked = [source for source in sources if not source.get("ready")]
+        readiness.append(
+            {
+                "host": host,
+                "source_count": len(sources),
+                "ready_source_count": len(sources) - len(blocked),
+                "blocked_source_count": len(blocked),
+                "blockers": _dedupe(
+                    [
+                        str(blocker)
+                        for source in blocked
+                        for blocker in source.get("blockers", [])
+                    ]
+                ),
+            }
+        )
+    return readiness
+
+
+def _handoff_expected_origin(
+    state_check: dict[str, object],
+    source_hosts: list[str],
+    *,
+    expect_origin_contains: str | None,
+) -> str | None:
+    if expect_origin_contains:
+        return expect_origin_contains
+    if len(source_hosts) == 1:
+        return source_hosts[0]
+    expected = str(state_check.get("expected_origin_contains") or "")
+    return expected or None
+
+
+def _browser_auth_handoff_commands(
+    platform: str,
+    *,
+    browser_state_file: Path | None,
+    source_hosts: list[str],
+    expected_origin_contains: str | None,
+) -> dict[str, object]:
+    state_arg = _state_file_arg(platform, browser_state_file)
+    inspect = f"aoa-course auth inspect-browser-state {state_arg}"
+    recheck = f"aoa-course preflight connected-plan --platform {platform} --live-scope bounded --state-file {state_arg}"
+    if expected_origin_contains:
+        quoted_origin = shlex.quote(expected_origin_contains)
+        inspect += f" --expect-origin-contains {quoted_origin}"
+        recheck += f" --expect-origin {quoted_origin}"
+    return {
+        "plan": f"aoa-course auth plan-browser-state {platform} account",
+        "capture": (
+            f"aoa-course auth capture-browser-state {platform} account "
+            f"--login-url <login-or-account-url> --state-file {state_arg}"
+        ),
+        "inspect": inspect,
+        "inspect_source_hosts": [
+            f"aoa-course auth inspect-browser-state {state_arg} --expect-origin-contains {shlex.quote(host)}"
+            for host in source_hosts
+        ],
+        "recheck": recheck,
+    }
+
+
 def _platform_plans(
     platforms: list[str],
     source_checks: list[dict[str, object]],
@@ -438,7 +588,7 @@ def _platform_plans(
                 "blocked_source_count": len(blocked),
                 "required_workflow": sync_workflow.get("name"),
                 "required_workflow_ready": bool(sync_workflow.get("ready")),
-                "blockers": [blocker for check in blocked for blocker in check.get("blockers", [])],
+                "blockers": _dedupe([blocker for check in blocked for blocker in check.get("blockers", [])]),
             }
         )
     return plans
@@ -467,13 +617,14 @@ def _stepik_smoke_command(
     course_id: int,
     *,
     slug: str,
+    access_mode: str,
     stepik_token_env: str,
     live_scope: str,
     include_step_sources: bool,
 ) -> str:
     command = (
         f"aoa-course smoke stepik-live {course_id} --run stepik-live-smoke-{slug} "
-        f"--token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
+        f"--access-mode {shlex.quote(access_mode)} --token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
     )
     if live_scope == "full-course":
         command += "--full-course "

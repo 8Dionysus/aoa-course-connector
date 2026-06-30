@@ -145,6 +145,11 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert any("sync browser-live" in command for command in plan["next_commands"])
     assert any("smoke browser-live" in command for command in plan["next_commands"])
     assert any("calibration build" in command for command in plan["next_commands"])
+    handoff = plan["browser_auth_handoffs"][0]
+    assert handoff["ready"] is True
+    assert handoff["source_hosts"] == ["school.example"]
+    assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
+    assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_PRIVATE_COOKIE" not in rendered_plan
     assert "SUPER_PRIVATE_TOKEN" not in rendered_plan

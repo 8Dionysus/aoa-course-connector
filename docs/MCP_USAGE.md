@@ -85,6 +85,10 @@ preflight-report, source sync, per-source smoke, and `calibration build`
 commands. Agents should use it before connected live work so blocked sources,
 missing auth state, missing Stepik token env, runtime report paths, and
 calibration packet inputs are explicit before network-touching commands run.
+For browser-session platforms, read `browser_auth_handoffs` first: it groups
+GetCourse/Skillspace sources by host, reports missing or mismatched
+storage-state, and provides the exact auth capture, redacted inspect, and
+recheck commands needed to turn blocked sources into sync-ready sources.
 The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
 `include_step_sources: true` only when the operator intentionally wants the
 larger Stepik full-course/source-enrichment route.

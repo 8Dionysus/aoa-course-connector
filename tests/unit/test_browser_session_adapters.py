@@ -7,7 +7,7 @@ from aoa_course_connector.adapters.browser import parse_caption_sidecar_text, pa
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
-from aoa_course_connector.ingest import materialize_browser_fixture
+from aoa_course_connector.ingest import materialize_browser_fixture, materialize_browser_snapshot
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.query import query_keyword_index, render_answer_packet
 
@@ -359,6 +359,53 @@ def test_browser_comment_authority_label_drives_normalized_tier(tmp_path: Path) 
     assert comment["role"] == ""
     assert comment["authority_label"] == "mentor"
     assert comment["authority_tier"] == "mentor_comment"
+
+
+def test_browser_materialize_receipt_counts_unparsed_caption_sidecar(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    raw_path = tmp_path / "empty_caption_snapshot.json"
+    raw_path.write_text(
+        json.dumps(
+            {
+                "platform": "getcourse",
+                "captured_at": "2026-06-30T00:00:00Z",
+                "source": {
+                    "source_id": "source:getcourse:demo",
+                    "platform": "getcourse",
+                    "source_ref": "https://school.example/course",
+                },
+                "pages": [
+                    {
+                        "kind": "lesson",
+                        "page_id": "empty-caption",
+                        "url": "https://school.example/course/lesson",
+                        "html": """
+                        <main>
+                          <h1>Empty caption lesson</h1>
+                          <track kind="captions" src="https://school.example/captions/empty.vtt">
+                        </main>
+                        """,
+                    }
+                ],
+                "resources": [
+                    {
+                        "url": "https://school.example/captions/empty.vtt",
+                        "kind": "captions",
+                        "content_type": "text/vtt",
+                        "text": "WEBVTT\\n\\n00:00:01.000 --> 00:00:02.000\\n",
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    receipt = materialize_browser_snapshot(storage, raw_path, run_id="empty-caption")
+
+    assert receipt["caption_resource_count"] == 1
+    assert receipt["caption_resource_error_count"] == 1
+    assert receipt["caption_resource_parse_error_count"] == 1
+    assert receipt["caption_resource_error_reasons"] == ["caption resource parsed without transcript text"]
 
 
 def test_browser_snapshot_reads_aria_only_progressbar() -> None:

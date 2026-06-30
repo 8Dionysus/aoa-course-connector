@@ -240,6 +240,12 @@ The plan reports which source hosts match the saved storage state and emits the
 exact `sync browser-live`, `smoke browser-live`, and `calibration build`
 commands only for ready sources.
 
+Its `browser_auth_handoffs` section is the operator/agent checklist for
+blocked browser sources. It groups registered sources by host, shows the
+storage-state file to create or inspect, lists blocked hosts, and gives
+portable `auth plan-browser-state`, `auth capture-browser-state`,
+`auth inspect-browser-state`, and `preflight connected-plan` recheck commands.
+
 Then capture a visible page:
 
 ```bash
@@ -308,7 +314,10 @@ private HTML, cookie values, or tokens.
 For registered browser sources, preflight checks the saved storage state against
 each source host before marking `browser_live_sync` ready. A state file captured
 for `a.example` does not make a registered `b.example` source ready; capture or
-select auth state for the matching host first.
+select auth state for the matching host first. When several registered sources
+share one host, `browser_auth_handoffs[].host_readiness` collapses their
+blockers into one host-level item instead of repeating the same missing-state
+message per source.
 
 Catalog discovery also rejects pagination links before applying a custom
 `link_pattern`, so broad patterns cannot accidentally register "next page"

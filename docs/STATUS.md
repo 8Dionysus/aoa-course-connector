@@ -50,6 +50,9 @@ This proves:
   and local snapshot `resources[]` into canonical Transcript objects,
   `browser_caption_sidecar` source authority, smoke `transcript_count`, answer
   packets, and `browser-transcripts` eval coverage.
+- Browser-session materialization receipts count caption resources that parse
+  without transcript text as caption parse errors, so live calibration does not
+  mistake empty sidecar files for healthy transcript coverage.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
 - Browser catalog discovery rejects pagination links even when a broad
@@ -70,6 +73,10 @@ This proves:
   network or printing secrets. Stepik launch plans default to bounded live
   smoke/sync commands, with full-course/source-enrichment commands gated behind
   explicit options.
+- GetCourse and Skillspace connected plans now include browser auth handoff
+  packets that group registered sources by host, show state-file readiness, and
+  provide capture, redacted inspect, and recheck commands before live sync is
+  allowed.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.

@@ -37,6 +37,9 @@
   readiness into exact preflight-report, source sync, per-source smoke, and
   calibration packet commands before touching live sources, with bounded
   Stepik commands by default and explicit full-course escalation.
+- Prove browser auth handoff packets for GetCourse and Skillspace so blocked
+  source hosts turn into exact storage-state capture, redacted inspection, and
+  connected-plan recheck steps instead of vague missing-auth blockers.
 - Prove connector-local answer-quality evals that validate source identity,
   evidence fields, lesson path, snippets, freshness, and platform nuance beyond
   simple term presence.

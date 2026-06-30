@@ -230,6 +230,10 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert plan["tool"] == "connected_source_plan"
     assert plan["plan"]["ready"] is True
     assert any("smoke browser-live" in command for command in plan["plan"]["next_commands"])
+    handoff = plan["plan"]["browser_auth_handoffs"][0]
+    assert handoff["ready"] is True
+    assert handoff["source_hosts"] == ["school.example"]
+    assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered_plan
     assert "SUPER_SECRET_TOKEN" not in rendered_plan

@@ -95,6 +95,9 @@
   including WebVTT/SRT cue cleanup, live caption-resource collection guardrails,
   smoke `transcript_count`, and source-authority checks in
   `eval browser-transcripts`.
+- Hardened browser-session materialization receipts so caption sidecar
+  resources that parse without transcript text count as caption parse errors
+  instead of silently looking healthy.
 - Added transcript/caption health diagnostics to live calibration packets,
   including transcript source-authority counts, caption sidecar totals, browser
   reports with transcripts, and caption-resource error failures.
@@ -105,6 +108,9 @@
 - Hardened connected-source launch plans so Stepik live commands default to a
   bounded smoke/sync scope, with `full-course` and step-source enrichment only
   emitted after an explicit operator/agent option.
+- Added browser auth handoff packets to connected-source plans so GetCourse and
+  Skillspace sources are grouped by host with state-file readiness, auth
+  capture, redacted inspect, and connected-plan recheck commands.
 - Verified the bounded public Stepik live calibration route through preflight,
   live smoke, answer evidence, timestamp checks, and live calibration packet
   privacy guards.
