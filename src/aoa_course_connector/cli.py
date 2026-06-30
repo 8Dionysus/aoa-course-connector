@@ -14,6 +14,8 @@ from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
     discover_browser_live as discover_browser_live_route,
     discover_browser_snapshot as discover_browser_snapshot_route,
+    discover_stepik_account_fixture as discover_stepik_account_fixture_route,
+    discover_stepik_account_live as discover_stepik_account_live_route,
 )
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
@@ -123,6 +125,17 @@ def build_parser() -> argparse.ArgumentParser:
     discover_stepik.add_argument("--title")
     discover_stepik.add_argument("--access-mode", choices=["public_api", "api_token", "oauth"], default="public_api")
     discover_stepik.set_defaults(func=cmd_discover_stepik)
+    discover_stepik_account = discover_sub.add_parser("stepik-account")
+    discover_stepik_account.add_argument("--from-fixture", action="store_true")
+    discover_stepik_account.add_argument("--fixture", type=Path)
+    discover_stepik_account.add_argument("--register", action="store_true")
+    discover_stepik_account.add_argument("--run", default="stepik-account-discovery")
+    discover_stepik_account.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    discover_stepik_account.add_argument("--max-pages", type=int, default=5)
+    discover_stepik_account.add_argument("--batch-size", type=int, default=20)
+    discover_stepik_account.add_argument("--source-limit", type=int)
+    discover_stepik_account.add_argument("--access-mode", choices=["api_token", "oauth"], default="api_token")
+    discover_stepik_account.set_defaults(func=cmd_discover_stepik_account)
     discover_browser = discover_sub.add_parser("browser-fixture")
     discover_browser.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
     discover_browser.add_argument("--run")
@@ -615,6 +628,43 @@ def cmd_discover_stepik(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def cmd_discover_stepik_account(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    try:
+        if args.from_fixture:
+            receipt = discover_stepik_account_fixture_route(
+                roots,
+                run_id=args.run,
+                fixture=args.fixture,
+                register=args.register,
+                access_mode=args.access_mode,
+                source_limit=args.source_limit,
+            )
+        else:
+            receipt = discover_stepik_account_live_route(
+                roots,
+                run_id=args.run,
+                token_env=args.token_env,
+                max_pages=args.max_pages,
+                batch_size=args.batch_size,
+                register=args.register,
+                access_mode=args.access_mode,
+                source_limit=args.source_limit,
+            )
+    except Exception as exc:
+        _emit({
+            "schema": "aoa_course_stepik_account_discovery_receipt_v1",
+            "status": "error",
+            "run_id": args.run,
+            "source_mode": "stepik_account_fixture" if args.from_fixture else "stepik_account_live",
+            "error": str(exc),
+            "network_touched": False if args.from_fixture or str(exc).startswith("Stepik account discovery requires token env") else True,
+        })
+        return 2
+    _emit(receipt)
+    return 0 if receipt.get("status") == "ok" else 1
 
 
 def cmd_discover_browser_fixture(args: argparse.Namespace) -> int:

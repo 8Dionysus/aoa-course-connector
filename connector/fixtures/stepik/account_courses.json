@@ -1,0 +1,52 @@
+{
+  "schema": "aoa_course_stepik_account_discovery_v1",
+  "fetched_at": "2026-06-29T12:35:00Z",
+  "account": {
+    "user_id": 501,
+    "profile": {
+      "id": 501,
+      "full_name": "Fixture Learner"
+    }
+  },
+  "courses": [
+    {
+      "course_id": 67,
+      "source_ref": "67",
+      "title": "Stepik API Fixture",
+      "canonical_url": "https://stepik.org/course/67",
+      "update_date": "2025-05-16T11:06:56Z",
+      "enrollment": {
+        "id": 7001,
+        "user": 501,
+        "course": 67,
+        "is_active": true,
+        "is_deleted": false
+      }
+    },
+    {
+      "course_id": 100,
+      "source_ref": "100",
+      "title": "Stepik Connected Account Fixture",
+      "canonical_url": "https://stepik.org/course/100",
+      "update_date": "2025-05-20T09:00:00Z",
+      "enrollment": {
+        "id": 7002,
+        "user": 501,
+        "course": 100,
+        "is_active": true,
+        "is_deleted": false
+      }
+    }
+  ],
+  "enrollment_count": 2,
+  "limits": {
+    "max_pages": 1,
+    "batch_size": 20
+  },
+  "diagnostics": {
+    "enrollment_error": "",
+    "side_loaded_page_count": 0,
+    "side_loaded_pages": []
+  },
+  "network_touched": false
+}

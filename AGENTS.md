@@ -40,6 +40,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock roll
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live --help
+PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik 67 --register --title "Stepik course 67"
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run stepik-sync-fixture --build-artifacts
 PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-fixture --platform stepik

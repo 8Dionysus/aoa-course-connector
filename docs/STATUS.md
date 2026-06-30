@@ -26,7 +26,8 @@ This proves:
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,
-  optional authenticated step-source enrichment, and client pagination helpers.
+  optional authenticated step-source enrichment, account-level source discovery,
+  and client pagination helpers.
 - GetCourse and Skillspace browser-session snapshot adapters through fixtures
   and optional Playwright live capture route.
 - GetCourse and Skillspace account-level browser discovery into the local source
@@ -67,7 +68,7 @@ The next layer is live connected-source work:
 - gated live full-course Stepik runs against operator-selected authenticated
   courses to calibrate real course size, permissions, and source enrichment;
 - broader Stepik live smoke calibration against operator-selected authenticated
-  courses and full-course source-registry runs;
+  courses, account discovery output, and full-course source-registry runs;
 - external embedding provider integration behind the existing semantic index
   contract;
 - richer live smoke routes gated away from CI secrets.

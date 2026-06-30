@@ -70,6 +70,7 @@ enrichment when the connected account is allowed to read it.
 Stepik also participates in the source registry and sync checkpoint route:
 
 ```bash
+PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik 67 --register --title "Stepik course 67"
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run stepik-sync-fixture --build-artifacts
 PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-fixture --platform stepik
@@ -79,6 +80,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
 For live source-registry sync, register the course once and run:
 
 ```bash
+export STEPIK_API_TOKEN=...
+PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --run stepik-account-discovery-live --token-env STEPIK_API_TOKEN --register --max-pages 5
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --full-course --batch-size 20 --include-step-sources --build-artifacts
 ```
 

@@ -26,6 +26,8 @@
   authenticated step-source enrichment.
 - Prove Stepik source-registry driven sync checkpoints with optional
   index/graph builds, MCP status, and eval coverage.
+- Prove Stepik account-level discovery into the source registry through a safe
+  fixture and optional authenticated live route.
 - Prove Stepik fixture/live smoke reports that combine registration, sync,
   artifacts, answer evidence, and privacy-safe local raw API path reporting.
 - Prove a deterministic semantic/vector index baseline behind the stable keyword
@@ -42,8 +44,8 @@
 - Run gated live full-course Stepik sync on an operator-selected authenticated
   course and calibrate permission/source-enrichment behavior.
 - Broaden Stepik live smoke calibration beyond public bounded course checks.
-- Expand Stepik from registered course-id sync into account-level discovery
-  where official account scopes expose enough course catalog data.
+- Calibrate Stepik account-level discovery against operator-selected
+  authenticated accounts where official scopes expose enough catalog data.
 - Add optional external embedding providers behind the stable semantic index
   contract.
 

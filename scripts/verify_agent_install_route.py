@@ -36,6 +36,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "bootloader rollback", "--run", "starter-fixture", "--mode", "hybrid"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-fixture", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-live", "--help"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "discover", "stepik-account", "--from-fixture", "--run", "stepik-account-discovery-fixture", "--register", "--source-limit", "1"],
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "stepik", "67", "--register", "--title", "Stepik course 67"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "stepik-fixture", "--run", "stepik-sync-fixture", "--build-artifacts"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "status", "--run", "stepik-sync-fixture", "--platform", "stepik"],
