@@ -50,6 +50,9 @@ aoa-course query "rollback" --run starter-fixture
 aoa-course query "rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
+aoa-course refresh query "bootloader rollback" --run starter-fixture --mode hybrid
+aoa-course refresh query "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid --strategy fixture --execute --sync-run stepik-refresh-cycle
+aoa-course refresh query "course-specific question" --run "<checkpoint-run-id>" --strategy live --execute --allow-network --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course graph neighbors lesson:starter:unlock-risk --run starter-fixture
 aoa-course evidence inspect "rollback" --run starter-fixture --mode hybrid
 aoa-course eval answer-quality
@@ -69,6 +72,7 @@ aoa-course mcp tools
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
 aoa-course mcp call connected_source_plan '{"platforms":["getcourse","stepik"],"live_scope":"bounded","query":"course-specific question"}'
 ```

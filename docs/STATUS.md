@@ -34,6 +34,10 @@ This proves:
   and graphs for the current run, how to run a bounded connected-source
   preflight, and which registry-matched live sync route can refresh GetCourse,
   Skillspace, or Stepik sources without touching the network during planning;
+- `refresh query` now wraps those hints into `aoa_course_refresh_cycle_v1`:
+  a read-only plan by default, a fixture-executable sync/checkpoint/rebuild
+  loop for registered safe sources, and a live execution route gated behind
+  explicit `--allow-network`; MCP exposes the read-only `refresh_plan` tool;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,

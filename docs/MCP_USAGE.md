@@ -9,6 +9,7 @@ Initial tools:
 - `sync_status`
 - `live_preflight`
 - `connected_source_plan`
+- `refresh_plan`
 - `search`
 - `semantic_search`
 - `hybrid_search`
@@ -29,6 +30,7 @@ aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot",
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{"platforms":["getcourse","stepik"]}'
@@ -64,8 +66,9 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","method":"notifications/initialized"}' \
   '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' \
   '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"rollback","run":"starter-fixture"}}}' \
-  '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
-  '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"refresh_plan","arguments":{"query":"rollback","run":"starter-fixture","mode":"keyword"}}}' \
+  '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{"platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"platforms":["stepik"]}}}' \
   | aoa-course-connector-mcp
 ```
 
@@ -82,6 +85,14 @@ authority tier, rank score, and `refresh_hint`. The hint always gives local
 GetCourse, Skillspace, and Stepik it also points agents to
 `preflight connected-plan` first, and only exposes live sync commands when the
 result source matches the local source registry.
+
+`refresh_plan` is the read-only MCP handoff for the full refresh loop. It
+returns an `aoa_course_refresh_cycle_v1` packet with the current answer packet,
+selected source-backed result, planned local rebuild/source commands, refresh
+hint, optional connected-source plan, and `network_touched: false`. Network or
+filesystem-mutating refresh execution stays on the CLI side through
+`aoa-course refresh query --strategy fixture --execute` or the explicitly gated
+live form with `--strategy live --execute --allow-network`.
 
 `live_preflight` is read-only and returns `network_touched: false`. It lets an
 agent inspect Stepik token presence, browser storage-state readiness, registered

@@ -16,6 +16,7 @@ from typing import Any, TextIO
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight
+from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.sync import load_sync_status
 
@@ -79,6 +80,19 @@ def _connected_source_plan_schema() -> dict[str, object]:
     )
 
 
+def _refresh_plan_schema() -> dict[str, object]:
+    properties = {
+        "query": _string_schema("Search query to refresh from evidence."),
+        "run": _string_schema("Connector run id."),
+        "limit": _integer_schema("Maximum result count.", 1),
+        "mode": {"type": "string", "enum": ["keyword", "semantic", "hybrid"], "description": "Query mode."},
+        "source_id": _string_schema("Optional source id to select from the answer packet."),
+        "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
+        "state_file": _string_schema("Optional browser storage-state file for readiness planning."),
+    }
+    return _object_schema(properties, required=["query"])
+
+
 def _object_schema(properties: dict[str, object], *, required: Iterable[str] = ()) -> dict[str, object]:
     return {"type": "object", "properties": properties, "required": list(required), "additionalProperties": False}
 
@@ -97,6 +111,7 @@ TOOLS = [
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
     {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
+    {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
     {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined.", "inputSchema": _query_schema()},
@@ -126,6 +141,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_live_preflight(roots, args)}
     if name == "connected_source_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "plan": _call_connected_source_plan(roots, args)}
+    if name == "refresh_plan":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "refresh": _call_refresh_plan(roots, args)}
     if name == "search":
         return {
             "schema": "aoa_course_mcp_result_v1",
@@ -231,6 +248,24 @@ def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) ->
         calibration_run=str(args.get("calibration_run") or "connected-live-calibration"),
         live_scope=str(args.get("live_scope") or "bounded"),
         include_step_sources=bool(args.get("include_step_sources", False)),
+    )
+
+
+def _call_refresh_plan(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    state_file = args.get("state_file")
+    if state_file is not None and not isinstance(state_file, str):
+        raise ValueError("refresh_plan state_file must be a string")
+    return refresh_query_cycle(
+        roots,
+        str(args.get("query") or ""),
+        run_id=str(args.get("run") or "starter-fixture"),
+        limit=int(args.get("limit") or 5),
+        mode=str(args.get("mode") or "keyword"),
+        strategy="plan",
+        execute=False,
+        source_id=str(args.get("source_id") or "") or None,
+        state_file=Path(state_file) if state_file else None,
+        stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
     )
 
 

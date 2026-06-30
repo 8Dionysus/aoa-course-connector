@@ -39,6 +39,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --help
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli refresh query "bootloader rollback" --run starter-fixture --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live --help
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
@@ -102,6 +103,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval browser-crawl
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-agent","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | PYTHONPATH=src python -m aoa_course_connector.mcp.server
 ```

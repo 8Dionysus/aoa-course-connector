@@ -34,6 +34,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "build-graph", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "bootloader unlock rollback", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "answer", "bootloader rollback", "--run", "starter-fixture", "--mode", "hybrid"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "refresh", "query", "bootloader rollback", "--run", "starter-fixture", "--mode", "hybrid"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-fixture", "--run", "stepik-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-live", "--help"],
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "stepik-account", "--from-fixture", "--run", "stepik-account-discovery-fixture", "--register", "--source-limit", "1"],
@@ -97,6 +98,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "graph_neighbors", '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "freshness_report", '{"run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "refresh_plan", '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'],
         ]
         if not args.skip_pytest:
             commands.insert(1, [sys.executable, "-m", "pytest", "-q"])

@@ -59,6 +59,15 @@ Answer packets summarize these per-result hints in `refresh_report` with
 unique source counts, registry-match counts, local rebuild commands, source
 commands, and `network_touched: false`.
 
+`aoa-course refresh query` wraps this into an `aoa_course_refresh_cycle_v1`
+packet. Without `--execute`, it is a read-only plan: current answer packet,
+selected source-backed result, planned rebuild/source commands, refresh hint,
+and optional connected-source plan. With `--strategy fixture --execute`, it
+proves the full loop against safe registered fixture sources: source sync,
+checkpoint selection, keyword/semantic/graph rebuild, refreshed answer packet,
+and a source-id comparison. Live execution is gated behind
+`--strategy live --execute --allow-network`.
+
 Authority tiers are deterministic local signals derived from normalized item
 shape and safe metadata: `official_lesson`, `official_assignment`,
 `instructor_comment`, `mentor_comment`, `learner_comment`, `transcript`,
@@ -99,6 +108,8 @@ aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --
 aoa-course query "bootloader rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course evidence inspect "bootloader rollback" --run starter-fixture --mode hybrid
+aoa-course refresh query "bootloader rollback" --run starter-fixture --mode hybrid
+aoa-course refresh query "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid --strategy fixture --execute --sync-run stepik-refresh-cycle
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 aoa-course build-index --run freshness-ranking-fixture
 aoa-course build-semantic-index --run freshness-ranking-fixture

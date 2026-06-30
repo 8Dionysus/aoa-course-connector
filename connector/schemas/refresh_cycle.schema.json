@@ -1,0 +1,25 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aoa_course_refresh_cycle.schema.json",
+  "title": "RefreshCycle",
+  "type": "object",
+  "required": ["schema", "query", "run_id", "strategy", "execute", "network_touched", "status"],
+  "properties": {
+    "schema": {"const": "aoa_course_refresh_cycle_v1"},
+    "query": {"type": "string"},
+    "run_id": {"type": "string"},
+    "mode": {"type": "string"},
+    "strategy": {"type": "string", "enum": ["plan", "fixture", "live"]},
+    "execute": {"type": "boolean"},
+    "network_touched": {"type": "boolean"},
+    "status": {"type": "string"},
+    "selected_result": {"type": ["object", "null"]},
+    "refresh_hint": {"type": "object"},
+    "planned_commands": {"type": "object"},
+    "connected_plan": {"type": ["object", "null"]},
+    "sync_receipt": {"type": "object"},
+    "refreshed_run_id": {"type": "string"},
+    "refreshed_answer_packet": {"type": "object"},
+    "comparison": {"type": "object"}
+  }
+}

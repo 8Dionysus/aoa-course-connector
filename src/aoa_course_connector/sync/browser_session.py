@@ -25,13 +25,14 @@ def sync_browser_fixture_sources(
     *,
     sync_run_id: str = "browser-sync-fixture",
     platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
     max_lessons: int = 20,
     link_pattern: str | None = None,
     source_limit: int | None = None,
     build_artifacts: bool = False,
 ) -> dict[str, object]:
     create_storage_roots(roots)
-    sources = _selected_sources(roots, platforms=platforms, source_limit=source_limit)
+    sources = _selected_sources(roots, platforms=platforms, source_ids=source_ids, source_limit=source_limit)
     receipt = _base_receipt(sync_run_id, "browser_fixture_sync", sources, network_touched=False)
     for source in sources:
         child_run = _child_run_id(sync_run_id, source)
@@ -57,6 +58,7 @@ def sync_browser_live_sources(
     *,
     sync_run_id: str = "browser-live-sync",
     platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
     state_file: Path | None = None,
     wait_until: str = "networkidle",
     max_lessons: int = 20,
@@ -65,7 +67,7 @@ def sync_browser_live_sources(
     build_artifacts: bool = False,
 ) -> dict[str, object]:
     create_storage_roots(roots)
-    sources = _selected_sources(roots, platforms=platforms, source_limit=source_limit)
+    sources = _selected_sources(roots, platforms=platforms, source_ids=source_ids, source_limit=source_limit)
     receipt = _base_receipt(sync_run_id, "browser_live_sync", sources, network_touched=True)
     for source in sources:
         child_run = _child_run_id(sync_run_id, source)
@@ -89,9 +91,10 @@ def sync_browser_live_sources(
     return _finish_receipt(roots, receipt)
 
 
-def _selected_sources(roots: StorageRoots, *, platforms: list[str] | None, source_limit: int | None) -> list[dict[str, Any]]:
+def _selected_sources(roots: StorageRoots, *, platforms: list[str] | None, source_ids: list[str] | None, source_limit: int | None) -> list[dict[str, Any]]:
     registry = load_registry(roots.data)
     wanted = set(platforms or ["getcourse", "skillspace"])
+    wanted_ids = {str(source_id) for source_id in source_ids or []}
     sources = [
         source
         for source in registry.get("sources", [])
@@ -99,6 +102,7 @@ def _selected_sources(roots: StorageRoots, *, platforms: list[str] | None, sourc
         and source.get("enabled", True)
         and source.get("platform") in wanted
         and source.get("access_mode") == "browser_session"
+        and (not wanted_ids or str(source.get("source_id") or "") in wanted_ids)
     ]
     sources = sorted(sources, key=lambda item: str(item.get("source_id") or item.get("source_ref") or ""))
     return sources[:source_limit] if source_limit is not None else sources
