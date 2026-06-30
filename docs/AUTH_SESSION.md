@@ -12,3 +12,36 @@ Browser-session adapters follow this route:
 
 The public repository must not contain browser state, cookies, tokens, phone
 numbers, paid/private pages, or course exports.
+
+## Browser State Onboarding
+
+Plan the local state path first:
+
+```bash
+aoa-course auth plan-browser-state getcourse "https://school.example"
+```
+
+Then install the optional browser extra and capture a Playwright storage-state
+file from the operator's own logged-in session:
+
+```bash
+python -m pip install -e ".[browser]"
+
+aoa-course auth capture-browser-state getcourse "https://school.example" \
+  --login-url "https://school.example/cms/system/login" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+```
+
+The command opens a local browser window. Log in normally, then press Enter in
+the terminal so the connector can save storage state under `AOA_COURSE_AUTH_ROOT`.
+For automation or already-authenticated browser contexts, use `--no-prompt`.
+
+Inspect the state before using it for live discovery or sync:
+
+```bash
+aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
+```
+
+Inspection reports only counts, timestamps, and match status. It does not print
+cookie values, localStorage values, or tokens.

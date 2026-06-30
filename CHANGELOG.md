@@ -43,3 +43,5 @@
   tools, and semantic index eval coverage.
 - Hardened smoke/sync guardrails so catalog-only browser smoke queries report a
   partial blocked answer and Stepik fixture sync refuses non-fixture course IDs.
+- Added browser-session auth-state onboarding commands for Playwright state
+  capture and redacted state inspection before live GetCourse/Skillspace sync.

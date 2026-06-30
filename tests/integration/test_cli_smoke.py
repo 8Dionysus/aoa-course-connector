@@ -32,6 +32,27 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert tools["server"] == "aoa-course-connector-mcp"
 
 
+def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
+    plan = run_cli(tmp_path, "auth", "plan-browser-state", "getcourse", "https://school.example")
+    assert "capture-browser-state" in plan["capture_command"]
+    state_file = Path(str(plan["state_file"]))
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.example", "path": "/"}],
+            "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "secret"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    status = run_cli(tmp_path, "auth", "inspect-browser-state", str(state_file), "--expect-origin-contains", "school.example")
+
+    assert status["status"] == "ok"
+    assert status["usable"] is True
+    assert status["cookie_count"] == 1
+    assert status["local_storage_entry_count"] == 1
+
+
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:
     run_cli(tmp_path, "materialize", "stepik-fixture", "--run", "stepik-fixture")
     run_cli(tmp_path, "build-index", "--run", "stepik-fixture")
