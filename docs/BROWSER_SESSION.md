@@ -2,7 +2,7 @@
 
 GetCourse and Skillspace are hard browser-session adapters.
 
-The connector supports five browser-session routes:
+The connector supports six browser-session routes:
 
 1. `browser-fixture`: safe synthetic snapshots used by CI.
 2. `browser-snapshot`: operator-provided JSON snapshot captured outside Git.
@@ -12,6 +12,8 @@ The connector supports five browser-session routes:
    pages.
 5. `discover`: account/catalog discovery that finds visible course entrypoints
    and can register them as local sources.
+6. `sync`: source-registry driven refresh that writes checkpoints and optional
+   index/graph artifacts.
 
 ## Fixture Proof
 
@@ -43,6 +45,21 @@ aoa-course eval browser-discovery
 `--register` writes discovered course entrypoints into the local source registry
 under `AOA_COURSE_DATA_ROOT`. Without `--register`, discovery is read-only and
 emits a receipt only.
+
+## Source Sync Proof
+
+After discovery has registered sources, run a source-driven sync:
+
+```bash
+aoa-course sync browser-fixture --run browser-sync-fixture --build-artifacts
+aoa-course sync status --run browser-sync-fixture
+aoa-course eval browser-sync
+aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
+```
+
+The sync route creates child runs for enabled `browser_session` sources, writes
+`SyncCheckpoint` records under `AOA_COURSE_DATA_ROOT`, and can build keyword
+indexes and graphs for each child run with `--build-artifacts`.
 
 ## Course-Tree Crawl Proof
 
@@ -125,3 +142,16 @@ aoa-course discover browser-live "https://school.example/teach/control/stream" \
 `--max-lessons` bounds the live traversal. `--link-pattern` can narrow discovery
 when a platform or school theme emits noisy navigation links.
 `--max-sources` bounds account-level source discovery.
+
+To sync all registered live browser sources:
+
+```bash
+aoa-course sync browser-live \
+  --run browser-live-sync \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --max-lessons 50 \
+  --build-artifacts
+```
+
+Use `--platform` more than once to narrow the source set. Use `sync status` to
+inspect checkpoints before choosing which child run to query.

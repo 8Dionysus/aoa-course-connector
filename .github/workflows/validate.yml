@@ -33,6 +33,10 @@ jobs:
       - run: aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
       - run: aoa-course sources list
       - run: aoa-course eval browser-discovery
+      - run: aoa-course sync browser-fixture --run browser-sync-fixture --build-artifacts
+      - run: aoa-course sync status --run browser-sync-fixture
+      - run: aoa-course eval browser-sync
+      - run: aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
       - run: aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
       - run: aoa-course build-index --run getcourse-browser-fixture
       - run: aoa-course build-graph --run getcourse-browser-fixture

@@ -22,6 +22,8 @@ discovery, snapshot, and course-tree crawl adapters:
 ```bash
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course sources list
+aoa-course sync browser-fixture --run browser-sync-fixture --platform getcourse --build-artifacts
+aoa-course sync status --run browser-sync-fixture --platform getcourse
 
 aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
 aoa-course build-index --run getcourse-browser-fixture
@@ -52,4 +54,11 @@ aoa-course crawl browser-live "https://school.example/teach/control/stream" \
   --run getcourse-live-crawl \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --max-lessons 50
+
+aoa-course sync browser-live \
+  --run getcourse-live-sync \
+  --platform getcourse \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --max-lessons 50 \
+  --build-artifacts
 ```

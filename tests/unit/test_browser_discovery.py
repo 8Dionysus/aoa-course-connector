@@ -44,6 +44,24 @@ def test_catalog_link_pattern_rejects_nonmatching_course_hints() -> None:
     assert [link["href"] for link in links] == ["https://academy.example/course/allowed"]
 
 
+def test_skillspace_catalog_allows_course_slugs_with_non_course_words() -> None:
+    html = """
+    <main>
+      <a href="/course/lesson-planning">Lesson planning course</a>
+      <a href="/lesson/intro">Intro lesson</a>
+      <a href="/course/task-design">Task design course</a>
+      <a href="/task/123">Task page</a>
+    </main>
+    """
+
+    links = discover_course_links(html, "https://academy.example/", platform="skillspace", max_sources=10)
+
+    assert [link["href"] for link in links] == [
+        "https://academy.example/course/lesson-planning",
+        "https://academy.example/course/task-design",
+    ]
+
+
 def test_skillspace_catalog_discovery_registers_sources(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     receipt = discover_browser_fixture(storage, "skillspace", run_id="skillspace-browser-discovery-fixture", register=True)

@@ -12,11 +12,13 @@ import sys
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_keyword_index, render_answer_packet
 from aoa_course_connector.sources import load_registry
+from aoa_course_connector.sync import load_sync_status
 
 
 TOOLS = [
     {"name": "list_sources", "description": "List configured course sources."},
     {"name": "ingest_status", "description": "Inspect local ingest run status."},
+    {"name": "sync_status", "description": "Inspect source sync checkpoints."},
     {"name": "search", "description": "Search indexed course knowledge."},
     {"name": "lesson_context", "description": "Return source-backed lesson context for a query."},
     {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods."},
@@ -36,6 +38,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "registry": load_registry(roots.data)}
     if name == "ingest_status":
         return _ingest_status(roots, run_id)
+    if name == "sync_status":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sync": load_sync_status(roots, sync_run_id=str(args.get("sync_run") or ""), platform=str(args.get("platform") or ""))}
     if name == "search":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "results": query_keyword_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5))}
     if name == "lesson_context":

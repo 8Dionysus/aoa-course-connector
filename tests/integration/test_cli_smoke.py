@@ -92,3 +92,26 @@ def test_cli_browser_account_discovery_registers_sources(tmp_path: Path) -> None
     assert len(registry["sources"]) == 4
     eval_result = run_cli(tmp_path, "eval", "browser-discovery")
     assert eval_result["status"] == "ok"
+
+
+def test_cli_browser_source_sync_checkpoint_flow(tmp_path: Path) -> None:
+    for platform in ["getcourse", "skillspace"]:
+        run_cli(
+            tmp_path,
+            "discover",
+            "browser-fixture",
+            "--platform",
+            platform,
+            "--run",
+            f"{platform}-browser-discovery-fixture",
+            "--register",
+        )
+    receipt = run_cli(tmp_path, "sync", "browser-fixture", "--run", "browser-sync-fixture", "--build-artifacts")
+    assert receipt["status"] == "ok"
+    assert receipt["synced_count"] == 4
+    status = run_cli(tmp_path, "sync", "status", "--run", "browser-sync-fixture")
+    assert status["ok_count"] == 4
+    eval_result = run_cli(tmp_path, "eval", "browser-sync")
+    assert eval_result["status"] == "ok"
+    mcp_status = run_cli(tmp_path, "mcp", "call", "sync_status", '{"sync_run":"browser-sync-fixture"}')
+    assert mcp_status["result"]["sync"]["ok_count"] == 4

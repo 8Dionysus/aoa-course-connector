@@ -11,6 +11,10 @@
   fixture materialization and optional Playwright live capture.
 - Added GetCourse/Skillspace browser-session account discovery into the local
   source registry with fixture, snapshot, live Playwright CLI routes, and evals.
+- Added source-registry driven browser sync with `SyncCheckpoint` records,
+  `sync status`, MCP `sync_status`, and optional per-source index/graph builds.
+- Hardened browser catalog discovery so course slugs containing words like
+  `lesson` or `task` are not rejected as non-course pages.
 - Added bounded GetCourse/Skillspace course-tree crawl routes with fixture,
   snapshot, live Playwright CLI commands, CI smoke checks, and answer evals.
 - Hardened browser asset metadata extraction for unannotated file links and

@@ -54,12 +54,15 @@ uses safe synthetic snapshots; live operator-owned pages can be captured with
 the optional Playwright browser extra. The `discover` route finds visible course
 entrypoints and can register them as local sources. The `crawl` route starts
 from a course index and expands visible lesson links into a course-tree
-snapshot.
+snapshot. The `sync` route runs configured sources and records checkpoints.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
 PYTHONPATH=src python -m aoa_course_connector.cli sources list
+PYTHONPATH=src python -m aoa_course_connector.cli sync browser-fixture --run browser-sync-fixture --build-artifacts
+PYTHONPATH=src python -m aoa_course_connector.cli sync status --run browser-sync-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval browser-sync
 
 PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-fixture
@@ -86,8 +89,8 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "Skillspace logcat bugr
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Working browser-session discovery, snapshot, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Skillspace | Working browser-session discovery, snapshot, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| GetCourse | Working browser-session discovery, source sync checkpoints, snapshot, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| Skillspace | Working browser-session discovery, source sync checkpoints, snapshot, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Stepik | Working clean API reference adapter |
 | Moodle / Canvas | Future clean LMS adapters |
 | Teachable / Thinkific / Kajabi | Future platform adapters with API/browser-session split |
@@ -119,6 +122,7 @@ local artifacts used by the CLI:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 ```
 
 Runtime deployment in the full Abyss stack belongs in `abyss-stack`; this repo

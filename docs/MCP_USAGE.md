@@ -6,6 +6,7 @@ Initial tools:
 
 - `list_sources`
 - `ingest_status`
+- `sync_status`
 - `search`
 - `lesson_context`
 - `graph_neighbors`
@@ -16,4 +17,5 @@ CLI smoke:
 ```bash
 aoa-course mcp tools
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 ```

@@ -28,6 +28,9 @@ This proves:
 - GetCourse and Skillspace account-level browser discovery into the local source
   registry through fixtures, snapshot input, optional Playwright live discovery,
   and source-registry evals.
+- GetCourse and Skillspace source-registry driven browser sync with
+  `SyncCheckpoint` records, optional per-source index/graph builds, CLI status,
+  MCP status, and evals.
 - GetCourse and Skillspace bounded course-tree crawlers through fixtures,
   snapshot input, optional Playwright live traversal, and answer evals.
 
@@ -35,9 +38,9 @@ This proves:
 
 The next layer is live connected-source work:
 
-- GetCourse pagination, progress, checkpoints, and visible comment extraction
+- GetCourse pagination, progress, and visible comment extraction
   beyond bounded account catalog and course-index crawl;
-- Skillspace pagination, progress, checkpoints, and visible comment extraction
+- Skillspace pagination, progress, and visible comment extraction
   beyond bounded account catalog and course-index crawl;
 - broader Stepik sync coverage beyond bounded smoke slices;
 - richer live smoke routes gated away from CI secrets.
