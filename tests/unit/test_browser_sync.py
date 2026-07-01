@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 import aoa_course_connector.refresh as refresh_module
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.discover import discover_browser_fixture
@@ -10,7 +12,7 @@ from aoa_course_connector.index import build_semantic_index
 from aoa_course_connector.query import render_answer_packet
 from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.sync import load_sync_status, sync_browser_fixture_sources
-from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
+from aoa_course_connector.sync.checkpoints import checkpoint_store_path, make_checkpoint, upsert_checkpoint
 
 
 def roots(tmp_path: Path) -> StorageRoots:
@@ -59,6 +61,22 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     ]
     assert "semantic index" in hint["source_refresh"]["post_sync_guidance"]
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
+
+
+def test_browser_fixture_sync_rejects_invalid_sync_run_id_before_checkpoint_write(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "getcourse", "https://school.example", "School")
+
+    with pytest.raises(ValueError, match="sync_run_id must be a portable runtime id"):
+        sync_browser_fixture_sources(
+            storage,
+            sync_run_id="../bad-sync",
+            platforms=["getcourse"],
+            source_ids=[str(source["source_id"])],
+        )
+
+    assert not checkpoint_store_path(storage).exists()
+    assert not (storage.data / "sync").exists()
 
 
 def test_refresh_live_cycle_uses_selected_source_readiness_and_default_browser_state(
