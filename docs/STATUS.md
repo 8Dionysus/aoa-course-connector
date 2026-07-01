@@ -126,7 +126,10 @@ This proves:
   and pagination counts, caption sidecar repair lanes, and no raw HTML or
   caption text in the report. MCP exposes the same read-only audit as
   `browser_snapshot_audit` so agents can diagnose runtime snapshots without
-  leaving the MCP surface.
+  leaving the MCP surface. Browser smoke reports now embed compact
+  `snapshot_audits[]` summaries for discovery/course raw snapshots, and live
+  calibration packets aggregate snapshot-audit counts, readiness, failures, and
+  repair lanes.
 - Browser-session auth-state onboarding through CLI planning, optional
   Playwright capture, expected-origin capture receipts, and redacted
   storage-state inspection. `auth plan-browser-state` and connected-source

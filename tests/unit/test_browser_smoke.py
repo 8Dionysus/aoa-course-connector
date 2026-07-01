@@ -28,6 +28,11 @@ def test_browser_fixture_smoke_builds_artifacts_and_answer(tmp_path: Path) -> No
     assert report["course"]["lesson_count"] >= 2
     assert report["course"]["progress_detected_count"] == 1
     assert report["course"]["comment_count"] >= 1
+    assert len(report["snapshot_audits"]) == 2
+    assert {audit["status"] for audit in report["snapshot_audits"]} == {"ok"}
+    assert any(audit["readiness"]["ready_for_discovery"] for audit in report["snapshot_audits"])
+    assert any(audit["readiness"]["ready_for_materialize"] for audit in report["snapshot_audits"])
+    assert report["snapshot_audits"][0]["privacy"]["raw_html_included"] is False
     assert report["artifacts"]["enabled"] is True
     assert report["artifacts"]["answer"]["result_count"] >= 1
     assert report["artifacts"]["answer"]["quality"]["ready"] is True
@@ -52,6 +57,9 @@ def test_browser_snapshot_smoke_accepts_catalog_and_course_snapshots(tmp_path: P
     assert report["source_mode"] == "browser_snapshot_smoke"
     assert report["discovery"]["course_count"] == 3
     assert report["course"]["comment_count"] >= 1
+    assert len(report["snapshot_audits"]) == 2
+    assert report["snapshot_audits"][0]["source_schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert report["snapshot_audits"][1]["readiness"]["ready_for_materialize"] is True
     assert report["artifacts"]["answer"]["evidence_count"] >= 1
     assert report["artifacts"]["answer"]["quality"]["ready"] is True
 
@@ -67,6 +75,9 @@ def test_browser_snapshot_smoke_flags_catalog_only_query_without_course_material
     )
 
     assert report["status"] == "partial"
+    assert len(report["snapshot_audits"]) == 1
+    assert report["snapshot_audits"][0]["readiness"]["ready_for_discovery"] is True
+    assert report["snapshot_audits"][0]["readiness"]["ready_for_materialize"] is False
     assert report["course"] == {"enabled": False}
     assert report["artifacts"]["status"] == "not_run_no_course_materialized"
     assert report["artifacts"]["answer"]["status"] == "blocked_no_course_materialized"

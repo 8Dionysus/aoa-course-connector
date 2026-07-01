@@ -105,8 +105,11 @@ def build_live_calibration_packet(
     transcript_count_total = sum(int(summary.get("transcript_count") or 0) for summary in smoke_summaries)
     caption_sidecar_count_total = sum(int(summary.get("caption_sidecar_count") or 0) for summary in smoke_summaries)
     caption_resource_error_count_total = sum(int(summary.get("caption_resource_error_count") or 0) for summary in smoke_summaries)
+    snapshot_audit_count_total = sum(int(summary.get("snapshot_audit_count") or 0) for summary in smoke_summaries)
+    snapshot_audit_failure_count_total = sum(int(summary.get("snapshot_audit_failure_count") or 0) for summary in smoke_summaries)
     transcript_source_authority_counts = _sum_count_maps(summary.get("transcript_source_authority_counts") for summary in smoke_summaries)
     answered_summaries = [summary for summary in smoke_summaries if summary.get("answer_enabled")]
+    browser_summaries = [summary for summary in smoke_summaries if _is_browser_smoke(summary)]
     network_touched = any(bool(summary.get("network_touched")) for summary in smoke_summaries)
     return {
         "schema": "aoa_course_live_calibration_packet_v1",
@@ -126,14 +129,19 @@ def build_live_calibration_packet(
             "transcript_count_total": transcript_count_total,
             "caption_sidecar_count_total": caption_sidecar_count_total,
             "caption_resource_error_count_total": caption_resource_error_count_total,
+            "snapshot_audit_count_total": snapshot_audit_count_total,
+            "snapshot_audit_failure_count_total": snapshot_audit_failure_count_total,
             "transcript_source_authority_counts": transcript_source_authority_counts,
             "answer_quality_ready_report_count": sum(1 for summary in answered_summaries if summary.get("answer_quality_ready")),
             "all_answered_reports_have_proof_fields": all(bool(summary.get("answer_quality_ready")) for summary in answered_summaries),
             "answer_expected_platform_match_count_total": sum(int(summary.get("answer_expected_platform_match_count") or 0) for summary in smoke_summaries),
             "answer_provenance_complete_count_total": sum(int(summary.get("answer_provenance_complete_count") or 0) for summary in smoke_summaries),
             "answer_refresh_hint_count_total": sum(int(summary.get("answer_refresh_hint_count") or 0) for summary in smoke_summaries),
-            "browser_report_count": sum(1 for summary in smoke_summaries if _is_browser_smoke(summary)),
-            "browser_reports_with_transcripts": sum(1 for summary in smoke_summaries if _is_browser_smoke(summary) and int(summary.get("transcript_count") or 0) > 0),
+            "browser_report_count": len(browser_summaries),
+            "browser_reports_with_transcripts": sum(1 for summary in browser_summaries if int(summary.get("transcript_count") or 0) > 0),
+            "browser_reports_with_snapshot_audit": sum(1 for summary in browser_summaries if int(summary.get("snapshot_audit_count") or 0) > 0),
+            "all_browser_reports_have_snapshot_audit": all(int(summary.get("snapshot_audit_count") or 0) > 0 for summary in browser_summaries) if browser_summaries else True,
+            "all_snapshot_audits_ok": snapshot_audit_failure_count_total == 0,
             "all_answered_reports_have_evidence": all(
                 not summary.get("answer_enabled") or int(summary.get("answer_evidence_count") or 0) > 0
                 for summary in smoke_summaries
@@ -199,6 +207,10 @@ def build_live_calibration_intake(*, packet: dict[str, object], run_id: str) -> 
             "answer_expected_platform_match_count_total": quality.get("answer_expected_platform_match_count_total"),
             "answer_provenance_complete_count_total": quality.get("answer_provenance_complete_count_total"),
             "answer_refresh_hint_count_total": quality.get("answer_refresh_hint_count_total"),
+            "snapshot_audit_count_total": quality.get("snapshot_audit_count_total"),
+            "snapshot_audit_failure_count_total": quality.get("snapshot_audit_failure_count_total"),
+            "all_browser_reports_have_snapshot_audit": quality.get("all_browser_reports_have_snapshot_audit"),
+            "all_snapshot_audits_ok": quality.get("all_snapshot_audits_ok"),
         },
         "privacy": {
             "contains_raw_payloads": bool(privacy.get("contains_raw_payloads")),
@@ -236,6 +248,7 @@ def _smoke_summary(report: dict[str, object]) -> dict[str, object]:
     discovery = report.get("discovery") if isinstance(report.get("discovery"), dict) else {}
     sync = report.get("sync") if isinstance(report.get("sync"), dict) else {}
     privacy = report.get("privacy") if isinstance(report.get("privacy"), dict) else {}
+    snapshot_audits = report.get("snapshot_audits") if isinstance(report.get("snapshot_audits"), list) else []
     return {
         "schema": report.get("schema"),
         "status": report.get("status"),
@@ -267,6 +280,18 @@ def _smoke_summary(report: dict[str, object]) -> dict[str, object]:
         "caption_resource_count": int(course.get("caption_resource_count") or 0),
         "caption_resource_error_count": int(course.get("caption_resource_error_count") or 0),
         "caption_resource_error_reasons": [str(reason) for reason in course.get("caption_resource_error_reasons", [])] if isinstance(course.get("caption_resource_error_reasons"), list) else [],
+        "snapshot_audit_count": len(snapshot_audits),
+        "snapshot_audit_failure_count": _snapshot_audit_failure_count(snapshot_audits),
+        "snapshot_audit_repair_lane_count": _snapshot_audit_repair_lane_count(snapshot_audits),
+        "snapshot_audit_ready_for_discovery_count": _snapshot_audit_ready_count(snapshot_audits, "ready_for_discovery"),
+        "snapshot_audit_ready_for_materialize_count": _snapshot_audit_ready_count(snapshot_audits, "ready_for_materialize"),
+        "snapshot_audit_statuses": sorted(
+            {
+                str(audit.get("status") or "unknown")
+                for audit in snapshot_audits
+                if isinstance(audit, dict)
+            }
+        ),
         "transcript_source_authority_counts": {
             str(key): int(value)
             for key, value in course.get("transcript_source_authority_counts", {}).items()
@@ -327,6 +352,19 @@ def _smoke_failures(summary: dict[str, object]) -> list[dict[str, object]]:
                 "caption_resource_error_reasons": summary.get("caption_resource_error_reasons"),
             }
         )
+    if _is_browser_smoke(summary):
+        if int(summary.get("snapshot_audit_count") or 0) < 1:
+            failures.append({**context, "surface": "snapshot_audit", "reason": "browser smoke report has no snapshot audit"})
+        if int(summary.get("snapshot_audit_failure_count") or 0) > 0:
+            failures.append(
+                {
+                    **context,
+                    "surface": "snapshot_audit",
+                    "reason": "browser snapshot audit recorded failures",
+                    "snapshot_audit_failure_count": summary.get("snapshot_audit_failure_count"),
+                    "snapshot_audit_statuses": summary.get("snapshot_audit_statuses"),
+                }
+            )
     if not summary.get("raw_paths_are_local_runtime_state") or not summary.get("private_data_commit_guard"):
         failures.append({**context, "surface": "privacy", "reason": "private/raw data guard is missing"})
     return failures
@@ -361,6 +399,12 @@ def _intake_action(failure: dict[str, object]) -> dict[str, object]:
         title = "Repair caption/transcript collection for connected browser smoke"
         follow_up = "capture a minimal redacted fixture for the failing caption resource shape"
         eval_hint = "browser-transcripts fixture covering caption resource error reason"
+        severity = "high"
+    elif surface == "snapshot_audit":
+        lane = "browser_snapshot_diagnostics"
+        title = "Repair browser snapshot readiness or selector diagnostics"
+        follow_up = "run browser_snapshot_audit on the runtime snapshot and follow its repair lanes"
+        eval_hint = "browser snapshot audit fixture covering the failed readiness or sidecar shape"
         severity = "high"
     elif surface in {"course", "evidence"}:
         lane = "browser_or_api_structure_discovery"
@@ -440,6 +484,8 @@ def _intake_next_steps(actions: list[dict[str, object]]) -> list[str]:
         steps.append("do not share or promote this packet until privacy guard failures are removed")
     if any(action.get("lane") == "caption_or_transcript_collection" for action in actions):
         steps.append("add a redacted caption/transcript fixture before repairing browser transcript selectors")
+    if any(action.get("lane") == "browser_snapshot_diagnostics" for action in actions):
+        steps.append("inspect the browser snapshot audit repair lanes before changing selectors")
     if any(action.get("lane") == "retrieval_quality" for action in actions):
         steps.append("compare normalized bundle, keyword/semantic indexes, graph edges, and answer packet evidence")
     return steps
@@ -520,6 +566,38 @@ def _sum_count_maps(items: Any) -> dict[str, int]:
 
 def _is_browser_smoke(summary: dict[str, object]) -> bool:
     return str(summary.get("source_mode") or "").startswith("browser_")
+
+
+def _snapshot_audit_failure_count(snapshot_audits: list[object]) -> int:
+    total = 0
+    for audit in snapshot_audits:
+        if not isinstance(audit, dict):
+            continue
+        failure_count = int(audit.get("failure_count") or 0)
+        total += failure_count
+        if failure_count == 0 and audit.get("status") not in {"ok", None}:
+            total += 1
+    return total
+
+
+def _snapshot_audit_repair_lane_count(snapshot_audits: list[object]) -> int:
+    total = 0
+    for audit in snapshot_audits:
+        if not isinstance(audit, dict):
+            continue
+        total += int(audit.get("repair_lane_count") or 0)
+    return total
+
+
+def _snapshot_audit_ready_count(snapshot_audits: list[object], field: str) -> int:
+    total = 0
+    for audit in snapshot_audits:
+        if not isinstance(audit, dict):
+            continue
+        readiness = audit.get("readiness") if isinstance(audit.get("readiness"), dict) else {}
+        if readiness.get(field):
+            total += 1
+    return total
 
 
 def _now() -> str:

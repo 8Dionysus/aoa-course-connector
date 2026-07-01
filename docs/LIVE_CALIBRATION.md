@@ -177,6 +177,10 @@ The packet summarizes report health without embedding raw private payloads:
   visible transcript/caption text and caption sidecars.
 - `quality.browser_reports_with_transcripts` shows how many browser smoke
   reports produced at least one canonical transcript object.
+- `quality.snapshot_audit_count_total`,
+  `quality.browser_reports_with_snapshot_audit`, and
+  `quality.all_snapshot_audits_ok` show whether browser smoke reports carried
+  privacy-safe snapshot diagnostics for their raw catalog/course captures.
 - `quality.caption_resource_error_count_total` must stay `0`; any non-zero
   value means a visible caption sidecar was present but could not be collected
   or parsed cleanly.
@@ -191,8 +195,9 @@ The packet summarizes report health without embedding raw private payloads:
   stay false.
 
 If a smoke report has no lessons, no evidence, no answer chain, caption-resource
-errors, a missing privacy guard, or a secret-like marker, packet `status`
-becomes `partial` and the `failures` list tells the next agent what to repair.
+errors, snapshot-audit failures, a missing privacy guard, or a secret-like
+marker, packet `status` becomes `partial` and the `failures` list tells the
+next agent what to repair.
 Run `calibration intake` against such packets before selector or query repairs
 so the failure is routed to a concrete lane and fixture/eval follow-up.
 

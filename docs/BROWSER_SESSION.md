@@ -182,7 +182,10 @@ aoa-course smoke browser-live \
 Smoke reports include counts, including `transcript_count`, local artifact
 paths, answer/evidence health, and privacy reminders. They do not print raw
 private HTML or caption text; raw snapshots remain runtime state under
-`AOA_COURSE_DATA_ROOT`.
+`AOA_COURSE_DATA_ROOT`. Browser smoke reports also embed compact
+`snapshot_audits[]` summaries for the raw discovery/course snapshots, so live
+calibration can route selector, caption, comment, transcript, and pagination
+failures without reopening private HTML.
 
 Use `eval live-calibration` for fixture-safe packet proof, then use
 `calibration build` with saved `smoke browser-live` and `preflight live` JSON

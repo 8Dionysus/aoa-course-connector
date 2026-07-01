@@ -7,13 +7,16 @@
   "min_answer_evidence_count_total": 3,
   "min_transcript_count_total": 4,
   "min_caption_sidecar_count_total": 2,
+  "min_snapshot_audit_count_total": 4,
   "required_transcript_source_authorities": [
     "browser_caption_sidecar",
     "browser_visible_transcript"
   ],
   "required_quality_true_fields": [
     "all_answered_reports_have_evidence",
-    "all_answered_reports_have_timestamps"
+    "all_answered_reports_have_timestamps",
+    "all_browser_reports_have_snapshot_audit",
+    "all_snapshot_audits_ok"
   ],
   "required_privacy_false_fields": [
     "contains_raw_payloads",

@@ -53,10 +53,17 @@ def test_live_calibration_packet_summarizes_fixture_smoke_reports(tmp_path: Path
     assert packet["quality"]["transcript_count_total"] >= 4
     assert packet["quality"]["caption_sidecar_count_total"] >= 2
     assert packet["quality"]["caption_resource_error_count_total"] == 0
+    assert packet["quality"]["snapshot_audit_count_total"] >= 4
+    assert packet["quality"]["snapshot_audit_failure_count_total"] == 0
+    assert packet["quality"]["browser_reports_with_snapshot_audit"] == 2
+    assert packet["quality"]["all_browser_reports_have_snapshot_audit"] is True
+    assert packet["quality"]["all_snapshot_audits_ok"] is True
     assert packet["quality"]["transcript_source_authority_counts"]["browser_visible_transcript"] >= 2
     assert packet["quality"]["transcript_source_authority_counts"]["browser_caption_sidecar"] >= 2
     assert packet["smoke_reports"][0]["transcript_count"] >= 2
     assert packet["smoke_reports"][0]["caption_resource_error_count"] == 0
+    assert packet["smoke_reports"][0]["snapshot_audit_count"] == 2
+    assert packet["smoke_reports"][0]["snapshot_audit_ready_for_materialize_count"] >= 1
     assert packet["privacy"]["contains_raw_payloads"] is False
     assert packet["privacy"]["contains_secret_values"] is False
     assert saved["packet_path"] == str(packet_path)
@@ -131,6 +138,31 @@ def test_live_calibration_packet_surfaces_caption_resource_errors(tmp_path: Path
         and failure["caption_resource_error_count"] == 1
         for failure in packet["failures"]
     )
+
+
+def test_live_calibration_packet_surfaces_snapshot_audit_failures(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    report = smoke_browser_fixture(storage, platform="getcourse", run_id="getcourse-audit-failure-check")
+    report["snapshot_audits"][0]["status"] = "partial"
+    report["snapshot_audits"][0]["failure_count"] = 1
+    report["snapshot_audits"][0]["failures"] = [
+        {"surface": "caption_sidecar", "reason": "visible caption sidecar has no matching resources[] payload"}
+    ]
+
+    packet = build_live_calibration_packet(run_id="audit-failure-check", smoke_reports=[report])
+    intake = build_live_calibration_intake(packet=packet, run_id="audit-failure-check")
+
+    assert packet["status"] == "partial"
+    assert packet["quality"]["snapshot_audit_count_total"] == 2
+    assert packet["quality"]["snapshot_audit_failure_count_total"] == 1
+    assert packet["quality"]["all_snapshot_audits_ok"] is False
+    assert any(
+        failure["surface"] == "snapshot_audit"
+        and failure["reason"] == "browser snapshot audit recorded failures"
+        for failure in packet["failures"]
+    )
+    assert any(action["lane"] == "browser_snapshot_diagnostics" for action in intake["actions"])
+    assert any("snapshot audit" in step for step in intake["next_steps"])
 
 
 def test_live_calibration_packet_surfaces_answer_quality_failures(tmp_path: Path) -> None:
