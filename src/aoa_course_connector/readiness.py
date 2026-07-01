@@ -245,6 +245,7 @@ def semantic_provider_preflight(
         checks.extend(provider_checks)
         provider_ready = all(bool(check.get("ready")) for check in provider_checks)
     ready = normalized_path.exists() and provider_ready
+    semantic_index_ready = ready and semantic_index_path.exists()
     build_command = _semantic_build_command(
         run_id=run_id,
         provider=selected_provider,
@@ -272,6 +273,7 @@ def semantic_provider_preflight(
         "status": "ok" if ready else "warning",
         "ready": ready,
         "ready_for_build": ready,
+        "semantic_index_ready": semantic_index_ready,
         "network_touched": False,
         "read_only": True,
         "run_id": run_id,
@@ -332,9 +334,13 @@ def live_preflight(
     expect_origin_contains: str | None = None,
     include_disabled: bool = False,
 ) -> dict[str, object]:
-    selected_platforms = _selected_platforms(platforms)
     selected_source_ids = _selected_source_ids(source_ids)
     registry = load_registry(roots.data)
+    selected_platforms = _selected_platforms(
+        platforms,
+        sources=registry.get("sources", []),
+        source_ids=selected_source_ids,
+    )
     sources = [
         source
         for source in registry.get("sources", [])
@@ -426,9 +432,14 @@ def connected_source_plan(
 ) -> dict[str, object]:
     """Build a read-only launch plan for connected-source calibration."""
 
-    selected_platforms = _selected_platforms(platforms)
-    selected_live_scope = _selected_live_scope(live_scope)
     selected_source_ids = _selected_source_ids(source_ids)
+    registry = load_registry(roots.data)
+    selected_platforms = _selected_platforms(
+        platforms,
+        sources=registry.get("sources", []),
+        source_ids=selected_source_ids,
+    )
+    selected_live_scope = _selected_live_scope(live_scope)
     preflight = live_preflight(
         roots,
         platforms=selected_platforms,
@@ -558,11 +569,39 @@ def connected_source_plan(
     }
 
 
-def _selected_platforms(platforms: list[str] | None) -> list[str]:
-    selected = list(dict.fromkeys(platforms or ["getcourse", "skillspace", "stepik"]))
+def _selected_platforms(
+    platforms: list[str] | None,
+    *,
+    sources: object = None,
+    source_ids: list[str] | None = None,
+) -> list[str]:
+    selected = list(
+        dict.fromkeys(
+            platforms
+            or _platforms_for_source_ids(source_ids or [], sources)
+            or ["getcourse", "skillspace", "stepik"]
+        )
+    )
     unsupported = [platform for platform in selected if platform not in CONNECTED_PLATFORMS]
     if unsupported:
         raise ValueError(f"unsupported preflight platform: {', '.join(unsupported)}")
+    return selected
+
+
+def _platforms_for_source_ids(source_ids: list[str], sources: object) -> list[str]:
+    if not source_ids or not isinstance(sources, list):
+        return []
+    selected: list[str] = []
+    for source_id in source_ids:
+        for source in sources:
+            if not isinstance(source, dict):
+                continue
+            if str(source.get("source_id") or "") != source_id:
+                continue
+            platform = str(source.get("platform") or "")
+            if platform in CONNECTED_PLATFORMS and platform not in selected:
+                selected.append(platform)
+            break
     return selected
 
 
@@ -1432,7 +1471,6 @@ def _append_browser_preflight(
     expect_origin_contains: str | None,
 ) -> None:
     state_file = (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
-    source_id_flags = _source_id_flags(sources)
     expected_origin = expect_origin_contains or _origin_hint(sources)
     capture_command = _capture_browser_state_command(platform, state_file, expected_origin)
     inspect_command = _inspect_browser_state_command(state_file, expected_origin)
@@ -1458,6 +1496,7 @@ def _append_browser_preflight(
         }
     )
     operator_source_ready_flags: list[bool] = []
+    ready_operator_sources: list[dict[str, object]] = []
     fixture_source_count = 0
     for source in sources:
         source_ref = str(source.get("source_ref") or "")
@@ -1481,12 +1520,15 @@ def _append_browser_preflight(
         ready = source_state_ready and bool(source.get("enabled", True))
         if not fixture_or_example:
             operator_source_ready_flags.append(ready)
+            if ready:
+                ready_operator_sources.append(source)
         source_check = _source_check(source, ready=ready, blockers=blockers)
         source_check["operator_live_candidate"] = not fixture_or_example
         source_check["fixture_or_example_source"] = fixture_or_example
         checks.append(source_check)
     operator_source_count = len(operator_source_ready_flags)
     all_sources_ready = bool(operator_source_ready_flags) and all(operator_source_ready_flags)
+    sync_source_id_flags = _source_id_flags(ready_operator_sources)
 
     workflows.append(
         {
@@ -1514,7 +1556,7 @@ def _append_browser_preflight(
             "fixture_or_example_source_count": fixture_source_count,
             "next_command": (
                 f"aoa-course sync browser-live --platform {platform} "
-                f"{source_id_flags}"
+                f"{sync_source_id_flags}"
                 f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
             ),
         }
@@ -1535,7 +1577,7 @@ def _append_browser_preflight(
     elif all_sources_ready:
         next_commands.append(
             f"aoa-course sync browser-live --platform {platform} "
-            f"{source_id_flags}"
+            f"{sync_source_id_flags}"
             f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
         )
     else:

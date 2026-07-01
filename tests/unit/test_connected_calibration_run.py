@@ -282,7 +282,7 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
 def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Path, monkeypatch) -> None:
     storage = roots(tmp_path)
     blocked, _path, _state = upsert_source(storage.data, "stepik", "68", "Stepik Token", access_mode="api_token")
-    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+    monkeypatch.delenv("CUSTOM_STEPIK_TOKEN", raising=False)
 
     receipt = run_connected_calibration(
         storage,
@@ -291,6 +291,7 @@ def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Pa
         platforms=["stepik"],
         source_ids=[str(blocked["source_id"])],
         allow_network=True,
+        stepik_token_env="CUSTOM_STEPIK_TOKEN",
     )
 
     assert receipt["status"] == "partial"
@@ -303,10 +304,35 @@ def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Pa
     assert "source_auth_or_readiness" in lanes
     assert "source_selection" in lanes
     assert lanes["source_auth_or_readiness"]["source_id"] == blocked["source_id"]
-    assert any(command.startswith("export STEPIK_API_TOKEN=") for command in lanes["source_auth_or_readiness"]["next_commands"])
+    repair_commands = lanes["source_auth_or_readiness"]["next_commands"]
+    assert any(command.startswith("export CUSTOM_STEPIK_TOKEN=") for command in repair_commands)
+    assert not any(command.startswith("export STEPIK_API_TOKEN=") for command in repair_commands)
+    assert any("--stepik-token-env CUSTOM_STEPIK_TOKEN" in command for command in repair_commands)
     status = load_connected_calibration_status(storage, run_id="connected-live-explicit-blocked")
     assert status["repair_lane_count"] == receipt["repair_lane_count"]
     assert {lane["lane"] for lane in status["repair_lanes"]} == {"source_auth_or_readiness", "source_selection"}
+
+
+def test_connected_calibration_browser_source_repair_keeps_state_file(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    blocked, _path, _state = upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
+    state_file = tmp_path / "custom-auth" / "operator.storage-state.json"
+
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-browser-blocked",
+        mode="live",
+        platforms=["getcourse"],
+        source_ids=[str(blocked["source_id"])],
+        allow_network=True,
+        browser_state_file=state_file,
+    )
+
+    lanes = {lane["lane"]: lane for lane in receipt["repair_lanes"]}
+    repair_commands = lanes["source_auth_or_readiness"]["next_commands"]
+    assert any("auth plan-browser-state getcourse account" in command for command in repair_commands)
+    assert any(f"--state-file {state_file}" in command for command in repair_commands)
+    assert any(f"--source-id {blocked['source_id']}" in command for command in repair_commands)
 
 
 def test_connected_calibration_live_packet_failures_promote_intake_repair_lanes(

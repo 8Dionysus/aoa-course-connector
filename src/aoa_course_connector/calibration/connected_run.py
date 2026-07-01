@@ -1172,7 +1172,13 @@ def _repair_lanes(
         source_ids=[str(item) for item in source_selection.get("ready_source_ids", []) if str(item)],
         execution_options=execution_options,
     )
-    preflight_command = _connected_preflight_command(platforms, live_scope=live_scope, execution_options=execution_options)
+    ready_source_ids = [str(item) for item in source_selection.get("ready_source_ids", []) if str(item)]
+    preflight_command = _connected_preflight_command(
+        platforms,
+        live_scope=live_scope,
+        execution_options=execution_options,
+        source_ids=ready_source_ids,
+    )
 
     for failure in failures:
         reason = str(failure.get("reason") or "inspect connected run failure")
@@ -1203,7 +1209,16 @@ def _repair_lanes(
                     source_id=source_id,
                     source_ref=source_ref,
                     blockers=[str(item) for item in failure.get("blockers", [])] if isinstance(failure.get("blockers"), list) else [],
-                    next_commands=_source_repair_commands(platform, preflight_command=preflight_command),
+                    next_commands=_source_repair_commands(
+                        platform,
+                        preflight_command=_connected_preflight_command(
+                            [platform] if platform else platforms,
+                            live_scope=live_scope,
+                            execution_options=execution_options,
+                            source_ids=[source_id] if source_id else ready_source_ids,
+                        ),
+                        execution_options=execution_options,
+                    ),
                     evidence_needed=["redacted preflight report", "source registry entry", "auth-state or token readiness proof"],
                     source="connected_run_failure",
                 )
@@ -1357,16 +1372,36 @@ def _dedupe_repair_lanes(lanes: list[dict[str, object]]) -> list[dict[str, objec
     return deduped
 
 
-def _connected_preflight_command(platforms: list[str], *, live_scope: str, execution_options: dict[str, object]) -> str:
+def _connected_preflight_command(
+    platforms: list[str],
+    *,
+    live_scope: str,
+    execution_options: dict[str, object],
+    source_ids: list[str] | None = None,
+) -> str:
     parts = ["aoa-course preflight connected-plan"]
     for platform in platforms:
         parts.append(f"--platform {shlex.quote(platform)}")
+    for source_id in source_ids or []:
+        parts.append(f"--source-id {shlex.quote(source_id)}")
     if live_scope:
         parts.append(f"--live-scope {shlex.quote(live_scope)}")
     if execution_options.get("query"):
         parts.append(f"--query {shlex.quote(str(execution_options.get('query')))}")
     if execution_options.get("link_pattern"):
         parts.append(f"--link-pattern {shlex.quote(str(execution_options.get('link_pattern')))}")
+    if execution_options.get("stepik_token_env") and "stepik" in platforms:
+        parts.append(f"--stepik-token-env {shlex.quote(str(execution_options.get('stepik_token_env')))}")
+    if execution_options.get("browser_state_file") and any(platform in BROWSER_PLATFORMS for platform in platforms):
+        parts.append(f"--state-file {shlex.quote(str(execution_options.get('browser_state_file')))}")
+    for option, flag in [
+        ("max_lessons", "--max-lessons"),
+        ("max_pages", "--max-pages"),
+        ("max_sources", "--max-sources"),
+    ]:
+        value = execution_options.get(option)
+        if value is not None:
+            parts.append(f"{flag} {int(value)}")
     return " ".join(parts)
 
 
@@ -1411,12 +1446,13 @@ def _connected_rerun_command(
     return " ".join(parts)
 
 
-def _source_repair_commands(platform: str, *, preflight_command: str) -> list[str]:
+def _source_repair_commands(platform: str, *, preflight_command: str, execution_options: dict[str, object]) -> list[str]:
     commands = [preflight_command]
     if platform in BROWSER_PLATFORMS:
         commands.insert(0, f"aoa-course auth plan-browser-state {platform} account")
     elif platform == "stepik":
-        commands.insert(0, "export STEPIK_API_TOKEN=<stepik-api-token>")
+        token_env = str(execution_options.get("stepik_token_env") or "STEPIK_API_TOKEN")
+        commands.insert(0, f"export {token_env}=<stepik-api-token>")
     return commands
 
 

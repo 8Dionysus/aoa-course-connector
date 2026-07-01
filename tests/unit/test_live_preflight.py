@@ -115,6 +115,35 @@ def test_live_preflight_blocks_example_browser_sources_from_live_sync(tmp_path: 
     assert "SUPER_SECRET_TOKEN" not in rendered
 
 
+def test_live_preflight_scopes_sync_to_ready_operator_sources_when_fixture_remains(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    fixture, _, _ = upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "Fixture School")
+    operator, _, _ = upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "Operator School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+
+    report = live_preflight(storage, platforms=["getcourse"])
+
+    assert report["ready"] is True
+    sync_commands = [command for command in report["next_commands"] if command.startswith("aoa-course sync browser-live")]
+    assert sync_commands
+    assert all(str(operator["source_id"]) in command for command in sync_commands)
+    assert not any(str(fixture["source_id"]) in command for command in sync_commands)
+    workflow = next(item for item in report["workflows"] if item["name"] == "browser_live_sync")
+    assert str(operator["source_id"]) in workflow["next_command"]
+    assert str(fixture["source_id"]) not in workflow["next_command"]
+    rendered = json.dumps(report)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
+
+
 def test_live_preflight_blocks_browser_source_when_state_matches_other_host(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     upsert_source(storage.data, "getcourse", "https://a.operator.edu/teach/control/stream", "A")
@@ -181,6 +210,14 @@ def test_connected_source_plan_can_scope_browser_work_to_one_ready_source(tmp_pa
     rendered = json.dumps(scoped)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
+
+    implicit_platform = connected_source_plan(storage, source_ids=[str(source_a["source_id"])])
+    assert implicit_platform["ready"] is True
+    assert implicit_platform["platforms"] == ["getcourse"]
+    assert implicit_platform["preflight"]["platforms"] == ["getcourse"]
+    assert implicit_platform["source_ids"] == [source_a["source_id"]]
+    assert all("--platform skillspace" not in command for command in implicit_platform["next_commands"])
+    assert all("--platform stepik" not in command for command in implicit_platform["next_commands"])
 
 
 def test_live_preflight_rejects_source_host_substring_state_match(tmp_path: Path) -> None:
