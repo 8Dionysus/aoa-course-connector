@@ -42,6 +42,20 @@ def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
     assert evidence["rank_features"]["provenance_complete"] is True
 
 
+def test_answer_packet_omits_missing_optional_evidence_fields(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(storage, run_id="test-run")
+    build_keyword_index(storage, run_id="test-run")
+
+    packet = render_answer_packet(storage, "in_progress", run_id="test-run")
+    progress_evidence = next(item for item in packet["evidence_chain"] if item["kind"] == "progress")
+
+    assert progress_evidence["authority_tier"] == "progress_metadata"
+    assert progress_evidence["authority_label"] == ""
+    assert "source_authority" not in progress_evidence
+    assert all(value is not None for value in progress_evidence.values())
+
+
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     materialize_fixture(storage, run_id="test-run")
