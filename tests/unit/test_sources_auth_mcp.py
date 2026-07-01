@@ -15,7 +15,9 @@ from aoa_course_connector.connection_profile import (
     build_connection_profile,
     inspect_connection_profile,
     load_connection_profile,
+    render_connection_profile_runbook,
     write_connection_profile,
+    write_connection_profile_runbook,
 )
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.goal_audit import goal_audit, render_connection_handoff, write_connection_handoff
@@ -92,6 +94,14 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in rendered
     assert any("sources add" in command for command in inspection["next_commands"])
     assert any("auth capture-browser-state" in command for command in inspection["next_commands"])
+    runbook_text = render_connection_profile_runbook(inspection)
+    assert "Course Connection Profile Runbook" in runbook_text
+    assert "Browser Auth" in runbook_text
+    assert "Semantic Provider" in runbook_text
+    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in runbook_text
+    runbook = write_connection_profile_runbook(inspection, tmp_path / "artifacts" / "connections" / "live-courses.runbook.md")
+    assert runbook["written"] is True
+    assert Path(str(runbook["path"])).is_file()
 
     apply_receipt = apply_connection_profile(storage, loaded, profile_path=profile_path)
     registry = load_registry(storage.data)

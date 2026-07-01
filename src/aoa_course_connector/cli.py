@@ -25,6 +25,7 @@ from aoa_course_connector.connection_profile import (
     inspect_connection_profile,
     load_connection_profile,
     write_connection_profile,
+    write_connection_profile_runbook,
 )
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
@@ -172,12 +173,15 @@ def build_parser() -> argparse.ArgumentParser:
     connect_profile.add_argument("--embedding-batch-size", type=int, default=32)
     connect_profile.add_argument("--embedding-timeout-seconds", type=float, default=30.0)
     connect_profile.add_argument("--write", type=Path)
+    connect_profile.add_argument("--write-runbook", type=Path)
     connect_profile.set_defaults(func=cmd_connect_profile)
     connect_inspect = connect_sub.add_parser("inspect")
     connect_inspect.add_argument("profile", type=Path)
+    connect_inspect.add_argument("--write-runbook", type=Path)
     connect_inspect.set_defaults(func=cmd_connect_inspect)
     connect_apply = connect_sub.add_parser("apply")
     connect_apply.add_argument("profile", type=Path)
+    connect_apply.add_argument("--write-runbook", type=Path)
     connect_apply.set_defaults(func=cmd_connect_apply)
 
     preflight = sub.add_parser("preflight")
@@ -776,6 +780,8 @@ def cmd_connect_profile(args: argparse.Namespace) -> int:
     path = args.write or default_connection_profile_path(roots.artifact, args.name)
     written = write_connection_profile(profile, path)
     inspection = inspect_connection_profile(roots, profile, profile_path=Path(str(written["path"])))
+    if args.write_runbook:
+        inspection["runbook"] = write_connection_profile_runbook(inspection, args.write_runbook)
     _emit(
         {
             "schema": "aoa_course_connection_profile_receipt_v1",
@@ -794,7 +800,10 @@ def cmd_connect_profile(args: argparse.Namespace) -> int:
 def cmd_connect_inspect(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     profile = load_connection_profile(args.profile)
-    _emit(inspect_connection_profile(roots, profile, profile_path=args.profile))
+    inspection = inspect_connection_profile(roots, profile, profile_path=args.profile)
+    if args.write_runbook:
+        inspection["runbook"] = write_connection_profile_runbook(inspection, args.write_runbook)
+    _emit(inspection)
     return 0
 
 
@@ -802,7 +811,10 @@ def cmd_connect_apply(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     create_storage_roots(roots)
     profile = load_connection_profile(args.profile)
-    _emit(apply_connection_profile(roots, profile, profile_path=args.profile))
+    receipt = apply_connection_profile(roots, profile, profile_path=args.profile)
+    if args.write_runbook:
+        receipt["inspection"]["runbook"] = write_connection_profile_runbook(receipt["inspection"], args.write_runbook)
+    _emit(receipt)
     return 0
 
 
