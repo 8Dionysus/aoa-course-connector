@@ -360,19 +360,21 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing goal audit ready-for-connection validation")
     if "--write-connection-handoff" not in agents:
         errors.append("AGENTS route missing goal connection handoff validation")
-    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect apply" not in agents or "--write-runbook" not in agents:
+    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect status" not in agents or "connect apply" not in agents or "--write-runbook" not in agents:
         errors.append("AGENTS route missing connection profile validation")
     if "mcp call goal_audit" not in agents:
         errors.append("AGENTS route missing MCP goal_audit validation")
     if "mcp call connection_profile_inspect" not in agents:
         errors.append("AGENTS route missing MCP connection_profile_inspect validation")
+    if "mcp call connection_profile_status" not in agents:
+        errors.append("AGENTS route missing MCP connection_profile_status validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
     if "goal audit --run starter-fixture --connected-run" not in agent_install_raw or "ready_for_operator_connection" not in agent_install_raw:
         errors.append("Agent install route missing goal audit handoff")
     if "--write-connection-handoff" not in agent_install_raw or "aoa_course_connection_handoff_v1" not in agent_install_raw:
         errors.append("Agent install route missing connection handoff write route")
-    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "--write-runbook" not in agent_install_raw:
+    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "connection_profile_status" not in agent_install_raw or "aoa_course_connection_profile_status_v1" not in agent_install_raw or "--write-runbook" not in agent_install_raw:
         errors.append("Agent install route missing connection profile handoff")
     if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
         errors.append("Agent install route missing capture expected-origin handoff")
@@ -412,7 +414,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "connection_profile_inspect", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "aoa_course_connection_handoff_v1", "connection_handoff", "aoa_course_connection_profile_v1", "aoa_course_connection_profile_inspection_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "connection_profile_inspect", "connection_profile_status", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "aoa_course_connection_handoff_v1", "connection_handoff", "aoa_course_connection_profile_v1", "aoa_course_connection_profile_inspection_v1", "aoa_course_connection_profile_status_v1", "aoa_course_connection_profile_readiness_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
@@ -427,7 +429,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         ("connection profile code", connection_profile_raw),
         ("MCP server connection profile route", mcp_server_raw),
     ]:
-        for token in ["aoa_course_connection_profile_v1", "connection_profile_inspect", "network_touched", "token"]:
+        for token in ["aoa_course_connection_profile_v1", "connection_profile_inspect", "connection_profile_status", "aoa_course_connection_profile_status_v1", "ready_for_connected_run", "network_touched", "token"]:
             if token not in text:
                 errors.append(f"{label} missing connection profile token: {token}")
     for label, text in [

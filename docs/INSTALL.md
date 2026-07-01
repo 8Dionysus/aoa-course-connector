@@ -70,6 +70,7 @@ aoa-course connect profile --name operator-live \
   --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
 ```
@@ -79,7 +80,10 @@ source refs may be operator-private, but token values are never written. Apply
 only registers non-secret source refs in the local source registry; live sync
 still requires the later explicit preflight/auth/network-gated commands.
 `--write-runbook` writes the redacted operator checklist as Markdown beside the
-profile JSON.
+profile JSON. `connect status` returns
+`aoa_course_connection_profile_status_v1`, the compact go/no-go packet for
+registered sources, browser auth readiness, connected-plan readiness, blockers,
+and ready live connected-run commands.
 
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser

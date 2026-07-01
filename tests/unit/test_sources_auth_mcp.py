@@ -13,6 +13,7 @@ from aoa_course_connector.calibration.connected_run import run_connected_calibra
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
     build_connection_profile,
+    connection_profile_status,
     inspect_connection_profile,
     load_connection_profile,
     render_connection_profile_runbook,
@@ -90,6 +91,9 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert loaded["schema"] == "aoa_course_connection_profile_v1"
     assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert inspection["network_touched"] is False
+    assert inspection["live_readiness"]["schema"] == "aoa_course_connection_profile_readiness_v1"
+    assert inspection["live_readiness"]["ready_for_connected_run"] is False
+    assert inspection["live_readiness"]["blocked_by"]
     assert inspection["source_registry"]["registered_profile_source_count"] == 0
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in rendered
     assert any("sources add" in command for command in inspection["next_commands"])
@@ -97,6 +101,7 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     runbook_text = render_connection_profile_runbook(inspection)
     assert "Course Connection Profile Runbook" in runbook_text
     assert "Browser Auth" in runbook_text
+    assert "Live Readiness" in runbook_text
     assert "Semantic Provider" in runbook_text
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in runbook_text
     runbook = write_connection_profile_runbook(inspection, tmp_path / "artifacts" / "connections" / "live-courses.runbook.md")
@@ -109,11 +114,59 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert len(apply_receipt["applied"]) == 3
     assert len(registry["sources"]) == 3
     assert apply_receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 3
+    status = connection_profile_status(apply_receipt["inspection"])
+    assert status["schema"] == "aoa_course_connection_profile_status_v1"
+    assert status["live_readiness"]["ready_for_connected_run"] is False
 
     mcp = call_tool("connection_profile_inspect", {"profile_path": str(profile_path)})
     assert mcp["tool"] == "connection_profile_inspect"
     assert mcp["inspection"]["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert mcp["inspection"]["network_touched"] is False
+    mcp_status = call_tool("connection_profile_status", {"profile_path": str(profile_path)})
+    assert mcp_status["tool"] == "connection_profile_status"
+    assert mcp_status["status"]["schema"] == "aoa_course_connection_profile_status_v1"
+    assert mcp_status["status"]["network_touched"] is False
+
+
+def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    source_url = "https://school.operator.edu/teach/control/stream"
+    profile = build_connection_profile(
+        storage,
+        name="ready-live",
+        getcourse_urls=[source_url],
+        run_id="connected-live-calibration",
+        query="course-specific question",
+    )
+    state_file = default_browser_state_path(storage.auth, "getcourse", source_url)
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    profile_path = tmp_path / "artifacts" / "connections" / "ready-live.connection-profile.json"
+    write_connection_profile(profile, profile_path)
+    receipt = apply_connection_profile(storage, load_connection_profile(profile_path), profile_path=profile_path)
+    readiness = receipt["inspection"]["live_readiness"]
+
+    assert readiness["ready_for_connected_run"] is True
+    assert readiness["registered_source_count"] == 1
+    assert readiness["browser_auth_ready_count"] == 1
+    assert readiness["ready_connected_plan_count"] == 1
+    assert readiness["blocked_by"] == []
+    assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["connected_run_commands"])
+    rendered = json.dumps(receipt)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
 
 
 def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, monkeypatch) -> None:

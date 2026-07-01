@@ -210,12 +210,17 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     assert receipt["inspection"]["runbook"]["written"] is True
     assert runbook_path.is_file()
     assert "Course Connection Profile Runbook" in runbook_path.read_text(encoding="utf-8")
+    assert receipt["inspection"]["live_readiness"]["schema"] == "aoa_course_connection_profile_readiness_v1"
+    assert receipt["inspection"]["live_readiness"]["ready_for_connected_run"] is False
     assert receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 0
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(receipt)
 
     inspection = run_cli(tmp_path, "connect", "inspect", str(profile_path))
     assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert any("sources add" in command for command in inspection["next_commands"])
+    status = run_cli(tmp_path, "connect", "status", str(profile_path))
+    assert status["schema"] == "aoa_course_connection_profile_status_v1"
+    assert status["live_readiness"]["ready_for_connected_run"] is False
 
     apply_runbook = tmp_path / "artifacts" / "connections" / "operator-live-applied.runbook.md"
     applied = run_cli(tmp_path, "connect", "apply", str(profile_path), "--write-runbook", str(apply_runbook))
@@ -230,6 +235,9 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     mcp = run_cli(tmp_path, "mcp", "call", "connection_profile_inspect", json.dumps({"profile_path": str(profile_path)}))
     assert mcp["result"]["inspection"]["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert mcp["result"]["inspection"]["network_touched"] is False
+    mcp_status = run_cli(tmp_path, "mcp", "call", "connection_profile_status", json.dumps({"profile_path": str(profile_path)}))
+    assert mcp_status["result"]["status"]["schema"] == "aoa_course_connection_profile_status_v1"
+    assert mcp_status["result"]["status"]["network_touched"] is False
 
 
 def test_cli_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path) -> None:

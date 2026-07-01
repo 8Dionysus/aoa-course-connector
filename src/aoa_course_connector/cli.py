@@ -21,6 +21,7 @@ from aoa_course_connector.calibration.connected_run import load_connected_calibr
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
     build_connection_profile,
+    connection_profile_status,
     default_connection_profile_path,
     inspect_connection_profile,
     load_connection_profile,
@@ -183,6 +184,9 @@ def build_parser() -> argparse.ArgumentParser:
     connect_apply.add_argument("profile", type=Path)
     connect_apply.add_argument("--write-runbook", type=Path)
     connect_apply.set_defaults(func=cmd_connect_apply)
+    connect_status = connect_sub.add_parser("status")
+    connect_status.add_argument("profile", type=Path)
+    connect_status.set_defaults(func=cmd_connect_status)
 
     preflight = sub.add_parser("preflight")
     preflight_sub = preflight.add_subparsers(dest="preflight_command", required=True)
@@ -815,6 +819,14 @@ def cmd_connect_apply(args: argparse.Namespace) -> int:
     if args.write_runbook:
         receipt["inspection"]["runbook"] = write_connection_profile_runbook(receipt["inspection"], args.write_runbook)
     _emit(receipt)
+    return 0
+
+
+def cmd_connect_status(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    profile = load_connection_profile(args.profile)
+    inspection = inspect_connection_profile(roots, profile, profile_path=args.profile)
+    _emit(connection_profile_status(inspection))
     return 0
 
 
