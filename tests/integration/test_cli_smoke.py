@@ -86,6 +86,15 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert browser_snapshot_audit["schema"] == "aoa_course_browser_snapshot_audit_v1"
     assert browser_snapshot_audit["readiness"]["ready_for_materialize"] is True
     assert browser_snapshot_audit["privacy"]["raw_html_included"] is False
+    mcp_snapshot_audit = run_cli(
+        tmp_path,
+        "mcp",
+        "call",
+        "browser_snapshot_audit",
+        '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}',
+    )
+    assert mcp_snapshot_audit["result"]["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert mcp_snapshot_audit["result"]["audit"]["network_touched"] is False
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "connector_readiness" for tool in tools["tools"])
@@ -384,8 +393,9 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "semantic_provider_preflight", "arguments": {"run": "starter-fixture"}}},
-        {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
-        {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "browser_snapshot_audit", "arguments": {"snapshot_path": "connector/fixtures/browser/getcourse_starter_snapshot.json", "platform": "getcourse"}}},
+        {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
+        {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -400,7 +410,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
@@ -410,10 +420,13 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[6]["result"]["structuredContent"]["plan"]["network_touched"] is False
     assert responses[7]["result"]["structuredContent"]["preflight"]["schema"] == "aoa_course_semantic_provider_preflight_v1"
     assert responses[7]["result"]["structuredContent"]["preflight"]["network_touched"] is False
-    assert responses[8]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
-    assert responses[9]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[9]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[9]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[8]["result"]["structuredContent"]["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert responses[8]["result"]["structuredContent"]["audit"]["network_touched"] is False
+    assert responses[8]["result"]["structuredContent"]["audit"]["privacy"]["raw_html_included"] is False
+    assert responses[9]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
+    assert responses[10]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[10]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[10]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

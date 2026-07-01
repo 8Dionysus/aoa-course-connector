@@ -13,6 +13,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any, TextIO
 
+from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
 from aoa_course_connector.connection_profile import connection_profile_status, inspect_connection_profile, load_connection_profile
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
 from aoa_course_connector.config import StorageRoots, find_repo_root
@@ -149,6 +150,19 @@ def _semantic_provider_preflight_schema() -> dict[str, object]:
     )
 
 
+def _browser_snapshot_audit_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "snapshot_path": _string_schema("Local browser snapshot JSON path."),
+            "platform": {"type": "string", "enum": ["getcourse", "skillspace"], "description": "Browser-session platform."},
+            "max_sources": _integer_schema("Maximum course sources to inspect.", 1),
+            "max_lessons": _integer_schema("Maximum lesson links to inspect.", 1),
+            "link_pattern": _string_schema("Optional browser lesson/course link glob."),
+        },
+        required=["snapshot_path"],
+    )
+
+
 def _refresh_plan_schema() -> dict[str, object]:
     properties = {
         "query": _string_schema("Search query to refresh from evidence."),
@@ -192,6 +206,7 @@ TOOLS = [
     {"name": "connection_profile_inspect", "description": "Inspect a local redacted aoa_course_connection_profile_v1 file and return aoa_course_connection_profile_inspection_v1 source/auth/semantic next commands with network_touched false and without mutation.", "inputSchema": _connection_profile_inspect_schema()},
     {"name": "connection_profile_status", "description": "Return compact aoa_course_connection_profile_status_v1 go/no-go readiness, including ready_for_connected_run, blockers, and network_touched false, for a local connection profile.", "inputSchema": _connection_profile_status_schema()},
     {"name": "semantic_provider_preflight", "description": "Inspect semantic provider build readiness without touching the network or printing token values.", "inputSchema": _semantic_provider_preflight_schema()},
+    {"name": "browser_snapshot_audit", "description": "Inspect a local GetCourse/Skillspace browser snapshot for discovery, crawl, transcript, caption, comment, progress, pagination, and repair readiness without printing raw HTML.", "inputSchema": _browser_snapshot_audit_schema()},
     {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
     {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
@@ -231,6 +246,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "status": _call_connection_profile_status(roots, args)}
     if name == "semantic_provider_preflight":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_semantic_provider_preflight(roots, args)}
+    if name == "browser_snapshot_audit":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "audit": _call_browser_snapshot_audit(args)}
     if name == "connected_run_status":
         connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=connected_run_id)}
@@ -417,6 +434,25 @@ def _call_semantic_provider_preflight(roots: StorageRoots, args: dict[str, objec
         embedding_token_env=str(args.get("embedding_token_env") or "AOA_COURSE_EMBEDDING_TOKEN"),
         embedding_batch_size=int(args.get("embedding_batch_size") or 32),
         embedding_timeout_seconds=float(args.get("embedding_timeout_seconds") or 30.0),
+    )
+
+
+def _call_browser_snapshot_audit(args: dict[str, object]) -> dict[str, object]:
+    snapshot_path = args.get("snapshot_path")
+    if not isinstance(snapshot_path, str) or not snapshot_path:
+        raise ValueError("browser_snapshot_audit snapshot_path must be a non-empty string")
+    path = Path(snapshot_path).expanduser()
+    if not path.is_absolute():
+        path = find_repo_root() / path
+    platform = args.get("platform")
+    if platform is not None and not isinstance(platform, str):
+        raise ValueError("browser_snapshot_audit platform must be a string")
+    return audit_browser_snapshot_file(
+        path,
+        platform=platform,
+        max_sources=int(args.get("max_sources") or 50),
+        max_lessons=int(args.get("max_lessons") or 50),
+        link_pattern=str(args.get("link_pattern") or "") or None,
     )
 
 

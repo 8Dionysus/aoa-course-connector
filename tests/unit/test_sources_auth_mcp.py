@@ -19,7 +19,7 @@ from aoa_course_connector.connection_profile import (
     write_connection_profile,
     write_connection_profile_runbook,
 )
-from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
@@ -424,6 +424,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "semantic_provider_preflight" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "browser_snapshot_audit" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_run_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
@@ -463,6 +464,20 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert evidence["evidence_chain"][0]["rank_score"] == evidence["result_refs"][0]["rank_score"]
 
     assert evidence["result_refs"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
+    snapshot_audit = call_tool(
+        "browser_snapshot_audit",
+        {
+            "snapshot_path": str(find_repo_root() / "connector/fixtures/browser/getcourse_starter_snapshot.json"),
+            "platform": "getcourse",
+        },
+    )
+    rendered_audit = json.dumps(snapshot_audit)
+    assert snapshot_audit["tool"] == "browser_snapshot_audit"
+    assert snapshot_audit["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert snapshot_audit["audit"]["network_touched"] is False
+    assert snapshot_audit["audit"]["readiness"]["ready_for_materialize"] is True
+    assert snapshot_audit["audit"]["privacy"]["raw_html_included"] is False
+    assert "rollback index" not in rendered_audit
     checkpoint = make_checkpoint(
         source={"source_id": "source:getcourse:test", "platform": "getcourse", "source_ref": "https://school.example", "access_mode": "browser_session"},
         sync_run_id="browser-sync-fixture",
@@ -821,6 +836,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
     semantic_provider_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "semantic_provider_preflight")
+    browser_snapshot_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "browser_snapshot_audit")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
@@ -839,6 +855,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "link_pattern" in connected_plan_tool["inputSchema"]["properties"]
     assert "embedding_endpoint" in semantic_provider_tool["inputSchema"]["properties"]
     assert "embedding_token_env" in semantic_provider_tool["inputSchema"]["properties"]
+    assert browser_snapshot_audit_tool["inputSchema"]["required"] == ["snapshot_path"]
+    assert browser_snapshot_audit_tool["inputSchema"]["properties"]["platform"]["enum"] == ["getcourse", "skillspace"]
     assert connected_run_tool["inputSchema"]["required"] == []
     assert evidence_tool["inputSchema"]["required"] == ["query"]
     assert refresh_tool["inputSchema"]["required"] == ["query"]
@@ -890,6 +908,24 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     })
     assert semantic_preflight["result"]["structuredContent"]["tool"] == "semantic_provider_preflight"
     assert semantic_preflight["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    snapshot_audit = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 401,
+        "method": "tools/call",
+        "params": {
+            "name": "browser_snapshot_audit",
+            "arguments": {
+                "snapshot_path": "connector/fixtures/browser/getcourse_starter_snapshot.json",
+                "platform": "getcourse",
+            },
+        },
+    })
+    snapshot_content = snapshot_audit["result"]["structuredContent"]
+    assert snapshot_content["tool"] == "browser_snapshot_audit"
+    assert snapshot_content["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert snapshot_content["audit"]["network_touched"] is False
+    assert snapshot_content["audit"]["privacy"]["raw_html_included"] is False
+    assert "rollback index" not in json.dumps(snapshot_content)
     upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
 
     connected_plan = handle_jsonrpc_message({

@@ -215,6 +215,7 @@ raw HTML:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli inspect browser-snapshot "$AOA_COURSE_DATA_ROOT/private/getcourse-course.json" --platform getcourse --require-ready
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
 ```
 
 The audit reports discovery/materialization readiness, lesson/course links,
