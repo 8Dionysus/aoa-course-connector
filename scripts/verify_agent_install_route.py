@@ -107,6 +107,8 @@ def main(argv: list[str] | None = None) -> int:
         env["AOA_COURSE_INSTANCE_ROOT"] = str(Path(tmp) / "state")
         connection_handoff_path = Path(tmp) / "state" / "artifacts" / "goal-connection-handoff.md"
         connection_profile_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live.connection-profile.json"
+        connection_profile_runbook_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live.runbook.md"
+        applied_profile_runbook_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live-applied.runbook.md"
         commands = [
             [sys.executable, "scripts/validate_connector.py"],
             [sys.executable, "-m", "compileall", "-q", "src", "scripts"],
@@ -143,9 +145,11 @@ def main(argv: list[str] | None = None) -> int:
                 "AOA_COURSE_EMBEDDING_TOKEN",
                 "--write",
                 str(connection_profile_path),
+                "--write-runbook",
+                str(connection_profile_runbook_path),
             ],
             [sys.executable, "-m", "aoa_course_connector.cli", "connect", "inspect", str(connection_profile_path)],
-            [sys.executable, "-m", "aoa_course_connector.cli", "connect", "apply", str(connection_profile_path)],
+            [sys.executable, "-m", "aoa_course_connector.cli", "connect", "apply", str(connection_profile_path), "--write-runbook", str(applied_profile_runbook_path)],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connection_profile_inspect", json.dumps({"profile_path": str(connection_profile_path)})],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "fixture", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "starter-fixture"],
@@ -237,6 +241,12 @@ def main(argv: list[str] | None = None) -> int:
             return 1
         if not connection_profile_path.is_file() or "aoa_course_connection_profile_v1" not in connection_profile_path.read_text(encoding="utf-8"):
             print("connection profile was not written correctly", file=sys.stderr)
+            return 1
+        if not connection_profile_runbook_path.is_file() or "Course Connection Profile Runbook" not in connection_profile_runbook_path.read_text(encoding="utf-8"):
+            print("connection profile runbook was not written correctly", file=sys.stderr)
+            return 1
+        if not applied_profile_runbook_path.is_file() or "Course Connection Profile Runbook" not in applied_profile_runbook_path.read_text(encoding="utf-8"):
+            print("applied connection profile runbook was not written correctly", file=sys.stderr)
             return 1
         stdio_requests = "\n".join([
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"install-route","version":"0"}}}',

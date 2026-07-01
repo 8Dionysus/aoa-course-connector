@@ -6,9 +6,9 @@ aoa-course bootstrap fixture --run starter-fixture --connected-run connected-cal
 aoa-course readiness --run starter-fixture
 aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
 aoa-course goal audit --run starter-fixture --connected-run connected-calibration --write-connection-handoff "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/goal-connection-handoff.md"
-aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
 aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
 aoa-course init
 aoa-course adapters list
@@ -202,6 +202,12 @@ preflight/build/query commands without mutating local state or touching the
 network. `connect apply` registers the profile sources in the local source
 registry only; browser login, Stepik API calls, semantic builds, and connected
 live calibration remain separate explicit commands.
+Pass `--write-runbook` to emit a redacted Markdown checklist from
+`aoa_course_connection_profile_inspection_v1`; this is useful when a human and
+an agent need the same source/auth/connected-plan/semantic sequence without
+reading the full JSON. The write receipt is
+`aoa_course_connection_profile_runbook_v1`, and the file starts with
+`Course Connection Profile Runbook`.
 MCP `connection_profile_inspect` exposes the same read-only inspection for
 agents that continue from the MCP surface.
 

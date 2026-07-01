@@ -53,7 +53,11 @@ but never stores token values. `connect inspect` is read-only and returns the
 source registration, browser auth, connected-plan, and semantic-provider next
 commands with `network_touched: false`. `connect apply` mutates only the local
 source registry, then returns the same inspection so the next `preflight connected-plan` or MCP
-`connection_profile_inspect` call can continue from registered sources.
+`connection_profile_inspect` call can continue from registered sources. Pass
+`--write-runbook` to `connect profile`, `connect inspect`, or `connect apply`
+to write the same redacted handoff as a runtime Markdown checklist. The write
+receipt is `aoa_course_connection_profile_runbook_v1`; the Markdown starts
+with `Course Connection Profile Runbook`.
 
 `readiness` is the read-only agent handoff for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry

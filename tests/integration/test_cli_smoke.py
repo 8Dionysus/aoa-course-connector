@@ -172,6 +172,7 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
 
 def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    runbook_path = tmp_path / "artifacts" / "connections" / "operator-live.runbook.md"
     receipt = run_cli(
         tmp_path,
         "connect",
@@ -199,11 +200,16 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
         "course-embedding",
         "--embedding-token-env",
         "AOA_COURSE_TEST_EMBEDDING_TOKEN",
+        "--write-runbook",
+        str(runbook_path),
     )
 
     profile_path = Path(str(receipt["profile_path"]))
     assert receipt["schema"] == "aoa_course_connection_profile_receipt_v1"
     assert profile_path.is_file()
+    assert receipt["inspection"]["runbook"]["written"] is True
+    assert runbook_path.is_file()
+    assert "Course Connection Profile Runbook" in runbook_path.read_text(encoding="utf-8")
     assert receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 0
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(receipt)
 
@@ -211,10 +217,13 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert any("sources add" in command for command in inspection["next_commands"])
 
-    applied = run_cli(tmp_path, "connect", "apply", str(profile_path))
+    apply_runbook = tmp_path / "artifacts" / "connections" / "operator-live-applied.runbook.md"
+    applied = run_cli(tmp_path, "connect", "apply", str(profile_path), "--write-runbook", str(apply_runbook))
     assert applied["schema"] == "aoa_course_connection_profile_apply_v1"
     assert len(applied["applied"]) == 3
     assert applied["inspection"]["source_registry"]["registered_profile_source_count"] == 3
+    assert applied["inspection"]["runbook"]["written"] is True
+    assert apply_runbook.is_file()
 
     sources = run_cli(tmp_path, "sources", "list")
     assert len(sources["registry"]["sources"]) == 3

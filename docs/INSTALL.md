@@ -67,15 +67,19 @@ aoa-course connect profile --name operator-live \
   --semantic-provider http_json_v1 \
   --embedding-endpoint "https://embed.example/v1" \
   --embedding-model "course-embedding" \
-  --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
+  --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN \
+  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" \
+  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
 ```
 
 The profile is `aoa_course_connection_profile_v1`. It is a runtime artifact:
 source refs may be operator-private, but token values are never written. Apply
 only registers non-secret source refs in the local source registry; live sync
 still requires the later explicit preflight/auth/network-gated commands.
+`--write-runbook` writes the redacted operator checklist as Markdown beside the
+profile JSON.
 
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser

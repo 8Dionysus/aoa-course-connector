@@ -360,7 +360,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing goal audit ready-for-connection validation")
     if "--write-connection-handoff" not in agents:
         errors.append("AGENTS route missing goal connection handoff validation")
-    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect apply" not in agents:
+    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect apply" not in agents or "--write-runbook" not in agents:
         errors.append("AGENTS route missing connection profile validation")
     if "mcp call goal_audit" not in agents:
         errors.append("AGENTS route missing MCP goal_audit validation")
@@ -372,7 +372,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Agent install route missing goal audit handoff")
     if "--write-connection-handoff" not in agent_install_raw or "aoa_course_connection_handoff_v1" not in agent_install_raw:
         errors.append("Agent install route missing connection handoff write route")
-    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw:
+    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "--write-runbook" not in agent_install_raw:
         errors.append("Agent install route missing connection profile handoff")
     if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
         errors.append("Agent install route missing capture expected-origin handoff")
@@ -430,6 +430,14 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         for token in ["aoa_course_connection_profile_v1", "connection_profile_inspect", "network_touched", "token"]:
             if token not in text:
                 errors.append(f"{label} missing connection profile token: {token}")
+    for label, text in [
+        ("README connection profile runbook", readme_raw),
+        ("CLI usage connection profile runbook", cli_usage_raw),
+        ("connection profile runbook code", connection_profile_raw),
+    ]:
+        for token in ["--write-runbook", "aoa_course_connection_profile_runbook_v1", "Course Connection Profile Runbook"]:
+            if token not in text:
+                errors.append(f"{label} missing connection profile runbook token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
     for token in [
         "build-semantic-index",

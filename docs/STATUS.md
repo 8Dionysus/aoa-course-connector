@@ -69,7 +69,9 @@ This proves:
   browser state-file paths, Stepik token env names, and semantic provider
   settings; a read-only `aoa_course_connection_profile_inspection_v1` for
   source registration/auth/connected-plan/semantic next commands; and a
-  registry-only apply step that does not touch the network or log token values;
+  registry-only apply step that does not touch the network or log token values.
+  The same inspection can be written as a redacted Markdown runbook through
+  `--write-runbook`;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh
