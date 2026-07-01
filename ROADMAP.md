@@ -28,6 +28,10 @@
   unannotated DOM heuristics for progress/status/comments.
 - Prove fixture/snapshot/live browser smoke reports that combine discovery,
   ingestion, index/graph build, and optional answer evidence checks.
+- Prove privacy-safe browser snapshot audits so operator-provided GetCourse and
+  Skillspace snapshots can be diagnosed for discovery, crawl, transcripts,
+  captions, comments, progress, pagination, and repair lanes before
+  materialization.
 - Prove browser-session auth-state planning, capture, and redacted inspection
   so live GetCourse/Skillspace routes have a reproducible onboarding step.
 - Prove read-only live preflight reports so agents can verify Stepik token

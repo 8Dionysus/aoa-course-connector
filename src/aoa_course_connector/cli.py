@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
+from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
 from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration import (
@@ -570,6 +571,17 @@ def build_parser() -> argparse.ArgumentParser:
     inspect.add_argument("--limit", type=int, default=5)
     inspect.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
     inspect.set_defaults(func=cmd_evidence_inspect)
+
+    inspect_root = sub.add_parser("inspect")
+    inspect_sub = inspect_root.add_subparsers(dest="inspect_command", required=True)
+    inspect_browser_snapshot = inspect_sub.add_parser("browser-snapshot")
+    inspect_browser_snapshot.add_argument("snapshot", type=Path)
+    inspect_browser_snapshot.add_argument("--platform", choices=["getcourse", "skillspace"])
+    inspect_browser_snapshot.add_argument("--max-sources", type=int, default=50)
+    inspect_browser_snapshot.add_argument("--max-lessons", type=int, default=50)
+    inspect_browser_snapshot.add_argument("--link-pattern")
+    inspect_browser_snapshot.add_argument("--require-ready", action="store_true")
+    inspect_browser_snapshot.set_defaults(func=cmd_inspect_browser_snapshot)
 
     refresh = sub.add_parser("refresh")
     refresh_sub = refresh.add_subparsers(dest="refresh_command", required=True)
@@ -1550,6 +1562,21 @@ def cmd_evidence_inspect(args: argparse.Namespace) -> int:
         }
     )
     return 0
+
+
+def cmd_inspect_browser_snapshot(args: argparse.Namespace) -> int:
+    report = audit_browser_snapshot_file(
+        args.snapshot,
+        platform=args.platform,
+        max_sources=args.max_sources,
+        max_lessons=args.max_lessons,
+        link_pattern=args.link_pattern,
+    )
+    _emit(report)
+    ready = bool(report.get("readiness", {}).get("ready_for_discovery")) or bool(
+        report.get("readiness", {}).get("ready_for_materialize")
+    )
+    return 0 if ready or not args.require_ready else 1
 
 
 def cmd_refresh_query(args: argparse.Namespace) -> int:
