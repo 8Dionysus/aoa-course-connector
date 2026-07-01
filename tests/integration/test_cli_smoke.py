@@ -74,6 +74,18 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     evidence_inspect = run_cli(tmp_path, "evidence", "inspect", "rollback", "--run", "starter-fixture")
     assert evidence_inspect["evidence_chain"]
     assert evidence_inspect["freshness_report"]["has_source_timestamps"] is True
+    browser_snapshot_audit = run_cli(
+        tmp_path,
+        "inspect",
+        "browser-snapshot",
+        "connector/fixtures/browser/getcourse_starter_snapshot.json",
+        "--platform",
+        "getcourse",
+        "--require-ready",
+    )
+    assert browser_snapshot_audit["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert browser_snapshot_audit["readiness"]["ready_for_materialize"] is True
+    assert browser_snapshot_audit["privacy"]["raw_html_included"] is False
     tools = run_cli(tmp_path, "mcp", "tools")
     assert tools["server"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "connector_readiness" for tool in tools["tools"])

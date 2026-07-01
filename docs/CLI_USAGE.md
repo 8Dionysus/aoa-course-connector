@@ -38,6 +38,7 @@ aoa-course sync browser-live --run browser-live-sync --source-id "source:getcour
 aoa-course sync status --run browser-sync-fixture
 aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
 aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
+aoa-course inspect browser-snapshot /path/to/snapshot.json --platform getcourse --require-ready
 aoa-course materialize browser-snapshot /path/to/snapshot.json --platform getcourse --run getcourse-snapshot
 aoa-course materialize browser-live "https://school.example/lesson" --platform getcourse --run getcourse-live --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture --max-lessons 20
@@ -145,6 +146,13 @@ Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network. The status packet includes
 `repair_lanes` for partial runs plus `query_plan` entries with CLI commands
 and MCP `mcp_commands` for `search`, `lesson_context`, and `evidence_report`.
+
+Use `inspect browser-snapshot` before materializing operator snapshots. The
+packet is `aoa_course_browser_snapshot_audit_v1`: it reports whether the file is
+ready for discovery, crawl, materialization, or smoke; counts the visible course
+links, lesson links, progress, comments, transcripts, caption sidecars,
+caption-resource parse errors, and pagination; and emits repair lanes without
+printing raw HTML or caption text.
 
 Use `readiness` when an agent or operator needs one read-only route audit before
 continuing. It emits `aoa_course_connector_readiness_v1` with install route

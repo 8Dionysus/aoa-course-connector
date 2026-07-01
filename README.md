@@ -210,6 +210,16 @@ Fixture-discovered GetCourse and Skillspace entries use reserved example hosts
 to prove the install route. Live preflight marks those entries as
 `fixture_or_example_source` with `operator_live_candidate: false` and will not
 emit `sync browser-live` until a real operator-owned course URL is registered.
+Before turning an operator snapshot into indexes, inspect it without printing
+raw HTML:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli inspect browser-snapshot "$AOA_COURSE_DATA_ROOT/private/getcourse-course.json" --platform getcourse --require-ready
+```
+
+The audit reports discovery/materialization readiness, lesson/course links,
+visible progress, comments, transcripts, caption sidecar resources, pagination,
+repair lanes, and next commands while keeping raw page text out of the report.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register

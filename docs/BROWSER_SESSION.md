@@ -192,6 +192,7 @@ reports when calibrating connected GetCourse or Skillspace accounts. See
 ## Snapshot Route
 
 ```bash
+aoa-course inspect browser-snapshot /path/to/snapshot.json --platform getcourse --require-ready
 aoa-course materialize browser-snapshot /path/to/snapshot.json --platform getcourse --run my-getcourse-run
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run my-getcourse-discovery --register --max-sources 50
 aoa-course crawl browser-snapshot /path/to/snapshot.json --platform getcourse --run my-getcourse-crawl --max-lessons 50
@@ -202,6 +203,14 @@ Git. They contain page URLs, titles, captured timestamps, and HTML from pages th
 connected account can legitimately view. Operator snapshots may include multiple
 catalog pages when the account has paginated course lists; the connector records
 pagination evidence in the discovery receipt.
+
+`inspect browser-snapshot` emits `aoa_course_browser_snapshot_audit_v1` before
+materialization. It is read-only, does not touch the network, and does not echo
+raw HTML or caption text. Use it to check whether the snapshot is ready for
+catalog discovery, course crawl, materialization, or smoke; it also reports
+counts for course links, lesson links, visible progress, comments, transcripts,
+caption sidecars, caption `resources[]` parse errors, pagination, and repair
+lanes.
 
 When a snapshot includes caption sidecars, store them as `resources[]` entries
 with `url`, optional `kind`, optional `language`, optional `content_type`, and

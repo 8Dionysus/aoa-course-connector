@@ -106,6 +106,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_provider_preflight '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 7 --max-pages 3 --max-sources 4 --live-scope bounded
+PYTHONPATH=src python -m aoa_course_connector.cli inspect browser-snapshot connector/fixtures/browser/getcourse_starter_snapshot.json --platform getcourse --require-ready
 PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture

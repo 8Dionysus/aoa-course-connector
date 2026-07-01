@@ -120,6 +120,11 @@ This proves:
   comment/reply/discussion blocks.
 - Browser-session smoke route for fixture, operator snapshot, and gated live
   calibration reports without printing private raw HTML.
+- Browser-session snapshot audit through CLI `inspect browser-snapshot`,
+  returning `aoa_course_browser_snapshot_audit_v1` with discovery/crawl/
+  materialization/smoke readiness, visible progress/comment/transcript/caption
+  and pagination counts, caption sidecar repair lanes, and no raw HTML or
+  caption text in the report.
 - Browser-session auth-state onboarding through CLI planning, optional
   Playwright capture, expected-origin capture receipts, and redacted
   storage-state inspection. `auth plan-browser-state` and connected-source
