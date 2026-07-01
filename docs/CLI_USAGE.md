@@ -110,6 +110,11 @@ commands include `--expect-origin-contains` when the source ref has a host.
 `auth capture-browser-state` repeats that redacted check in the receipt through
 `expected_origin_matched`, so a state file captured from the wrong school host
 is caught before discovery or sync.
+`preflight connected-plan` also emits `state_file_candidates` inside
+`browser_auth_handoffs`: one per operator source host, with a host-specific
+state-file path, capture, inspect, and source-scoped recheck command. Use those
+per-host candidates when one GetCourse or Skillspace platform plan contains
+several schools or custom domains.
 
 Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the

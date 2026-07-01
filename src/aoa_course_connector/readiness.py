@@ -106,6 +106,16 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
                     lines.extend(["- inspect source hosts:"])
                     for command in inspect_hosts:
                         lines.extend(["  ```bash", f"  {command}", "  ```"])
+            candidates = _dict_items(handoff.get("state_file_candidates"))
+            if candidates:
+                lines.extend(["", "Per-host state-file candidates:"])
+                for candidate in candidates:
+                    lines.append(f"- `{candidate.get('host')}` -> `{candidate.get('state_file')}`")
+                    candidate_commands = candidate.get("commands") if isinstance(candidate.get("commands"), dict) else {}
+                    for label in ["plan", "capture", "inspect", "recheck"]:
+                        command = str(candidate_commands.get(label) or "")
+                        if command:
+                            lines.extend(["  ```bash", f"  {command}", "  ```"])
             notes = [str(item) for item in handoff.get("notes", [])] if isinstance(handoff.get("notes"), list) else []
             if notes:
                 lines.extend(["", "Notes:"])
@@ -1112,6 +1122,11 @@ def _browser_auth_handoffs(
                 "blocked_source_hosts": blocked_source_hosts,
                 "fixture_or_example_source_hosts": fixture_source_hosts,
                 "host_readiness": _host_readiness(source_checks),
+                "state_file_candidates": _host_state_file_candidates(
+                    platform,
+                    operator_source_checks,
+                    browser_state_file=browser_state_file,
+                ),
                 "blockers": blockers,
                 "commands": _browser_auth_handoff_commands(
                     platform,
@@ -1122,6 +1137,7 @@ def _browser_auth_handoffs(
                 "notes": [
                     "capture auth state only from the connected user's legitimate course account",
                     "inspect commands redact cookie, token, localStorage, and sessionStorage values",
+                    "use per-host state-file candidates when one platform account path spans multiple schools or custom domains",
                     "re-run connected-plan after capture; live sync remains blocked until every registered source host matches auth state",
                     "fixture/example hosts prove the install route only; register operator-owned course URLs before live sync",
                 ],
@@ -1154,6 +1170,55 @@ def _host_readiness(source_checks: list[dict[str, object]]) -> list[dict[str, ob
             }
         )
     return readiness
+
+
+def _host_state_file_candidates(
+    platform: str,
+    source_checks: list[dict[str, object]],
+    *,
+    browser_state_file: Path | None,
+) -> list[dict[str, object]]:
+    groups: dict[str, list[dict[str, object]]] = {}
+    for source in source_checks:
+        host = _host(str(source.get("source_ref") or ""))
+        if not host:
+            continue
+        groups.setdefault(host, []).append(source)
+    candidates: list[dict[str, object]] = []
+    for host, sources in sorted(groups.items()):
+        state_file = f'"{AUTH_ROOT_EXPR}/{platform}/{_slug_text(host)}.storage-state.json"'
+        source_ids = [
+            str(source.get("source_id"))
+            for source in sources
+            if source.get("source_id")
+        ]
+        source_id_flags = " ".join(f"--source-id {shlex.quote(source_id)}" for source_id in source_ids)
+        recheck = (
+            f"aoa-course preflight connected-plan --platform {platform} "
+            f"--live-scope bounded --state-file {state_file} --expect-origin {shlex.quote(host)}"
+        )
+        if source_id_flags:
+            recheck += f" {source_id_flags}"
+        candidates.append(
+            {
+                "host": host,
+                "state_file": state_file.strip('"'),
+                "selected_by_default": browser_state_file is None,
+                "source_ids": source_ids,
+                "source_count": len(sources),
+                "commands": {
+                    "plan": f"aoa-course auth plan-browser-state {platform} {shlex.quote(host)}",
+                    "capture": (
+                        f"aoa-course auth capture-browser-state {platform} {shlex.quote(host)} "
+                        f"--login-url <login-or-account-url> --state-file {state_file} "
+                        f"--expect-origin-contains {shlex.quote(host)}"
+                    ),
+                    "inspect": f"aoa-course auth inspect-browser-state {state_file} --expect-origin-contains {shlex.quote(host)}",
+                    "recheck": recheck,
+                },
+            }
+        )
+    return candidates
 
 
 def _handoff_expected_origin(
@@ -1551,6 +1616,10 @@ def _state_file_arg(platform: str, state_file: Path | None) -> str:
     if state_file:
         return shlex.quote(str(state_file.expanduser()))
     return f'"{AUTH_ROOT_EXPR}/{platform}/account.storage-state.json"'
+
+
+def _slug_text(value: str) -> str:
+    return re.sub(r"[^a-z0-9]+", "-", value.casefold()).strip("-")[:64] or "source"
 
 
 def _command_touches_network(command: str) -> bool:

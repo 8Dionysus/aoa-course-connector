@@ -343,6 +343,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Connected-source plan code missing portable artifact root expression")
     if "runs/{calibration_run}/calibration/live_calibration_packet.json" not in readiness_raw:
         errors.append("Connected-source plan code missing runs/<run> calibration artifact path")
+    for token in ["state_file_candidates", "_host_state_file_candidates", "source_id_flags"]:
+        if token not in readiness_raw:
+            errors.append(f"Readiness code missing per-host auth candidate token: {token}")
     if "preflight connected-plan --live-scope bounded" not in agents or "connected_source_plan" not in agents:
         errors.append("AGENTS route missing connected-source launch plan validation")
     if "mcp call live_preflight '{}'" not in agents or "connected_source_plan '{\"live_scope\":\"bounded\"}'" not in agents:
@@ -621,6 +624,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "operator_live_candidate",
         "connected_run_handoff.source_ids",
         "expected_origin_matched",
+        "state_file_candidates",
+        "per-host",
     ]:
         if token not in browser_doc:
             errors.append(f"Browser session doc missing token: {token}")
