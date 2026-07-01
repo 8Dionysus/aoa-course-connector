@@ -6,6 +6,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.discover import discover_browser_fixture, discover_browser_live, discover_browser_snapshot
 from aoa_course_connector.graph import build_graph
@@ -167,6 +168,8 @@ def _report(
     )
     failures = _failures(discovery, materialized, course_summary, artifact_summary, build_artifacts)
     raw_paths = _raw_paths(discovery, materialized)
+    snapshot_audits = _snapshot_audits(raw_paths, platform=platform)
+    failures.extend(_snapshot_audit_failures(snapshot_audits))
     return {
         "schema": "aoa_course_browser_smoke_report_v1",
         "status": "ok" if not failures else "partial",
@@ -177,6 +180,7 @@ def _report(
         "failures": failures,
         "discovery": _discovery_summary(discovery),
         "course": course_summary,
+        "snapshot_audits": snapshot_audits,
         "artifacts": artifact_summary,
         "privacy": {
             "raw_paths": raw_paths,
@@ -360,3 +364,71 @@ def _raw_paths(discovery: dict[str, object] | None, materialized: dict[str, obje
         if isinstance(receipt, dict) and receipt.get("raw_path"):
             paths.append(str(receipt["raw_path"]))
     return paths
+
+
+def _snapshot_audits(raw_paths: list[str], *, platform: str) -> list[dict[str, object]]:
+    audits: list[dict[str, object]] = []
+    for raw_path in raw_paths:
+        path = Path(raw_path)
+        if not path.is_file():
+            audits.append(
+                {
+                    "schema": "aoa_course_browser_snapshot_audit_summary_v1",
+                    "status": "missing",
+                    "snapshot_path": raw_path,
+                    "platform": platform,
+                    "network_touched": False,
+                    "readiness": {},
+                    "counts": {},
+                    "failure_count": 1,
+                    "failures": [{"surface": "snapshot_audit", "reason": "raw snapshot path is missing"}],
+                    "repair_lanes": [],
+                    "privacy": {"raw_html_included": False, "raw_caption_text_included": False},
+                }
+            )
+            continue
+        audit = audit_browser_snapshot_file(path, platform=platform)
+        audits.append(_compact_snapshot_audit(audit))
+    return audits
+
+
+def _compact_snapshot_audit(audit: dict[str, object]) -> dict[str, object]:
+    failures = audit.get("failures") if isinstance(audit.get("failures"), list) else []
+    repair_lanes = audit.get("repair_lanes") if isinstance(audit.get("repair_lanes"), list) else []
+    return {
+        "schema": "aoa_course_browser_snapshot_audit_summary_v1",
+        "source_schema": audit.get("schema"),
+        "status": audit.get("status"),
+        "platform": audit.get("platform"),
+        "source_ref": audit.get("source_ref"),
+        "snapshot_path": audit.get("snapshot_path"),
+        "network_touched": bool(audit.get("network_touched")),
+        "readiness": audit.get("readiness") if isinstance(audit.get("readiness"), dict) else {},
+        "counts": audit.get("counts") if isinstance(audit.get("counts"), dict) else {},
+        "page_kind_counts": audit.get("page_kind_counts") if isinstance(audit.get("page_kind_counts"), dict) else {},
+        "coverage_gaps": audit.get("coverage_gaps") if isinstance(audit.get("coverage_gaps"), list) else [],
+        "failure_count": len(failures),
+        "failures": failures,
+        "repair_lanes": repair_lanes,
+        "repair_lane_count": len(repair_lanes),
+        "privacy": audit.get("privacy") if isinstance(audit.get("privacy"), dict) else {},
+        "next_commands": audit.get("next_commands") if isinstance(audit.get("next_commands"), list) else [],
+    }
+
+
+def _snapshot_audit_failures(snapshot_audits: list[dict[str, object]]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    for audit in snapshot_audits:
+        if audit.get("status") == "ok" and int(audit.get("failure_count") or 0) == 0:
+            continue
+        failures.append(
+            {
+                "surface": "snapshot_audit",
+                "reason": "browser snapshot audit is not ok",
+                "status": audit.get("status"),
+                "snapshot_path": audit.get("snapshot_path"),
+                "failure_count": audit.get("failure_count"),
+                "repair_lanes": audit.get("repair_lanes", []),
+            }
+        )
+    return failures

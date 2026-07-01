@@ -2077,6 +2077,9 @@ def _live_calibration_failures(packet: dict[str, object], suite: dict[str, objec
     min_caption_sidecar_count = int(suite.get("min_caption_sidecar_count_total") or 0)
     if int(quality.get("caption_sidecar_count_total") or 0) < min_caption_sidecar_count:
         failures.append({"field": "quality.caption_sidecar_count_total", "expected_min": min_caption_sidecar_count, "actual": quality.get("caption_sidecar_count_total")})
+    min_snapshot_audit_count = int(suite.get("min_snapshot_audit_count_total") or 0)
+    if int(quality.get("snapshot_audit_count_total") or 0) < min_snapshot_audit_count:
+        failures.append({"field": "quality.snapshot_audit_count_total", "expected_min": min_snapshot_audit_count, "actual": quality.get("snapshot_audit_count_total")})
     transcript_source_authority_counts = quality.get("transcript_source_authority_counts") if isinstance(quality.get("transcript_source_authority_counts"), dict) else {}
     for source_authority in _list_of_strings(suite.get("required_transcript_source_authorities")):
         if int(transcript_source_authority_counts.get(source_authority) or 0) < 1:

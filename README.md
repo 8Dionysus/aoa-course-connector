@@ -221,6 +221,9 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call browser_snapshot_audi
 The audit reports discovery/materialization readiness, lesson/course links,
 visible progress, comments, transcripts, caption sidecar resources, pagination,
 repair lanes, and next commands while keeping raw page text out of the report.
+Browser smoke reports embed the same compact audit summaries under
+`snapshot_audits[]`; live calibration packets aggregate those summaries into
+quality fields and repair lanes.
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
