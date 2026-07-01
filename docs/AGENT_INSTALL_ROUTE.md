@@ -67,7 +67,9 @@
     live sources.
 25. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
-    `auth inspect-browser-state`.
+    `auth inspect-browser-state`. The plan/capture commands should carry
+    `--expect-origin-contains`; the capture receipt must show
+    `expected_origin_matched: true` before discovery or sync.
 26. Run `preflight live --platform getcourse` or
     `preflight live --platform skillspace` to inspect source registry and
     redacted browser-state readiness before live discovery or sync.

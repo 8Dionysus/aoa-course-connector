@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import os
+import sys
+import types
 from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
-from aoa_course_connector.auth import browser_state_plan, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
 from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
@@ -30,9 +32,97 @@ def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
     plan = browser_state_plan(tmp_path / "auth", "getcourse", "https://school.example")
     assert plan["state_file"]
     assert plan["state_file"] == str(default_browser_state_path(tmp_path / "auth", "getcourse", "https://school.example"))
+    assert plan["expected_origin_contains"] == "school.example"
     assert "capture-browser-state" in plan["capture_command"]
+    assert "--state-file" in plan["capture_command"]
+    assert "--expect-origin-contains school.example" in plan["capture_command"]
     assert "inspect-browser-state" in plan["inspect_command"]
+    assert "--expect-origin-contains school.example" in plan["inspect_command"]
     assert plan["git_safe"] is False
+
+
+def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, monkeypatch) -> None:
+    state_file = tmp_path / "auth" / "getcourse" / "account.storage-state.json"
+
+    class FakePage:
+        url = "https://school.example/cms/system/login"
+
+        def goto(self, *_args, **_kwargs) -> None:
+            return None
+
+        def title(self) -> str:
+            return "Login"
+
+    class FakeContext:
+        def new_page(self) -> FakePage:
+            return FakePage()
+
+        def storage_state(self, *, path: str) -> None:
+            Path(path).write_text(
+                json.dumps({
+                    "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.example", "path": "/"}],
+                    "origins": [{"origin": "https://school.example", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+                }),
+                encoding="utf-8",
+            )
+
+    class FakeBrowser:
+        def new_context(self) -> FakeContext:
+            return FakeContext()
+
+        def close(self) -> None:
+            return None
+
+    class FakeChromium:
+        def launch(self, *, headless: bool = False) -> FakeBrowser:
+            assert headless is True
+            return FakeBrowser()
+
+    class FakePlaywright:
+        chromium = FakeChromium()
+
+    class FakeSyncPlaywright:
+        def __enter__(self) -> FakePlaywright:
+            return FakePlaywright()
+
+        def __exit__(self, *_args) -> None:
+            return None
+
+    sync_api = types.ModuleType("playwright.sync_api")
+    sync_api.sync_playwright = lambda: FakeSyncPlaywright()
+    monkeypatch.setitem(sys.modules, "playwright", types.ModuleType("playwright"))
+    monkeypatch.setitem(sys.modules, "playwright.sync_api", sync_api)
+
+    receipt = capture_browser_state(
+        tmp_path / "auth",
+        "getcourse",
+        "https://school.example",
+        "https://school.example/cms/system/login",
+        state_file=state_file,
+        headless=True,
+        pause=lambda _page_info: None,
+    )
+    mismatch = capture_browser_state(
+        tmp_path / "auth",
+        "getcourse",
+        "account",
+        "https://school.example/cms/system/login",
+        state_file=state_file,
+        headless=True,
+        expect_origin_contains="other.example",
+        pause=lambda _page_info: None,
+    )
+
+    assert receipt["status"] == "ok"
+    assert receipt["expected_origin_contains"] == "school.example"
+    assert receipt["expected_origin_matched"] is True
+    assert receipt["state"]["expected_origin_matched"] is True
+    assert mismatch["status"] == "warning"
+    assert mismatch["expected_origin_contains"] == "other.example"
+    assert mismatch["expected_origin_matched"] is False
+    rendered = json.dumps(receipt) + json.dumps(mismatch)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
 
 
 def test_goal_audit_reports_ready_for_operator_connection_after_bootstrap(tmp_path: Path) -> None:

@@ -105,7 +105,10 @@ This proves:
 - Browser-session smoke route for fixture, operator snapshot, and gated live
   calibration reports without printing private raw HTML.
 - Browser-session auth-state onboarding through CLI planning, optional
-  Playwright capture, and redacted storage-state inspection.
+  Playwright capture, expected-origin capture receipts, and redacted
+  storage-state inspection. `auth plan-browser-state` and connected-source
+  handoffs carry `--expect-origin-contains` so wrong-login or cross-school
+  storage-state mismatches are visible before live discovery or sync.
 - Read-only live preflight reports for Stepik tokens, browser storage-state
   usability, source-registry readiness, next commands, secret redaction, and
   MCP `live_preflight` structuredContent.

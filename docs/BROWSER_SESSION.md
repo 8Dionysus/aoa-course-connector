@@ -222,7 +222,8 @@ Create and verify a local Playwright storage-state file:
 ```bash
 aoa-course auth capture-browser-state getcourse "https://school.example" \
   --login-url "https://school.example/cms/system/login" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
 
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --expect-origin-contains "school.example"
@@ -232,6 +233,11 @@ aoa-course preflight live \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --expect-origin school.example
 ```
+
+The capture receipt is safe to inspect: it reports counts and
+`expected_origin_matched` without printing cookies, localStorage values, or
+tokens. Treat a `warning` receipt as a blocked live route until the saved state
+matches the operator-owned course host.
 
 When an agent needs to decide the next live action for GetCourse browser
 sources, narrow the read-only connected plan:

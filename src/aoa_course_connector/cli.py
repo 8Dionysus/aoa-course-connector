@@ -186,6 +186,7 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("--no-prompt", action="store_true")
     capture.add_argument("--wait-until", default="domcontentloaded")
     capture.add_argument("--timeout-ms", type=int, default=120_000)
+    capture.add_argument("--expect-origin-contains")
     capture.set_defaults(func=cmd_auth_capture_browser_state)
     inspect_state = auth_sub.add_parser("inspect-browser-state")
     inspect_state.add_argument("state_file", nargs="?", type=Path)
@@ -760,6 +761,7 @@ def cmd_auth_capture_browser_state(args: argparse.Namespace) -> int:
             headless=args.headless,
             wait_until=args.wait_until,
             timeout_ms=args.timeout_ms,
+            expect_origin_contains=args.expect_origin_contains,
             pause=pause,
         )
     except Exception as exc:

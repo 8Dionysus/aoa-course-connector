@@ -897,17 +897,19 @@ def _browser_auth_handoff_commands(
 ) -> dict[str, object]:
     state_arg = _state_file_arg(platform, browser_state_file)
     inspect = f"aoa-course auth inspect-browser-state {state_arg}"
+    capture = (
+        f"aoa-course auth capture-browser-state {platform} account "
+        f"--login-url <login-or-account-url> --state-file {state_arg}"
+    )
     recheck = f"aoa-course preflight connected-plan --platform {platform} --live-scope bounded --state-file {state_arg}"
     if expected_origin_contains:
         quoted_origin = shlex.quote(expected_origin_contains)
         inspect += f" --expect-origin-contains {quoted_origin}"
+        capture += f" --expect-origin-contains {quoted_origin}"
         recheck += f" --expect-origin {quoted_origin}"
     return {
         "plan": f"aoa-course auth plan-browser-state {platform} account",
-        "capture": (
-            f"aoa-course auth capture-browser-state {platform} account "
-            f"--login-url <login-or-account-url> --state-file {state_arg}"
-        ),
+        "capture": capture,
         "inspect": inspect,
         "inspect_source_hosts": [
             f"aoa-course auth inspect-browser-state {state_arg} --expect-origin-contains {shlex.quote(host)}"
@@ -1085,6 +1087,8 @@ def _append_browser_preflight(
     state_file = (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
     source_id_flags = _source_id_flags(sources)
     expected_origin = expect_origin_contains or _origin_hint(sources)
+    capture_command = _capture_browser_state_command(platform, state_file, expected_origin)
+    inspect_command = _inspect_browser_state_command(state_file, expected_origin)
     state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
     state_ready = bool(state.get("usable"))
     checks.append(
@@ -1103,7 +1107,7 @@ def _append_browser_preflight(
             "local_storage_entry_count": state.get("local_storage_entry_count", 0),
             "session_storage_entry_count": state.get("session_storage_entry_count", 0),
             "secrets_redacted": True,
-            "next_command": f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}",
+            "next_command": capture_command,
         }
     )
     operator_source_ready_flags: list[bool] = []
@@ -1170,8 +1174,8 @@ def _append_browser_preflight(
     )
     if not state_ready:
         next_commands.append(f"aoa-course auth plan-browser-state {platform} account")
-        next_commands.append(f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}")
-        next_commands.append(f"aoa-course auth inspect-browser-state {str(state_file)!r}")
+        next_commands.append(capture_command)
+        next_commands.append(inspect_command)
     if fixture_source_count and not operator_source_ready_flags:
         next_commands.append(f"aoa-course sources add <operator-course-url> --platform {platform} --title <course-title>")
     if not state_ready:
@@ -1188,8 +1192,8 @@ def _append_browser_preflight(
             f"--state-file {str(state_file)!r} --max-lessons 50 --build-artifacts"
         )
     else:
-        next_commands.append(f"aoa-course auth inspect-browser-state {str(state_file)!r}")
-        next_commands.append(f"aoa-course auth capture-browser-state {platform} account --login-url <login-or-account-url> --state-file {str(state_file)!r}")
+        next_commands.append(inspect_command)
+        next_commands.append(capture_command)
 
 
 def _source_check(source: dict[str, object], *, ready: bool, blockers: list[str]) -> dict[str, object]:
@@ -1214,6 +1218,23 @@ def _source_id_flags(sources: list[dict[str, object]]) -> str:
         if source.get("source_id")
     )
     return f"{flags} " if flags else ""
+
+
+def _capture_browser_state_command(platform: str, state_file: Path, expected_origin: str | None) -> str:
+    command = (
+        f"aoa-course auth capture-browser-state {platform} account "
+        f"--login-url <login-or-account-url> --state-file {str(state_file)!r}"
+    )
+    if expected_origin:
+        command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
+    return command
+
+
+def _inspect_browser_state_command(state_file: Path, expected_origin: str | None) -> str:
+    command = f"aoa-course auth inspect-browser-state {str(state_file)!r}"
+    if expected_origin:
+        command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
+    return command
 
 
 def _origin_hint(sources: list[dict[str, object]]) -> str:
