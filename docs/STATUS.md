@@ -63,6 +63,13 @@ This proves:
   false`, and exits non-zero on the CLI with
   `--require-ready-for-connection` until offline starter, fixture connected-run,
   MCP, docs, schemas, storage, and privacy/source boundaries are all in place;
+- CLI `connect profile`, `connect inspect`, `connect apply`, and MCP
+  `connection_profile_inspect` provide the next operator-connection handoff:
+  a local `aoa_course_connection_profile_v1` runtime artifact for source refs,
+  browser state-file paths, Stepik token env names, and semantic provider
+  settings; a read-only `aoa_course_connection_profile_inspection_v1` for
+  source registration/auth/connected-plan/semantic next commands; and a
+  registry-only apply step that does not touch the network or log token values;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
   evidence reports with source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh

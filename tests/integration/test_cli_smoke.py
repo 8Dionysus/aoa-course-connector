@@ -170,6 +170,59 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert "SUPER_SECRET" not in runbook
 
 
+def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    receipt = run_cli(
+        tmp_path,
+        "connect",
+        "profile",
+        "--name",
+        "operator-live",
+        "--getcourse-url",
+        "https://school.example/teach/control/stream",
+        "--skillspace-url",
+        "https://academy.example/course/demo",
+        "--stepik-course-id",
+        "67",
+        "--run",
+        "connected-live-calibration",
+        "--query",
+        "course-specific question",
+        "--live-scope",
+        "full-course",
+        "--include-step-sources",
+        "--semantic-provider",
+        "http_json_v1",
+        "--embedding-endpoint",
+        "https://embed.example/v1",
+        "--embedding-model",
+        "course-embedding",
+        "--embedding-token-env",
+        "AOA_COURSE_TEST_EMBEDDING_TOKEN",
+    )
+
+    profile_path = Path(str(receipt["profile_path"]))
+    assert receipt["schema"] == "aoa_course_connection_profile_receipt_v1"
+    assert profile_path.is_file()
+    assert receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 0
+    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(receipt)
+
+    inspection = run_cli(tmp_path, "connect", "inspect", str(profile_path))
+    assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
+    assert any("sources add" in command for command in inspection["next_commands"])
+
+    applied = run_cli(tmp_path, "connect", "apply", str(profile_path))
+    assert applied["schema"] == "aoa_course_connection_profile_apply_v1"
+    assert len(applied["applied"]) == 3
+    assert applied["inspection"]["source_registry"]["registered_profile_source_count"] == 3
+
+    sources = run_cli(tmp_path, "sources", "list")
+    assert len(sources["registry"]["sources"]) == 3
+    mcp = run_cli(tmp_path, "mcp", "call", "connection_profile_inspect", json.dumps({"profile_path": str(profile_path)}))
+    assert mcp["result"]["inspection"]["schema"] == "aoa_course_connection_profile_inspection_v1"
+    assert mcp["result"]["inspection"]["network_touched"] is False
+
+
 def test_cli_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path) -> None:
     run_cli(
         tmp_path,

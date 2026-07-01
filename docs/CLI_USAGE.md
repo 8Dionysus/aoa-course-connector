@@ -6,6 +6,9 @@ aoa-course bootstrap fixture --run starter-fixture --connected-run connected-cal
 aoa-course readiness --run starter-fixture
 aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
 aoa-course goal audit --run starter-fixture --connected-run connected-calibration --write-connection-handoff "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/goal-connection-handoff.md"
+aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
 aoa-course init
 aoa-course adapters list
@@ -84,6 +87,7 @@ aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
+aoa-course mcp call connection_profile_inspect '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
@@ -186,6 +190,20 @@ runtime Markdown artifact outside Git.
 The same packet is exposed through MCP `goal_audit`, so an MCP-only agent can
 inspect the DoD handoff without switching back to shell commands or touching
 the network.
+
+Use `connect profile` after the goal handoff when the operator is ready to
+provide real source refs and provider choices. The command writes
+`aoa_course_connection_profile_v1` under runtime artifact storage. It may
+include operator course URLs and state-file paths, so keep it outside Git; it
+does not include token values. `connect inspect` reads that profile and returns
+source registration commands, browser-state capture/inspect commands,
+per-platform `preflight connected-plan` commands, and semantic provider
+preflight/build/query commands without mutating local state or touching the
+network. `connect apply` registers the profile sources in the local source
+registry only; browser login, Stepik API calls, semantic builds, and connected
+live calibration remain separate explicit commands.
+MCP `connection_profile_inspect` exposes the same read-only inspection for
+agents that continue from the MCP surface.
 
 Use `preflight semantic-provider` before external vector calibration. The
 `local_hashing_v1` route is ready whenever the normalized bundle exists.
