@@ -41,6 +41,9 @@ def test_stepik_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert results[0]["source_authority"] == "stepik_step_api"
     packet = render_answer_packet(storage, "Stepik public API evidence", run_id="stepik-fixture")
     assert packet["evidence_chain"]
+    assert packet["evidence_chain"][0]["platform"] == "stepik"
+    assert packet["evidence_chain"][0]["authority_tier"] == "official_lesson"
+    assert packet["evidence_chain"][0]["source_authority"] == "stepik_step_api"
 
 
 def test_stepik_live_fetches_step_block_sources(monkeypatch) -> None:

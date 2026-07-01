@@ -15,7 +15,7 @@
       "expect_equal_relevance_score": true,
       "expect_preferred_ranked_above_lower": true,
       "required_rank_features": ["authority_tier", "authority_boost", "freshness_state", "provenance_complete"],
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     },
     {
       "query": "diagnostic logcat capture sequence",
@@ -29,7 +29,7 @@
       "lower_authority_doc_id": "comment:comment:authority:learner-diagnostics",
       "expect_preferred_ranked_above_lower": true,
       "required_rank_features": ["authority_tier", "authority_boost", "freshness_state", "provenance_complete"],
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     }
   ]
 }

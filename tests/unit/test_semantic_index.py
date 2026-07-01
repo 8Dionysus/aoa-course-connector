@@ -105,6 +105,9 @@ def test_semantic_and_hybrid_queries_return_evidence(tmp_path: Path) -> None:
     assert packet["mode"] == "hybrid"
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+    assert packet["evidence_chain"][0]["freshness_state"]
+    assert packet["evidence_chain"][0]["authority_tier"]
+    assert packet["evidence_chain"][0]["rank_score"] == packet["results"][0]["rank_score"]
     assert packet["refresh_report"]["schema"] == "aoa_course_refresh_report_v1"
     assert packet["refresh_report"]["local_rebuild_commands"]
     assert packet["results"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"

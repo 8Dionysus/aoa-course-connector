@@ -458,6 +458,9 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert evidence["freshness_report"]["has_source_timestamps"] is True
     assert evidence["refresh_report"]["local_rebuild_commands"]
     assert evidence["result_refs"][0]["evidence_id"]
+    assert evidence["evidence_chain"][0]["freshness_state"]
+    assert evidence["evidence_chain"][0]["authority_tier"]
+    assert evidence["evidence_chain"][0]["rank_score"] == evidence["result_refs"][0]["rank_score"]
 
     assert evidence["result_refs"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
     checkpoint = make_checkpoint(

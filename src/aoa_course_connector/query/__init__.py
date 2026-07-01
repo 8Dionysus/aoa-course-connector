@@ -213,11 +213,22 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
             evidence_chain.append(
                 {
                     "evidence_id": evidence_id,
+                    "doc_id": result.get("doc_id"),
+                    "kind": result.get("kind"),
                     "source_id": result.get("source_id"),
                     "source_url": result.get("source_url"),
                     "fetched_at": result.get("fetched_at"),
                     "platform": result.get("platform"),
                     "path": result.get("path"),
+                    "lesson_id": result.get("lesson_id"),
+                    "lesson_title": result.get("lesson_title"),
+                    "freshness_state": result.get("freshness_state"),
+                    "authority_tier": result.get("authority_tier"),
+                    "authority_label": result.get("authority_label"),
+                    "source_authority": result.get("source_authority"),
+                    "score": result.get("score"),
+                    "rank_score": result.get("rank_score"),
+                    "rank_features": result.get("rank_features"),
                     "refresh_hint": result.get("refresh_hint"),
                 }
             )

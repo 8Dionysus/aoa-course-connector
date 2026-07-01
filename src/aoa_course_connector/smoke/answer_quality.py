@@ -6,7 +6,15 @@ from typing import Any
 
 
 REQUIRED_RESULT_FIELDS = ["source_id", "source_url", "fetched_at", "path", "authority_tier", "freshness_state"]
-REQUIRED_EVIDENCE_FIELDS = ["source_id", "source_url", "fetched_at", "path"]
+REQUIRED_EVIDENCE_FIELDS = [
+    "source_id",
+    "source_url",
+    "fetched_at",
+    "path",
+    "freshness_state",
+    "authority_tier",
+    "rank_score",
+]
 
 
 def summarize_answer_packet(packet: dict[str, object], *, expected_platform: str | None = None) -> dict[str, object]:

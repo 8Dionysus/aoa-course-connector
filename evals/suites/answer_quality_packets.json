@@ -13,7 +13,7 @@
       "expected_top_path_terms": ["Android Firmware Recovery", "Course Knowledge Indexing", "Evidence-Backed Search"],
       "expected_top_snippet_terms": ["lesson path", "source URL", "fetched timestamp", "evidence identifiers"],
       "expected_freshness_states": ["current"],
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     },
     {
       "query": "mentor anti-rollback vendor boot",
@@ -26,7 +26,7 @@
       "expected_top_snippet_terms": ["connected account", "rollback", "vendor boot"],
       "must_include_kind": "comment",
       "expected_freshness_states": ["current"],
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     },
     {
       "query": "Stepik public API evidence",
@@ -39,7 +39,7 @@
       "expected_top_path_terms": ["Stepik Public API Fixture", "Clean API Section", "Stepik Lesson From API"],
       "expected_top_snippet_terms": ["Stepik", "public API", "source evidence", "lesson path"],
       "expected_freshness_states": ["current"],
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     }
   ]
 }

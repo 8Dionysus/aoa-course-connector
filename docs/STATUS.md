@@ -31,6 +31,9 @@ This proves:
   `network_touched: false`;
 - graph construction for course/module/lesson/step/asset/topic/entity;
 - answer packets with evidence chains and freshness timestamps;
+- evidence chains preserve freshness state, authority tier, source authority,
+  rank score, rank features, and refresh hints alongside source URLs and
+  fetched timestamps, so agents can cite and refresh the exact proof item;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
   `tools/call` responses;
 - MCP `ingest_status` returns a read-only run readiness packet with normalized
