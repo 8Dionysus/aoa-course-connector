@@ -149,6 +149,25 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert goal["ready_for_operator_connection"] is True
     assert goal["goal_complete"] is False
     assert goal["remaining_live_requirements"]
+    assert goal["connection_handoff"]["schema"] == "aoa_course_connection_handoff_v1"
+    handoff_path = tmp_path / "artifacts" / "goal-connection-handoff.md"
+    goal_with_handoff = run_cli(
+        tmp_path,
+        "goal",
+        "audit",
+        "--run",
+        "starter-fixture",
+        "--connected-run",
+        "connected-calibration",
+        "--write-connection-handoff",
+        str(handoff_path),
+    )
+    assert goal_with_handoff["connection_handoff"]["runbook"]["written"] is True
+    runbook = handoff_path.read_text(encoding="utf-8")
+    assert "Course Connector Connection Handoff" in runbook
+    assert "Browser Auth" in runbook
+    assert "Semantic Provider" in runbook
+    assert "SUPER_SECRET" not in runbook
 
 
 def test_cli_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path) -> None:

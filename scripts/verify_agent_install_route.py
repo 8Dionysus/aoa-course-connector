@@ -86,6 +86,11 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError("goal_audit stdio response did not report ready_for_operator_connection")
     if audit.get("goal_complete") is not False:
         raise StdioVerificationError("goal_audit stdio response must keep goal_complete false before live calibration")
+    handoff = audit.get("connection_handoff")
+    if not isinstance(handoff, dict) or handoff.get("schema") != "aoa_course_connection_handoff_v1":
+        raise StdioVerificationError("goal_audit stdio response missing connection_handoff")
+    if handoff.get("network_touched") is not False:
+        raise StdioVerificationError("connection_handoff must be read-only")
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -100,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env["PYTHONPATH"] = "src"
         env["AOA_COURSE_INSTANCE_ROOT"] = str(Path(tmp) / "state")
+        connection_handoff_path = Path(tmp) / "state" / "artifacts" / "goal-connection-handoff.md"
         commands = [
             [sys.executable, "scripts/validate_connector.py"],
             [sys.executable, "-m", "compileall", "-q", "src", "scripts"],
@@ -107,6 +113,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "readiness", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready"],
             [sys.executable, "-m", "aoa_course_connector.cli", "goal", "audit", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready-for-connection"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "goal", "audit", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--write-connection-handoff", str(connection_handoff_path)],
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "fixture", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "starter-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-semantic-index", "--run", "starter-fixture"],
@@ -192,6 +199,9 @@ def main(argv: list[str] | None = None) -> int:
                 print(result.stdout, file=sys.stderr)
                 print(result.stderr, file=sys.stderr)
                 return result.returncode
+        if not connection_handoff_path.is_file() or "Course Connector Connection Handoff" not in connection_handoff_path.read_text(encoding="utf-8"):
+            print("goal connection handoff was not written correctly", file=sys.stderr)
+            return 1
         stdio_requests = "\n".join([
             '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"install-route","version":"0"}}}',
             '{"jsonrpc":"2.0","id":2,"method":"tools/list"}',

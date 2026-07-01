@@ -11,7 +11,7 @@ from aoa_course_connector.auth import browser_state_plan, capture_browser_state,
 from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.config import StorageRoots
-from aoa_course_connector.goal_audit import goal_audit
+from aoa_course_connector.goal_audit import goal_audit, render_connection_handoff, write_connection_handoff
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
@@ -164,6 +164,20 @@ def test_goal_audit_reports_ready_for_operator_connection_after_bootstrap(tmp_pa
     requirements = {item["id"]: item for item in report["requirements"]}
     assert requirements["local_index_graph_query"]["status"] == "proved"
     assert requirements["mcp_surface"]["status"] == "proved"
+    handoff = report["connection_handoff"]
+    assert handoff["schema"] == "aoa_course_connection_handoff_v1"
+    assert handoff["status"] == "operator_action_required"
+    assert handoff["network_touched"] is False
+    assert {item["platform"] for item in handoff["operator_inputs_needed"]} >= {"getcourse", "skillspace", "stepik", "semantic"}
+    assert handoff["browser_auth"]
+    assert handoff["semantic_provider"]["commands"]
+    assert any("semantic_provider_preflight" in command for command in handoff["mcp_commands"])
+    rendered = render_connection_handoff(report)
+    assert "Course Connector Connection Handoff" in rendered
+    assert "AOA_COURSE_EMBEDDING_TOKEN" in rendered
+    runbook = write_connection_handoff(report, tmp_path / "artifacts" / "connection-handoff.md")
+    assert runbook["written"] is True
+    assert Path(str(runbook["path"])).is_file()
 
 
 def test_adapter_registry_covers_goal_platform_topology(tmp_path: Path) -> None:

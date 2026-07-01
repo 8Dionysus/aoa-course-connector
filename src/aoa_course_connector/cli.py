@@ -27,7 +27,7 @@ from aoa_course_connector.discover import (
     discover_stepik_account_live as discover_stepik_account_live_route,
 )
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.goal_audit import goal_audit
+from aoa_course_connector.goal_audit import goal_audit, write_connection_handoff
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER, build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import (
     capture_browser_live,
@@ -84,6 +84,7 @@ def build_parser() -> argparse.ArgumentParser:
     goal_audit_parser = goal_sub.add_parser("audit")
     goal_audit_parser.add_argument("--run", action="append")
     goal_audit_parser.add_argument("--connected-run", default="connected-calibration")
+    goal_audit_parser.add_argument("--write-connection-handoff", type=Path)
     goal_audit_parser.add_argument("--require-ready-for-connection", action="store_true")
     goal_audit_parser.set_defaults(func=cmd_goal_audit)
 
@@ -621,6 +622,8 @@ def cmd_goal_audit(args: argparse.Namespace) -> int:
         connected_run=args.connected_run,
         mcp_tool_names=tools,
     )
+    if args.write_connection_handoff:
+        report["connection_handoff"]["runbook"] = write_connection_handoff(report, args.write_connection_handoff)
     _emit(report)
     if args.require_ready_for_connection and not bool(report.get("ready_for_operator_connection")):
         return 1

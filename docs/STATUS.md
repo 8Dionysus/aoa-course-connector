@@ -57,8 +57,10 @@ This proves:
 - CLI `goal audit` and MCP `goal_audit` return
   `aoa_course_goal_audit_v1`, a read-only DoD-oriented handoff that separates
   `ready_for_operator_connection` from `goal_complete`, keeps live account
-  calibration in `remaining_live_requirements`, reports
-  `network_touched: false`, and exits non-zero on the CLI with
+  calibration in `remaining_live_requirements`, embeds
+  `aoa_course_connection_handoff_v1` with operator inputs, browser auth,
+  Stepik, semantic provider, and MCP commands, reports `network_touched:
+  false`, and exits non-zero on the CLI with
   `--require-ready-for-connection` until offline starter, fixture connected-run,
   MCP, docs, schemas, storage, and privacy/source boundaries are all in place;
 - MCP agent routes for graph neighborhoods, freshness reports, and compact
