@@ -22,6 +22,13 @@ This proves:
 - optional `http_json_v1` semantic provider contract for operator-configured
   embedding endpoints, with provider metadata in the index artifact, query/MCP
   reuse of the same vector provider, and token-value redaction;
+- read-only semantic provider preflight through CLI `preflight
+  semantic-provider`, MCP `semantic_provider_preflight`, and embedded
+  `readiness` packets. The preflight emits
+  `aoa_course_semantic_provider_preflight_v1`, verifies normalized bundle
+  presence plus `http_json_v1` endpoint/model/token-env readiness before any
+  network call, and keeps `token_value_logged: false` and
+  `network_touched: false`;
 - graph construction for course/module/lesson/step/asset/topic/entity;
 - answer packets with evidence chains and freshness timestamps;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
@@ -32,9 +39,10 @@ This proves:
 - CLI `readiness` and MCP `connector_readiness` return one read-only
   `aoa_course_connector_readiness_v1` route audit with install-route files,
   storage roots, source registry counts, selected run/index/graph readiness,
-  connected-source handoff status, compact `connected_run_handoff`,
-  connected-run receipt status, MCP tool coverage, `operational_ready`,
-  `connected_live_ready`, and next commands. The embedded connected plan
+  semantic provider readiness, connected-source handoff status, compact
+  `connected_run_handoff`, connected-run receipt status, MCP tool coverage,
+  `operational_ready`, `connected_live_ready`, and next commands. The embedded
+  connected plan
   preserves operator-selected `live_scope`, `include_step_sources`,
   `link_pattern`, `max_lessons`, `max_pages`, and `max_sources` through the
   ready connected-run handoff. If the selected connected-run receipt is partial
@@ -229,7 +237,9 @@ The next layer is live connected-source work:
   packets to drive selector, sync, retrieval, privacy, and eval-intake follow-up
   work;
 - live calibration of operator-selected external embedding endpoints beyond the
-  local CI `http_json_v1` contract proof;
+  local CI `http_json_v1` contract proof, using `preflight semantic-provider`
+  first and then `build-semantic-index --provider http_json_v1` against the
+  connected run;
 - live-calibrated authority tiers from adapter/source metadata beyond current
   fixture-proven browser-role and Stepik official API signals;
 - richer live smoke routes gated away from CI secrets.

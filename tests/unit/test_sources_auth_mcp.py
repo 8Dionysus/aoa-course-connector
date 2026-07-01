@@ -16,6 +16,7 @@ from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
+from aoa_course_connector.readiness import semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
@@ -324,6 +325,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "semantic_provider_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_run_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
@@ -358,6 +360,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert evidence["freshness_report"]["has_source_timestamps"] is True
     assert evidence["refresh_report"]["local_rebuild_commands"]
     assert evidence["result_refs"][0]["evidence_id"]
+
     assert evidence["result_refs"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
     checkpoint = make_checkpoint(
         source={"source_id": "source:getcourse:test", "platform": "getcourse", "source_ref": "https://school.example", "access_mode": "browser_session"},
@@ -404,6 +407,47 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert refresh["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
     assert refresh["refresh"]["status"] == "planned"
     assert refresh["refresh"]["network_touched"] is False
+
+
+def test_semantic_provider_preflight_redacts_token_values(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    materialize_fixture(storage, run_id="starter-fixture")
+
+    missing = semantic_provider_preflight(
+        storage,
+        run_id="starter-fixture",
+        provider="http_json_v1",
+        embedding_endpoint="https://embed.example/v1",
+        embedding_model="course-embedding",
+        embedding_token_env="AOA_COURSE_TEST_EMBEDDING_TOKEN",
+    )
+    assert missing["schema"] == "aoa_course_semantic_provider_preflight_v1"
+    assert missing["ready"] is False
+    assert missing["network_touched"] is False
+    assert missing["provider_config"]["token_env_present"] is False
+    assert "export AOA_COURSE_TEST_EMBEDDING_TOKEN=<redacted-token>" in missing["next_commands"]
+
+    monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    ready = semantic_provider_preflight(
+        storage,
+        run_id="starter-fixture",
+        provider="http_json_v1",
+        embedding_endpoint="https://embed.example/v1",
+        embedding_model="course-embedding",
+        embedding_token_env="AOA_COURSE_TEST_EMBEDDING_TOKEN",
+    )
+    serialized = json.dumps(ready, sort_keys=True)
+    assert ready["ready"] is True
+    assert ready["provider_config"]["token_env_present"] is True
+    assert ready["provider_config"]["secret_values_logged"] is False
+    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in serialized
+    assert "build-semantic-index --run starter-fixture --provider http_json_v1" in ready["commands"]["build"]
 
 
 def test_ingest_status_treats_corrupt_artifacts_as_not_ready(tmp_path: Path, monkeypatch) -> None:
@@ -640,6 +684,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
+    semantic_provider_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "semantic_provider_preflight")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
@@ -658,6 +703,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
     assert "link_pattern" in connected_plan_tool["inputSchema"]["properties"]
+    assert "embedding_endpoint" in semantic_provider_tool["inputSchema"]["properties"]
+    assert "embedding_token_env" in semantic_provider_tool["inputSchema"]["properties"]
     assert connected_run_tool["inputSchema"]["required"] == []
     assert evidence_tool["inputSchema"]["required"] == ["query"]
     assert refresh_tool["inputSchema"]["required"] == ["query"]
@@ -701,6 +748,14 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert preflight_result["isError"] is False
     assert preflight_result["structuredContent"]["tool"] == "live_preflight"
     assert preflight_result["structuredContent"]["preflight"]["network_touched"] is False
+    semantic_preflight = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 40,
+        "method": "tools/call",
+        "params": {"name": "semantic_provider_preflight", "arguments": {"run": "starter-fixture"}},
+    })
+    assert semantic_preflight["result"]["structuredContent"]["tool"] == "semantic_provider_preflight"
+    assert semantic_preflight["result"]["structuredContent"]["preflight"]["network_touched"] is False
     upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
 
     connected_plan = handle_jsonrpc_message({

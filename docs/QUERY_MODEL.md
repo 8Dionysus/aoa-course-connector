@@ -104,6 +104,7 @@ Commands:
 
 ```bash
 aoa-course build-semantic-index --run starter-fixture
+aoa-course preflight semantic-provider --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --require-ready
 aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
 aoa-course query "bootloader rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid

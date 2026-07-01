@@ -10,7 +10,9 @@ from urllib.parse import urlparse
 
 from aoa_course_connector.auth import inspect_browser_state
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.sources import load_registry, registry_path
+from aoa_course_connector.storage import run_artifact_dir, run_data_dir
 
 
 BROWSER_PLATFORMS = {"getcourse", "skillspace"}
@@ -19,6 +21,7 @@ LIVE_SCOPES = {"bounded", "full-course"}
 ARTIFACT_ROOT_EXPR = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
 AUTH_ROOT_EXPR = "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}"
 EXAMPLE_HOSTS = {"example.com", "example.net", "example.org"}
+SEMANTIC_PROVIDERS = {LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER}
 
 
 def render_connected_source_runbook(plan: dict[str, object]) -> str:
@@ -161,6 +164,151 @@ def write_connected_source_runbook(plan: dict[str, object], path: Path) -> dict[
         "format": "markdown",
         "network_touched": False,
         "redacted": True,
+    }
+
+
+def semantic_provider_preflight(
+    roots: StorageRoots,
+    *,
+    run_id: str = "starter-fixture",
+    provider: str = LOCAL_HASHING_PROVIDER,
+    dimensions: int = 256,
+    embedding_endpoint: str | None = None,
+    embedding_model: str | None = None,
+    embedding_token_env: str | None = "AOA_COURSE_EMBEDDING_TOKEN",
+    embedding_batch_size: int = 32,
+    embedding_timeout_seconds: float = 30.0,
+) -> dict[str, object]:
+    """Plan semantic-index provider use without touching the network or secrets."""
+
+    selected_provider = _selected_semantic_provider(provider)
+    normalized_path = run_data_dir(roots, run_id) / "normalized" / "course_bundle.json"
+    semantic_index_path = run_artifact_dir(roots, run_id) / "indexes" / "semantic_index.json"
+    token_env = str(embedding_token_env or "") if selected_provider == HTTP_JSON_PROVIDER else ""
+    token_present = bool(os.environ.get(token_env)) if token_env else False
+    endpoint = str(embedding_endpoint or "")
+    model = str(embedding_model or "")
+    checks = [
+        {
+            "kind": "normalized_bundle",
+            "ready": normalized_path.exists(),
+            "path": str(normalized_path),
+            "required": True,
+            "blocker": "" if normalized_path.exists() else "normalized bundle is missing",
+        }
+    ]
+    provider_ready = True
+    if selected_provider == HTTP_JSON_PROVIDER:
+        provider_checks = [
+            {
+                "kind": "embedding_endpoint",
+                "ready": bool(endpoint),
+                "configured": bool(endpoint),
+                "required": True,
+                "blocker": "" if endpoint else "provide --embedding-endpoint",
+            },
+            {
+                "kind": "embedding_model",
+                "ready": bool(model),
+                "configured": bool(model),
+                "required": True,
+                "blocker": "" if model else "provide --embedding-model",
+            },
+            {
+                "kind": "embedding_token_env",
+                "ready": bool(token_env),
+                "configured": bool(token_env),
+                "required": True,
+                "token_env": token_env,
+                "blocker": "" if token_env else "provide --embedding-token-env",
+            },
+            {
+                "kind": "embedding_token_value",
+                "ready": token_present,
+                "configured": token_present,
+                "required": True,
+                "token_env": token_env,
+                "secret_value_logged": False,
+                "blocker": "" if token_present else f"set token value in {token_env or '<embedding-token-env>'}",
+            },
+        ]
+        checks.extend(provider_checks)
+        provider_ready = all(bool(check.get("ready")) for check in provider_checks)
+    ready = normalized_path.exists() and provider_ready
+    build_command = _semantic_build_command(
+        run_id=run_id,
+        provider=selected_provider,
+        dimensions=dimensions,
+        embedding_endpoint=endpoint,
+        embedding_model=model,
+        embedding_token_env=token_env,
+        embedding_batch_size=embedding_batch_size,
+        embedding_timeout_seconds=embedding_timeout_seconds,
+    )
+    recheck_command = _semantic_preflight_command(
+        run_id=run_id,
+        provider=selected_provider,
+        dimensions=dimensions,
+        embedding_endpoint=endpoint or "<url>",
+        embedding_model=model or "<model>",
+        embedding_token_env=token_env or "AOA_COURSE_EMBEDDING_TOKEN",
+        embedding_batch_size=embedding_batch_size,
+        embedding_timeout_seconds=embedding_timeout_seconds,
+        require_ready=True,
+    )
+    return {
+        "schema": "aoa_course_semantic_provider_preflight_v1",
+        "tool": "semantic_provider_preflight",
+        "status": "ok" if ready else "warning",
+        "ready": ready,
+        "ready_for_build": ready,
+        "network_touched": False,
+        "read_only": True,
+        "run_id": run_id,
+        "provider": selected_provider,
+        "storage": {
+            "data": str(roots.data),
+            "artifact": str(roots.artifact),
+            "normalized_path": str(normalized_path),
+            "semantic_index_path": str(semantic_index_path),
+            "semantic_index_exists": semantic_index_path.exists(),
+        },
+        "provider_config": _semantic_public_provider_config(
+            provider=selected_provider,
+            dimensions=dimensions,
+            embedding_endpoint=endpoint,
+            embedding_model=model,
+            embedding_token_env=token_env,
+            token_present=token_present,
+            embedding_batch_size=embedding_batch_size,
+            embedding_timeout_seconds=embedding_timeout_seconds,
+        ),
+        "privacy": {
+            "token_value_logged": False,
+            "secret_values_logged": False,
+            "endpoint_is_operator_configured": selected_provider == HTTP_JSON_PROVIDER,
+        },
+        "checks": checks,
+        "commands": {
+            "recheck": recheck_command,
+            "build": build_command,
+            "semantic_query": f"aoa-course query {shlex.quote('course-specific question')} --run {shlex.quote(run_id)} --mode semantic",
+            "hybrid_answer": f"aoa-course answer {shlex.quote('course-specific question')} --run {shlex.quote(run_id)} --mode hybrid",
+            "mcp_semantic_search": (
+                "aoa-course mcp call semantic_search "
+                + shlex.quote(f'{{"query":"course-specific question","run":"{run_id}"}}')
+            ),
+        },
+        "next_commands": _semantic_next_commands(
+            run_id=run_id,
+            ready=ready,
+            normalized_exists=normalized_path.exists(),
+            provider=selected_provider,
+            token_env=token_env,
+            token_present=token_present,
+            build_command=build_command,
+            recheck_command=recheck_command,
+        ),
     }
 
 
@@ -428,6 +576,140 @@ def _selected_live_scope(live_scope: str) -> str:
     if selected not in LIVE_SCOPES:
         raise ValueError(f"unsupported live scope: {selected}")
     return selected
+
+
+def _selected_semantic_provider(provider: str) -> str:
+    selected = str(provider or LOCAL_HASHING_PROVIDER)
+    if selected not in SEMANTIC_PROVIDERS:
+        raise ValueError(f"unsupported semantic provider: {selected}")
+    return selected
+
+
+def _semantic_public_provider_config(
+    *,
+    provider: str,
+    dimensions: int,
+    embedding_endpoint: str,
+    embedding_model: str,
+    embedding_token_env: str,
+    token_present: bool,
+    embedding_batch_size: int,
+    embedding_timeout_seconds: float,
+) -> dict[str, object]:
+    if provider == LOCAL_HASHING_PROVIDER:
+        return {
+            "provider": LOCAL_HASHING_PROVIDER,
+            "dimensions": max(8, int(dimensions or 256)),
+            "external_embedding_vectors": False,
+            "secret_values_logged": False,
+        }
+    return {
+        "provider": HTTP_JSON_PROVIDER,
+        "endpoint": embedding_endpoint,
+        "endpoint_configured": bool(embedding_endpoint),
+        "model": embedding_model,
+        "model_configured": bool(embedding_model),
+        "token_env": embedding_token_env,
+        "token_env_configured": bool(embedding_token_env),
+        "token_env_present": token_present,
+        "token_value_logged": False,
+        "secret_values_logged": False,
+        "batch_size": max(1, int(embedding_batch_size or 1)),
+        "timeout_seconds": float(embedding_timeout_seconds or 30.0),
+        "request_schema": "json_input_array_v1",
+        "response_schema": "data_embedding_or_embeddings_array_v1",
+    }
+
+
+def _semantic_build_command(
+    *,
+    run_id: str,
+    provider: str,
+    dimensions: int,
+    embedding_endpoint: str,
+    embedding_model: str,
+    embedding_token_env: str,
+    embedding_batch_size: int,
+    embedding_timeout_seconds: float,
+) -> str:
+    parts = [
+        "aoa-course build-semantic-index",
+        f"--run {shlex.quote(run_id)}",
+        f"--provider {shlex.quote(provider)}",
+    ]
+    if provider == LOCAL_HASHING_PROVIDER:
+        parts.append(f"--dimensions {max(8, int(dimensions or 256))}")
+    else:
+        parts.extend(
+            [
+                f"--embedding-endpoint {shlex.quote(embedding_endpoint or '<url>')}",
+                f"--embedding-model {shlex.quote(embedding_model or '<model>')}",
+                f"--embedding-token-env {shlex.quote(embedding_token_env or 'AOA_COURSE_EMBEDDING_TOKEN')}",
+                f"--embedding-batch-size {max(1, int(embedding_batch_size or 1))}",
+                f"--embedding-timeout-seconds {float(embedding_timeout_seconds or 30.0)}",
+            ]
+        )
+    return " ".join(parts)
+
+
+def _semantic_preflight_command(
+    *,
+    run_id: str,
+    provider: str,
+    dimensions: int,
+    embedding_endpoint: str,
+    embedding_model: str,
+    embedding_token_env: str,
+    embedding_batch_size: int,
+    embedding_timeout_seconds: float,
+    require_ready: bool,
+) -> str:
+    parts = [
+        "aoa-course preflight semantic-provider",
+        f"--run {shlex.quote(run_id)}",
+        f"--provider {shlex.quote(provider)}",
+    ]
+    if provider == LOCAL_HASHING_PROVIDER:
+        parts.append(f"--dimensions {max(8, int(dimensions or 256))}")
+    else:
+        parts.extend(
+            [
+                f"--embedding-endpoint {shlex.quote(embedding_endpoint)}",
+                f"--embedding-model {shlex.quote(embedding_model)}",
+                f"--embedding-token-env {shlex.quote(embedding_token_env)}",
+                f"--embedding-batch-size {max(1, int(embedding_batch_size or 1))}",
+                f"--embedding-timeout-seconds {float(embedding_timeout_seconds or 30.0)}",
+            ]
+        )
+    if require_ready:
+        parts.append("--require-ready")
+    return " ".join(parts)
+
+
+def _semantic_next_commands(
+    *,
+    run_id: str,
+    ready: bool,
+    normalized_exists: bool,
+    provider: str,
+    token_env: str,
+    token_present: bool,
+    build_command: str,
+    recheck_command: str,
+) -> list[str]:
+    commands: list[str] = []
+    if not normalized_exists:
+        if run_id == "starter-fixture":
+            commands.append(f"aoa-course materialize fixture --run {shlex.quote(run_id)}")
+        else:
+            commands.append(f"run an ingest, materialize, crawl, or source sync command that writes data/runs/{run_id}/normalized/course_bundle.json")
+    if provider == HTTP_JSON_PROVIDER and token_env and not token_present:
+        commands.append(f"export {token_env}=<redacted-token>")
+    if not ready:
+        commands.append(recheck_command)
+    commands.append(build_command)
+    commands.append(f"aoa-course query {shlex.quote('course-specific question')} --run {shlex.quote(run_id)} --mode semantic")
+    return _dedupe(commands)
 
 
 def _preflight_actions(

@@ -42,7 +42,7 @@ from aoa_course_connector.ingest import (
 )
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, write_answer_packet
-from aoa_course_connector.readiness import connected_source_plan, live_preflight, write_connected_source_runbook
+from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight, write_connected_source_runbook
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.smoke import (
     smoke_browser_fixture as smoke_browser_fixture_route,
@@ -103,6 +103,13 @@ def build_parser() -> argparse.ArgumentParser:
     readiness.add_argument("--link-pattern")
     readiness.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
     readiness.add_argument("--include-step-sources", action="store_true")
+    readiness.add_argument("--semantic-provider", choices=[LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], default=LOCAL_HASHING_PROVIDER)
+    readiness.add_argument("--dimensions", type=int, default=256)
+    readiness.add_argument("--embedding-endpoint")
+    readiness.add_argument("--embedding-model")
+    readiness.add_argument("--embedding-token-env", default="AOA_COURSE_EMBEDDING_TOKEN")
+    readiness.add_argument("--embedding-batch-size", type=int, default=32)
+    readiness.add_argument("--embedding-timeout-seconds", type=float, default=30.0)
     readiness.add_argument("--require-ready", action="store_true")
     readiness.set_defaults(func=cmd_readiness)
 
@@ -159,6 +166,17 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_plan.add_argument("--write-runbook", type=Path)
     preflight_plan.add_argument("--require-ready", action="store_true")
     preflight_plan.set_defaults(func=cmd_preflight_connected_plan)
+    preflight_semantic = preflight_sub.add_parser("semantic-provider")
+    preflight_semantic.add_argument("--run", default=DEFAULT_RUN)
+    preflight_semantic.add_argument("--provider", choices=[LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], default=LOCAL_HASHING_PROVIDER)
+    preflight_semantic.add_argument("--dimensions", type=int, default=256)
+    preflight_semantic.add_argument("--embedding-endpoint")
+    preflight_semantic.add_argument("--embedding-model")
+    preflight_semantic.add_argument("--embedding-token-env", default="AOA_COURSE_EMBEDDING_TOKEN")
+    preflight_semantic.add_argument("--embedding-batch-size", type=int, default=32)
+    preflight_semantic.add_argument("--embedding-timeout-seconds", type=float, default=30.0)
+    preflight_semantic.add_argument("--require-ready", action="store_true")
+    preflight_semantic.set_defaults(func=cmd_preflight_semantic_provider)
 
     sources = sub.add_parser("sources")
     sources_sub = sources.add_subparsers(dest="sources_command", required=True)
@@ -631,6 +649,13 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         link_pattern=args.link_pattern,
         live_scope=args.live_scope,
         include_step_sources=args.include_step_sources,
+        semantic_provider=args.semantic_provider,
+        dimensions=args.dimensions,
+        embedding_endpoint=args.embedding_endpoint,
+        embedding_model=args.embedding_model,
+        embedding_token_env=args.embedding_token_env,
+        embedding_batch_size=args.embedding_batch_size,
+        embedding_timeout_seconds=args.embedding_timeout_seconds,
         mcp_tool_names=tools,
     )
     _emit(report)
@@ -713,6 +738,23 @@ def cmd_preflight_connected_plan(args: argparse.Namespace) -> int:
         plan["runbook"] = write_connected_source_runbook(plan, args.write_runbook)
     _emit(plan)
     return 0 if bool(plan.get("ready")) or not args.require_ready else 1
+
+
+def cmd_preflight_semantic_provider(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    report = semantic_provider_preflight(
+        roots,
+        run_id=args.run,
+        provider=args.provider,
+        dimensions=args.dimensions,
+        embedding_endpoint=args.embedding_endpoint,
+        embedding_model=args.embedding_model,
+        embedding_token_env=args.embedding_token_env,
+        embedding_batch_size=args.embedding_batch_size,
+        embedding_timeout_seconds=args.embedding_timeout_seconds,
+    )
+    _emit(report)
+    return 0 if bool(report.get("ready")) or not args.require_ready else 1
 
 
 def cmd_sources_add(args: argparse.Namespace) -> int:

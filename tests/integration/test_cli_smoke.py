@@ -235,6 +235,53 @@ def test_cli_http_json_semantic_provider_flow(tmp_path: Path, monkeypatch) -> No
         server.close()
 
 
+def test_cli_semantic_provider_preflight_redacts_secret_and_feeds_readiness(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
+    preflight = run_cli(
+        tmp_path,
+        "preflight",
+        "semantic-provider",
+        "--run",
+        "starter-fixture",
+        "--provider",
+        "http_json_v1",
+        "--embedding-endpoint",
+        "https://embed.example/v1",
+        "--embedding-model",
+        "course-embedding",
+        "--embedding-token-env",
+        "AOA_COURSE_TEST_EMBEDDING_TOKEN",
+        "--require-ready",
+    )
+    assert preflight["schema"] == "aoa_course_semantic_provider_preflight_v1"
+    assert preflight["ready"] is True
+    assert preflight["network_touched"] is False
+    assert preflight["provider_config"]["token_env_present"] is True
+    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(preflight)
+
+    readiness = run_cli(
+        tmp_path,
+        "readiness",
+        "--run",
+        "starter-fixture",
+        "--platform",
+        "stepik",
+        "--semantic-provider",
+        "http_json_v1",
+        "--embedding-endpoint",
+        "https://embed.example/v1",
+        "--embedding-model",
+        "course-embedding",
+        "--embedding-token-env",
+        "AOA_COURSE_TEST_EMBEDDING_TOKEN",
+    )
+    assert readiness["lanes"]["semantic_provider_ready"] is True
+    assert readiness["semantic_provider_preflight"][0]["provider"] == "http_json_v1"
+    assert readiness["semantic_provider_preflight"][0]["secret_values_logged"] is False
+    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(readiness)
+
+
 def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     run_cli(tmp_path, "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration")
     requests = [
@@ -246,9 +293,10 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "refresh_plan", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "keyword"}}},
         {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
         {"jsonrpc": "2.0", "id": 7, "method": "tools/call", "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"]}}},
-        {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
-        {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
-        {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "goal_audit", "arguments": {"runs": ["starter-fixture"], "connected_run": "connected-calibration"}}},
+        {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "semantic_provider_preflight", "arguments": {"run": "starter-fixture"}}},
+        {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
+        {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
+        {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "goal_audit", "arguments": {"runs": ["starter-fixture"], "connected_run": "connected-calibration"}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -263,7 +311,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "goal_audit" for tool in responses[1]["result"]["tools"])
@@ -272,12 +320,15 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[4]["result"]["structuredContent"]["refresh"]["network_touched"] is False
     assert responses[5]["result"]["structuredContent"]["preflight"]["network_touched"] is False
     assert responses[6]["result"]["structuredContent"]["plan"]["network_touched"] is False
-    assert responses[7]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
-    assert responses[8]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[8]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[9]["result"]["structuredContent"]["schema"] == "aoa_course_goal_audit_v1"
-    assert responses[9]["result"]["structuredContent"]["ready_for_operator_connection"] is True
-    assert responses[9]["result"]["structuredContent"]["goal_complete"] is False
+    assert responses[7]["result"]["structuredContent"]["preflight"]["schema"] == "aoa_course_semantic_provider_preflight_v1"
+    assert responses[7]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[8]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
+    assert responses[9]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[9]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[9]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[10]["result"]["structuredContent"]["schema"] == "aoa_course_goal_audit_v1"
+    assert responses[10]["result"]["structuredContent"]["ready_for_operator_connection"] is True
+    assert responses[10]["result"]["structuredContent"]["goal_complete"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

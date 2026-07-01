@@ -28,11 +28,18 @@ receipt without network or secrets.
 `readiness` is the broad read-only route audit for the connector. It reports
 install files, storage roots, local run/index/graph readiness, source registry
 counts, MCP tool coverage, connected-source handoff status,
-`connected_run_handoff`, and next commands. For browser-session sources,
-`--link-pattern` keeps narrowed lesson/course globs in that handoff. Use
+semantic provider readiness, `connected_run_handoff`, and next commands. For
+browser-session sources, `--link-pattern` keeps narrowed lesson/course globs
+in that handoff. Use
 `--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
 `--include-step-sources` when a readiness audit must preserve the exact
 operator-selected connected-run breadth.
+
+`preflight semantic-provider` is safe before an external embedding endpoint is
+called. For `http_json_v1`, pass `--embedding-endpoint`, `--embedding-model`,
+and `--embedding-token-env`; it reports endpoint/model/token-env readiness,
+`token_env_present`, and `token_value_logged: false` without touching the
+network.
 
 `preflight live` is safe before credentials exist. It reports missing live auth
 as a warning, does not touch the network, and gives the next commands for

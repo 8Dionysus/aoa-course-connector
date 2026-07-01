@@ -11,6 +11,7 @@ Initial tools:
 - `sync_status`
 - `live_preflight`
 - `connected_source_plan`
+- `semantic_provider_preflight`
 - `connected_run_status`
 - `refresh_plan`
 - `search`
@@ -40,6 +41,7 @@ aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
@@ -50,6 +52,14 @@ that artifact was built with `http_json_v1`, the MCP route uses the same
 operator-configured endpoint and token environment variable name for query
 vectors; token values are read from the environment and are not written to the
 artifact or tool result.
+
+`semantic_provider_preflight` is the read-only MCP route for external semantic provider
+connection. It returns `aoa_course_semantic_provider_preflight_v1`
+with normalized bundle readiness, semantic index artifact path, provider
+configuration, `token_env_present`, `token_value_logged: false`,
+`network_touched: false`, and exact build/query/MCP follow-up commands. Use it
+before `build-semantic-index --provider http_json_v1` so missing endpoint,
+model, or token env state is visible before the first network call.
 
 `ingest_status` is the read-only run readiness packet. It reports normalized
 bundle counts, materialization receipt summaries, keyword/semantic index
@@ -85,6 +95,10 @@ Pass `source_ids` when a large registry contains several sources but the agent
 is preparing one selected source. The source scope applies before any
 network-touching command is emitted, so a ready source is not blocked by another
 source whose browser state or token is not ready yet.
+`connector_readiness` also embeds a compact `semantic_provider_preflight`
+packet. Pass `semantic_provider`, `embedding_endpoint`, `embedding_model`, and
+`embedding_token_env` when the MCP audit should check the same external
+embedding endpoint that will later build the connected-run semantic index.
 
 `goal_audit` is the MCP equivalent of CLI `goal audit`. It returns
 `aoa_course_goal_audit_v1` with `requirements`,

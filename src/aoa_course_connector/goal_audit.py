@@ -93,7 +93,9 @@ LIVE_REMAINING = [
         "platform": "semantic",
         "reason": "requires operator-selected embedding endpoint and token env outside CI",
         "next_commands": [
+            "aoa-course preflight semantic-provider --run <connected-run> --provider http_json_v1 --embedding-endpoint <url> --embedding-model <model> --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --require-ready",
             "aoa-course build-semantic-index --run <connected-run> --provider http_json_v1 --embedding-endpoint <url> --embedding-model <model> --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN",
+            "aoa-course query \"course-specific question\" --run <connected-run> --mode semantic",
         ],
     },
 ]

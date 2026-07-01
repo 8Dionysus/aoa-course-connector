@@ -9,7 +9,8 @@ from pathlib import Path
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
 from aoa_course_connector.config import StorageRoots
-from aoa_course_connector.readiness import connected_source_plan, live_preflight
+from aoa_course_connector.index import LOCAL_HASHING_PROVIDER
+from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, registry_path
 from aoa_course_connector.storage import storage_status
 
@@ -35,6 +36,7 @@ REQUIRED_MCP_TOOLS = [
     "sync_status",
     "live_preflight",
     "connected_source_plan",
+    "semantic_provider_preflight",
     "connected_run_status",
     "refresh_plan",
     "search",
@@ -66,6 +68,13 @@ def connector_readiness(
     link_pattern: str | None = None,
     live_scope: str = "bounded",
     include_step_sources: bool = False,
+    semantic_provider: str = LOCAL_HASHING_PROVIDER,
+    dimensions: int = 256,
+    embedding_endpoint: str | None = None,
+    embedding_model: str | None = None,
+    embedding_token_env: str | None = "AOA_COURSE_EMBEDDING_TOKEN",
+    embedding_batch_size: int = 32,
+    embedding_timeout_seconds: float = 30.0,
     mcp_tool_names: list[str] | set[str] | None = None,
 ) -> dict[str, object]:
     """Build a single read-only route audit for install, query, and live handoff."""
@@ -102,6 +111,20 @@ def connector_readiness(
         live_scope=live_scope,
         include_step_sources=include_step_sources,
     )
+    semantic_preflights = [
+        semantic_provider_preflight(
+            roots,
+            run_id=run_id,
+            provider=semantic_provider,
+            dimensions=dimensions,
+            embedding_endpoint=embedding_endpoint,
+            embedding_model=embedding_model,
+            embedding_token_env=embedding_token_env,
+            embedding_batch_size=embedding_batch_size,
+            embedding_timeout_seconds=embedding_timeout_seconds,
+        )
+        for run_id in selected_runs
+    ]
     connected_status = load_connected_calibration_status(roots, run_id=connected_run)
     mcp = _mcp_surface(mcp_tool_names)
     storage_exists = storage.get("exists") if isinstance(storage.get("exists"), dict) else {}
@@ -117,6 +140,7 @@ def connector_readiness(
         "source_registry_configured": int(source_summary.get("selected_source_count", 0)) > 0,
         "agent_query_ready": query_ready,
         "connected_live_ready": bool(plan.get("ready")),
+        "semantic_provider_ready": all(bool(item.get("ready")) for item in semantic_preflights),
         "connected_run_receipt_ready": connected_status.get("status") == "ok",
         "mcp_tools_ready": bool(mcp.get("ready")),
     }
@@ -141,6 +165,7 @@ def connector_readiness(
         "runs": run_statuses,
         "live_preflight": _compact_preflight(preflight),
         "connected_source_plan": _compact_connected_plan(plan),
+        "semantic_provider_preflight": [_compact_semantic_provider_preflight(item) for item in semantic_preflights],
         "connected_run": connected_status,
         "mcp": mcp,
         "lanes": lanes,
@@ -150,6 +175,7 @@ def connector_readiness(
             run_statuses=run_statuses,
             preflight=preflight,
             connected_plan=plan,
+            semantic_preflights=semantic_preflights,
             connected_run=connected_status,
             mcp=mcp,
         ),
@@ -271,7 +297,7 @@ def _mcp_surface(tool_names: list[str] | set[str] | None) -> dict[str, object]:
 
 def _compact_preflight(preflight: dict[str, object]) -> dict[str, object]:
     return {
-        "schema": preflight.get("schema"),
+        "schema": preflight.get("schema") or "aoa_course_semantic_provider_preflight_v1",
         "status": preflight.get("status"),
         "ready": bool(preflight.get("ready")),
         "network_touched": bool(preflight.get("network_touched")),
@@ -304,6 +330,27 @@ def _compact_connected_plan(plan: dict[str, object]) -> dict[str, object]:
     }
 
 
+def _compact_semantic_provider_preflight(preflight: dict[str, object]) -> dict[str, object]:
+    config = preflight.get("provider_config") if isinstance(preflight.get("provider_config"), dict) else {}
+    return {
+        "schema": preflight.get("schema"),
+        "status": preflight.get("status"),
+        "ready": bool(preflight.get("ready")),
+        "network_touched": bool(preflight.get("network_touched")),
+        "run_id": preflight.get("run_id"),
+        "provider": preflight.get("provider"),
+        "normalized_path": preflight.get("storage", {}).get("normalized_path") if isinstance(preflight.get("storage"), dict) else None,
+        "semantic_index_path": preflight.get("storage", {}).get("semantic_index_path") if isinstance(preflight.get("storage"), dict) else None,
+        "semantic_index_exists": bool(preflight.get("storage", {}).get("semantic_index_exists")) if isinstance(preflight.get("storage"), dict) else False,
+        "endpoint_configured": bool(config.get("endpoint_configured")),
+        "model_configured": bool(config.get("model_configured")),
+        "token_env": config.get("token_env"),
+        "token_env_present": bool(config.get("token_env_present")),
+        "secret_values_logged": bool(config.get("secret_values_logged")),
+        "next_commands": preflight.get("next_commands", []),
+    }
+
+
 def _next_commands(
     *,
     storage_exists: dict[str, object],
@@ -311,6 +358,7 @@ def _next_commands(
     run_statuses: list[dict[str, object]],
     preflight: dict[str, object],
     connected_plan: dict[str, object],
+    semantic_preflights: list[dict[str, object]],
     connected_run: dict[str, object],
     mcp: dict[str, object],
 ) -> list[str]:
@@ -346,6 +394,9 @@ def _next_commands(
             commands.append(command)
     else:
         commands.extend([str(command) for command in connected_plan.get("next_commands", []) if str(command)])
+    for semantic_preflight in semantic_preflights:
+        if not bool(semantic_preflight.get("ready")):
+            commands.extend([str(command) for command in semantic_preflight.get("next_commands", []) if str(command)])
     if not bool(mcp.get("ready")):
         commands.append("aoa-course mcp tools")
     readiness_command = "aoa-course readiness --run starter-fixture"
