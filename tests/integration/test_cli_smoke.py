@@ -851,6 +851,9 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert connected["schema"] == "aoa_course_connected_calibration_run_receipt_v1"
     assert connected["status"] == "ok"
     assert connected["network_touched"] is False
+    assert connected["snapshot_audit"]["status"] == "ok"
+    assert connected["snapshot_audit"]["browser_report_count"] == 2
+    assert connected["snapshot_audit"]["all_snapshot_audits_ok"] is True
     assert Path(str(connected["artifacts"]["packet_path"])).is_file()
     assert Path(str(connected["artifacts"]["intake_path"])).is_file()
     assert Path(str(connected["receipt_path"])).is_file()
@@ -858,6 +861,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert connected_status["schema"] == "aoa_course_connected_calibration_run_status_v1"
     assert connected_status["status"] == "ok"
     assert connected_status["read_only"] is True
+    assert connected_status["snapshot_audit"] == connected["snapshot_audit"]
     status_entry = connected_status["query_plan"]["entries"][0]
     assert status_entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert "lesson_context" in status_entry["mcp_commands"]
@@ -865,6 +869,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     mcp_connected_status = run_cli(tmp_path, "mcp", "call", "connected_run_status", '{"run":"connected-fixture-cli"}')
     assert mcp_connected_status["result"]["connected_run"]["status"] == "ok"
     assert mcp_connected_status["result"]["connected_run"]["network_touched"] is False
+    assert mcp_connected_status["result"]["connected_run"]["snapshot_audit"]["status"] == "ok"
     mcp_entry = mcp_connected_status["result"]["connected_run"]["query_plan"]["entries"][0]
     assert mcp_entry["mcp_commands"]["lesson_context"].startswith("aoa-course mcp call lesson_context ")
 

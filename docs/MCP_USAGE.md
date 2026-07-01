@@ -230,6 +230,10 @@ selected profile sources are registered and authorized.
 artifact paths, `source_selection`, `execution_options`, `query_plan`,
 packet quality, privacy flags, failures, `repair_lanes`, and next steps from
 `connected_calibration_receipt.json`.
+The `snapshot_audit` child packet is
+`aoa_course_connected_snapshot_audit_status_v1`: it summarizes browser smoke
+snapshot-audit coverage, failure counts, filtered
+`browser_snapshot_diagnostics` repair lanes, and the next diagnostic commands.
 `repair_lanes` classify partial connected-run failures into network gate,
 source auth/readiness, source selection, sync, live smoke/selector, and
 calibration-packet intake routes with concrete next commands.

@@ -104,6 +104,10 @@ failures, `repair_lanes`, next steps, runtime artifact paths,
 already have local indexes, graphs, answer packets, CLI `query`/`answer`
 commands, and `mcp_commands` for MCP `search`, `lesson_context`, and
 `evidence_report` plans.
+It also includes `snapshot_audit`, a compact
+`aoa_course_connected_snapshot_audit_status_v1` block with browser smoke audit
+coverage, failure counts, filtered `browser_snapshot_diagnostics` repair lanes,
+and next commands.
 `repair_lanes` turn partial runs into concrete network gate, source readiness,
 source selection, sync, smoke/selector, or packet-intake follow-up commands.
 `execution_options` records the course-specific query, browser `link_pattern`,

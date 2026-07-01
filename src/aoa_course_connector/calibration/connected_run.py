@@ -75,6 +75,16 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
             "read_only": True,
         }
     artifacts = receipt.get("artifacts") if isinstance(receipt.get("artifacts"), dict) else {}
+    quality = receipt.get("quality") if isinstance(receipt.get("quality"), dict) else {}
+    repair_lanes = receipt.get("repair_lanes") if isinstance(receipt.get("repair_lanes"), list) else []
+    snapshot_audit = receipt.get("snapshot_audit")
+    if not isinstance(snapshot_audit, dict):
+        snapshot_audit = _snapshot_audit_status_from_quality(
+            quality,
+            packet_available=bool(artifacts.get("packet_path") or quality),
+            intake=None,
+            repair_lanes=[lane for lane in repair_lanes if isinstance(lane, dict)],
+        )
     return {
         "schema": "aoa_course_connected_calibration_run_status_v1",
         "status": receipt.get("status") or "unknown",
@@ -91,11 +101,12 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "network_touched": bool(receipt.get("network_touched")),
         "stage_count": receipt.get("stage_count"),
         "stages": receipt.get("stages", []),
-        "quality": receipt.get("quality") if isinstance(receipt.get("quality"), dict) else {},
+        "quality": quality,
+        "snapshot_audit": snapshot_audit,
         "privacy": receipt.get("privacy") if isinstance(receipt.get("privacy"), dict) else {},
         "failures": receipt.get("failures", []),
         "repair_lane_count": receipt.get("repair_lane_count", 0),
-        "repair_lanes": receipt.get("repair_lanes", []),
+        "repair_lanes": repair_lanes,
         "next_steps": receipt.get("next_steps", []),
         "source_selection": receipt.get("source_selection", {}),
         "execution_options": receipt.get("execution_options") if isinstance(receipt.get("execution_options"), dict) else {},
@@ -756,6 +767,7 @@ def _receipt(
         execution_options=execution_options,
         packet_path=packet_path,
     )
+    snapshot_audit = _snapshot_audit_status(packet, intake=intake, repair_lanes=repair_lanes)
     return {
         "schema": "aoa_course_connected_calibration_run_receipt_v1",
         "status": status,
@@ -811,6 +823,7 @@ def _receipt(
         },
         "query_plan": query_plan,
         "quality": packet.get("quality") if isinstance(packet, dict) else {},
+        "snapshot_audit": snapshot_audit,
         "privacy": packet.get("privacy") if isinstance(packet, dict) else {"contains_raw_payloads": False, "contains_secret_values": False},
         "failures": failures,
         "next_steps": _next_steps(status, mode, allow_network, failures, intake, repair_lanes),
@@ -1111,6 +1124,122 @@ def _payload_summary(payload: dict[str, object]) -> dict[str, object]:
         "report_count": payload.get("report_count"),
         "action_count": payload.get("action_count"),
     }
+
+
+def _snapshot_audit_status(
+    packet: dict[str, object] | None,
+    *,
+    intake: dict[str, object] | None,
+    repair_lanes: list[dict[str, object]],
+) -> dict[str, object]:
+    quality = packet.get("quality") if isinstance(packet, dict) and isinstance(packet.get("quality"), dict) else {}
+    return _snapshot_audit_status_from_quality(
+        quality,
+        packet_available=packet is not None,
+        intake=intake,
+        repair_lanes=repair_lanes,
+    )
+
+
+def _snapshot_audit_status_from_quality(
+    quality: dict[str, object],
+    *,
+    packet_available: bool,
+    intake: dict[str, object] | None,
+    repair_lanes: list[dict[str, object]],
+) -> dict[str, object]:
+    browser_report_count = _int_value(quality.get("browser_report_count"))
+    reports_with_audit = _int_value(quality.get("browser_reports_with_snapshot_audit"))
+    audit_count = _int_value(quality.get("snapshot_audit_count_total"))
+    failure_count = _int_value(quality.get("snapshot_audit_failure_count_total"))
+    all_reports_have_audit = _bool_value(
+        quality.get("all_browser_reports_have_snapshot_audit"),
+        default=browser_report_count == 0 or reports_with_audit >= browser_report_count,
+    )
+    all_audits_ok = _bool_value(quality.get("all_snapshot_audits_ok"), default=failure_count == 0)
+    audit_lanes = [
+        lane
+        for lane in repair_lanes
+        if isinstance(lane, dict) and lane.get("lane") == "browser_snapshot_diagnostics"
+    ]
+    intake_actions = _snapshot_audit_intake_actions(intake)
+    if not packet_available:
+        status = "not_built"
+        reason = "calibration packet was not built for this run"
+    elif browser_report_count == 0:
+        status = "not_applicable"
+        reason = "no browser smoke reports were included"
+    elif all_reports_have_audit and all_audits_ok and failure_count == 0:
+        status = "ok"
+        reason = "browser snapshot audits are present and healthy"
+    else:
+        status = "partial"
+        reason = "browser snapshot audit diagnostics need inspection"
+    return {
+        "schema": "aoa_course_connected_snapshot_audit_status_v1",
+        "status": status,
+        "reason": reason,
+        "packet_available": packet_available,
+        "browser_report_count": browser_report_count,
+        "browser_reports_with_snapshot_audit": reports_with_audit,
+        "snapshot_audit_count_total": audit_count,
+        "snapshot_audit_failure_count_total": failure_count,
+        "all_browser_reports_have_snapshot_audit": all_reports_have_audit,
+        "all_snapshot_audits_ok": all_audits_ok,
+        "intake_action_count": len(intake_actions),
+        "intake_actions": intake_actions,
+        "repair_lane_count": len(audit_lanes),
+        "repair_lanes": audit_lanes,
+        "next_commands": [
+            str(command)
+            for lane in audit_lanes
+            for command in lane.get("next_commands", [])
+            if str(command)
+        ],
+    }
+
+
+def _snapshot_audit_intake_actions(intake: dict[str, object] | None) -> list[dict[str, object]]:
+    actions = intake.get("actions") if isinstance(intake, dict) and isinstance(intake.get("actions"), list) else []
+    compact: list[dict[str, object]] = []
+    for action in actions:
+        if not isinstance(action, dict) or action.get("lane") != "browser_snapshot_diagnostics":
+            continue
+        compact.append(
+            {
+                "lane": action.get("lane"),
+                "severity": action.get("severity"),
+                "platform": action.get("platform"),
+                "surface": action.get("surface"),
+                "reason": action.get("reason"),
+                "title": action.get("title"),
+                "eval_hint": action.get("eval_hint"),
+            }
+        )
+    return compact
+
+
+def _int_value(value: object) -> int:
+    try:
+        return int(value or 0)
+    except (TypeError, ValueError):
+        return 0
+
+
+def _bool_value(value: object, *, default: bool) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, (int, float)):
+        return bool(value)
+    if isinstance(value, str):
+        lowered = value.strip().lower()
+        if lowered in {"1", "true", "yes", "y", "on"}:
+            return True
+        if lowered in {"0", "false", "no", "n", "off"}:
+            return False
+    return default
 
 
 def _stage_without_full_payload(stage: dict[str, object]) -> dict[str, object]:
