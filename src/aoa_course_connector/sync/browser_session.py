@@ -16,7 +16,7 @@ from aoa_course_connector.ingest.browser_session import FIXTURES
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.sources import load_registry
-from aoa_course_connector.storage import create_storage_roots, run_data_dir, sync_data_dir
+from aoa_course_connector.storage import create_storage_roots, run_data_dir, safe_runtime_id, sync_data_dir
 from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, upsert_checkpoint
 
 
@@ -31,6 +31,7 @@ def sync_browser_fixture_sources(
     source_limit: int | None = None,
     build_artifacts: bool = False,
 ) -> dict[str, object]:
+    sync_run_id = _validated_sync_run_id(sync_run_id)
     create_storage_roots(roots)
     sources = _selected_sources(roots, platforms=platforms, source_ids=source_ids, source_limit=source_limit)
     receipt = _base_receipt(sync_run_id, "browser_fixture_sync", sources, network_touched=False)
@@ -66,6 +67,7 @@ def sync_browser_live_sources(
     source_limit: int | None = None,
     build_artifacts: bool = False,
 ) -> dict[str, object]:
+    sync_run_id = _validated_sync_run_id(sync_run_id)
     create_storage_roots(roots)
     sources = _selected_sources(roots, platforms=platforms, source_ids=source_ids, source_limit=source_limit)
     receipt = _base_receipt(sync_run_id, "browser_live_sync", sources, network_touched=True)
@@ -106,6 +108,10 @@ def _selected_sources(roots: StorageRoots, *, platforms: list[str] | None, sourc
     ]
     sources = sorted(sources, key=lambda item: str(item.get("source_id") or item.get("source_ref") or ""))
     return sources[:source_limit] if source_limit is not None else sources
+
+
+def _validated_sync_run_id(sync_run_id: str) -> str:
+    return safe_runtime_id(sync_run_id, field="sync_run_id")
 
 
 def _materialize_source_fixture(
