@@ -565,6 +565,13 @@ def test_semantic_provider_preflight_redacts_token_values(tmp_path: Path, monkey
         "build-semantic-index --run starter-fixture --provider http_json_v1" in command
         for command in readiness["next_commands"]
     )
+    semantic_build_commands = [
+        command
+        for command in readiness["next_commands"]
+        if command.startswith("aoa-course build-semantic-index --run starter-fixture")
+    ]
+    assert semantic_build_commands
+    assert all("--provider http_json_v1" in command for command in semantic_build_commands)
     assert not any("build-semantic-index --run starter-fixture --provider local_hashing" in command for command in readiness["next_commands"])
 
 
