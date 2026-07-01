@@ -37,7 +37,7 @@
   readiness into exact preflight-report, source sync, per-source smoke, and
   calibration packet commands before touching live sources, with bounded
   Stepik commands by default and explicit full-course escalation.
-- Prove browser auth handoff packets for GetCourse and Skillspace so blocked
+- Prove browser auth plan packets for GetCourse and Skillspace so blocked
   source hosts turn into exact storage-state capture, redacted inspection, and
   connected-plan recheck steps instead of vague missing-auth blockers.
 - Prove connected-source runbook generation so the redacted plan becomes a

@@ -8,7 +8,33 @@
     "schema": {"const": "aoa_course_answer_packet_v1"},
     "query": {"type": "string"},
     "results": {"type": "array"},
-    "evidence_chain": {"type": "array"},
+    "evidence_chain": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"],
+        "properties": {
+          "evidence_id": {"type": "string"},
+          "doc_id": {"type": "string"},
+          "kind": {"type": "string"},
+          "source_id": {"type": "string"},
+          "source_url": {"type": "string"},
+          "fetched_at": {"type": "string"},
+          "platform": {"type": "string"},
+          "path": {"type": "array", "items": {"type": "string"}},
+          "lesson_id": {"type": "string"},
+          "lesson_title": {"type": "string"},
+          "freshness_state": {"type": "string"},
+          "authority_tier": {"type": "string"},
+          "authority_label": {"type": "string"},
+          "source_authority": {"type": "string"},
+          "score": {"type": "number"},
+          "rank_score": {"type": "number"},
+          "rank_features": {"type": "object"},
+          "refresh_hint": {"type": "object"}
+        }
+      }
+    },
     "freshness_report": {"type": "object"},
     "authority_report": {"type": "object"},
     "refresh_report": {"type": "object"}

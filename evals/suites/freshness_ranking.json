@@ -14,7 +14,7 @@
       "stale_doc_id": "step:step:freshness:aaa-stale-policy",
       "expect_equal_relevance_score": true,
       "expect_current_ranked_above_stale": true,
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     },
     {
       "query": "firmware rollback policy",
@@ -27,7 +27,7 @@
       "current_doc_id": "step:step:freshness:zzz-current-policy",
       "stale_doc_id": "step:step:freshness:aaa-stale-policy",
       "expect_current_ranked_above_stale": true,
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path"]
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
     }
   ]
 }

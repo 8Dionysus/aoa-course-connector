@@ -34,6 +34,12 @@ def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
     packet = render_answer_packet(storage, "bootloader rollback", run_id="test-run")
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+    evidence = packet["evidence_chain"][0]
+    assert evidence["doc_id"]
+    assert evidence["freshness_state"] == packet["results"][0]["freshness_state"]
+    assert evidence["authority_tier"] == packet["results"][0]["authority_tier"]
+    assert evidence["rank_score"] == packet["results"][0]["rank_score"]
+    assert evidence["rank_features"]["provenance_complete"] is True
 
 
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:
@@ -90,6 +96,9 @@ def test_authority_ranking_prefers_official_and_mentor_sources_when_relevance_ti
     assert official[0]["rank_features"]["authority_tier"] == "official_lesson"
     assert official[1]["rank_features"]["authority_tier"] == "learner_comment"
     assert official[0]["rank_score"] > official[1]["rank_score"]
+    official_packet = render_answer_packet(storage, "driver signing rollback policy", run_id="authority-ranking-fixture")
+    assert official_packet["evidence_chain"][0]["authority_tier"] == "official_lesson"
+    assert official_packet["evidence_chain"][0]["rank_score"] == official_packet["results"][0]["rank_score"]
 
     mentor = query_hybrid_index(storage, "diagnostic logcat capture sequence", run_id="authority-ranking-fixture", limit=2)
     assert [result["doc_id"] for result in mentor] == [
