@@ -163,6 +163,11 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
     assert readiness["browser_auth_ready_count"] == 1
     assert readiness["ready_connected_plan_count"] == 1
     assert readiness["blocked_by"] == []
+    source_id = str(receipt["applied"][0]["source"]["source_id"])
+    browser_auth = receipt["inspection"]["browser_auth"][0]
+    assert browser_auth["source_id"] == source_id
+    assert f"--source-id {source_id}" in browser_auth["preflight_command"]
+    assert receipt["inspection"]["connected_plans"][0]["source_ids"] == [source_id]
     assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["connected_run_commands"])
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET_COOKIE" not in rendered
@@ -230,6 +235,15 @@ def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, 
         headless=True,
         pause=lambda _page_info: None,
     )
+    alias = capture_browser_state(
+        tmp_path / "auth",
+        "getcourse",
+        "account",
+        "https://school.example/cms/system/login",
+        state_file=state_file,
+        headless=True,
+        pause=lambda _page_info: None,
+    )
     mismatch = capture_browser_state(
         tmp_path / "auth",
         "getcourse",
@@ -245,10 +259,13 @@ def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, 
     assert receipt["expected_origin_contains"] == "school.example"
     assert receipt["expected_origin_matched"] is True
     assert receipt["state"]["expected_origin_matched"] is True
+    assert alias["status"] == "ok"
+    assert alias["expected_origin_contains"] == "school.example"
+    assert alias["expected_origin_matched"] is True
     assert mismatch["status"] == "warning"
     assert mismatch["expected_origin_contains"] == "other.example"
     assert mismatch["expected_origin_matched"] is False
-    rendered = json.dumps(receipt) + json.dumps(mismatch)
+    rendered = json.dumps(receipt) + json.dumps(alias) + json.dumps(mismatch)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
 
@@ -590,6 +607,26 @@ def test_semantic_provider_preflight_redacts_token_values(tmp_path: Path, monkey
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in serialized
     assert "build-semantic-index --run starter-fixture --provider http_json_v1" in ready["commands"]["build"]
 
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+    readiness = call_tool(
+        "connector_readiness",
+        {
+            "runs": ["starter-fixture"],
+            "semantic_provider": "http_json_v1",
+            "embedding_endpoint": "https://embed.example/v1",
+            "embedding_model": "course-embedding",
+            "embedding_token_env": "AOA_COURSE_TEST_EMBEDDING_TOKEN",
+        },
+    )
+    assert any(
+        "build-semantic-index --run starter-fixture --provider http_json_v1" in command
+        for command in readiness["next_commands"]
+    )
+    assert not any("build-semantic-index --run starter-fixture --provider local_hashing" in command for command in readiness["next_commands"])
+
 
 def test_ingest_status_treats_corrupt_artifacts_as_not_ready(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
@@ -657,6 +694,7 @@ def test_connector_readiness_surfaces_partial_connected_run_repair_lanes(tmp_pat
     build_keyword_index(storage, run_id="starter-fixture")
     build_semantic_index(storage, run_id="starter-fixture")
     build_graph(storage, run_id="starter-fixture")
+    upsert_source(storage.data, "stepik", "https://stepik.org/course/67/syllabus", "Stepik Public", access_mode="public_api")
     run_connected_calibration(storage, run_id="partial-connected-run", mode="live", platforms=["stepik"])
     monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
     monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
@@ -673,6 +711,10 @@ def test_connector_readiness_surfaces_partial_connected_run_repair_lanes(tmp_pat
     assert readiness["lanes"]["connected_run_receipt_ready"] is False
     assert any(command.startswith("aoa-course preflight connected-plan --platform stepik") for command in readiness["next_commands"])
     assert any("aoa-course calibration connected-run --mode live --allow-network --run partial-connected-run" in command for command in readiness["next_commands"])
+    assert not any(
+        "aoa-course calibration connected-run --mode live --allow-network --run connected-live-calibration" in command
+        for command in readiness["next_commands"]
+    )
     assert not any(command == "aoa-course bootstrap fixture --connected-run partial-connected-run" for command in readiness["next_commands"])
 
 

@@ -342,6 +342,7 @@ def _compact_semantic_provider_preflight(preflight: dict[str, object]) -> dict[s
         "normalized_path": preflight.get("storage", {}).get("normalized_path") if isinstance(preflight.get("storage"), dict) else None,
         "semantic_index_path": preflight.get("storage", {}).get("semantic_index_path") if isinstance(preflight.get("storage"), dict) else None,
         "semantic_index_exists": bool(preflight.get("storage", {}).get("semantic_index_exists")) if isinstance(preflight.get("storage"), dict) else False,
+        "semantic_index_ready": bool(preflight.get("semantic_index_ready")),
         "endpoint_configured": bool(config.get("endpoint_configured")),
         "model_configured": bool(config.get("model_configured")),
         "token_env": config.get("token_env"),
@@ -374,6 +375,7 @@ def _next_commands(
         commands.append(f"aoa-course bootstrap fixture --connected-run {connected_run_id}")
     elif connected_run_status != "ok":
         commands.extend(_connected_run_repair_commands(connected_run, connected_run_id))
+    connected_run_repairing = connected_run_status not in {"", "ok", "missing"}
     for run_status in run_statuses:
         commands.extend([str(command) for command in run_status.get("next_commands", []) if str(command)])
     if int(source_summary.get("enabled_source_count", 0)) == 0:
@@ -390,12 +392,14 @@ def _next_commands(
     if bool(connected_plan.get("ready")):
         handoff = connected_plan.get("connected_run_handoff") if isinstance(connected_plan.get("connected_run_handoff"), dict) else {}
         command = str(handoff.get("command") or "")
-        if command:
+        if command and not connected_run_repairing:
             commands.append(command)
     else:
         commands.extend([str(command) for command in connected_plan.get("next_commands", []) if str(command)])
     for semantic_preflight in semantic_preflights:
-        if not bool(semantic_preflight.get("ready")):
+        storage = semantic_preflight.get("storage") if isinstance(semantic_preflight.get("storage"), dict) else {}
+        semantic_index_exists = bool(storage.get("semantic_index_exists"))
+        if not bool(semantic_preflight.get("ready")) or not semantic_index_exists:
             commands.extend([str(command) for command in semantic_preflight.get("next_commands", []) if str(command)])
     if not bool(mcp.get("ready")):
         commands.append("aoa-course mcp tools")

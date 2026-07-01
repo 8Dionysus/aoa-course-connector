@@ -453,7 +453,6 @@ def _browser_handoff(roots: StorageRoots, source: dict[str, object], *, source_i
     state_file = Path(str(source.get("state_file") or default_browser_state_path(roots.auth, platform, source_ref)))
     expected_origin = str(source.get("expected_origin_contains") or _host_fragment(source_ref))
     state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
-    source_id = ""
     return {
         "platform": platform,
         "source_ref": source_ref,

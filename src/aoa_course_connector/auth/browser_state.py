@@ -133,7 +133,7 @@ def capture_browser_state(
             context.storage_state(path=str(resolved_state))
         finally:
             browser.close()
-    expected_origin = expect_origin_contains or _host_fragment(source_ref) or _host_fragment(login_url)
+    expected_origin = expect_origin_contains or _source_ref_origin_hint(source_ref) or _host_fragment(login_url)
     status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None)
     return {
         "schema": "aoa_course_browser_state_capture_receipt_v1",
@@ -191,6 +191,13 @@ def _host_fragment(value: str) -> str:
     parsed = urlparse(raw if "://" in raw else f"//{raw}")
     host = parsed.hostname or raw.split("/", 1)[0]
     return host.strip().lstrip(".")
+
+
+def _source_ref_origin_hint(source_ref: str) -> str:
+    host = _host_fragment(source_ref)
+    if host in {"account", "default", "browser", "session"}:
+        return ""
+    return host
 
 
 def _origin_matches_expected_origin(expected_origin: str, origin: str) -> bool:
