@@ -20,7 +20,7 @@ def summarize_answer_packet(packet: dict[str, object], *, expected_platform: str
     platform_counts = _value_counts(result.get("platform") for result in results)
     expected_platform_match_count = sum(1 for result in results if str(result.get("platform") or "").casefold() == expected) if expected else 0
     provenance_complete_count = sum(1 for result in results if _rank_provenance_complete(result))
-    refresh_hint_count = sum(1 for result in results if isinstance(result.get("refresh_hint"), dict))
+    refresh_hint_count = sum(1 for result in results if _refresh_hint_present(result.get("refresh_hint")))
     blockers = _quality_blockers(
         results=results,
         evidence_chain=evidence_chain,
@@ -29,6 +29,7 @@ def summarize_answer_packet(packet: dict[str, object], *, expected_platform: str
         expected_platform=expected,
         expected_platform_match_count=expected_platform_match_count,
         provenance_complete_count=provenance_complete_count,
+        refresh_hint_count=refresh_hint_count,
     )
     return {
         "schema": "aoa_course_answer_quality_summary_v1",
@@ -74,6 +75,7 @@ def _quality_blockers(
     expected_platform: str,
     expected_platform_match_count: int,
     provenance_complete_count: int,
+    refresh_hint_count: int,
 ) -> list[str]:
     blockers: list[str] = []
     if not results:
@@ -90,6 +92,8 @@ def _quality_blockers(
         blockers.append("result_platform_mismatch")
     if results and provenance_complete_count < len(results):
         blockers.append("result_rank_provenance_incomplete")
+    if results and refresh_hint_count < len(results):
+        blockers.append("result_missing_refresh_hint")
     return blockers
 
 
@@ -108,6 +112,10 @@ def _value_counts(values: Any) -> dict[str, int]:
 def _rank_provenance_complete(result: dict[str, Any]) -> bool:
     features = result.get("rank_features") if isinstance(result.get("rank_features"), dict) else {}
     return bool(features.get("provenance_complete"))
+
+
+def _refresh_hint_present(value: object) -> bool:
+    return isinstance(value, dict) and _present(value)
 
 
 def _present(value: object) -> bool:
