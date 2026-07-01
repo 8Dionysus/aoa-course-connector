@@ -38,6 +38,6 @@ source-backed query packets.
 
 The live-calibration suite builds a fixture-safe
 `aoa_course_live_calibration_packet_v1` from GetCourse, Skillspace, and Stepik
-smoke/preflight reports. It proves the connected-source handoff contract,
+smoke/preflight reports. It proves the connected-source plan contract,
 including browser transcript/caption health and caption-resource error counts,
 without requiring credentials or storing private course payloads.

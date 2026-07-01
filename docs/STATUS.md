@@ -39,13 +39,13 @@ This proves:
 - CLI `readiness` and MCP `connector_readiness` return one read-only
   `aoa_course_connector_readiness_v1` route audit with install-route files,
   storage roots, source registry counts, selected run/index/graph readiness,
-  semantic provider readiness, connected-source handoff status, compact
-  `connected_run_handoff`, connected-run receipt status, MCP tool coverage,
+  semantic provider readiness, connected-source plan status, compact
+  `connected_run_plan`, connected-run receipt status, MCP tool coverage,
   `operational_ready`, `connected_live_ready`, and next commands. The embedded
   connected plan
   preserves operator-selected `live_scope`, `include_step_sources`,
   `link_pattern`, `max_lessons`, `max_pages`, and `max_sources` through the
-  ready connected-run handoff. If the selected connected-run receipt is partial
+  ready connected-run plan. If the selected connected-run receipt is partial
   and includes `repair_lanes`, the top-level readiness `next_commands` now
   surface those lane commands instead of replacing the receipt with fixture
   bootstrap;
@@ -54,17 +54,8 @@ This proves:
   normalized starter bundle, keyword index, semantic index, graph, default
   GetCourse/Skillspace/Stepik fixture connected-run receipt, and embedded
   readiness without touching the network;
-- CLI `goal audit` and MCP `goal_audit` return
-  `aoa_course_goal_audit_v1`, a read-only DoD-oriented handoff that separates
-  `ready_for_operator_connection` from `goal_complete`, keeps live account
-  calibration in `remaining_live_requirements`, embeds
-  `aoa_course_connection_handoff_v1` with operator inputs, browser auth,
-  Stepik, semantic provider, and MCP commands, reports `network_touched:
-  false`, and exits non-zero on the CLI with
-  `--require-ready-for-connection` until offline starter, fixture connected-run,
-  MCP, docs, schemas, storage, and privacy/source boundaries are all in place;
 - CLI `connect profile`, `connect inspect`, `connect apply`, and MCP
-  `connection_profile_inspect` provide the next operator-connection handoff:
+  `connection_profile_inspect` provide the next operator-connection plan:
   a local `aoa_course_connection_profile_v1` runtime artifact for source refs,
   browser state-file paths, Stepik token env names, and semantic provider
   settings; a read-only `aoa_course_connection_profile_inspection_v1` for
@@ -87,7 +78,7 @@ This proves:
   a read-only plan by default, a fixture-executable sync/checkpoint/rebuild
   loop for registered safe sources, and a live execution route gated behind
   explicit `--allow-network`; MCP exposes the read-only `refresh_plan` tool;
-- source-registry sync routes and connected-source handoff commands support
+- source-registry sync routes and connected-source plan commands support
   `--source-id` scoped refreshes, so an agent can refresh one selected source
   without forcing a full platform sync;
 - fresh-copy agent install route.
@@ -129,7 +120,7 @@ This proves:
 - Browser-session auth-state onboarding through CLI planning, optional
   Playwright capture, expected-origin capture receipts, and redacted
   storage-state inspection. `auth plan-browser-state` and connected-source
-  handoffs carry `--expect-origin-contains` so wrong-login or cross-school
+  plans carry `--expect-origin-contains` so wrong-login or cross-school
   storage-state mismatches are visible before live discovery or sync.
 - Read-only live preflight reports for Stepik tokens, browser storage-state
   usability, source-registry readiness, next commands, secret redaction, and
@@ -137,21 +128,21 @@ This proves:
 - Read-only connected-source launch plans through CLI `preflight
   connected-plan` and MCP `connected_source_plan`, turning source readiness into
   exact preflight, sync, smoke, calibration, and
-  `connected_run_handoff` commands without touching the network or printing
-  secrets. Ready handoffs preserve selected platforms, source ids, query, live
+  `connected_run_plan` commands without touching the network or printing
+  secrets. Ready plans preserve selected platforms, source ids, query, live
   scope, and browser `link_pattern` in the one-command
   `calibration connected-run --mode live --allow-network` route. Stepik launch
   plans default to bounded live smoke/sync commands, with
   full-course/source-enrichment commands gated behind explicit options.
 - `preflight live`, `preflight connected-plan`, `readiness`, and MCP
   `source_ids` support source-scoped planning, so one ready registered source
-  can produce its own preflight, sync, smoke, and connected-run handoff without
+  can produce its own preflight, sync, smoke, and connected-run plan without
   being blocked by another source whose auth state or token is not ready yet.
-- GetCourse and Skillspace connected plans now include browser auth handoff
+- GetCourse and Skillspace connected plans now include browser auth plan
   packets that group registered sources by host, show state-file readiness, and
   provide capture, redacted inspect, and recheck commands before live sync is
   allowed.
-- Browser auth handoffs include per-host `state_file_candidates` with
+- Browser auth plans include per-host `state_file_candidates` with
   host-specific state-file paths plus capture, inspect, and source-scoped
   recheck commands for multi-school/custom-domain GetCourse and Skillspace
   registries.
@@ -196,7 +187,7 @@ This proves:
   official API objects, with `adapter-authority` eval coverage proving the
   signal survives normalized bundles, indexes, and query packets.
 - The machine-readable adapter and source registries cover the full planned
-  platform topology from the goal: working GetCourse, Skillspace, and Stepik;
+  platform topology: working GetCourse, Skillspace, and Stepik;
   future Moodle, Canvas, Coursera, Teachable, Thinkific, and Kajabi entries
   without claiming their ingestion routes are implemented yet.
 - Browser live preflight rejects unsafe origin substring matches and withholds
@@ -226,15 +217,15 @@ This proves:
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, privacy flags, failures, next steps, artifact paths,
-  `execution_options`, and `query_handoff` entries after fixture or gated live
-  runs. Query handoff entries now include CLI commands and MCP `mcp_commands`
+  `execution_options`, and `query_plan` entries after fixture or gated live
+  runs. Query plan entries now include CLI commands and MCP `mcp_commands`
   for `search`, `lesson_context`, and `evidence_report`, so agents can stay on
   the MCP surface after a connected run. Partial connected-run receipts also
   include `repair_lanes` for network gate, source auth/readiness, source
   selection, source sync, live smoke/selector, and calibration-packet intake
   failures with concrete next commands.
 
-## Remaining Goal Work
+## Remaining Connector Work
 
 The next layer is live connected-source work:
 

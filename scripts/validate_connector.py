@@ -11,7 +11,7 @@ from pathlib import Path
 
 
 BOOTSTRAP_FIXTURE_INSTALL_COMMAND = "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration"
-PLATFORM_NARROWED_BOOTSTRAP_ERROR = "Agent install route must not narrow fixture bootstrap handoff with --platform"
+PLATFORM_NARROWED_BOOTSTRAP_ERROR = "Agent install route must not narrow fixture bootstrap plan with --platform"
 COMMAND_SPAN_RE = re.compile(r"`([^`\n]+)`")
 
 REQUIRED_FILES = [
@@ -103,7 +103,6 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/adapters/browser/snapshot.py",
     "src/aoa_course_connector/discover/browser_session.py",
     "src/aoa_course_connector/discover/stepik.py",
-    "src/aoa_course_connector/goal_audit.py",
     "src/aoa_course_connector/adapters/stepik/client.py",
     "src/aoa_course_connector/ingest/browser_session.py",
     "src/aoa_course_connector/ingest/stepik.py",
@@ -228,9 +227,9 @@ def _is_fixture_bootstrap_command(command: str) -> bool:
 
 def _check_agent_install_route_commands(agent_install_raw: str, errors: list[str]) -> None:
     if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
-        errors.append("Agent install route missing connector readiness audit handoff")
+        errors.append("Agent install route missing connector readiness check")
     if not _has_exact_documented_command(agent_install_raw, BOOTSTRAP_FIXTURE_INSTALL_COMMAND):
-        errors.append("Agent install route missing exact fixture bootstrap handoff")
+        errors.append("Agent install route missing exact fixture bootstrap command")
     for command in _documented_commands(agent_install_raw):
         if _is_fixture_bootstrap_command(command) and "--platform" in _command_tokens(command):
             if PLATFORM_NARROWED_BOOTSTRAP_ERROR not in errors:
@@ -340,9 +339,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if portable_packet_path not in text:
             errors.append(f"{label} missing portable connected-live-calibration packet path")
     if "preflight connected-plan --write-runbook" not in agent_install_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md" not in agent_install_raw:
-        errors.append("Agent install route missing portable connected-source runbook handoff")
+        errors.append("Agent install route missing portable connected-source runbook plan")
     if "calibration connected-run --mode fixture" not in agent_install_raw or "calibration connected-run --mode live --allow-network" not in agent_install_raw:
-        errors.append("Agent install route missing executable connected-run handoff")
+        errors.append("Agent install route missing executable connected-run plan")
     if "ARTIFACT_ROOT_EXPR" not in readiness_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}" not in readiness_raw:
         errors.append("Connected-source plan code missing portable artifact root expression")
     if "runs/{calibration_run}/calibration/live_calibration_packet.json" not in readiness_raw:
@@ -356,28 +355,18 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing default all-priority MCP connected-source validation")
     if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
         errors.append("AGENTS route missing connector readiness validation")
-    if "goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection" not in agents:
-        errors.append("AGENTS route missing goal audit ready-for-connection validation")
-    if "--write-connection-handoff" not in agents:
-        errors.append("AGENTS route missing goal connection handoff validation")
     if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect status" not in agents or "connect apply" not in agents or "--write-runbook" not in agents:
         errors.append("AGENTS route missing connection profile validation")
-    if "mcp call goal_audit" not in agents:
-        errors.append("AGENTS route missing MCP goal_audit validation")
     if "mcp call connection_profile_inspect" not in agents:
         errors.append("AGENTS route missing MCP connection_profile_inspect validation")
     if "mcp call connection_profile_status" not in agents:
         errors.append("AGENTS route missing MCP connection_profile_status validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
-    if "goal audit --run starter-fixture --connected-run" not in agent_install_raw or "ready_for_operator_connection" not in agent_install_raw:
-        errors.append("Agent install route missing goal audit handoff")
-    if "--write-connection-handoff" not in agent_install_raw or "aoa_course_connection_handoff_v1" not in agent_install_raw:
-        errors.append("Agent install route missing connection handoff write route")
     if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "connection_profile_status" not in agent_install_raw or "aoa_course_connection_profile_status_v1" not in agent_install_raw or "--write-runbook" not in agent_install_raw:
-        errors.append("Agent install route missing connection profile handoff")
+        errors.append("Agent install route missing connection profile plan")
     if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
-        errors.append("Agent install route missing capture expected-origin handoff")
+        errors.append("Agent install route missing capture expected-origin plan")
     _check_agent_install_route_commands(agent_install_raw, errors)
     if "refresh query" not in agents or "refresh_plan" not in agents:
         errors.append("AGENTS route missing refresh query/refresh_plan validation")
@@ -385,7 +374,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing browser transcript/caption eval")
     if "preflight semantic-provider --run starter-fixture --require-ready" not in agents:
         errors.append("AGENTS route missing semantic provider preflight validation")
-    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status", "mcp call ingest_status", "mcp call goal_audit", "mcp call semantic_provider_preflight"]:
+    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status", "mcp call ingest_status", "mcp call semantic_provider_preflight"]:
         if token not in agents:
             errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
     for token in ["getcourse", "skillspace", "coursera", "teachable", "thinkific", "kajabi", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
@@ -393,11 +382,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
             errors.append(f"source policy missing boundary token: {token}")
     for token in ["getcourse", "skillspace", "stepik", "moodle", "canvas", "coursera", "teachable", "thinkific", "kajabi"]:
         if token not in adapters_raw:
-            errors.append(f"adapter registry missing goal platform: {token}")
+            errors.append(f"adapter registry missing platform: {token}")
         if token not in sources_raw:
-            errors.append(f"source registry platform set missing goal platform: {token}")
+            errors.append(f"source registry platform set missing platform: {token}")
         if token not in manifest_raw:
-            errors.append(f"connector manifest missing goal platform: {token}")
+            errors.append(f"connector manifest missing platform: {token}")
     for token in ["coursera", "teachable", "thinkific", "kajabi", "future platform"]:
         if token not in architecture_doc:
             errors.append(f"Architecture doc missing future platform topology token: {token}")
@@ -414,10 +403,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "connection_profile_inspect", "connection_profile_status", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "aoa_course_connection_handoff_v1", "connection_handoff", "aoa_course_connection_profile_v1", "aoa_course_connection_profile_inspection_v1", "aoa_course_connection_profile_status_v1", "aoa_course_connection_profile_readiness_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "connection_profile_inspect", "connection_profile_status", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_connection_profile_v1", "aoa_course_connection_profile_inspection_v1", "aoa_course_connection_profile_status_v1", "aoa_course_connection_profile_readiness_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_plan", "source_selection", "query_plan", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -471,19 +460,12 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "goal audit", "--write-connection-handoff", "aoa_course_connection_handoff_v1", "connection_handoff", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_goal_audit_v1", "ready_for_operator_connection", "remaining_live_requirements", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "connected_run_plan", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
-    goal_audit_raw = (repo_root / "src" / "aoa_course_connector" / "goal_audit.py").read_text(encoding="utf-8")
-    for token in ["aoa_course_goal_audit_v1", "aoa_course_connection_handoff_v1", "render_connection_handoff", "write_connection_handoff", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "requires_operator_live_access", "connector_readiness", "preflight semantic-provider"]:
-        if token not in goal_audit_raw:
-            errors.append(f"Goal audit code missing token: {token}")
-    for token in ["goal_audit", "_goal_audit_schema", "aoa_course_connector.goal_audit", "DEFAULT_CONNECTED_RUN", "mcp_tool_names=TOOL_NAMES"]:
-        if token not in mcp_server_raw:
-            errors.append(f"MCP server missing goal audit token: {token}")
     verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")
-    if "goal" not in verifier_raw or "audit" not in verifier_raw or "--require-ready-for-connection" not in verifier_raw:
-        errors.append("Agent install verifier missing goal audit command")
+    if "connector_readiness" not in verifier_raw or "connected_source_plan" not in verifier_raw:
+        errors.append("Agent install verifier missing connector readiness/plan route")
     connected_run_raw = (repo_root / "src" / "aoa_course_connector" / "calibration" / "connected_run.py").read_text(encoding="utf-8")
     for token in ["repair_lanes", "repair_lane_count", "network_gate", "source_auth_or_readiness", "source_selection", "source_sync", "live_smoke_or_selector", "calibration_packet_intake"]:
         if token not in connected_run_raw:
@@ -496,7 +478,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "REQUIRED_MCP_TOOLS",
         "load_connected_calibration_status",
         "connected_source_plan",
-        "connected_run_handoff",
+        "connected_run_plan",
         "link_pattern",
         "max_lessons",
         "max_pages",
@@ -554,12 +536,12 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "aoa_course_connected_calibration_run_status_v1",
         "source_selection",
         "execution_options",
-        "query_handoff",
+        "query_plan",
         "repair_lanes",
         "mcp_commands",
         "lesson_context",
         "evidence_report",
-        "connected_run_handoff",
+        "connected_run_plan",
         "link-pattern",
         "account.storage-state.json",
         "preflight connected-plan",
@@ -655,7 +637,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "pagination links before applying a custom",
         "fixture_or_example_source",
         "operator_live_candidate",
-        "connected_run_handoff.source_ids",
+        "connected_run_plan.source_ids",
         "expected_origin_matched",
         "state_file_candidates",
         "per-host",

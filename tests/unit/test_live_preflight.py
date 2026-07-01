@@ -95,6 +95,7 @@ def test_live_preflight_blocks_example_browser_sources_from_live_sync(tmp_path: 
     )
 
     plan = connected_source_plan(storage, platforms=["getcourse"])
+    next_commands = plan["next_commands"]
 
     assert plan["ready"] is False
     assert plan["platform_plans"][0]["operator_source_count"] == 0
@@ -104,12 +105,12 @@ def test_live_preflight_blocks_example_browser_sources_from_live_sync(tmp_path: 
     assert source["fixture_or_example_source"] is True
     assert source["sync_command"] is None
     assert "example/reserved host" in " ".join(source["blockers"])
-    handoff = plan["browser_auth_handoffs"][0]
-    assert handoff["operator_source_count"] == 0
-    assert handoff["fixture_or_example_source_hosts"] == ["school.example"]
-    assert "no operator-owned live sources registered" in handoff["blockers"]
-    assert not any("sync browser-live" in command for command in plan["next_commands"])
-    assert any("sources add <operator-course-url>" in command for command in plan["next_commands"])
+    plan = plan["browser_auth_plans"][0]
+    assert plan["operator_source_count"] == 0
+    assert plan["fixture_or_example_source_hosts"] == ["school.example"]
+    assert "no operator-owned live sources registered" in plan["blockers"]
+    assert not any("sync browser-live" in command for command in next_commands)
+    assert any("sources add <operator-course-url>" in command for command in next_commands)
     rendered = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
@@ -203,9 +204,9 @@ def test_connected_source_plan_can_scope_browser_work_to_one_ready_source(tmp_pa
     assert [source["source_id"] for source in scoped["source_plans"]] == [source_a["source_id"]]
     assert scoped["platform_plans"][0]["ready_source_count"] == 1
     assert scoped["platform_plans"][0]["blocked_source_count"] == 0
-    assert scoped["connected_run_handoff"]["source_ids"] == [source_a["source_id"]]
-    assert f"--source-id {source_a['source_id']}" in scoped["connected_run_handoff"]["command"]
-    assert str(source_b["source_id"]) not in scoped["connected_run_handoff"]["command"]
+    assert scoped["connected_run_plan"]["source_ids"] == [source_a["source_id"]]
+    assert f"--source-id {source_a['source_id']}" in scoped["connected_run_plan"]["command"]
+    assert str(source_b["source_id"]) not in scoped["connected_run_plan"]["command"]
     assert any("sync browser-live" in command and str(source_a["source_id"]) in command for command in scoped["next_commands"])
     rendered = json.dumps(scoped)
     assert "SUPER_SECRET_COOKIE" not in rendered
@@ -281,7 +282,7 @@ def test_connected_source_plan_defaults_to_all_priority_platforms(tmp_path: Path
     assert platform_plans["getcourse"]["blocked_source_count"] == 1
     assert platform_plans["skillspace"]["blocked_source_count"] == 1
     assert platform_plans["stepik"]["ready_source_count"] == 1
-    assert [handoff["platform"] for handoff in plan["browser_auth_handoffs"]] == ["getcourse", "skillspace"]
+    assert [plan["platform"] for plan in plan["browser_auth_plans"]] == ["getcourse", "skillspace"]
     assert any("capture-browser-state getcourse" in command for command in plan["next_commands"])
     assert any("capture-browser-state skillspace" in command for command in plan["next_commands"])
     assert any("sync stepik-live" in command for command in plan["next_commands"])
@@ -334,26 +335,26 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert "--source-id" in connected_run["command"]
     assert "--query 'course-specific question'" in connected_run["command"]
     assert "--link-pattern '*/lessons/*'" in connected_run["command"]
-    assert plan["connected_run_handoff"] == connected_run
+    assert plan["connected_run_plan"] == connected_run
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
     assert plan["source_plans"][0]["smoke_report_path"].startswith("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/")
     assert "--source-id" in plan["source_plans"][0]["sync_command"]
     assert stage_actions["preflight_reports"][0]["artifact_path"] == "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
     assert stage_actions["calibration_packet"][0]["artifact_path"] == "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
     assert "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in stage_actions["calibration_packet"][0]["artifact_path"]
-    handoff = plan["browser_auth_handoffs"][0]
-    assert handoff["platform"] == "getcourse"
-    assert handoff["ready"] is True
-    assert handoff["source_hosts"] == ["school.operator.edu"]
-    assert handoff["blocked_source_count"] == 0
-    assert handoff["host_readiness"][0]["ready_source_count"] == 1
-    assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
-    assert "--expect-origin-contains school.operator.edu" in handoff["commands"]["capture"]
-    assert "inspect-browser-state" in handoff["commands"]["inspect"]
-    assert handoff["commands"]["inspect_source_hosts"] == [
+    plan = plan["browser_auth_plans"][0]
+    assert plan["platform"] == "getcourse"
+    assert plan["ready"] is True
+    assert plan["source_hosts"] == ["school.operator.edu"]
+    assert plan["blocked_source_count"] == 0
+    assert plan["host_readiness"][0]["ready_source_count"] == 1
+    assert "capture-browser-state getcourse account" in plan["commands"]["capture"]
+    assert "--expect-origin-contains school.operator.edu" in plan["commands"]["capture"]
+    assert "inspect-browser-state" in plan["commands"]["inspect"]
+    assert plan["commands"]["inspect_source_hosts"] == [
         'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --expect-origin-contains school.operator.edu'
     ]
-    assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
+    assert "preflight connected-plan --platform getcourse" in plan["commands"]["recheck"]
     rendered = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
@@ -364,6 +365,7 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     upsert_source(storage.data, "skillspace", "https://school.skillspace.edu/courses", "School")
 
     plan = connected_source_plan(storage, platforms=["skillspace"])
+    next_commands = plan["next_commands"]
 
     assert plan["status"] == "warning"
     assert plan["ready"] is False
@@ -374,14 +376,14 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
     assert connected_run["ready"] is False
     assert "command" not in connected_run
     assert "skillspace workflow is not ready" in connected_run["blocked_by"]
-    handoff = plan["browser_auth_handoffs"][0]
-    assert handoff["platform"] == "skillspace"
-    assert handoff["ready"] is False
-    assert handoff["source_count"] == 1
-    assert handoff["blocked_source_count"] == 1
-    assert handoff["source_hosts"] == ["school.skillspace.edu"]
-    assert handoff["blocked_source_hosts"] == ["school.skillspace.edu"]
-    assert handoff["host_readiness"] == [
+    plan = plan["browser_auth_plans"][0]
+    assert plan["platform"] == "skillspace"
+    assert plan["ready"] is False
+    assert plan["source_count"] == 1
+    assert plan["blocked_source_count"] == 1
+    assert plan["source_hosts"] == ["school.skillspace.edu"]
+    assert plan["blocked_source_hosts"] == ["school.skillspace.edu"]
+    assert plan["host_readiness"] == [
         {
             "host": "school.skillspace.edu",
             "source_count": 1,
@@ -390,15 +392,15 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
             "blockers": ["browser storage state is missing"],
         }
     ]
-    assert handoff["blockers"] == ["browser storage state is missing"]
-    assert "capture-browser-state skillspace account" in handoff["commands"]["capture"]
-    assert "--state-file" in handoff["commands"]["capture"]
-    assert "--expect-origin school.skillspace.edu" in handoff["commands"]["recheck"]
-    assert not any("sync browser-live" in command for command in plan["next_commands"])
-    assert any("capture-browser-state" in command for command in plan["next_commands"])
+    assert plan["blockers"] == ["browser storage state is missing"]
+    assert "capture-browser-state skillspace account" in plan["commands"]["capture"]
+    assert "--state-file" in plan["commands"]["capture"]
+    assert "--expect-origin school.skillspace.edu" in plan["commands"]["recheck"]
+    assert not any("sync browser-live" in command for command in next_commands)
+    assert any("capture-browser-state" in command for command in next_commands)
 
 
-def test_connected_source_runbook_renders_handoff_without_secret_values(tmp_path: Path) -> None:
+def test_connected_source_runbook_renders_plan_without_secret_values(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
     state_file = storage.auth / "getcourse" / "account.storage-state.json"
@@ -415,7 +417,7 @@ def test_connected_source_runbook_renders_handoff_without_secret_values(tmp_path
     runbook = render_connected_source_runbook(plan)
 
     assert "# Connected Source Runbook" in runbook
-    assert "## Browser Auth Handoffs" in runbook
+    assert "## Browser Auth Plans" in runbook
     assert "school.operator.edu" in runbook
     assert "capture-browser-state getcourse account" in runbook
     assert "smoke browser-live" in runbook

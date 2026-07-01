@@ -20,7 +20,7 @@ It is public method and code, not a course data dump.
   platform-neutral.
 - Browser-session adapters may use only the connected user's legitimate access.
 - Protected media should be represented with metadata, source links, available
-  captions/transcripts, and evidence; do not make DRM bypass a connector goal.
+  captions/transcripts, and evidence; do not make DRM bypass connector behavior.
 - Runtime/MCP deployment belongs in `abyss-stack`; this repo owns connector
   logic and an independently runnable MCP server package.
 
@@ -34,8 +34,6 @@ PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m aoa_course_connector.cli doctor
 PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starter-fixture --connected-run connected-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
-PYTHONPATH=src python -m aoa_course_connector.cli goal audit --run starter-fixture --connected-run connected-calibration --write-connection-handoff "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/goal-connection-handoff.md"
 PYTHONPATH=src python -m aoa_course_connector.cli connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
 PYTHONPATH=src python -m aoa_course_connector.cli connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 PYTHONPATH=src python -m aoa_course_connector.cli connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
@@ -122,7 +120,6 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"qu
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connector_readiness '{"runs":["starter-fixture"]}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-agent","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | PYTHONPATH=src python -m aoa_course_connector.mcp.server

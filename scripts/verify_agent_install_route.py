@@ -68,30 +68,24 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError("connected_source_plan stdio response did not prove read-only plan")
     if plan_payload.get("live_scope") != "bounded":
         raise StdioVerificationError("connected_source_plan stdio response did not preserve live_scope=bounded")
-    handoff = plan_payload.get("connected_run_handoff")
-    if not isinstance(handoff, dict) or handoff.get("kind") != "connected_run":
-        raise StdioVerificationError("connected_source_plan stdio response missing connected_run_handoff")
-    if handoff.get("network_touched") is not True:
-        raise StdioVerificationError("connected_run_handoff did not declare network-touching execution")
-    if handoff.get("ready") is True and "calibration connected-run --mode live --allow-network" not in str(handoff.get("command") or ""):
-        raise StdioVerificationError("connected_run_handoff ready command did not expose executable live route")
-    if handoff.get("ready") is False and not handoff.get("blocked_by"):
-        raise StdioVerificationError("blocked connected_run_handoff did not explain blockers")
+    plan = plan_payload.get("connected_run_plan")
+    if not isinstance(plan, dict) or plan.get("kind") != "connected_run":
+        raise StdioVerificationError("connected_source_plan stdio response missing connected_run_plan")
+    if plan.get("network_touched") is not True:
+        raise StdioVerificationError("connected_run_plan did not declare network-touching execution")
+    if plan.get("ready") is True and "calibration connected-run --mode live --allow-network" not in str(plan.get("command") or ""):
+        raise StdioVerificationError("connected_run_plan ready command did not expose executable live route")
+    if plan.get("ready") is False and not plan.get("blocked_by"):
+        raise StdioVerificationError("blocked connected_run_plan did not explain blockers")
     semantic = _require_tool_success(responses, 6, "semantic_provider_preflight")
     semantic_payload = semantic.get("preflight")
     if not isinstance(semantic_payload, dict) or semantic_payload.get("network_touched") is not False:
         raise StdioVerificationError("semantic_provider_preflight stdio response did not prove read-only provider preflight")
-    audit = _require_tool_success(responses, 7, "goal_audit")
-    if audit.get("ready_for_operator_connection") is not True:
-        raise StdioVerificationError("goal_audit stdio response did not report ready_for_operator_connection")
-    if audit.get("goal_complete") is not False:
-        raise StdioVerificationError("goal_audit stdio response must keep goal_complete false before live calibration")
-    handoff = audit.get("connection_handoff")
-    if not isinstance(handoff, dict) or handoff.get("schema") != "aoa_course_connection_handoff_v1":
-        raise StdioVerificationError("goal_audit stdio response missing connection_handoff")
-    if handoff.get("network_touched") is not False:
-        raise StdioVerificationError("connection_handoff must be read-only")
-
+    readiness = _require_tool_success(responses, 7, "connector_readiness")
+    if readiness.get("schema") != "aoa_course_connector_readiness_v1":
+        raise StdioVerificationError("connector_readiness stdio response reported wrong schema")
+    if readiness.get("network_touched") is not False:
+        raise StdioVerificationError("connector_readiness stdio response touched network")
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
@@ -105,7 +99,6 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env["PYTHONPATH"] = "src"
         env["AOA_COURSE_INSTANCE_ROOT"] = str(Path(tmp) / "state")
-        connection_handoff_path = Path(tmp) / "state" / "artifacts" / "goal-connection-handoff.md"
         connection_profile_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live.connection-profile.json"
         connection_profile_runbook_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live.runbook.md"
         applied_profile_runbook_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live-applied.runbook.md"
@@ -115,8 +108,6 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "doctor"],
             [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "readiness", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready"],
-            [sys.executable, "-m", "aoa_course_connector.cli", "goal", "audit", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready-for-connection"],
-            [sys.executable, "-m", "aoa_course_connector.cli", "goal", "audit", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--write-connection-handoff", str(connection_handoff_path)],
             [
                 sys.executable,
                 "-m",
@@ -210,6 +201,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "live_preflight", "{}"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_source_plan", '{"live_scope":"bounded"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_provider_preflight", '{"run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connector_readiness", '{"runs":["starter-fixture"]}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "crawl", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-crawl-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "getcourse-browser-crawl-fixture"],
@@ -238,9 +230,6 @@ def main(argv: list[str] | None = None) -> int:
                 print(result.stdout, file=sys.stderr)
                 print(result.stderr, file=sys.stderr)
                 return result.returncode
-        if not connection_handoff_path.is_file() or "Course Connector Connection Handoff" not in connection_handoff_path.read_text(encoding="utf-8"):
-            print("goal connection handoff was not written correctly", file=sys.stderr)
-            return 1
         if not connection_profile_path.is_file() or "aoa_course_connection_profile_v1" not in connection_profile_path.read_text(encoding="utf-8"):
             print("connection profile was not written correctly", file=sys.stderr)
             return 1
@@ -257,7 +246,7 @@ def main(argv: list[str] | None = None) -> int:
             '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"live_preflight","arguments":{}}}',
             '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}',
             '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"semantic_provider_preflight","arguments":{"run":"starter-fixture"}}}',
-            '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"goal_audit","arguments":{"runs":["starter-fixture"],"connected_run":"connected-calibration"}}}',
+            '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}',
             "",
         ])
         result = subprocess.run(

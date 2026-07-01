@@ -99,7 +99,7 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "next_steps": receipt.get("next_steps", []),
         "source_selection": receipt.get("source_selection", {}),
         "execution_options": receipt.get("execution_options") if isinstance(receipt.get("execution_options"), dict) else {},
-        "query_handoff": receipt.get("query_handoff", {}),
+        "query_plan": receipt.get("query_plan", {}),
         "artifacts": {
             "plan_path": artifacts.get("plan_path"),
             "runbook_path": artifacts.get("runbook_path"),
@@ -742,7 +742,7 @@ def _receipt(
     execution_options: dict[str, object] | None = None,
 ) -> dict[str, object]:
     status = _receipt_status(failures, packet=packet, stages=stages)
-    query_handoff = _query_handoff(stages)
+    query_plan = _query_plan(stages)
     registry = load_registry(roots.data)
     repair_lanes = _repair_lanes(
         failures,
@@ -809,7 +809,7 @@ def _receipt(
                 if isinstance(receipt, dict) and receipt.get("receipt_path")
             ],
         },
-        "query_handoff": query_handoff,
+        "query_plan": query_plan,
         "quality": packet.get("quality") if isinstance(packet, dict) else {},
         "privacy": packet.get("privacy") if isinstance(packet, dict) else {"contains_raw_payloads": False, "contains_secret_values": False},
         "failures": failures,
@@ -950,7 +950,7 @@ def _resolved_browser_state_file(roots: StorageRoots, *, platform: str, browser_
     return (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
 
 
-def _query_handoff(stages: list[dict[str, object]]) -> dict[str, object]:
+def _query_plan(stages: list[dict[str, object]]) -> dict[str, object]:
     entries: list[dict[str, object]] = []
     seen: set[tuple[str, str, str]] = set()
     for stage in stages:
@@ -960,27 +960,27 @@ def _query_handoff(stages: list[dict[str, object]]) -> dict[str, object]:
             payload = action["payload"]
             kind = str(action.get("kind") or "")
             if kind == "sync":
-                for entry in _sync_query_handoff_entries(payload, action):
+                for entry in _sync_query_plan_entries(payload, action):
                     key = (str(entry.get("kind")), str(entry.get("platform")), str(entry.get("run_id")))
                     if key not in seen:
                         entries.append(entry)
                         seen.add(key)
             elif kind == "smoke":
-                entry = _smoke_query_handoff_entry(payload, action)
+                entry = _smoke_query_plan_entry(payload, action)
                 if entry:
                     key = (str(entry.get("kind")), str(entry.get("platform")), str(entry.get("run_id")))
                     if key not in seen:
                         entries.append(entry)
                         seen.add(key)
     return {
-        "schema": "aoa_course_connected_query_handoff_v1",
+        "schema": "aoa_course_connected_query_plan_v1",
         "ready": any(bool(entry.get("query_ready")) for entry in entries),
         "entry_count": len(entries),
         "entries": entries,
     }
 
 
-def _sync_query_handoff_entries(payload: dict[str, object], action: dict[str, object]) -> list[dict[str, object]]:
+def _sync_query_plan_entries(payload: dict[str, object], action: dict[str, object]) -> list[dict[str, object]]:
     checkpoints = payload.get("synced_sources") if isinstance(payload.get("synced_sources"), list) else []
     entries: list[dict[str, object]] = []
     for checkpoint in checkpoints:
@@ -997,7 +997,7 @@ def _sync_query_handoff_entries(payload: dict[str, object], action: dict[str, ob
             "answer_path": "",
         }
         entries.append(
-            _query_handoff_entry(
+            _query_plan_entry(
                 kind="sync",
                 platform=str(checkpoint.get("platform") or action.get("platform") or ""),
                 run_id=run_id,
@@ -1014,7 +1014,7 @@ def _sync_query_handoff_entries(payload: dict[str, object], action: dict[str, ob
     return entries
 
 
-def _smoke_query_handoff_entry(payload: dict[str, object], action: dict[str, object]) -> dict[str, object] | None:
+def _smoke_query_plan_entry(payload: dict[str, object], action: dict[str, object]) -> dict[str, object] | None:
     artifacts = payload.get("artifacts") if isinstance(payload.get("artifacts"), dict) else {}
     course = payload.get("course") if isinstance(payload.get("course"), dict) else {}
     source = payload.get("source") if isinstance(payload.get("source"), dict) else {}
@@ -1029,7 +1029,7 @@ def _smoke_query_handoff_entry(payload: dict[str, object], action: dict[str, obj
         "graph_path": str(artifacts.get("graph_path") or ""),
         "answer_path": str(answer.get("answer_path") or ""),
     }
-    return _query_handoff_entry(
+    return _query_plan_entry(
         kind="smoke",
         platform=str(payload.get("platform") or action.get("platform") or ""),
         run_id=run_id,
@@ -1044,7 +1044,7 @@ def _smoke_query_handoff_entry(payload: dict[str, object], action: dict[str, obj
     )
 
 
-def _query_handoff_entry(
+def _query_plan_entry(
     *,
     kind: str,
     platform: str,

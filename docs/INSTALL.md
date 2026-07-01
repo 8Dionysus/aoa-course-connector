@@ -16,7 +16,6 @@ aoa-course init
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
-aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
 aoa-course preflight live
 ```
 
@@ -27,10 +26,10 @@ receipt without network or secrets.
 
 `readiness` is the broad read-only route audit for the connector. It reports
 install files, storage roots, local run/index/graph readiness, source registry
-counts, MCP tool coverage, connected-source handoff status,
-semantic provider readiness, `connected_run_handoff`, and next commands. For
+counts, MCP tool coverage, connected-source plan status,
+semantic provider readiness, `connected_run_plan`, and next commands. For
 browser-session sources, `--link-pattern` keeps narrowed lesson/course globs
-in that handoff. Use
+in that plan. Use
 `--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
 `--include-step-sources` when a readiness audit must preserve the exact
 operator-selected connected-run breadth.
@@ -44,16 +43,6 @@ network.
 `preflight live` is safe before credentials exist. It reports missing live auth
 as a warning, does not touch the network, and gives the next commands for
 Stepik tokens or browser storage-state capture.
-
-`goal audit` is the read-only closeout handoff for a fresh agent. After
-bootstrap it should report `ready_for_operator_connection: true` while keeping
-`goal_complete: false` until live GetCourse, Skillspace, Stepik, and external
-embedding calibration are performed with operator-owned access.
-MCP `goal_audit` exposes the same DoD-oriented packet for agents that stay on
-the MCP surface after install and readiness checks.
-Pass `--write-connection-handoff` to write the redacted
-`aoa_course_connection_handoff_v1` operator checklist as runtime Markdown under
-artifact storage.
 
 When the operator has real course URLs, state-file paths, Stepik course ids, or
 semantic-provider settings, capture them as local runtime state:

@@ -1,7 +1,7 @@
 """Live calibration packet helpers.
 
 Calibration packets summarize smoke/preflight reports without embedding raw
-private source data. They are runtime artifacts: useful for operator handoff and
+private source data. They are runtime artifacts: useful for operator plan and
 agent checks, but not central proof verdicts.
 """
 

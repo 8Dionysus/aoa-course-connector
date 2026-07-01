@@ -44,7 +44,7 @@ Each result exposes `rank_features`, including `freshness_state`,
 `provenance_complete`. Hybrid results also expose these factors in
 `score_components`.
 
-Each result also exposes `refresh_hint`. This is read-only handoff metadata, not
+Each result also exposes `refresh_hint`. This is read-only plan metadata, not
 a network action. It always includes `local_rebuild_commands` for
 `build-index`, `build-semantic-index`, and `build-graph` against the current
 run. For connected platforms (`getcourse`, `skillspace`, `stepik`) it also

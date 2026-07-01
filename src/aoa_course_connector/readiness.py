@@ -68,23 +68,23 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
             lines.extend([f"  - {blocker}" for blocker in blockers])
         lines.append("")
 
-    handoffs = _dict_items(plan.get("browser_auth_handoffs"))
-    if handoffs:
-        lines.extend(["## Browser Auth Handoffs", ""])
-        for handoff in handoffs:
+    plans = _dict_items(plan.get("browser_auth_plans"))
+    if plans:
+        lines.extend(["## Browser Auth Plans", ""])
+        for auth_plan in plans:
             lines.extend(
                 [
-                    f"### {handoff.get('platform')}",
+                    f"### {auth_plan.get('platform')}",
                     "",
-                    f"- ready: `{bool(handoff.get('ready'))}`",
-                    f"- state_file: `{handoff.get('state_file')}`",
-                    f"- state_status: `{handoff.get('state_status')}`",
-                    f"- expected_origin_contains: `{handoff.get('expected_origin_contains')}`",
-                    f"- source_hosts: `{', '.join([str(host) for host in handoff.get('source_hosts', [])])}`",
-                    f"- blocked_source_hosts: `{', '.join([str(host) for host in handoff.get('blocked_source_hosts', [])])}`",
+                    f"- ready: `{bool(auth_plan.get('ready'))}`",
+                    f"- state_file: `{auth_plan.get('state_file')}`",
+                    f"- state_status: `{auth_plan.get('state_status')}`",
+                    f"- expected_origin_contains: `{auth_plan.get('expected_origin_contains')}`",
+                    f"- source_hosts: `{', '.join([str(host) for host in auth_plan.get('source_hosts', [])])}`",
+                    f"- blocked_source_hosts: `{', '.join([str(host) for host in auth_plan.get('blocked_source_hosts', [])])}`",
                 ]
             )
-            host_readiness = _dict_items(handoff.get("host_readiness"))
+            host_readiness = _dict_items(auth_plan.get("host_readiness"))
             if host_readiness:
                 lines.extend(["", "Host readiness:"])
                 for host in host_readiness:
@@ -94,7 +94,7 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
                     )
                     blockers = [str(item) for item in host.get("blockers", [])] if isinstance(host.get("blockers"), list) else []
                     lines.extend([f"  - {blocker}" for blocker in blockers])
-            commands = handoff.get("commands") if isinstance(handoff.get("commands"), dict) else {}
+            commands = auth_plan.get("commands") if isinstance(auth_plan.get("commands"), dict) else {}
             if commands:
                 lines.extend(["", "Commands:"])
                 for label in ["plan", "capture", "inspect", "recheck"]:
@@ -106,7 +106,7 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
                     lines.extend(["- inspect source hosts:"])
                     for command in inspect_hosts:
                         lines.extend(["  ```bash", f"  {command}", "  ```"])
-            candidates = _dict_items(handoff.get("state_file_candidates"))
+            candidates = _dict_items(auth_plan.get("state_file_candidates"))
             if candidates:
                 lines.extend(["", "Per-host state-file candidates:"])
                 for candidate in candidates:
@@ -116,7 +116,7 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
                         command = str(candidate_commands.get(label) or "")
                         if command:
                             lines.extend(["  ```bash", f"  {command}", "  ```"])
-            notes = [str(item) for item in handoff.get("notes", [])] if isinstance(handoff.get("notes"), list) else []
+            notes = [str(item) for item in auth_plan.get("notes", [])] if isinstance(auth_plan.get("notes"), list) else []
             if notes:
                 lines.extend(["", "Notes:"])
                 lines.extend([f"- {note}" for note in notes])
@@ -498,7 +498,7 @@ def connected_source_plan(
     )
     source_plans = [_source_plan(check, sync_actions, smoke_actions) for check in source_checks]
     platform_plans = _platform_plans(selected_platforms, source_checks, workflow_by_key)
-    browser_auth_handoffs = _browser_auth_handoffs(
+    browser_auth_plans = _browser_auth_plans(
         selected_platforms,
         preflight,
         browser_state_file=browser_state_file,
@@ -553,8 +553,8 @@ def connected_source_plan(
         "max_sources": max_sources,
         "link_pattern": link_pattern or "",
         "platform_plans": platform_plans,
-        "browser_auth_handoffs": browser_auth_handoffs,
-        "connected_run_handoff": connected_run_actions[0] if connected_run_actions else {},
+        "browser_auth_plans": browser_auth_plans,
+        "connected_run_plan": connected_run_actions[0] if connected_run_actions else {},
         "source_plans": source_plans,
         "stages": stages,
         "next_commands": _dedupe(
@@ -1099,7 +1099,7 @@ def _source_plan(source: dict[str, object], sync_actions: list[dict[str, object]
     }
 
 
-def _browser_auth_handoffs(
+def _browser_auth_plans(
     platforms: list[str],
     preflight: dict[str, object],
     *,
@@ -1107,7 +1107,7 @@ def _browser_auth_handoffs(
     expect_origin_contains: str | None,
 ) -> list[dict[str, object]]:
     checks = [check for check in preflight.get("checks", []) if isinstance(check, dict)]
-    handoffs: list[dict[str, object]] = []
+    plans: list[dict[str, object]] = []
     for platform in [item for item in platforms if item in BROWSER_PLATFORMS]:
         state_check = next(
             (
@@ -1130,7 +1130,7 @@ def _browser_auth_handoffs(
         source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in operator_source_checks])
         blocked_source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in blocked_sources])
         fixture_source_hosts = _dedupe([_host(str(check.get("source_ref") or "")) for check in fixture_sources])
-        expected_origin = _handoff_expected_origin(
+        expected_origin = _plan_expected_origin(
             state_check,
             source_hosts,
             expect_origin_contains=expect_origin_contains,
@@ -1143,7 +1143,7 @@ def _browser_auth_handoffs(
             ]
             + (["no operator-owned live sources registered"] if fixture_sources and not operator_source_checks else [])
         )
-        handoffs.append(
+        plans.append(
             {
                 "platform": platform,
                 "ready": bool(state_check.get("ready")) and bool(operator_source_checks) and not blocked_sources,
@@ -1167,7 +1167,7 @@ def _browser_auth_handoffs(
                     browser_state_file=browser_state_file,
                 ),
                 "blockers": blockers,
-                "commands": _browser_auth_handoff_commands(
+                "commands": _browser_auth_plan_commands(
                     platform,
                     browser_state_file=browser_state_file,
                     source_hosts=source_hosts,
@@ -1182,7 +1182,7 @@ def _browser_auth_handoffs(
                 ],
             }
         )
-    return handoffs
+    return plans
 
 
 def _host_readiness(source_checks: list[dict[str, object]]) -> list[dict[str, object]]:
@@ -1260,7 +1260,7 @@ def _host_state_file_candidates(
     return candidates
 
 
-def _handoff_expected_origin(
+def _plan_expected_origin(
     state_check: dict[str, object],
     source_hosts: list[str],
     *,
@@ -1274,7 +1274,7 @@ def _handoff_expected_origin(
     return expected or None
 
 
-def _browser_auth_handoff_commands(
+def _browser_auth_plan_commands(
     platform: str,
     *,
     browser_state_file: Path | None,

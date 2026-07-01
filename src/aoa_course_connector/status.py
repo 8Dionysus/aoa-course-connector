@@ -30,7 +30,6 @@ REQUIRED_ROUTE_FILES = [
 ]
 REQUIRED_MCP_TOOLS = [
     "connector_readiness",
-    "goal_audit",
     "list_sources",
     "ingest_status",
     "sync_status",
@@ -77,7 +76,7 @@ def connector_readiness(
     embedding_timeout_seconds: float = 30.0,
     mcp_tool_names: list[str] | set[str] | None = None,
 ) -> dict[str, object]:
-    """Build a single read-only route audit for install, query, and live handoff."""
+    """Build a single read-only route audit for install, query, and live plan."""
 
     selected_runs = _dedupe([str(run) for run in (runs or [DEFAULT_RUN]) if str(run)])
     selected_platforms = _dedupe([str(platform) for platform in (platforms or DEFAULT_PLATFORMS) if str(platform)])
@@ -324,8 +323,8 @@ def _compact_connected_plan(plan: dict[str, object]) -> dict[str, object]:
         "platforms": plan.get("platforms", []),
         "source_registry": plan.get("source_registry"),
         "platform_plans": plan.get("platform_plans", []),
-        "browser_auth_handoffs": plan.get("browser_auth_handoffs", []),
-        "connected_run_handoff": plan.get("connected_run_handoff", {}),
+        "browser_auth_plans": plan.get("browser_auth_plans", []),
+        "connected_run_plan": plan.get("connected_run_plan", {}),
         "next_commands": plan.get("next_commands", []),
     }
 
@@ -390,8 +389,8 @@ def _next_commands(
     if not bool(preflight.get("ready")):
         commands.extend([str(command) for command in preflight.get("next_commands", []) if str(command)])
     if bool(connected_plan.get("ready")):
-        handoff = connected_plan.get("connected_run_handoff") if isinstance(connected_plan.get("connected_run_handoff"), dict) else {}
-        command = str(handoff.get("command") or "")
+        plan = connected_plan.get("connected_run_plan") if isinstance(connected_plan.get("connected_run_plan"), dict) else {}
+        command = str(plan.get("command") or "")
         if command and not connected_run_repairing:
             commands.append(command)
     else:
