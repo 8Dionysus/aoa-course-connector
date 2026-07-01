@@ -11,6 +11,7 @@ Initial tools:
 - `sync_status`
 - `live_preflight`
 - `connected_source_plan`
+- `connection_profile_inspect`
 - `semantic_provider_preflight`
 - `connected_run_status`
 - `refresh_plan`
@@ -41,6 +42,7 @@ aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call connection_profile_inspect '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
@@ -207,6 +209,15 @@ Markdown checklist as runtime-only artifact state.
 The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
 `include_step_sources: true` only when the operator intentionally wants the
 larger Stepik full-course/source-enrichment route.
+
+`connection_profile_inspect` is the MCP-side reader for a local
+`aoa_course_connection_profile_v1` file created by `aoa-course connect
+profile`. It returns `aoa_course_connection_profile_inspection_v1` with source
+registration state, browser auth capture/inspect commands, per-platform
+connected-plan commands, semantic-provider preflight/build/query commands, and
+`network_touched: false`. It does not mutate the source registry; use CLI
+`connect apply` when the operator wants to register the profile's non-secret
+source refs.
 
 `connected_run_status` is the read-only MCP handoff after a CLI
 `calibration connected-run`. It returns

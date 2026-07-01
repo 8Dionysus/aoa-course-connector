@@ -55,6 +55,28 @@ Pass `--write-connection-handoff` to write the redacted
 `aoa_course_connection_handoff_v1` operator checklist as runtime Markdown under
 artifact storage.
 
+When the operator has real course URLs, state-file paths, Stepik course ids, or
+semantic-provider settings, capture them as local runtime state:
+
+```bash
+aoa-course connect profile --name operator-live \
+  --getcourse-url "https://school.example/teach/control/stream" \
+  --skillspace-url "https://academy.example/course/demo" \
+  --stepik-course-id 67 \
+  --run connected-live-calibration \
+  --semantic-provider http_json_v1 \
+  --embedding-endpoint "https://embed.example/v1" \
+  --embedding-model "course-embedding" \
+  --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
+aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
+```
+
+The profile is `aoa_course_connection_profile_v1`. It is a runtime artifact:
+source refs may be operator-private, but token values are never written. Apply
+only registers non-secret source refs in the local source registry; live sync
+still requires the later explicit preflight/auth/network-gated commands.
+
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser
 sources still require matching local auth state before live sync is ready.

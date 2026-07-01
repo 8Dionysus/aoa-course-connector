@@ -10,6 +10,13 @@ from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
 from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
+from aoa_course_connector.connection_profile import (
+    apply_connection_profile,
+    build_connection_profile,
+    inspect_connection_profile,
+    load_connection_profile,
+    write_connection_profile,
+)
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.goal_audit import goal_audit, render_connection_handoff, write_connection_handoff
 from aoa_course_connector.graph import build_graph
@@ -40,6 +47,63 @@ def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
     assert "inspect-browser-state" in plan["inspect_command"]
     assert "--expect-origin-contains school.example" in plan["inspect_command"]
     assert plan["git_safe"] is False
+
+
+def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(tmp_path / "cache"))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(tmp_path / "auth"))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+    monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    profile = build_connection_profile(
+        storage,
+        name="live-courses",
+        getcourse_urls=["https://school.example/teach/control/stream"],
+        skillspace_urls=["https://academy.example/course/demo"],
+        stepik_course_ids=["67"],
+        stepik_token_env="STEPIK_API_TOKEN",
+        run_id="connected-live-calibration",
+        query="course-specific question",
+        live_scope="full-course",
+        include_step_sources=True,
+        semantic_provider="http_json_v1",
+        embedding_endpoint="https://embed.example/v1",
+        embedding_model="course-embedding",
+        embedding_token_env="AOA_COURSE_TEST_EMBEDDING_TOKEN",
+    )
+    profile_path = tmp_path / "artifacts" / "connections" / "live-courses.connection-profile.json"
+    write_receipt = write_connection_profile(profile, profile_path)
+    loaded = load_connection_profile(profile_path)
+    inspection = inspect_connection_profile(storage, loaded, profile_path=profile_path)
+
+    rendered = json.dumps({"profile": loaded, "inspection": inspection})
+    assert write_receipt["written"] is True
+    assert loaded["schema"] == "aoa_course_connection_profile_v1"
+    assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
+    assert inspection["network_touched"] is False
+    assert inspection["source_registry"]["registered_profile_source_count"] == 0
+    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in rendered
+    assert any("sources add" in command for command in inspection["next_commands"])
+    assert any("auth capture-browser-state" in command for command in inspection["next_commands"])
+
+    apply_receipt = apply_connection_profile(storage, loaded, profile_path=profile_path)
+    registry = load_registry(storage.data)
+    assert apply_receipt["status"] == "ok"
+    assert len(apply_receipt["applied"]) == 3
+    assert len(registry["sources"]) == 3
+    assert apply_receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 3
+
+    mcp = call_tool("connection_profile_inspect", {"profile_path": str(profile_path)})
+    assert mcp["tool"] == "connection_profile_inspect"
+    assert mcp["inspection"]["schema"] == "aoa_course_connection_profile_inspection_v1"
+    assert mcp["inspection"]["network_touched"] is False
 
 
 def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, monkeypatch) -> None:

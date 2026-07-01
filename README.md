@@ -46,6 +46,15 @@ checklist from `aoa_course_connection_handoff_v1`. It gathers the remaining
 operator inputs, browser auth handoffs, Stepik full-course route, semantic
 provider route, and MCP commands into one file under artifact storage.
 
+`connect profile` turns those operator inputs into a local runtime JSON
+contract, `aoa_course_connection_profile_v1`. It stores source refs, state-file
+paths, token env names, and semantic-provider settings under artifact storage,
+but never stores token values. `connect inspect` is read-only and returns the
+source registration, browser auth, connected-plan, and semantic-provider next
+commands with `network_touched: false`. `connect apply` mutates only the local
+source registry, then returns the same inspection so the next `preflight connected-plan` or MCP
+`connection_profile_inspect` call can continue from registered sources.
+
 `readiness` is the read-only agent handoff for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry
 counts, run/index/graph readiness, connected-source handoff status, MCP tool

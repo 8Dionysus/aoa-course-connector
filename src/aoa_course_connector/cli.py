@@ -18,6 +18,14 @@ from aoa_course_connector.calibration import (
     write_live_calibration_packet,
 )
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
+from aoa_course_connector.connection_profile import (
+    apply_connection_profile,
+    build_connection_profile,
+    default_connection_profile_path,
+    inspect_connection_profile,
+    load_connection_profile,
+    write_connection_profile,
+)
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
@@ -137,6 +145,40 @@ def build_parser() -> argparse.ArgumentParser:
     adapters = sub.add_parser("adapters")
     adapters_sub = adapters.add_subparsers(dest="adapters_command", required=True)
     adapters_sub.add_parser("list").set_defaults(func=cmd_adapters_list)
+
+    connect = sub.add_parser("connect")
+    connect_sub = connect.add_subparsers(dest="connect_command", required=True)
+    connect_profile = connect_sub.add_parser("profile")
+    connect_profile.add_argument("--name", default="operator-connection")
+    connect_profile.add_argument("--getcourse-url", action="append")
+    connect_profile.add_argument("--skillspace-url", action="append")
+    connect_profile.add_argument("--stepik-course-id", action="append")
+    connect_profile.add_argument("--getcourse-state-file", type=Path)
+    connect_profile.add_argument("--skillspace-state-file", type=Path)
+    connect_profile.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
+    connect_profile.add_argument("--run", default="connected-calibration")
+    connect_profile.add_argument("--query")
+    connect_profile.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
+    connect_profile.add_argument("--include-step-sources", action="store_true")
+    connect_profile.add_argument("--max-lessons", type=int, default=50)
+    connect_profile.add_argument("--max-pages", type=int, default=5)
+    connect_profile.add_argument("--max-sources", type=int, default=50)
+    connect_profile.add_argument("--link-pattern")
+    connect_profile.add_argument("--semantic-provider", choices=[LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], default=LOCAL_HASHING_PROVIDER)
+    connect_profile.add_argument("--dimensions", type=int, default=256)
+    connect_profile.add_argument("--embedding-endpoint")
+    connect_profile.add_argument("--embedding-model")
+    connect_profile.add_argument("--embedding-token-env", default="AOA_COURSE_EMBEDDING_TOKEN")
+    connect_profile.add_argument("--embedding-batch-size", type=int, default=32)
+    connect_profile.add_argument("--embedding-timeout-seconds", type=float, default=30.0)
+    connect_profile.add_argument("--write", type=Path)
+    connect_profile.set_defaults(func=cmd_connect_profile)
+    connect_inspect = connect_sub.add_parser("inspect")
+    connect_inspect.add_argument("profile", type=Path)
+    connect_inspect.set_defaults(func=cmd_connect_inspect)
+    connect_apply = connect_sub.add_parser("apply")
+    connect_apply.add_argument("profile", type=Path)
+    connect_apply.set_defaults(func=cmd_connect_apply)
 
     preflight = sub.add_parser("preflight")
     preflight_sub = preflight.add_subparsers(dest="preflight_command", required=True)
@@ -700,6 +742,67 @@ def cmd_storage_status(args: argparse.Namespace) -> int:
 
 def cmd_adapters_list(_args: argparse.Namespace) -> int:
     _emit({"schema": "aoa_course_adapters_v1", "adapters": adapter_list()})
+    return 0
+
+
+def cmd_connect_profile(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    create_storage_roots(roots)
+    profile = build_connection_profile(
+        roots,
+        name=args.name,
+        getcourse_urls=args.getcourse_url,
+        skillspace_urls=args.skillspace_url,
+        stepik_course_ids=args.stepik_course_id,
+        getcourse_state_file=args.getcourse_state_file,
+        skillspace_state_file=args.skillspace_state_file,
+        stepik_token_env=args.stepik_token_env,
+        run_id=args.run,
+        query=args.query,
+        live_scope=args.live_scope,
+        include_step_sources=args.include_step_sources,
+        max_lessons=args.max_lessons,
+        max_pages=args.max_pages,
+        max_sources=args.max_sources,
+        link_pattern=args.link_pattern,
+        semantic_provider=args.semantic_provider,
+        dimensions=args.dimensions,
+        embedding_endpoint=args.embedding_endpoint,
+        embedding_model=args.embedding_model,
+        embedding_token_env=args.embedding_token_env,
+        embedding_batch_size=args.embedding_batch_size,
+        embedding_timeout_seconds=args.embedding_timeout_seconds,
+    )
+    path = args.write or default_connection_profile_path(roots.artifact, args.name)
+    written = write_connection_profile(profile, path)
+    inspection = inspect_connection_profile(roots, profile, profile_path=Path(str(written["path"])))
+    _emit(
+        {
+            "schema": "aoa_course_connection_profile_receipt_v1",
+            "status": "ok",
+            "network_touched": False,
+            "redacted": True,
+            "profile_path": written["path"],
+            "write": written,
+            "profile": profile,
+            "inspection": inspection,
+        }
+    )
+    return 0
+
+
+def cmd_connect_inspect(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    profile = load_connection_profile(args.profile)
+    _emit(inspect_connection_profile(roots, profile, profile_path=args.profile))
+    return 0
+
+
+def cmd_connect_apply(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    create_storage_roots(roots)
+    profile = load_connection_profile(args.profile)
+    _emit(apply_connection_profile(roots, profile, profile_path=args.profile))
     return 0
 
 
