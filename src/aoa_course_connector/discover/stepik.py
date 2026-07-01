@@ -11,7 +11,7 @@ from typing import Any
 from aoa_course_connector.adapters.stepik import fetch_stepik_account_courses
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.sources import registry_path, upsert_source
-from aoa_course_connector.storage import create_storage_roots
+from aoa_course_connector.storage import create_storage_roots, discovery_data_dir
 
 
 DEFAULT_STEPIK_ACCOUNT_FIXTURE = Path("connector/fixtures/stepik/account_courses.json")
@@ -116,7 +116,7 @@ def _finish_account_discovery(
     }
     if fixture:
         receipt["fixture"] = fixture
-    receipt_path = roots.data / "discovery" / run_id / "stepik_account_discovery_receipt.json"
+    receipt_path = discovery_data_dir(roots, run_id) / "stepik_account_discovery_receipt.json"
     receipt_path.parent.mkdir(parents=True, exist_ok=True)
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
     receipt["receipt_path"] = str(receipt_path)
