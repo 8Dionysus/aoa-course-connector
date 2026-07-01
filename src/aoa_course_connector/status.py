@@ -399,6 +399,10 @@ def _next_commands(
         storage = semantic_preflight.get("storage") if isinstance(semantic_preflight.get("storage"), dict) else {}
         semantic_index_exists = bool(storage.get("semantic_index_exists"))
         if not bool(semantic_preflight.get("ready")) or not semantic_index_exists:
+            provider = str(semantic_preflight.get("provider") or LOCAL_HASHING_PROVIDER)
+            run_id = str(semantic_preflight.get("run_id") or DEFAULT_RUN)
+            if provider != LOCAL_HASHING_PROVIDER:
+                commands = _drop_default_semantic_build_commands(commands, run_id)
             commands.extend([str(command) for command in semantic_preflight.get("next_commands", []) if str(command)])
     if not bool(mcp.get("ready")):
         commands.append("aoa-course mcp tools")
@@ -419,6 +423,20 @@ def _connected_run_repair_commands(connected_run: dict[str, object], connected_r
     if commands:
         return commands
     return [f"aoa-course calibration status --run {connected_run_id}"]
+
+
+def _drop_default_semantic_build_commands(commands: list[str], run_id: str) -> list[str]:
+    default_build = f"aoa-course build-semantic-index --run {run_id}"
+    explicit_local_prefix = f"{default_build} --provider {LOCAL_HASHING_PROVIDER}"
+
+    def is_default_semantic_build(command: str) -> bool:
+        return (
+            command == default_build
+            or command == explicit_local_prefix
+            or command.startswith(f"{explicit_local_prefix} ")
+        )
+
+    return [command for command in commands if not is_default_semantic_build(command)]
 
 
 def _normalized_bundle_status(path: Path) -> dict[str, object]:
