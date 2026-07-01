@@ -37,8 +37,8 @@ def test_agent_install_route_rejects_platform_narrowed_bootstrap() -> None:
         errors,
     )
 
-    assert "Agent install route missing exact fixture bootstrap handoff" in errors
-    assert "Agent install route must not narrow fixture bootstrap handoff with --platform" in errors
+    assert "Agent install route missing exact fixture bootstrap command" in errors
+    assert "Agent install route must not narrow fixture bootstrap plan with --platform" in errors
 
 
 def test_agent_install_route_rejects_platform_before_required_bootstrap_args() -> None:
@@ -55,5 +55,5 @@ def test_agent_install_route_rejects_platform_before_required_bootstrap_args() -
         errors,
     )
 
-    assert "Agent install route missing exact fixture bootstrap handoff" in errors
-    assert "Agent install route must not narrow fixture bootstrap handoff with --platform" in errors
+    assert "Agent install route missing exact fixture bootstrap command" in errors
+    assert "Agent install route must not narrow fixture bootstrap plan with --platform" in errors

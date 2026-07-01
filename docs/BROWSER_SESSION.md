@@ -252,28 +252,28 @@ aoa-course preflight connected-plan \
 
 The plan reports which source hosts match the saved storage state and emits the
 exact `sync browser-live`, `smoke browser-live`, `calibration build`, and
-`connected_run_handoff` commands only for ready sources. `--write-runbook`
+`connected_run_plan` commands only for ready sources. `--write-runbook`
 turns the redacted JSON plan into a Markdown checklist under runtime artifact
 storage; do not commit that file because ready-source smoke commands can
 contain operator course URLs.
 Use `--source-id "source:getcourse:..."` when the registry contains several
 browser-session courses and the current auth state is meant for one selected
 source. The same scoped selection is available to MCP as `source_ids`, and the
-ready handoff should repeat it under `connected_run_handoff.source_ids`.
+ready plan should repeat it under `connected_run_plan.source_ids`.
 When the same ready source is executed through
 `calibration connected-run --mode live --allow-network`, the runner uses the default
 `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`
 path unless `--state-file` is supplied, and the receipt records
 `source_selection` plus per-stage source ids. If `--link-pattern` was passed to
-the plan, the connected-run handoff preserves it for live sync and smoke.
+the plan, the connected-run plan preserves it for live sync and smoke.
 
-Its `browser_auth_handoffs` section is the operator/agent checklist for
+Its `browser_auth_plans` section is the operator/agent checklist for
 blocked browser sources. It groups registered sources by host, shows the
 storage-state file to create or inspect, lists blocked hosts, and gives
 portable `auth plan-browser-state`, `auth capture-browser-state`,
 `auth inspect-browser-state`, and `preflight connected-plan` recheck commands.
 When one GetCourse or Skillspace plan contains several schools or custom
-domains, `browser_auth_handoffs[].state_file_candidates` gives one per-host
+domains, `browser_auth_plans[].state_file_candidates` gives one per-host
 state-file path with capture, inspect, and source-scoped recheck commands, so
 an agent does not accidentally reuse an auth state from the wrong school.
 
@@ -340,7 +340,7 @@ Use `--source-id` when refreshing one selected source from an answer or
 refresh. Use `sync status` to inspect checkpoints before choosing which child
 run to query.
 
-`preflight live` is the safe handoff check before these live routes. It reads
+`preflight live` is the safe plan check before these live routes. It reads
 the local source registry and redacted browser storage-state status, reports
 whether discovery/sync is ready, and suggests the next command without printing
 private HTML, cookie values, or tokens.
@@ -349,7 +349,7 @@ For registered browser sources, preflight checks the saved storage state against
 each source host before marking `browser_live_sync` ready. A state file captured
 for `a.example` does not make a registered `b.example` source ready; capture or
 select auth state for the matching host first. When several registered sources
-share one host, `browser_auth_handoffs[].host_readiness` collapses their
+share one host, `browser_auth_plans[].host_readiness` collapses their
 blockers into one host-level item instead of repeating the same missing-state
 message per source.
 

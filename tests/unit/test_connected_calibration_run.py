@@ -38,11 +38,11 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert receipt["privacy"]["contains_secret_values"] is False
     assert receipt["privacy"]["contains_raw_payloads"] is False
     assert len(receipt["artifacts"]["smoke_report_paths"]) == 3
-    assert receipt["query_handoff"]["schema"] == "aoa_course_connected_query_handoff_v1"
-    assert receipt["query_handoff"]["ready"] is True
-    assert receipt["query_handoff"]["entry_count"] >= 3
-    smoke_entries = [entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "smoke"]
-    sync_entries = [entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "sync"]
+    assert receipt["query_plan"]["schema"] == "aoa_course_connected_query_plan_v1"
+    assert receipt["query_plan"]["ready"] is True
+    assert receipt["query_plan"]["entry_count"] >= 3
+    smoke_entries = [entry for entry in receipt["query_plan"]["entries"] if entry["kind"] == "smoke"]
+    sync_entries = [entry for entry in receipt["query_plan"]["entries"] if entry["kind"] == "sync"]
     assert {entry["platform"] for entry in smoke_entries} == {"getcourse", "skillspace", "stepik"}
     assert all(entry["query_ready"] is True for entry in smoke_entries)
     assert all(entry["semantic_query_ready"] is True for entry in smoke_entries)
@@ -73,9 +73,9 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["network_touched"] is False
     assert status["artifacts"]["packet_path"] == receipt["artifacts"]["packet_path"]
     assert status["execution_options"] == receipt["execution_options"]
-    assert status["query_handoff"]["entry_count"] == receipt["query_handoff"]["entry_count"]
-    assert status["query_handoff"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
-    assert status["query_handoff"]["entries"][0]["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
+    assert status["query_plan"]["entry_count"] == receipt["query_plan"]["entry_count"]
+    assert status["query_plan"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
+    assert status["query_plan"]["entries"][0]["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert status["privacy"]["contains_secret_values"] is False
 
 
@@ -266,14 +266,14 @@ def test_connected_calibration_live_browser_uses_default_ready_state_file(
     assert live_sync_stage["actions"][0]["source_ids"] == [source["source_id"]]
     assert live_sync_stage["actions"][0]["state_file"] == str(state_file.resolve())
     assert live_smoke_stage["actions"][0]["source_id"] == source["source_id"]
-    assert receipt["query_handoff"]["ready"] is True
-    assert any(entry["kind"] == "smoke" and entry["platform"] == "getcourse" for entry in receipt["query_handoff"]["entries"])
-    smoke_entry = next(entry for entry in receipt["query_handoff"]["entries"] if entry["kind"] == "smoke" and entry["platform"] == "getcourse")
+    assert receipt["query_plan"]["ready"] is True
+    assert any(entry["kind"] == "smoke" and entry["platform"] == "getcourse" for entry in receipt["query_plan"]["entries"])
+    smoke_entry = next(entry for entry in receipt["query_plan"]["entries"] if entry["kind"] == "smoke" and entry["platform"] == "getcourse")
     assert "aoa-course mcp call lesson_context" in smoke_entry["mcp_commands"]["lesson_context"]
     assert f'"run":"{smoke_entry["run_id"]}"' in smoke_entry["mcp_commands"]["lesson_context"]
     assert status["source_selection"]["ready_source_ids"] == [source["source_id"]]
     assert status["execution_options"] == receipt["execution_options"]
-    assert status["query_handoff"]["ready"] is True
+    assert status["query_plan"]["ready"] is True
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered

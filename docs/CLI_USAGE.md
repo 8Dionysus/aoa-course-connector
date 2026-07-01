@@ -4,8 +4,6 @@
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
-aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
-aoa-course goal audit --run starter-fixture --connected-run connected-calibration --write-connection-handoff "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/goal-connection-handoff.md"
 aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
@@ -93,7 +91,6 @@ aoa-course mcp call connection_profile_status '{"profile_path":"${AOA_COURSE_ART
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
-aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
@@ -118,7 +115,7 @@ commands include `--expect-origin-contains` when the source ref has a host.
 `expected_origin_matched`, so a state file captured from the wrong school host
 is caught before discovery or sync.
 `preflight connected-plan` also emits `state_file_candidates` inside
-`browser_auth_handoffs`: one per operator source host, with a host-specific
+`browser_auth_plans`: one per operator source host, with a host-specific
 state-file path, capture, inspect, and source-scoped recheck command. Use those
 per-host candidates when one GetCourse or Skillspace platform plan contains
 several schools or custom domains.
@@ -127,7 +124,7 @@ Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the
 connected run receipt all write to portable runtime artifact storage. Use
 `--mode live --allow-network` only after `preflight connected-plan` shows the
-selected sources are ready; when the plan is ready, its `connected_run_handoff`
+selected sources are ready; when the plan is ready, its `connected_run_plan`
 contains the exact `calibration connected-run --mode live --allow-network`
 command for the same platforms, source ids, query, live scope, and browser
 `--link-pattern`.
@@ -135,7 +132,7 @@ By default, `preflight connected-plan` and the MCP `connected_source_plan` route
 cover GetCourse, Skillspace, and Stepik together; pass `--platform`/`platforms`
 to narrow a diagnostic run and `--source-id`/`source_ids` to plan only one
 registered source so another not-yet-authorized source does not block the
-ready source's connected-run handoff.
+ready source's connected-run plan.
 Fixture-discovered browser sources and reserved example hosts such as
 `*.example` are install proof only. Live preflight marks them as
 `fixture_or_example_source` with `operator_live_candidate: false`, does not
@@ -143,10 +140,10 @@ emit `sync browser-live` for them, and asks the operator to register a real
 operator-owned course URL before live sync.
 For browser-session sources, pass `--link-pattern` or MCP `link_pattern` when a
 school needs a narrower course/lesson URL glob for live sync, smoke, and the
-connected-run handoff.
+connected-run plan.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network. The status packet includes
-`repair_lanes` for partial runs plus `query_handoff` entries with CLI commands
+`repair_lanes` for partial runs plus `query_plan` entries with CLI commands
 and MCP `mcp_commands` for `search`, `lesson_context`, and `evidence_report`.
 
 Use `readiness` when an agent or operator needs one read-only route audit before
@@ -154,12 +151,12 @@ continuing. It emits `aoa_course_connector_readiness_v1` with install route
 files, storage roots, source registry counts, per-run `agent_query_ready`,
 connected-source `connected_live_ready`, semantic provider readiness,
 `semantic_provider_ready`, connected-run receipt status, MCP tool coverage, embedded
-`connected_run_handoff`, and next commands. For
+`connected_run_plan`, and next commands. For
 browser-session sources, `--link-pattern` flows into the embedded connected
-plan and its ready connected-run handoff. `--max-lessons`, `--max-pages`,
+plan and its ready connected-run plan. `--max-lessons`, `--max-pages`,
 `--max-sources`, `--live-scope`, and `--include-step-sources` also flow into
 the embedded connected plan, so a readiness packet can preserve either a bounded
-browser crawl or an explicit Stepik full-course/source-enrichment handoff.
+browser crawl or an explicit Stepik full-course/source-enrichment plan.
 Pass `--semantic-provider http_json_v1`, `--embedding-endpoint`,
 `--embedding-model`, and `--embedding-token-env` when the readiness packet
 should verify an operator-selected external embedding endpoint route. The
@@ -175,25 +172,7 @@ suggesting a blind fixture bootstrap.
 `--require-ready` exits non-zero only when `operational_ready` is false; live
 source execution remains gated behind the separate `--allow-network` commands.
 
-Use `goal audit` after `bootstrap fixture` and `readiness` when an agent needs
-a DoD-oriented handoff instead of another free-form status summary. It emits
-`aoa_course_goal_audit_v1` with `requirements`, `ready_for_operator_connection`,
-`goal_complete`, current readiness lanes, `remaining_live_requirements`, and
-`connection_handoff`. The nested `aoa_course_connection_handoff_v1` packet
-aggregates operator inputs, browser auth handoffs, Stepik full-course commands,
-semantic provider commands, and MCP commands without touching the network.
-`--require-ready-for-connection` exits non-zero until the offline starter,
-fixture connected-run receipt, MCP surface, docs, schemas, storage contract,
-and source/privacy boundaries are in place. The audit is read-only and does not
-mark the global goal complete; it keeps live GetCourse, Skillspace, Stepik,
-and external embedding calibration as explicit operator-access prerequisites.
-Use `--write-connection-handoff` to write the same redacted checklist as a
-runtime Markdown artifact outside Git.
-The same packet is exposed through MCP `goal_audit`, so an MCP-only agent can
-inspect the DoD handoff without switching back to shell commands or touching
-the network.
-
-Use `connect profile` after the goal handoff when the operator is ready to
+Use `connect profile` when the operator is ready to
 provide real source refs and provider choices. The command writes
 `aoa_course_connection_profile_v1` under runtime artifact storage. It may
 include operator course URLs and state-file paths, so keep it outside Git; it

@@ -6,7 +6,6 @@ Initial tools:
 
 - `list_sources`
 - `connector_readiness`
-- `goal_audit`
 - `ingest_status`
 - `sync_status`
 - `live_preflight`
@@ -48,7 +47,6 @@ aoa-course mcp call connection_profile_status '{"profile_path":".connector-state
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
-aoa-course mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 ```
 
 `semantic_search` follows the semantic index artifact for the requested run. If
@@ -74,10 +72,10 @@ commands without reading private raw payloads into `structuredContent`.
 `aoa_course_connector_readiness_v1` with install route files, storage roots,
 source registry counts, selected run readiness, connected-source plan summary,
 connected-run receipt status, MCP tool coverage, `operational_ready`,
-`connected_live_ready`, embedded `connected_run_handoff`, and next commands.
+`connected_live_ready`, embedded `connected_run_plan`, and next commands.
 For browser-session sources, pass `link_pattern` when the whole-connector audit
 should preserve a narrowed course/lesson glob in the connected-source plan and
-ready connected-run handoff. Pass `max_lessons`, `max_pages`, `max_sources`,
+ready connected-run plan. Pass `max_lessons`, `max_pages`, `max_sources`,
 `live_scope`, and `include_step_sources` when that audit must preserve the same
 bounded or full-course traversal breadth an operator expects the later
 connected run to use. It is the first MCP packet an agent should inspect when
@@ -103,19 +101,6 @@ source whose browser state or token is not ready yet.
 packet. Pass `semantic_provider`, `embedding_endpoint`, `embedding_model`, and
 `embedding_token_env` when the MCP audit should check the same external
 embedding endpoint that will later build the connected-run semantic index.
-
-`goal_audit` is the MCP equivalent of CLI `goal audit`. It returns
-`aoa_course_goal_audit_v1` with `requirements`,
-`ready_for_operator_connection`, `goal_complete`,
-`remaining_live_requirements`, `connection_handoff`, and
-`network_touched: false`. The nested `aoa_course_connection_handoff_v1` packet
-aggregates operator inputs, browser auth handoffs, Stepik full-course commands,
-semantic provider commands, and MCP commands without touching the network.
-Use it after
-`bootstrap fixture` and `connector_readiness` when an MCP-only agent needs the
-DoD-oriented handoff: the offline connector can be ready for operator
-connection while live GetCourse, Skillspace, Stepik, and external embedding
-calibration remain explicit operator-access prerequisites.
 
 ## JSON-RPC Stdio
 
@@ -145,7 +130,6 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
   '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
-  '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"goal_audit","arguments":{"runs":["starter-fixture"],"connected_run":"connected-calibration"}}}' \
   | aoa-course-connector-mcp
 ```
 
@@ -154,7 +138,7 @@ source-backed result objects, `score`/`rank_score`, `authority_tier`,
 rank features, evidence chains, freshness/authority reports, refresh hints, and
 graph packets without reparsing prose.
 
-`evidence_report` is the compact agent handoff for a query. It returns the
+`evidence_report` is the compact agent plan for a query. It returns the
 evidence chain, freshness report, authority report, refresh report, and result
 references with source URL, course path, fetched timestamp, freshness state,
 authority tier, rank score, and `refresh_hint`. The hint always gives local
@@ -165,7 +149,7 @@ result source matches the local source registry. Those sync commands are
 `--source-id` scoped so refreshing one result does not accidentally refresh an
 entire platform registry.
 
-`refresh_plan` is the read-only MCP handoff for the full refresh loop. It
+`refresh_plan` is the read-only MCP plan for the full refresh loop. It
 returns an `aoa_course_refresh_cycle_v1` packet with the current answer packet,
 selected source-backed result, planned local rebuild/source commands, refresh
 hint, optional connected-source plan, and `network_touched: false`. Network or
@@ -180,14 +164,14 @@ It reports token/cookie/localStorage presence and counts only; secret values are
 not included in `structuredContent`.
 
 `connected_source_plan` is also read-only and returns `network_touched: false`.
-It wraps the live preflight report into an operator handoff plan with exact
+It wraps the live preflight report into an operator plan plan with exact
 preflight-report, source sync, per-source smoke, `calibration build`, and
-`connected_run_handoff` commands. Agents should use it before connected live
+`connected_run_plan` commands. Agents should use it before connected live
 work so blocked sources, missing auth state, missing Stepik token env, runtime
 report paths, and calibration packet inputs are explicit before
 network-touching commands run.
 When `source_ids` is supplied, `source_plans`, platform readiness, and
-`connected_run_handoff.source_ids` are scoped to those ids. The same selection
+`connected_run_plan.source_ids` are scoped to those ids. The same selection
 is surfaced in `source_registry.selected_source_ids` for agent-side evidence.
 Browser fixture sources and reserved example hosts such as `*.example` are not
 treated as operator live candidates. They remain useful install proof, but
@@ -197,14 +181,14 @@ points the operator to register real operator-owned course URLs first.
 For browser-session platforms, pass `link_pattern` when a school needs a
 narrower course/lesson URL glob in live sync, smoke, and connected-run
 commands.
-For browser-session platforms, read `browser_auth_handoffs` first: it groups
+For browser-session platforms, read `browser_auth_plans` first: it groups
 GetCourse/Skillspace sources by host, reports missing or mismatched
 storage-state, and provides the exact auth capture, redacted inspect, and
 recheck commands needed to turn blocked sources into sync-ready sources.
 When one platform contains several schools or custom domains, use
-`browser_auth_handoffs[].state_file_candidates`: each entry gives a per-host
+`browser_auth_plans[].state_file_candidates`: each entry gives a per-host
 state-file path plus capture, inspect, and source-scoped recheck commands.
-When a shell-side operator handoff is needed, run the CLI equivalent with
+When a shell-side operator plan is needed, run the CLI equivalent with
 `--write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`; MCP
 keeps the structured plan in `structuredContent`, while the CLI writes the
 Markdown checklist as runtime-only artifact state.
@@ -228,10 +212,10 @@ blockers, next commands, and ready
 `calibration connected-run --mode live --allow-network` commands when all
 selected profile sources are registered and authorized.
 
-`connected_run_status` is the read-only MCP handoff after a CLI
+`connected_run_status` is the read-only MCP plan after a CLI
 `calibration connected-run`. It returns
 `aoa_course_connected_calibration_run_status_v1` with status, stages,
-artifact paths, `source_selection`, `execution_options`, `query_handoff`,
+artifact paths, `source_selection`, `execution_options`, `query_plan`,
 packet quality, privacy flags, failures, `repair_lanes`, and next steps from
 `connected_calibration_receipt.json`.
 `repair_lanes` classify partial connected-run failures into network gate,
@@ -239,7 +223,7 @@ source auth/readiness, source selection, sync, live smoke/selector, and
 calibration-packet intake routes with concrete next commands.
 `execution_options` records the query, browser `link_pattern`, source limit,
 and traversal bounds used by the connected run without exposing token values.
-`query_handoff` gives agents the run ids, local index/graph/answer paths, and
+`query_plan` gives agents the run ids, local index/graph/answer paths, and
 ready CLI `query`/`answer` commands produced by sync and smoke actions. Each
 entry also includes `mcp_commands` for `search`, `lesson_context`, and
 `evidence_report`, so an MCP-side agent can query the connected run without

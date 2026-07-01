@@ -134,40 +134,6 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert answer["result_count"] >= 1
     connected_status = run_cli(tmp_path, "calibration", "status", "--run", "connected-calibration")
     assert connected_status["status"] == "ok"
-    goal = run_cli(
-        tmp_path,
-        "goal",
-        "audit",
-        "--run",
-        "starter-fixture",
-        "--connected-run",
-        "connected-calibration",
-        "--require-ready-for-connection",
-    )
-    assert goal["schema"] == "aoa_course_goal_audit_v1"
-    assert goal["status"] == "ready_for_operator_connection"
-    assert goal["ready_for_operator_connection"] is True
-    assert goal["goal_complete"] is False
-    assert goal["remaining_live_requirements"]
-    assert goal["connection_handoff"]["schema"] == "aoa_course_connection_handoff_v1"
-    handoff_path = tmp_path / "artifacts" / "goal-connection-handoff.md"
-    goal_with_handoff = run_cli(
-        tmp_path,
-        "goal",
-        "audit",
-        "--run",
-        "starter-fixture",
-        "--connected-run",
-        "connected-calibration",
-        "--write-connection-handoff",
-        str(handoff_path),
-    )
-    assert goal_with_handoff["connection_handoff"]["runbook"]["written"] is True
-    runbook = handoff_path.read_text(encoding="utf-8")
-    assert "Course Connector Connection Handoff" in runbook
-    assert "Browser Auth" in runbook
-    assert "Semantic Provider" in runbook
-    assert "SUPER_SECRET" not in runbook
 
 
 def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
@@ -385,7 +351,6 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "semantic_provider_preflight", "arguments": {"run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
         {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
-        {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "goal_audit", "arguments": {"runs": ["starter-fixture"], "connected_run": "connected-calibration"}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
 
@@ -400,10 +365,9 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
-    assert any(tool["name"] == "goal_audit" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
     assert responses[3]["result"]["structuredContent"]["evidence_chain"]
     assert responses[4]["result"]["structuredContent"]["refresh"]["network_touched"] is False
@@ -415,9 +379,6 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[9]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
     assert responses[9]["result"]["structuredContent"]["mcp"]["ready"] is True
     assert responses[9]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
-    assert responses[10]["result"]["structuredContent"]["schema"] == "aoa_course_goal_audit_v1"
-    assert responses[10]["result"]["structuredContent"]["ready_for_operator_connection"] is True
-    assert responses[10]["result"]["structuredContent"]["goal_complete"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -492,14 +453,14 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert any("--link-pattern '*/lessons/*'" in command for command in plan["next_commands"] if "calibration connected-run" in command)
     assert any("calibration build" in command for command in plan["next_commands"])
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke" in command for command in plan["next_commands"])
-    assert plan["connected_run_handoff"]["ready"] is True
-    assert plan["connected_run_handoff"]["source_ids"] == [plan["source_plans"][0]["source_id"]]
+    assert plan["connected_run_plan"]["ready"] is True
+    assert plan["connected_run_plan"]["source_ids"] == [plan["source_plans"][0]["source_id"]]
     assert any("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in action["artifact_path"] for stage in plan["stages"] for action in stage["actions"] if action["kind"] == "calibration")
-    handoff = plan["browser_auth_handoffs"][0]
-    assert handoff["ready"] is True
-    assert handoff["source_hosts"] == ["school.operator.edu"]
-    assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
-    assert "preflight connected-plan --platform getcourse" in handoff["commands"]["recheck"]
+    plan = plan["browser_auth_plans"][0]
+    assert plan["ready"] is True
+    assert plan["source_hosts"] == ["school.operator.edu"]
+    assert "capture-browser-state getcourse account" in plan["commands"]["capture"]
+    assert "preflight connected-plan --platform getcourse" in plan["commands"]["recheck"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_PRIVATE_COOKIE" not in rendered_plan
     assert "SUPER_PRIVATE_TOKEN" not in rendered_plan
@@ -512,7 +473,11 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
         "--platform",
         "getcourse",
         "--expect-origin",
-        "school.example",
+        "school.operator.edu",
+        "--query",
+        "course-specific question",
+        "--link-pattern",
+        "*/lessons/*",
         "--write-runbook",
         str(runbook_path),
     )
@@ -521,7 +486,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert Path(str(plan_with_runbook["runbook"]["path"])).is_file()
     runbook = runbook_path.read_text(encoding="utf-8")
     assert "# Connected Source Runbook" in runbook
-    assert "Browser Auth Handoffs" in runbook
+    assert "Browser Auth Plans" in runbook
     assert "capture-browser-state getcourse account" in runbook
     assert "preflight connected-plan --platform getcourse" in runbook
     assert "calibration connected-run --mode live --allow-network" in runbook
@@ -552,11 +517,11 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert readiness["connected_source_plan"]["max_lessons"] == 7
     assert readiness["connected_source_plan"]["max_pages"] == 3
     assert readiness["connected_source_plan"]["max_sources"] == 4
-    assert readiness["connected_source_plan"]["connected_run_handoff"]["ready"] is True
-    assert "--link-pattern '*/lessons/*'" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
-    assert "--max-lessons 7" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
-    assert "--max-pages 3" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
-    assert "--max-sources 4" in readiness["connected_source_plan"]["connected_run_handoff"]["command"]
+    assert readiness["connected_source_plan"]["connected_run_plan"]["ready"] is True
+    assert "--link-pattern '*/lessons/*'" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
+    assert "--max-lessons 7" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
+    assert "--max-pages 3" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
+    assert "--max-sources 4" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
     assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
     assert any("--max-lessons 7" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
     assert any("--max-pages 3" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
@@ -589,7 +554,7 @@ def test_cli_and_mcp_connected_plan_can_scope_to_selected_source(tmp_path: Path)
 
     assert unscoped["ready"] is False
     assert {source["source_id"] for source in unscoped["source_plans"]} == {source_a["source_id"], source_b["source_id"]}
-    candidates = unscoped["browser_auth_handoffs"][0]["state_file_candidates"]
+    candidates = unscoped["browser_auth_plans"][0]["state_file_candidates"]
     assert {candidate["host"] for candidate in candidates} == {"a.operator.edu", "b.operator.edu"}
     candidate_a = next(candidate for candidate in candidates if candidate["host"] == "a.operator.edu")
     assert candidate_a["state_file"].endswith("/getcourse/a-operator-edu.storage-state.json")
@@ -600,8 +565,8 @@ def test_cli_and_mcp_connected_plan_can_scope_to_selected_source(tmp_path: Path)
     assert scoped["ready"] is True
     assert scoped["source_ids"] == [source_a["source_id"]]
     assert [source["source_id"] for source in scoped["source_plans"]] == [source_a["source_id"]]
-    assert scoped["browser_auth_handoffs"][0]["state_file_candidates"][0]["host"] == "a.operator.edu"
-    assert str(source_b["source_id"]) not in scoped["connected_run_handoff"]["command"]
+    assert scoped["browser_auth_plans"][0]["state_file_candidates"][0]["host"] == "a.operator.edu"
+    assert str(source_b["source_id"]) not in scoped["connected_run_plan"]["command"]
     assert readiness["connected_live_ready"] is True
     assert readiness["sources"]["selected_source_ids"] == [source_a["source_id"]]
     assert readiness["sources"]["selected_source_count"] == 1
@@ -845,14 +810,14 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert connected_status["schema"] == "aoa_course_connected_calibration_run_status_v1"
     assert connected_status["status"] == "ok"
     assert connected_status["read_only"] is True
-    status_entry = connected_status["query_handoff"]["entries"][0]
+    status_entry = connected_status["query_plan"]["entries"][0]
     assert status_entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert "lesson_context" in status_entry["mcp_commands"]
     assert "evidence_report" in status_entry["mcp_commands"]
     mcp_connected_status = run_cli(tmp_path, "mcp", "call", "connected_run_status", '{"run":"connected-fixture-cli"}')
     assert mcp_connected_status["result"]["connected_run"]["status"] == "ok"
     assert mcp_connected_status["result"]["connected_run"]["network_touched"] is False
-    mcp_entry = mcp_connected_status["result"]["connected_run"]["query_handoff"]["entries"][0]
+    mcp_entry = mcp_connected_status["result"]["connected_run"]["query_plan"]["entries"][0]
     assert mcp_entry["mcp_commands"]["lesson_context"].startswith("aoa-course mcp call lesson_context ")
 
 

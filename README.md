@@ -33,18 +33,12 @@ The starter path creates:
 - an optional HTTP JSON semantic provider (`http_json_v1`) for
   operator-configured embedding endpoints;
 - a course graph;
-- an answer packet with source-backed evidence.
 - answer packets with source-backed evidence.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,
 runs fixture connected-source calibration for GetCourse, Skillspace, and Stepik,
 and returns the final readiness packet without touching the network.
-
-`goal audit --write-connection-handoff` writes a redacted runtime Markdown
-checklist from `aoa_course_connection_handoff_v1`. It gathers the remaining
-operator inputs, browser auth handoffs, Stepik full-course route, semantic
-provider route, and MCP commands into one file under artifact storage.
 
 `connect profile` turns those operator inputs into a local runtime JSON
 contract, `aoa_course_connection_profile_v1`. It stores source refs, state-file
@@ -55,7 +49,7 @@ commands with `network_touched: false`. `connect apply` mutates only the local
 source registry, then returns the same inspection so the next `preflight connected-plan` or MCP
 `connection_profile_inspect` call can continue from registered sources. Pass
 `--write-runbook` to `connect profile`, `connect inspect`, or `connect apply`
-to write the same redacted handoff as a runtime Markdown checklist. The write
+to write the same redacted plan as a runtime Markdown checklist. The write
 receipt is `aoa_course_connection_profile_runbook_v1`; the Markdown starts
 with `Course Connection Profile Runbook`. `connect status` and MCP
 `connection_profile_status` return the compact
@@ -63,14 +57,14 @@ with `Course Connection Profile Runbook`. `connect status` and MCP
 `ready_for_connected_run`, blockers, counts, and any ready
 `calibration connected-run --mode live --allow-network` commands.
 
-`readiness` is the read-only agent handoff for the whole connector surface. It
+`readiness` is the read-only agent plan for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry
-counts, run/index/graph readiness, connected-source handoff status, MCP tool
+counts, run/index/graph readiness, connected-source plan status, MCP tool
 coverage, semantic provider readiness, `operational_ready`,
 `connected_live_ready`, and concrete next commands without touching the
 network. For browser-session sources,
 `--link-pattern` flows into the embedded connected-source plan so a ready
-readiness packet can expose the same narrowed `connected_run_handoff` command.
+readiness packet can expose the same narrowed `connected_run_plan` command.
 Use `--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
 `--include-step-sources` when the whole-connector audit must preserve the same
 operator-selected live traversal bounds that will later be used by the
@@ -266,7 +260,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli calibration status --run conne
 
 For operator-connected sources, save `preflight live`, `smoke browser-live`,
 and `smoke stepik-live` JSON reports under runtime artifact storage, then build
-one redacted handoff packet:
+one redacted plan packet:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
@@ -279,7 +273,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
 `preflight connected-plan` is read-only. It inspects the source registry and
 auth readiness, then emits exact preflight, sync, smoke, `calibration build`,
 and one-command `calibration connected-run --mode live --allow-network`
-handoffs with runtime artifact paths. It is also exposed to agents as MCP
+plans with runtime artifact paths. It is also exposed to agents as MCP
 `connected_source_plan`. The default `--live-scope bounded` plans GetCourse,
 Skillspace, and Stepik together, while keeping Stepik live sync/smoke commands
 under smoke limits. Use `--platform` only to narrow a diagnostic run, and use
@@ -289,19 +283,19 @@ not-yet-authorized sources in the same registry. MCP accepts the same scope as
 operator-selected full-course run. For browser-session sources,
 `--link-pattern` carries the same lesson/course URL glob into planned sync,
 smoke, and connected-run commands. `--write-runbook` writes the same redacted
-handoff as Markdown under runtime artifact storage so an operator or agent can
+plan as Markdown under runtime artifact storage so an operator or agent can
 execute the setup, sync, smoke, and calibration steps without rereading raw
 JSON.
 
 For GetCourse and Skillspace, the plan also includes
-`browser_auth_handoffs`: one per browser-session platform. Each handoff groups
+`browser_auth_plans`: one per browser-session platform. Each plan groups
 registered sources by host, reports whether the saved storage-state matches
 those hosts, and gives the exact `auth plan-browser-state`,
 `auth capture-browser-state`, `auth inspect-browser-state`, and recheck
 commands needed before live sync can start.
 
 `calibration connected-run` is the executable route over the same contract; a
-ready connected plan exposes the exact command as `connected_run_handoff`.
+ready connected plan exposes the exact command as `connected_run_plan`.
 `--mode fixture` runs safe GetCourse, Skillspace, and Stepik fixtures end to
 end, writes smoke reports, a connected-source plan, a runbook, a calibration
 packet, an intake report, and one
@@ -336,7 +330,7 @@ gate, source readiness, source selection, sync, smoke/selector, and packet
 intake failures into concrete next commands. CLI `readiness` and MCP
 `connector_readiness` surface those lane commands at the top-level when a
 selected connected-run receipt is partial, while a missing receipt still points
-to fixture bootstrap. They also include `query_handoff`,
+to fixture bootstrap. They also include `query_plan`,
 a compact list of queryable sync/smoke run ids with index, semantic index,
 graph, answer packet paths, and ready-to-run CLI `query`/`answer` commands plus
 MCP `search`, `lesson_context`, and `evidence_report` commands for agents that
@@ -423,7 +417,6 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_provider_preflight '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 ```
 
 Runtime deployment in the full Abyss stack belongs in `abyss-stack`; this repo

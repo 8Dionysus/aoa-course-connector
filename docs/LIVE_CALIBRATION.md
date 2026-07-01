@@ -37,8 +37,8 @@ aoa-course preflight connected-plan \
 The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
 result and lists exact commands for preflight report capture, auth/source
 unblocking, live sync, per-source smoke reports, `calibration build`, and a
-`connected_run_handoff` for `calibration connected-run --mode live
---allow-network`. It is the safest first handoff when connected-source state is
+`connected_run_plan` for `calibration connected-run --mode live
+--allow-network`. It is the safest first plan when connected-source state is
 unknown. Its default platform set covers GetCourse, Skillspace, and Stepik
 together, and its default `bounded` scope keeps Stepik live sync/smoke under
 smoke limits. Pass `--platform` only to narrow a diagnostic run; switch to
@@ -47,8 +47,8 @@ operator-selected full-course calibration. For browser-session sources,
 `--link-pattern` is optional and narrows the course/lesson URL glob used by
 generated live sync, smoke, and connected-run commands.
 
-For GetCourse and Skillspace, inspect `browser_auth_handoffs` before running
-any live browser command. The handoff packet groups source readiness by host,
+For GetCourse and Skillspace, inspect `browser_auth_plans` before running
+any live browser command. The plan packet groups source readiness by host,
 shows the storage-state file, and gives the auth capture, redacted inspect, and
 recheck commands required before the plan will emit browser live sync/smoke
 commands. The optional runbook is a Markdown rendering of the same redacted
@@ -70,7 +70,7 @@ and a calibration intake report. Fixture mode does not touch the network.
 
 After reviewing `preflight connected-plan` and confirming local auth/source
 readiness, the same route can execute selected live sources only with an
-explicit network gate. Prefer the plan's ready `connected_run_handoff` command
+explicit network gate. Prefer the plan's ready `connected_run_plan` command
 because it preserves the same platforms, source ids, query, live scope, and
 browser `--link-pattern` selected during preflight:
 
@@ -100,10 +100,10 @@ After any connected run, use `calibration status --run <run>` or MCP
 work. The `aoa_course_connected_calibration_run_status_v1` status packet
 includes `source_selection`, stage summaries, packet quality, privacy flags,
 failures, `repair_lanes`, next steps, runtime artifact paths,
-`execution_options`, and `query_handoff` entries for the sync/smoke runs that
+`execution_options`, and `query_plan` entries for the sync/smoke runs that
 already have local indexes, graphs, answer packets, CLI `query`/`answer`
 commands, and `mcp_commands` for MCP `search`, `lesson_context`, and
-`evidence_report` handoffs.
+`evidence_report` plans.
 `repair_lanes` turn partial runs into concrete network gate, source readiness,
 source selection, sync, smoke/selector, or packet-intake follow-up commands.
 `execution_options` records the course-specific query, browser `link_pattern`,
@@ -185,7 +185,7 @@ The packet summarizes report health without embedding raw private payloads:
   source-backed evidence.
 - `quality.all_answered_reports_have_evidence` and
   `quality.all_answered_reports_have_timestamps` must stay true for useful
-  connected-source handoff.
+  connected-source plan.
 - `privacy.raw_paths_are_local_runtime_state` must stay true.
 - `privacy.contains_raw_payloads` and `privacy.contains_secret_values` must
   stay false.

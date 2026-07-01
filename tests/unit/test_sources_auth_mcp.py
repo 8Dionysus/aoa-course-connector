@@ -8,7 +8,6 @@ from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
-from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
@@ -21,7 +20,6 @@ from aoa_course_connector.connection_profile import (
     write_connection_profile_runbook,
 )
 from aoa_course_connector.config import StorageRoots
-from aoa_course_connector.goal_audit import goal_audit, render_connection_handoff, write_connection_handoff
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
@@ -29,9 +27,6 @@ from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, t
 from aoa_course_connector.readiness import semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
-
-
-REPO_ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
@@ -270,61 +265,7 @@ def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, 
     assert "SUPER_SECRET_TOKEN" not in rendered
 
 
-def test_goal_audit_reports_ready_for_operator_connection_after_bootstrap(tmp_path: Path) -> None:
-    storage = StorageRoots(
-        data=tmp_path / "data",
-        cache=tmp_path / "cache",
-        auth=tmp_path / "auth",
-        artifact=tmp_path / "artifacts",
-        mode="test",
-    )
-    tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
-    bootstrap_fixture(
-        REPO_ROOT,
-        storage,
-        run_id="starter-fixture",
-        connected_run="connected-calibration",
-        mcp_tool_names=tools,
-    )
-
-    report = goal_audit(
-        REPO_ROOT,
-        storage,
-        runs=["starter-fixture"],
-        connected_run="connected-calibration",
-        mcp_tool_names=tools,
-    )
-
-    assert report["schema"] == "aoa_course_goal_audit_v1"
-    assert report["status"] == "ready_for_operator_connection"
-    assert report["ready_for_operator_connection"] is True
-    assert report["goal_complete"] is False
-    assert report["summary"]["blocking_action_required_count"] == 0
-    assert {item["id"] for item in report["remaining_live_requirements"]} >= {
-        "getcourse_live_calibration",
-        "skillspace_live_calibration",
-        "stepik_authenticated_full_course",
-    }
-    requirements = {item["id"]: item for item in report["requirements"]}
-    assert requirements["local_index_graph_query"]["status"] == "proved"
-    assert requirements["mcp_surface"]["status"] == "proved"
-    handoff = report["connection_handoff"]
-    assert handoff["schema"] == "aoa_course_connection_handoff_v1"
-    assert handoff["status"] == "operator_action_required"
-    assert handoff["network_touched"] is False
-    assert {item["platform"] for item in handoff["operator_inputs_needed"]} >= {"getcourse", "skillspace", "stepik", "semantic"}
-    assert handoff["browser_auth"]
-    assert handoff["semantic_provider"]["commands"]
-    assert any("semantic_provider_preflight" in command for command in handoff["mcp_commands"])
-    rendered = render_connection_handoff(report)
-    assert "Course Connector Connection Handoff" in rendered
-    assert "AOA_COURSE_EMBEDDING_TOKEN" in rendered
-    runbook = write_connection_handoff(report, tmp_path / "artifacts" / "connection-handoff.md")
-    assert runbook["written"] is True
-    assert Path(str(runbook["path"])).is_file()
-
-
-def test_adapter_registry_covers_goal_platform_topology(tmp_path: Path) -> None:
+def test_adapter_registry_covers_connector_platform_topology(tmp_path: Path) -> None:
     adapters = {str(adapter["platform"]): adapter for adapter in adapter_list()}
     expected = {
         "getcourse",
@@ -478,7 +419,6 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
     monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
     assert any(tool["name"] == "connector_readiness" for tool in tools_manifest()["tools"])
-    assert any(tool["name"] == "goal_audit" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
@@ -779,19 +719,19 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert any("--max-lessons 7" in command for command in plan["plan"]["next_commands"])
     assert any("--max-pages 3" in command for command in plan["plan"]["next_commands"])
     assert any("--max-sources 4" in command for command in plan["plan"]["next_commands"])
-    assert "calibration connected-run --mode live --allow-network" in plan["plan"]["connected_run_handoff"]["command"]
-    assert "--link-pattern '*/lessons/*'" in plan["plan"]["connected_run_handoff"]["command"]
-    assert "--max-lessons 7" in plan["plan"]["connected_run_handoff"]["command"]
-    assert "--max-pages 3" in plan["plan"]["connected_run_handoff"]["command"]
-    assert "--max-sources 4" in plan["plan"]["connected_run_handoff"]["command"]
-    handoff = plan["plan"]["browser_auth_handoffs"][0]
-    assert handoff["ready"] is True
-    assert handoff["source_hosts"] == ["school.operator.edu"]
-    assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
-    assert handoff["state_file_candidates"][0]["host"] == "school.operator.edu"
-    assert handoff["state_file_candidates"][0]["state_file"].endswith("/getcourse/school-operator-edu.storage-state.json")
-    assert handoff["state_file_candidates"][0]["selected_by_default"] is False
-    assert "--expect-origin-contains school.operator.edu" in handoff["state_file_candidates"][0]["commands"]["capture"]
+    assert "calibration connected-run --mode live --allow-network" in plan["plan"]["connected_run_plan"]["command"]
+    assert "--link-pattern '*/lessons/*'" in plan["plan"]["connected_run_plan"]["command"]
+    assert "--max-lessons 7" in plan["plan"]["connected_run_plan"]["command"]
+    assert "--max-pages 3" in plan["plan"]["connected_run_plan"]["command"]
+    assert "--max-sources 4" in plan["plan"]["connected_run_plan"]["command"]
+    plan = plan["plan"]["browser_auth_plans"][0]
+    assert plan["ready"] is True
+    assert plan["source_hosts"] == ["school.operator.edu"]
+    assert "capture-browser-state getcourse account" in plan["commands"]["capture"]
+    assert plan["state_file_candidates"][0]["host"] == "school.operator.edu"
+    assert plan["state_file_candidates"][0]["state_file"].endswith("/getcourse/school-operator-edu.storage-state.json")
+    assert plan["state_file_candidates"][0]["selected_by_default"] is False
+    assert "--expect-origin-contains school.operator.edu" in plan["state_file_candidates"][0]["commands"]["capture"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered_plan
     assert "SUPER_SECRET_TOKEN" not in rendered_plan
@@ -819,11 +759,11 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert compact_plan["max_lessons"] == 7
     assert compact_plan["max_pages"] == 3
     assert compact_plan["max_sources"] == 4
-    assert compact_plan["connected_run_handoff"]["ready"] is True
-    assert "--link-pattern '*/lessons/*'" in compact_plan["connected_run_handoff"]["command"]
-    assert "--max-lessons 7" in compact_plan["connected_run_handoff"]["command"]
-    assert "--max-pages 3" in compact_plan["connected_run_handoff"]["command"]
-    assert "--max-sources 4" in compact_plan["connected_run_handoff"]["command"]
+    assert compact_plan["connected_run_plan"]["ready"] is True
+    assert "--link-pattern '*/lessons/*'" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-lessons 7" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-pages 3" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-sources 4" in compact_plan["connected_run_plan"]["command"]
     assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["next_commands"])
     assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
     assert any("--max-lessons 7" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
@@ -867,7 +807,6 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
 
     listed = handle_jsonrpc_message({"jsonrpc": "2.0", "id": 2, "method": "tools/list"})
     readiness_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connector_readiness")
-    goal_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "goal_audit")
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
@@ -882,8 +821,6 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "max_lessons" in readiness_tool["inputSchema"]["properties"]
     assert "max_pages" in readiness_tool["inputSchema"]["properties"]
     assert "max_sources" in readiness_tool["inputSchema"]["properties"]
-    assert "runs" in goal_audit_tool["inputSchema"]["properties"]
-    assert "connected_run" in goal_audit_tool["inputSchema"]["properties"]
     assert search_tool["inputSchema"]["required"] == ["query"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
@@ -991,25 +928,9 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert compact_plan["max_lessons"] == 9
     assert compact_plan["max_pages"] == 4
     assert compact_plan["max_sources"] == 2
-    assert compact_plan["connected_run_handoff"]["ready"] is True
-    assert "--live-scope full-course" in compact_plan["connected_run_handoff"]["command"]
-    assert "--include-step-sources" in compact_plan["connected_run_handoff"]["command"]
-    assert "--max-lessons 9" in compact_plan["connected_run_handoff"]["command"]
-    assert "--max-pages 4" in compact_plan["connected_run_handoff"]["command"]
-    assert "--max-sources 2" in compact_plan["connected_run_handoff"]["command"]
-
-    goal = handle_jsonrpc_message({
-        "jsonrpc": "2.0",
-        "id": 44,
-        "method": "tools/call",
-        "params": {
-            "name": "goal_audit",
-            "arguments": {"runs": ["starter-fixture"], "connected_run": "connected-calibration"},
-        },
-    })
-    goal_content = goal["result"]["structuredContent"]
-    assert goal_content["tool"] == "goal_audit"
-    assert goal_content["schema"] == "aoa_course_goal_audit_v1"
-    assert goal_content["ready_for_operator_connection"] is False
-    assert goal_content["goal_complete"] is False
-    assert goal_content["network_touched"] is False
+    assert compact_plan["connected_run_plan"]["ready"] is True
+    assert "--live-scope full-course" in compact_plan["connected_run_plan"]["command"]
+    assert "--include-step-sources" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-lessons 9" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-pages 4" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-sources 2" in compact_plan["connected_run_plan"]["command"]
