@@ -37,6 +37,15 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert receipt["quality"]["answer_evidence_count_total"] >= 3
     assert receipt["quality"]["all_answered_reports_have_proof_fields"] is True
     assert receipt["quality"]["answer_quality_ready_report_count"] == 3
+    assert receipt["snapshot_audit"]["schema"] == "aoa_course_connected_snapshot_audit_status_v1"
+    assert receipt["snapshot_audit"]["status"] == "ok"
+    assert receipt["snapshot_audit"]["browser_report_count"] == 2
+    assert receipt["snapshot_audit"]["browser_reports_with_snapshot_audit"] == 2
+    assert receipt["snapshot_audit"]["snapshot_audit_count_total"] >= 4
+    assert receipt["snapshot_audit"]["snapshot_audit_failure_count_total"] == 0
+    assert receipt["snapshot_audit"]["all_browser_reports_have_snapshot_audit"] is True
+    assert receipt["snapshot_audit"]["all_snapshot_audits_ok"] is True
+    assert receipt["snapshot_audit"]["repair_lane_count"] == 0
     assert receipt["privacy"]["contains_secret_values"] is False
     assert receipt["privacy"]["contains_raw_payloads"] is False
     assert len(receipt["artifacts"]["smoke_report_paths"]) == 3
@@ -75,6 +84,7 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["network_touched"] is False
     assert status["artifacts"]["packet_path"] == receipt["artifacts"]["packet_path"]
     assert status["execution_options"] == receipt["execution_options"]
+    assert status["snapshot_audit"] == receipt["snapshot_audit"]
     assert status["query_plan"]["entry_count"] == receipt["query_plan"]["entry_count"]
     assert status["query_plan"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
     assert status["query_plan"]["entries"][0]["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
@@ -404,3 +414,73 @@ def test_connected_calibration_live_packet_failures_promote_intake_repair_lanes(
     assert any("calibration intake" in command for command in lanes["retrieval_quality"]["next_commands"])
     status = load_connected_calibration_status(storage, run_id="connected-live-packet-partial")
     assert "retrieval_quality" in {lane["lane"] for lane in status["repair_lanes"]}
+
+
+def test_connected_calibration_snapshot_audit_failures_promote_status_and_repair_lane(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(
+        storage.data,
+        "getcourse",
+        "https://school.operator.edu/teach/control/stream",
+        "School",
+        access_mode="browser_session",
+    )
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "secret", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": []}],
+        }),
+        encoding="utf-8",
+    )
+
+    def fake_sync(roots_arg, *, sync_run_id: str, source_ids=None, **_kwargs):
+        return {
+            "schema": "aoa_course_sync_receipt_v1",
+            "status": "ok",
+            "sync_run_id": sync_run_id,
+            "source_count": len(source_ids or []),
+            "synced_sources": [],
+            "failed_sources": [],
+            "network_touched": True,
+        }
+
+    def fake_smoke(roots_arg, *, platform: str, run_id: str, query=None, build_artifacts: bool = True, **_kwargs):
+        report = smoke_browser_fixture(
+            roots_arg,
+            platform=platform,
+            run_id=run_id,
+            query=query,
+            build_artifacts=build_artifacts,
+        )
+        report["snapshot_audits"][0]["status"] = "partial"
+        report["snapshot_audits"][0]["failure_count"] = 1
+        report["snapshot_audits"][0]["failures"] = [{"reason": "lesson links were not detected"}]
+        return {**report, "source_mode": "browser_live_smoke", "network_touched": True}
+
+    monkeypatch.setattr(connected_run_module, "sync_browser_live_sources", fake_sync)
+    monkeypatch.setattr(connected_run_module, "smoke_browser_live", fake_smoke)
+
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-snapshot-audit-partial",
+        mode="live",
+        platforms=["getcourse"],
+        source_ids=[str(source["source_id"])],
+        allow_network=True,
+    )
+
+    assert receipt["status"] == "partial"
+    assert receipt["snapshot_audit"]["status"] == "partial"
+    assert receipt["snapshot_audit"]["snapshot_audit_failure_count_total"] == 1
+    assert receipt["snapshot_audit"]["all_snapshot_audits_ok"] is False
+    assert receipt["snapshot_audit"]["repair_lane_count"] == 1
+    assert receipt["snapshot_audit"]["repair_lanes"][0]["lane"] == "browser_snapshot_diagnostics"
+    assert receipt["snapshot_audit"]["intake_action_count"] == 1
+    assert any("calibration intake" in command for command in receipt["snapshot_audit"]["next_commands"])
+    status = load_connected_calibration_status(storage, run_id="connected-live-snapshot-audit-partial")
+    assert status["snapshot_audit"] == receipt["snapshot_audit"]
