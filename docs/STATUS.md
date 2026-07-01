@@ -176,6 +176,11 @@ This proves:
 - Answer-quality eval coverage that checks top-result source id, platform,
   lesson path, snippet terms, freshness timestamps, evidence fields, and
   connector-local eval-port boundaries instead of only JSON term presence.
+- Browser and Stepik smoke reports embed
+  `aoa_course_answer_quality_summary_v1` proof-field checks, so connected
+  calibration packets fail into retrieval-quality repair lanes when answer
+  results lack source ids, source URLs, timestamps, lesson paths, platform
+  matches, freshness/authority fields, refresh hints, or complete provenance.
 - Freshness-aware result ranking with visible `rank_score`/`rank_features` and
   a conflict fixture proving current source-backed material beats stale material
   when base relevance is tied.

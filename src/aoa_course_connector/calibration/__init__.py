@@ -106,6 +106,7 @@ def build_live_calibration_packet(
     caption_sidecar_count_total = sum(int(summary.get("caption_sidecar_count") or 0) for summary in smoke_summaries)
     caption_resource_error_count_total = sum(int(summary.get("caption_resource_error_count") or 0) for summary in smoke_summaries)
     transcript_source_authority_counts = _sum_count_maps(summary.get("transcript_source_authority_counts") for summary in smoke_summaries)
+    answered_summaries = [summary for summary in smoke_summaries if summary.get("answer_enabled")]
     network_touched = any(bool(summary.get("network_touched")) for summary in smoke_summaries)
     return {
         "schema": "aoa_course_live_calibration_packet_v1",
@@ -126,6 +127,11 @@ def build_live_calibration_packet(
             "caption_sidecar_count_total": caption_sidecar_count_total,
             "caption_resource_error_count_total": caption_resource_error_count_total,
             "transcript_source_authority_counts": transcript_source_authority_counts,
+            "answer_quality_ready_report_count": sum(1 for summary in answered_summaries if summary.get("answer_quality_ready")),
+            "all_answered_reports_have_proof_fields": all(bool(summary.get("answer_quality_ready")) for summary in answered_summaries),
+            "answer_expected_platform_match_count_total": sum(int(summary.get("answer_expected_platform_match_count") or 0) for summary in smoke_summaries),
+            "answer_provenance_complete_count_total": sum(int(summary.get("answer_provenance_complete_count") or 0) for summary in smoke_summaries),
+            "answer_refresh_hint_count_total": sum(int(summary.get("answer_refresh_hint_count") or 0) for summary in smoke_summaries),
             "browser_report_count": sum(1 for summary in smoke_summaries if _is_browser_smoke(summary)),
             "browser_reports_with_transcripts": sum(1 for summary in smoke_summaries if _is_browser_smoke(summary) and int(summary.get("transcript_count") or 0) > 0),
             "all_answered_reports_have_evidence": all(
@@ -188,6 +194,11 @@ def build_live_calibration_intake(*, packet: dict[str, object], run_id: str) -> 
             "caption_resource_error_count_total": quality.get("caption_resource_error_count_total"),
             "all_answered_reports_have_evidence": quality.get("all_answered_reports_have_evidence"),
             "all_answered_reports_have_timestamps": quality.get("all_answered_reports_have_timestamps"),
+            "all_answered_reports_have_proof_fields": quality.get("all_answered_reports_have_proof_fields"),
+            "answer_quality_ready_report_count": quality.get("answer_quality_ready_report_count"),
+            "answer_expected_platform_match_count_total": quality.get("answer_expected_platform_match_count_total"),
+            "answer_provenance_complete_count_total": quality.get("answer_provenance_complete_count_total"),
+            "answer_refresh_hint_count_total": quality.get("answer_refresh_hint_count_total"),
         },
         "privacy": {
             "contains_raw_payloads": bool(privacy.get("contains_raw_payloads")),
@@ -220,6 +231,7 @@ def write_live_calibration_intake(roots: StorageRoots, intake: dict[str, object]
 def _smoke_summary(report: dict[str, object]) -> dict[str, object]:
     artifacts = report.get("artifacts") if isinstance(report.get("artifacts"), dict) else {}
     answer = artifacts.get("answer") if isinstance(artifacts.get("answer"), dict) else {}
+    answer_quality = answer.get("quality") if isinstance(answer.get("quality"), dict) else {}
     course = report.get("course") if isinstance(report.get("course"), dict) else {}
     discovery = report.get("discovery") if isinstance(report.get("discovery"), dict) else {}
     sync = report.get("sync") if isinstance(report.get("sync"), dict) else {}
@@ -242,6 +254,11 @@ def _smoke_summary(report: dict[str, object]) -> dict[str, object]:
         "answer_result_count": int(answer.get("result_count") or 0),
         "answer_evidence_count": int(answer.get("evidence_count") or 0),
         "has_source_timestamps": bool(answer.get("has_source_timestamps")),
+        "answer_quality_ready": bool(answer_quality.get("ready")),
+        "answer_quality_blockers": [str(item) for item in answer_quality.get("blockers", [])] if isinstance(answer_quality.get("blockers"), list) else [],
+        "answer_expected_platform_match_count": int(answer_quality.get("expected_platform_match_count") or 0),
+        "answer_provenance_complete_count": int(answer_quality.get("provenance_complete_count") or 0),
+        "answer_refresh_hint_count": int(answer_quality.get("refresh_hint_count") or 0),
         "progress_detected_count": int(course.get("progress_detected_count") or 0),
         "comment_count": int(course.get("comment_count") or 0),
         "transcript_count": int(course.get("transcript_count") or 0),
@@ -291,6 +308,15 @@ def _smoke_failures(summary: dict[str, object]) -> list[dict[str, object]]:
             failures.append({**context, "surface": "answer", "reason": "answer returned no results"})
         if int(summary.get("answer_evidence_count") or 0) < 1:
             failures.append({**context, "surface": "answer", "reason": "answer has no evidence chain"})
+        if not summary.get("answer_quality_ready"):
+            failures.append(
+                {
+                    **context,
+                    "surface": "answer",
+                    "reason": "answer proof fields incomplete",
+                    "blockers": summary.get("answer_quality_blockers", []),
+                }
+            )
     if int(summary.get("caption_resource_error_count") or 0) > 0:
         failures.append(
             {

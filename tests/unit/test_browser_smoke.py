@@ -30,6 +30,10 @@ def test_browser_fixture_smoke_builds_artifacts_and_answer(tmp_path: Path) -> No
     assert report["course"]["comment_count"] >= 1
     assert report["artifacts"]["enabled"] is True
     assert report["artifacts"]["answer"]["result_count"] >= 1
+    assert report["artifacts"]["answer"]["quality"]["ready"] is True
+    assert report["artifacts"]["answer"]["quality"]["expected_platform"] == "getcourse"
+    assert report["artifacts"]["answer"]["quality"]["expected_platform_match_count"] == report["artifacts"]["answer"]["result_count"]
+    assert report["artifacts"]["answer"]["quality"]["provenance_complete_count"] == report["artifacts"]["answer"]["result_count"]
     assert report["privacy"]["do_not_commit_raw_html_or_auth_state"] is True
 
 
@@ -49,6 +53,7 @@ def test_browser_snapshot_smoke_accepts_catalog_and_course_snapshots(tmp_path: P
     assert report["discovery"]["course_count"] == 3
     assert report["course"]["comment_count"] >= 1
     assert report["artifacts"]["answer"]["evidence_count"] >= 1
+    assert report["artifacts"]["answer"]["quality"]["ready"] is True
 
 
 def test_browser_snapshot_smoke_flags_catalog_only_query_without_course_materialization(tmp_path: Path) -> None:

@@ -9,6 +9,7 @@ from typing import Any
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import build_semantic_index
 from aoa_course_connector.query import render_answer_packet, write_answer_packet
+from aoa_course_connector.smoke.answer_quality import answer_quality_failures, summarize_answer_packet
 from aoa_course_connector.sources import upsert_source
 from aoa_course_connector.storage import create_storage_roots
 from aoa_course_connector.sync import sync_stepik_fixture_sources, sync_stepik_live_sources
@@ -262,6 +263,7 @@ def _artifact_summary(
             "has_source_timestamps": packet.get("freshness_report", {}).get("has_source_timestamps")
             if isinstance(packet.get("freshness_report"), dict)
             else False,
+            "quality": summarize_answer_packet(packet, expected_platform="stepik"),
         }
     return {
         "enabled": True,
@@ -291,6 +293,7 @@ def _failures(
     answer = artifact_summary.get("answer") if isinstance(artifact_summary.get("answer"), dict) else {}
     if build_artifacts and checkpoint and answer.get("enabled") and int(answer.get("result_count") or 0) < 1:
         failures.append({"surface": "answer", "reason": "query returned no results", "query": answer.get("query")})
+    failures.extend(answer_quality_failures(answer))
     return failures
 
 

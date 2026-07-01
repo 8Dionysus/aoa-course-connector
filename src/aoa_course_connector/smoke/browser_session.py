@@ -12,6 +12,7 @@ from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import crawl_browser_live, materialize_browser_fixture, materialize_browser_snapshot
 from aoa_course_connector.query import render_answer_packet, write_answer_packet
+from aoa_course_connector.smoke.answer_quality import answer_quality_failures, summarize_answer_packet
 
 
 DEFAULT_QUERIES = {
@@ -160,7 +161,7 @@ def _report(
     run_for_artifacts = str(materialized.get("run_id")) if materialized else ""
     course_summary = _course_summary(materialized)
     artifact_summary = (
-        _artifact_summary(roots, run_for_artifacts, query, build_artifacts)
+        _artifact_summary(roots, run_for_artifacts, query, build_artifacts, expected_platform=platform)
         if materialized
         else _artifact_not_run_summary(query, build_artifacts)
     )
@@ -270,7 +271,14 @@ def _course_summary(receipt: dict[str, object] | None) -> dict[str, object]:
     }
 
 
-def _artifact_summary(roots: StorageRoots, run_id: str, query: str | None, build_artifacts: bool) -> dict[str, object]:
+def _artifact_summary(
+    roots: StorageRoots,
+    run_id: str,
+    query: str | None,
+    build_artifacts: bool,
+    *,
+    expected_platform: str,
+) -> dict[str, object]:
     if not build_artifacts:
         return {"enabled": False}
     index_path = build_keyword_index(roots, run_id=run_id)
@@ -289,6 +297,7 @@ def _artifact_summary(roots: StorageRoots, run_id: str, query: str | None, build
             "has_source_timestamps": packet.get("freshness_report", {}).get("has_source_timestamps")
             if isinstance(packet.get("freshness_report"), dict)
             else False,
+            "quality": summarize_answer_packet(packet, expected_platform=expected_platform),
         }
     return {
         "enabled": True,
@@ -341,6 +350,7 @@ def _failures(
         })
     if build_artifacts and materialized and answer.get("enabled") and int(answer.get("result_count") or 0) < 1:
         failures.append({"surface": "answer", "reason": "query returned no results", "query": answer.get("query")})
+    failures.extend(answer_quality_failures(answer))
     return failures
 
 

@@ -45,6 +45,11 @@ def test_live_calibration_packet_summarizes_fixture_smoke_reports(tmp_path: Path
     assert packet["report_count"] == 3
     assert packet["quality"]["answer_result_count_total"] >= 3
     assert packet["quality"]["all_answered_reports_have_evidence"] is True
+    assert packet["quality"]["all_answered_reports_have_proof_fields"] is True
+    assert packet["quality"]["answer_quality_ready_report_count"] == 3
+    assert packet["quality"]["answer_expected_platform_match_count_total"] >= 3
+    assert packet["quality"]["answer_provenance_complete_count_total"] >= 3
+    assert packet["quality"]["answer_refresh_hint_count_total"] >= 3
     assert packet["quality"]["transcript_count_total"] >= 4
     assert packet["quality"]["caption_sidecar_count_total"] >= 2
     assert packet["quality"]["caption_resource_error_count_total"] == 0
@@ -124,6 +129,24 @@ def test_live_calibration_packet_surfaces_caption_resource_errors(tmp_path: Path
     assert any(
         failure["surface"] == "transcripts"
         and failure["caption_resource_error_count"] == 1
+        for failure in packet["failures"]
+    )
+
+
+def test_live_calibration_packet_surfaces_answer_quality_failures(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    report = smoke_browser_fixture(storage, platform="getcourse", run_id="getcourse-answer-quality-check")
+    report["artifacts"]["answer"]["quality"]["ready"] = False
+    report["artifacts"]["answer"]["quality"]["blockers"] = ["result_missing_source_url"]
+
+    packet = build_live_calibration_packet(run_id="answer-quality-check", smoke_reports=[report])
+
+    assert packet["status"] == "partial"
+    assert packet["quality"]["all_answered_reports_have_proof_fields"] is False
+    assert any(
+        failure["surface"] == "answer"
+        and failure["reason"] == "answer proof fields incomplete"
+        and "result_missing_source_url" in failure["blockers"]
         for failure in packet["failures"]
     )
 
