@@ -35,6 +35,8 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert receipt["execution_options"]["max_lessons"] == 50
     assert receipt["execution_options"]["link_pattern"] == ""
     assert receipt["quality"]["answer_evidence_count_total"] >= 3
+    assert receipt["quality"]["all_answered_reports_have_proof_fields"] is True
+    assert receipt["quality"]["answer_quality_ready_report_count"] == 3
     assert receipt["privacy"]["contains_secret_values"] is False
     assert receipt["privacy"]["contains_raw_payloads"] is False
     assert len(receipt["artifacts"]["smoke_report_paths"]) == 3
