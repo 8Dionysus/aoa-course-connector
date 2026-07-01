@@ -272,6 +272,10 @@ blocked browser sources. It groups registered sources by host, shows the
 storage-state file to create or inspect, lists blocked hosts, and gives
 portable `auth plan-browser-state`, `auth capture-browser-state`,
 `auth inspect-browser-state`, and `preflight connected-plan` recheck commands.
+When one GetCourse or Skillspace plan contains several schools or custom
+domains, `browser_auth_handoffs[].state_file_candidates` gives one per-host
+state-file path with capture, inspect, and source-scoped recheck commands, so
+an agent does not accidentally reuse an auth state from the wrong school.
 
 Then capture a visible page:
 

@@ -193,6 +193,9 @@ For browser-session platforms, read `browser_auth_handoffs` first: it groups
 GetCourse/Skillspace sources by host, reports missing or mismatched
 storage-state, and provides the exact auth capture, redacted inspect, and
 recheck commands needed to turn blocked sources into sync-ready sources.
+When one platform contains several schools or custom domains, use
+`browser_auth_handoffs[].state_file_candidates`: each entry gives a per-host
+state-file path plus capture, inspect, and source-scoped recheck commands.
 When a shell-side operator handoff is needed, run the CLI equivalent with
 `--write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`; MCP
 keeps the structured plan in `structuredContent`, while the CLI writes the

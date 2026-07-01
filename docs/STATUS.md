@@ -137,6 +137,10 @@ This proves:
   packets that group registered sources by host, show state-file readiness, and
   provide capture, redacted inspect, and recheck commands before live sync is
   allowed.
+- Browser auth handoffs include per-host `state_file_candidates` with
+  host-specific state-file paths plus capture, inspect, and source-scoped
+  recheck commands for multi-school/custom-domain GetCourse and Skillspace
+  registries.
 - Browser connected plans distinguish fixture/example registry entries from
   operator-owned live sources. Reserved hosts such as `*.example` are marked as
   `fixture_or_example_source` with `operator_live_candidate: false`; live

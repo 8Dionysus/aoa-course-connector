@@ -605,6 +605,10 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert handoff["ready"] is True
     assert handoff["source_hosts"] == ["school.operator.edu"]
     assert "capture-browser-state getcourse account" in handoff["commands"]["capture"]
+    assert handoff["state_file_candidates"][0]["host"] == "school.operator.edu"
+    assert handoff["state_file_candidates"][0]["state_file"].endswith("/getcourse/school-operator-edu.storage-state.json")
+    assert handoff["state_file_candidates"][0]["selected_by_default"] is False
+    assert "--expect-origin-contains school.operator.edu" in handoff["state_file_candidates"][0]["commands"]["capture"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered_plan
     assert "SUPER_SECRET_TOKEN" not in rendered_plan

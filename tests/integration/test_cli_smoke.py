@@ -500,9 +500,18 @@ def test_cli_and_mcp_connected_plan_can_scope_to_selected_source(tmp_path: Path)
 
     assert unscoped["ready"] is False
     assert {source["source_id"] for source in unscoped["source_plans"]} == {source_a["source_id"], source_b["source_id"]}
+    candidates = unscoped["browser_auth_handoffs"][0]["state_file_candidates"]
+    assert {candidate["host"] for candidate in candidates} == {"a.operator.edu", "b.operator.edu"}
+    candidate_a = next(candidate for candidate in candidates if candidate["host"] == "a.operator.edu")
+    assert candidate_a["state_file"].endswith("/getcourse/a-operator-edu.storage-state.json")
+    assert candidate_a["selected_by_default"] is True
+    assert candidate_a["source_ids"] == [source_a["source_id"]]
+    assert f"--source-id {source_a['source_id']}" in candidate_a["commands"]["recheck"]
+    assert str(source_b["source_id"]) not in candidate_a["commands"]["recheck"]
     assert scoped["ready"] is True
     assert scoped["source_ids"] == [source_a["source_id"]]
     assert [source["source_id"] for source in scoped["source_plans"]] == [source_a["source_id"]]
+    assert scoped["browser_auth_handoffs"][0]["state_file_candidates"][0]["host"] == "a.operator.edu"
     assert str(source_b["source_id"]) not in scoped["connected_run_handoff"]["command"]
     assert readiness["connected_live_ready"] is True
     assert readiness["sources"]["selected_source_ids"] == [source_a["source_id"]]
