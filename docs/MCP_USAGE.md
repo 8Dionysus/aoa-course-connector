@@ -13,6 +13,7 @@ Initial tools:
 - `connection_profile_inspect`
 - `connection_profile_status`
 - `semantic_provider_preflight`
+- `browser_snapshot_audit`
 - `connected_run_status`
 - `refresh_plan`
 - `search`
@@ -45,6 +46,7 @@ aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":
 aoa-course mcp call connection_profile_inspect '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call connection_profile_status '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
+aoa-course mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
@@ -62,6 +64,14 @@ configuration, `token_env_present`, `token_value_logged: false`,
 `network_touched: false`, and exact build/query/MCP follow-up commands. Use it
 before `build-semantic-index --provider http_json_v1` so missing endpoint,
 model, or token env state is visible before the first network call.
+
+`browser_snapshot_audit` is the read-only MCP route for local GetCourse and
+Skillspace browser snapshot diagnostics. It returns
+`aoa_course_browser_snapshot_audit_v1` with discovery, crawl,
+materialization, and smoke readiness; visible course/lesson link, progress,
+comment, transcript, caption sidecar, caption-resource error, and pagination
+counts; repair lanes; and next commands. It does not touch the network and does
+not include raw HTML or caption text in `structuredContent`.
 
 `ingest_status` is the read-only run readiness packet. It reports normalized
 bundle counts, materialization receipt summaries, keyword/semantic index
@@ -129,7 +139,8 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{}}}' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
-  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
+  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"browser_snapshot_audit","arguments":{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}}}' \
+  '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
   | aoa-course-connector-mcp
 ```
 

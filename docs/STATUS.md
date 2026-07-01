@@ -124,7 +124,9 @@ This proves:
   returning `aoa_course_browser_snapshot_audit_v1` with discovery/crawl/
   materialization/smoke readiness, visible progress/comment/transcript/caption
   and pagination counts, caption sidecar repair lanes, and no raw HTML or
-  caption text in the report.
+  caption text in the report. MCP exposes the same read-only audit as
+  `browser_snapshot_audit` so agents can diagnose runtime snapshots without
+  leaving the MCP surface.
 - Browser-session auth-state onboarding through CLI planning, optional
   Playwright capture, expected-origin capture receipts, and redacted
   storage-state inspection. `auth plan-browser-state` and connected-source
