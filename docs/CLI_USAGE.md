@@ -5,6 +5,7 @@ aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
 aoa-course goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
+aoa-course goal audit --run starter-fixture --connected-run connected-calibration --write-connection-handoff "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/goal-connection-handoff.md"
 aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
 aoa-course init
 aoa-course adapters list
@@ -171,12 +172,17 @@ source execution remains gated behind the separate `--allow-network` commands.
 Use `goal audit` after `bootstrap fixture` and `readiness` when an agent needs
 a DoD-oriented handoff instead of another free-form status summary. It emits
 `aoa_course_goal_audit_v1` with `requirements`, `ready_for_operator_connection`,
-`goal_complete`, current readiness lanes, and `remaining_live_requirements`.
+`goal_complete`, current readiness lanes, `remaining_live_requirements`, and
+`connection_handoff`. The nested `aoa_course_connection_handoff_v1` packet
+aggregates operator inputs, browser auth handoffs, Stepik full-course commands,
+semantic provider commands, and MCP commands without touching the network.
 `--require-ready-for-connection` exits non-zero until the offline starter,
 fixture connected-run receipt, MCP surface, docs, schemas, storage contract,
 and source/privacy boundaries are in place. The audit is read-only and does not
 mark the global goal complete; it keeps live GetCourse, Skillspace, Stepik,
 and external embedding calibration as explicit operator-access prerequisites.
+Use `--write-connection-handoff` to write the same redacted checklist as a
+runtime Markdown artifact outside Git.
 The same packet is exposed through MCP `goal_audit`, so an MCP-only agent can
 inspect the DoD handoff without switching back to shell commands or touching
 the network.

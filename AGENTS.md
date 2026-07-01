@@ -35,6 +35,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli doctor
 PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starter-fixture --connected-run connected-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection
+PYTHONPATH=src python -m aoa_course_connector.cli goal audit --run starter-fixture --connected-run connected-calibration --write-connection-handoff "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/goal-connection-handoff.md"
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture

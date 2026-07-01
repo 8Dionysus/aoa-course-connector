@@ -103,7 +103,11 @@ embedding endpoint that will later build the connected-run semantic index.
 `goal_audit` is the MCP equivalent of CLI `goal audit`. It returns
 `aoa_course_goal_audit_v1` with `requirements`,
 `ready_for_operator_connection`, `goal_complete`,
-`remaining_live_requirements`, and `network_touched: false`. Use it after
+`remaining_live_requirements`, `connection_handoff`, and
+`network_touched: false`. The nested `aoa_course_connection_handoff_v1` packet
+aggregates operator inputs, browser auth handoffs, Stepik full-course commands,
+semantic provider commands, and MCP commands without touching the network.
+Use it after
 `bootstrap fixture` and `connector_readiness` when an MCP-only agent needs the
 DoD-oriented handoff: the offline connector can be ready for operator
 connection while live GetCourse, Skillspace, Stepik, and external embedding

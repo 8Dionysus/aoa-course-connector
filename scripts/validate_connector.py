@@ -354,12 +354,16 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing connector readiness validation")
     if "goal audit --run starter-fixture --connected-run connected-calibration --require-ready-for-connection" not in agents:
         errors.append("AGENTS route missing goal audit ready-for-connection validation")
+    if "--write-connection-handoff" not in agents:
+        errors.append("AGENTS route missing goal connection handoff validation")
     if "mcp call goal_audit" not in agents:
         errors.append("AGENTS route missing MCP goal_audit validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
     if "goal audit --run starter-fixture --connected-run" not in agent_install_raw or "ready_for_operator_connection" not in agent_install_raw:
         errors.append("Agent install route missing goal audit handoff")
+    if "--write-connection-handoff" not in agent_install_raw or "aoa_course_connection_handoff_v1" not in agent_install_raw:
+        errors.append("Agent install route missing connection handoff write route")
     if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
         errors.append("Agent install route missing capture expected-origin handoff")
     _check_agent_install_route_commands(agent_install_raw, errors)
@@ -398,7 +402,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["json-rpc", "stdio", "tools/list", "tools/call", "structuredcontent"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing stdio token: {token}")
-    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
+    for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "goal_audit", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_goal_audit_v1", "aoa_course_connection_handoff_v1", "connection_handoff", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
     for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_handoff", "source_selection", "query_handoff", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
@@ -438,11 +442,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "goal audit", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_goal_audit_v1", "ready_for_operator_connection", "remaining_live_requirements", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "connected_run_handoff", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "goal audit", "--write-connection-handoff", "aoa_course_connection_handoff_v1", "connection_handoff", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_goal_audit_v1", "ready_for_operator_connection", "remaining_live_requirements", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     goal_audit_raw = (repo_root / "src" / "aoa_course_connector" / "goal_audit.py").read_text(encoding="utf-8")
-    for token in ["aoa_course_goal_audit_v1", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "requires_operator_live_access", "connector_readiness", "preflight semantic-provider"]:
+    for token in ["aoa_course_goal_audit_v1", "aoa_course_connection_handoff_v1", "render_connection_handoff", "write_connection_handoff", "ready_for_operator_connection", "goal_complete", "remaining_live_requirements", "requires_operator_live_access", "connector_readiness", "preflight semantic-provider"]:
         if token not in goal_audit_raw:
             errors.append(f"Goal audit code missing token: {token}")
     for token in ["goal_audit", "_goal_audit_schema", "aoa_course_connector.goal_audit", "DEFAULT_CONNECTED_RUN", "mcp_tool_names=TOOL_NAMES"]:

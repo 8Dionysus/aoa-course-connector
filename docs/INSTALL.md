@@ -51,6 +51,9 @@ bootstrap it should report `ready_for_operator_connection: true` while keeping
 embedding calibration are performed with operator-owned access.
 MCP `goal_audit` exposes the same DoD-oriented packet for agents that stay on
 the MCP surface after install and readiness checks.
+Pass `--write-connection-handoff` to write the redacted
+`aoa_course_connection_handoff_v1` operator checklist as runtime Markdown under
+artifact storage.
 
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser

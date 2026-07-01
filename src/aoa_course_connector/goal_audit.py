@@ -201,6 +201,12 @@ def goal_audit(
         }
         for item in LIVE_REMAINING
     ]
+    connection_handoff = _connection_handoff(
+        readiness,
+        remaining_live=remaining_live,
+        selected_runs=selected_runs,
+        connected_run=connected_run,
+    )
     return {
         "schema": "aoa_course_goal_audit_v1",
         "tool": "goal_audit",
@@ -229,12 +235,250 @@ def goal_audit(
             "lanes": readiness.get("lanes", {}),
             "next_commands": readiness.get("next_commands", []),
         },
+        "connection_handoff": connection_handoff,
         "git": git_state,
         "next_commands": _dedupe(
             [command for item in blocking_action_required for command in item.get("next_commands", [])]
             or [command for item in remaining_live for command in item.get("next_commands", [])]
         ),
     }
+
+
+def write_connection_handoff(report: dict[str, object], path: Path) -> dict[str, object]:
+    """Write the goal audit connection handoff as a redacted runtime Markdown file."""
+
+    target = path.expanduser()
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(render_connection_handoff(report), encoding="utf-8")
+    return {
+        "path": str(target),
+        "written": True,
+        "format": "markdown",
+        "network_touched": False,
+        "redacted": True,
+    }
+
+
+def render_connection_handoff(report: dict[str, object]) -> str:
+    """Render a connection handoff without secret values or private payloads."""
+
+    handoff = report.get("connection_handoff") if isinstance(report.get("connection_handoff"), dict) else {}
+    lines = [
+        "# Course Connector Connection Handoff",
+        "",
+        "This file is runtime operator handoff state. Keep it outside Git.",
+        "",
+        "## Summary",
+        "",
+        f"- status: `{handoff.get('status')}`",
+        f"- ready_for_operator_connection: `{bool(report.get('ready_for_operator_connection'))}`",
+        f"- goal_complete: `{bool(report.get('goal_complete'))}`",
+        f"- network_touched: `{bool(handoff.get('network_touched'))}`",
+        f"- connected_run: `{handoff.get('connected_run')}`",
+    ]
+    inputs = _dict_items(handoff.get("operator_inputs_needed"))
+    if inputs:
+        lines.extend(["", "## Operator Inputs", ""])
+        for item in inputs:
+            label = str(item.get("label") or item.get("kind") or "input")
+            lines.append(f"- `{item.get('platform')}` {label}: {item.get('description')}")
+
+    browser = _dict_items(handoff.get("browser_auth"))
+    if browser:
+        lines.extend(["", "## Browser Auth", ""])
+        for item in browser:
+            lines.extend(
+                [
+                    f"### {item.get('platform')}",
+                    "",
+                    f"- ready: `{bool(item.get('ready'))}`",
+                    f"- state_file: `{item.get('state_file')}`",
+                    f"- source_hosts: `{', '.join([str(host) for host in item.get('source_hosts', [])])}`",
+                ]
+            )
+            blockers = [str(blocker) for blocker in item.get("blockers", [])] if isinstance(item.get("blockers"), list) else []
+            if blockers:
+                lines.append("- blockers:")
+                lines.extend([f"  - {blocker}" for blocker in blockers])
+            commands = item.get("commands") if isinstance(item.get("commands"), dict) else {}
+            if commands:
+                lines.extend(["", "Commands:"])
+                for label in ["plan", "capture", "inspect", "recheck"]:
+                    command = str(commands.get(label) or "")
+                    if command:
+                        lines.extend([f"- {label}:", "  ```bash", f"  {command}", "  ```"])
+            candidates = _dict_items(item.get("state_file_candidates"))
+            if candidates:
+                lines.extend(["", "Per-host candidates:"])
+                for candidate in candidates:
+                    lines.append(f"- `{candidate.get('host')}` -> `{candidate.get('state_file')}`")
+                    candidate_commands = candidate.get("commands") if isinstance(candidate.get("commands"), dict) else {}
+                    for label in ["capture", "inspect", "recheck"]:
+                        command = str(candidate_commands.get(label) or "")
+                        if command:
+                            lines.extend(["  ```bash", f"  {command}", "  ```"])
+            lines.append("")
+
+    for section_name, key in [("Stepik", "stepik"), ("Semantic Provider", "semantic_provider")]:
+        section = handoff.get(key) if isinstance(handoff.get(key), dict) else {}
+        if not section:
+            continue
+        lines.extend([f"## {section_name}", ""])
+        for command in [str(command) for command in section.get("commands", []) if str(command)] if isinstance(section.get("commands"), list) else []:
+            lines.extend(["```bash", command, "```", ""])
+
+    mcp_commands = [str(command) for command in handoff.get("mcp_commands", [])] if isinstance(handoff.get("mcp_commands"), list) else []
+    if mcp_commands:
+        lines.extend(["## MCP Commands", ""])
+        for command in mcp_commands:
+            lines.extend(["```bash", command, "```", ""])
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def _connection_handoff(
+    readiness: dict[str, object],
+    *,
+    remaining_live: list[dict[str, object]],
+    selected_runs: list[str],
+    connected_run: str,
+) -> dict[str, object]:
+    connected_plan = readiness.get("connected_source_plan") if isinstance(readiness.get("connected_source_plan"), dict) else {}
+    browser_auth = [
+        _browser_handoff_item(item)
+        for item in _dict_items(connected_plan.get("browser_auth_handoffs"))
+    ]
+    semantic_preflights = _dict_items(readiness.get("semantic_provider_preflight"))
+    stepik_commands = _remaining_commands(remaining_live, "stepik")
+    semantic_commands = _remaining_commands(remaining_live, "semantic")
+    return {
+        "schema": "aoa_course_connection_handoff_v1",
+        "status": "operator_action_required",
+        "network_touched": False,
+        "read_only": True,
+        "redacted": True,
+        "runs": selected_runs,
+        "connected_run": connected_run,
+        "operator_inputs_needed": _operator_inputs_needed(remaining_live),
+        "browser_auth": browser_auth,
+        "stepik": {
+            "commands": stepik_commands,
+            "live_scope": "full-course",
+            "include_step_sources": True,
+            "token_env": "STEPIK_API_TOKEN",
+        },
+        "semantic_provider": {
+            "commands": semantic_commands,
+            "preflights": semantic_preflights,
+            "token_env": "AOA_COURSE_EMBEDDING_TOKEN",
+            "provider": "http_json_v1",
+        },
+        "connected_run_handoff": connected_plan.get("connected_run_handoff", {}),
+        "mcp_commands": [
+            'aoa-course mcp call connector_readiness \'{"runs":["starter-fixture"]}\'',
+            'aoa-course mcp call connected_source_plan \'{"live_scope":"bounded"}\'',
+            'aoa-course mcp call semantic_provider_preflight \'{"run":"starter-fixture"}\'',
+            f'aoa-course mcp call goal_audit \'{{"runs":["starter-fixture"],"connected_run":"{connected_run}"}}\'',
+        ],
+        "next_commands": _dedupe(
+            [
+                command
+                for item in browser_auth
+                for command in _handoff_commands(item)
+            ]
+            + stepik_commands
+            + semantic_commands
+        ),
+    }
+
+
+def _browser_handoff_item(handoff: dict[str, object]) -> dict[str, object]:
+    return {
+        "platform": handoff.get("platform"),
+        "ready": bool(handoff.get("ready")),
+        "state_file": handoff.get("state_file"),
+        "state_status": handoff.get("state_status"),
+        "expected_origin_contains": handoff.get("expected_origin_contains"),
+        "source_hosts": handoff.get("source_hosts", []),
+        "blocked_source_hosts": handoff.get("blocked_source_hosts", []),
+        "host_readiness": handoff.get("host_readiness", []),
+        "state_file_candidates": handoff.get("state_file_candidates", []),
+        "blockers": handoff.get("blockers", []),
+        "commands": handoff.get("commands", {}),
+    }
+
+
+def _operator_inputs_needed(remaining_live: list[dict[str, object]]) -> list[dict[str, object]]:
+    inputs = []
+    for item in remaining_live:
+        platform = str(item.get("platform") or "")
+        if platform in {"getcourse", "skillspace"}:
+            inputs.extend(
+                [
+                    {
+                        "kind": "source_url",
+                        "platform": platform,
+                        "label": "operator-owned course URL",
+                        "description": "A real course/catalog URL from the connected user's authorized account.",
+                    },
+                    {
+                        "kind": "browser_auth_state",
+                        "platform": platform,
+                        "label": "browser storage state",
+                        "description": "A local Playwright storage-state file captured after legitimate login.",
+                    },
+                ]
+            )
+        elif platform == "stepik":
+            inputs.append(
+                {
+                    "kind": "token_env",
+                    "platform": platform,
+                    "label": "STEPIK_API_TOKEN",
+                    "description": "A token/env route for authenticated full-course and source-enrichment calibration.",
+                }
+            )
+        elif platform == "semantic":
+            inputs.extend(
+                [
+                    {
+                        "kind": "embedding_endpoint",
+                        "platform": platform,
+                        "label": "embedding endpoint URL",
+                        "description": "Operator-selected http_json_v1 embedding endpoint.",
+                    },
+                    {
+                        "kind": "token_env",
+                        "platform": platform,
+                        "label": "AOA_COURSE_EMBEDDING_TOKEN",
+                        "description": "Environment variable holding the embedding endpoint token.",
+                    },
+                ]
+            )
+    return inputs
+
+
+def _remaining_commands(remaining_live: list[dict[str, object]], platform: str) -> list[str]:
+    for item in remaining_live:
+        if item.get("platform") == platform:
+            return [str(command) for command in item.get("next_commands", []) if str(command)] if isinstance(item.get("next_commands"), list) else []
+    return []
+
+
+def _handoff_commands(handoff: dict[str, object]) -> list[str]:
+    commands: list[str] = []
+    raw_commands = handoff.get("commands") if isinstance(handoff.get("commands"), dict) else {}
+    commands.extend([str(command) for command in raw_commands.values() if isinstance(command, str) and command])
+    inspect_hosts = raw_commands.get("inspect_source_hosts")
+    if isinstance(inspect_hosts, list):
+        commands.extend([str(command) for command in inspect_hosts if str(command)])
+    for candidate in _dict_items(handoff.get("state_file_candidates")):
+        candidate_commands = candidate.get("commands") if isinstance(candidate.get("commands"), dict) else {}
+        commands.extend([str(command) for command in candidate_commands.values() if isinstance(command, str) and command])
+    return commands
+
+
+def _dict_items(value: object) -> list[dict[str, object]]:
+    return [item for item in value if isinstance(item, dict)] if isinstance(value, list) else []
 
 
 def _path_requirement(

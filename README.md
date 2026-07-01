@@ -41,6 +41,11 @@ materializes the starter fixture, builds keyword/semantic indexes and the graph,
 runs fixture connected-source calibration for GetCourse, Skillspace, and Stepik,
 and returns the final readiness packet without touching the network.
 
+`goal audit --write-connection-handoff` writes a redacted runtime Markdown
+checklist from `aoa_course_connection_handoff_v1`. It gathers the remaining
+operator inputs, browser auth handoffs, Stepik full-course route, semantic
+provider route, and MCP commands into one file under artifact storage.
+
 `readiness` is the read-only agent handoff for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry
 counts, run/index/graph readiness, connected-source handoff status, MCP tool
