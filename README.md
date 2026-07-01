@@ -57,7 +57,11 @@ source registry, then returns the same inspection so the next `preflight connect
 `--write-runbook` to `connect profile`, `connect inspect`, or `connect apply`
 to write the same redacted handoff as a runtime Markdown checklist. The write
 receipt is `aoa_course_connection_profile_runbook_v1`; the Markdown starts
-with `Course Connection Profile Runbook`.
+with `Course Connection Profile Runbook`. `connect status` and MCP
+`connection_profile_status` return the compact
+`aoa_course_connection_profile_status_v1` go/no-go packet with
+`ready_for_connected_run`, blockers, counts, and any ready
+`calibration connected-run --mode live --allow-network` commands.
 
 `readiness` is the read-only agent handoff for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry

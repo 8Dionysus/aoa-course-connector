@@ -19,6 +19,7 @@ BROWSER_PLATFORMS = {"getcourse", "skillspace"}
 CONNECTED_PLATFORMS = {"getcourse", "skillspace", "stepik"}
 SEMANTIC_PROVIDERS = {LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER}
 MCP_INSPECT_TOOL = "connection_profile_inspect"
+MCP_STATUS_TOOL = "connection_profile_status"
 CLI_RUNBOOK_FLAG = "--write-runbook"
 
 
@@ -208,6 +209,32 @@ def render_connection_profile_runbook(inspection: dict[str, object]) -> str:
                 lines.extend(["", "Plan:", "```bash", command, "```"])
             lines.append("")
 
+    readiness = inspection.get("live_readiness") if isinstance(inspection.get("live_readiness"), dict) else {}
+    if readiness:
+        lines.extend(
+            [
+                "## Live Readiness",
+                "",
+                f"- status: `{readiness.get('status')}`",
+                f"- ready_for_connected_run: `{bool(readiness.get('ready_for_connected_run'))}`",
+                f"- ready_for_semantic_build: `{bool(readiness.get('ready_for_semantic_build'))}`",
+                f"- registered_source_count: `{readiness.get('registered_source_count')}` / `{readiness.get('source_count')}`",
+                f"- browser_auth_ready_count: `{readiness.get('browser_auth_ready_count')}` / `{readiness.get('browser_source_count')}`",
+                f"- ready_connected_plan_count: `{readiness.get('ready_connected_plan_count')}` / `{readiness.get('connected_plan_count')}`",
+                "",
+            ]
+        )
+        connected_run_commands = [str(item) for item in readiness.get("connected_run_commands", [])] if isinstance(readiness.get("connected_run_commands"), list) else []
+        if connected_run_commands:
+            lines.extend(["Connected run commands:"])
+            for command in connected_run_commands:
+                lines.extend(["```bash", command, "```", ""])
+        blockers = [str(item) for item in readiness.get("blocked_by", [])] if isinstance(readiness.get("blocked_by"), list) else []
+        if blockers:
+            lines.extend(["Blocked by:"])
+            lines.extend([f"- {blocker}" for blocker in blockers])
+            lines.append("")
+
     semantic = inspection.get("semantic_provider") if isinstance(inspection.get("semantic_provider"), dict) else {}
     if semantic:
         lines.extend(
@@ -273,7 +300,11 @@ def inspect_connection_profile(roots: StorageRoots, profile: dict[str, object], 
         if item.get("registered") and item.get("source_id")
     ]
     platforms = _dedupe([str(source.get("platform")) for source in sources if str(source.get("platform") or "") in CONNECTED_PLATFORMS])
-    browser_handoffs = [_browser_handoff(roots, source) for source in sources if source.get("platform") in BROWSER_PLATFORMS]
+    browser_handoffs = [
+        _browser_handoff(roots, source, source_id=_source_id_for_profile_source(source_handoffs, source))
+        for source in sources
+        if source.get("platform") in BROWSER_PLATFORMS
+    ]
     connected_plans = _connected_plans(roots, source_handoffs, runtime)
     semantic_preflight = semantic_provider_preflight(
         roots,
@@ -287,16 +318,14 @@ def inspect_connection_profile(roots: StorageRoots, profile: dict[str, object], 
         embedding_timeout_seconds=float(semantic.get("timeout_seconds") or 30.0),
     )
     apply_command = _apply_command(profile_path)
-    next_commands = _dedupe(
-        [
-            *[str(item.get("register_command") or "") for item in source_handoffs if not item.get("registered")],
-            *[str(item.get("capture_command") or "") for item in browser_handoffs if not item.get("state_ready")],
-            *[str(item.get("inspect_command") or "") for item in browser_handoffs],
-            *[str(plan.get("command") or "") for plan in connected_plans],
-            *[str(command) for command in semantic_preflight.get("next_commands", []) if str(command)],
-            apply_command,
-        ]
+    live_readiness = _live_readiness(
+        source_handoffs=source_handoffs,
+        browser_handoffs=browser_handoffs,
+        connected_plans=connected_plans,
+        semantic_preflight=semantic_preflight,
+        apply_command=apply_command,
     )
+    next_commands = _dedupe([str(command) for command in live_readiness.get("next_commands", []) if str(command)])
     return {
         "schema": "aoa_course_connection_profile_inspection_v1",
         "status": "ok",
@@ -320,9 +349,26 @@ def inspect_connection_profile(roots: StorageRoots, profile: dict[str, object], 
         "sources": source_handoffs,
         "browser_auth": browser_handoffs,
         "connected_plans": connected_plans,
+        "live_readiness": live_readiness,
         "semantic_provider": semantic_preflight,
         "apply_command": apply_command,
         "next_commands": next_commands,
+    }
+
+
+def connection_profile_status(inspection: dict[str, object]) -> dict[str, object]:
+    """Return the compact profile-driven live readiness status."""
+
+    readiness = inspection.get("live_readiness") if isinstance(inspection.get("live_readiness"), dict) else {}
+    return {
+        "schema": "aoa_course_connection_profile_status_v1",
+        "status": readiness.get("status") or "warning",
+        "profile": inspection.get("profile") if isinstance(inspection.get("profile"), dict) else {},
+        "network_touched": False,
+        "read_only": True,
+        "redacted": True,
+        "live_readiness": readiness,
+        "next_commands": readiness.get("next_commands", []) if isinstance(readiness.get("next_commands"), list) else [],
     }
 
 
@@ -401,7 +447,7 @@ def _source_handoff(roots: StorageRoots, registry: dict[str, object], source: di
     }
 
 
-def _browser_handoff(roots: StorageRoots, source: dict[str, object]) -> dict[str, object]:
+def _browser_handoff(roots: StorageRoots, source: dict[str, object], *, source_id: str = "") -> dict[str, object]:
     platform = str(source.get("platform") or "")
     source_ref = str(source.get("source_ref") or "")
     state_file = Path(str(source.get("state_file") or default_browser_state_path(roots.auth, platform, source_ref)))
@@ -411,6 +457,7 @@ def _browser_handoff(roots: StorageRoots, source: dict[str, object]) -> dict[str
     return {
         "platform": platform,
         "source_ref": source_ref,
+        "source_id": source_id,
         "state_file": str(state_file),
         "expected_origin_contains": expected_origin,
         "state_status": state.get("status"),
@@ -490,8 +537,120 @@ def _profile_state_file_for_platform(source_handoffs: list[dict[str, object]], p
     return ""
 
 
+def _live_readiness(
+    *,
+    source_handoffs: list[dict[str, object]],
+    browser_handoffs: list[dict[str, object]],
+    connected_plans: list[dict[str, object]],
+    semantic_preflight: dict[str, object],
+    apply_command: str,
+) -> dict[str, object]:
+    source_count = len(source_handoffs)
+    registered_sources = [source for source in source_handoffs if source.get("registered")]
+    browser_source_count = len(browser_handoffs)
+    browser_ready = [handoff for handoff in browser_handoffs if handoff.get("state_ready")]
+    ready_plans = [plan for plan in connected_plans if plan.get("ready")]
+    connected_run_commands = _dedupe([_connected_run_command(plan) for plan in ready_plans])
+    blocked_by = _live_readiness_blockers(
+        source_handoffs=source_handoffs,
+        browser_handoffs=browser_handoffs,
+        connected_plans=connected_plans,
+        apply_command=apply_command,
+    )
+    semantic_blockers = _semantic_blockers(semantic_preflight)
+    ready_for_connected_run = source_count > 0 and len(registered_sources) == source_count and len(ready_plans) == len(connected_plans) and bool(connected_run_commands)
+    ready_for_semantic_build = bool(semantic_preflight.get("ready"))
+    next_commands = _dedupe(
+        [
+            *[str(source.get("register_command") or "") for source in source_handoffs if not source.get("registered")],
+            *[str(handoff.get("capture_command") or "") for handoff in browser_handoffs if not handoff.get("state_ready")],
+            *[str(handoff.get("inspect_command") or "") for handoff in browser_handoffs],
+            *[str(plan.get("command") or "") for plan in connected_plans],
+            *connected_run_commands,
+            *[str(command) for command in semantic_preflight.get("next_commands", []) if str(command)],
+            apply_command if len(registered_sources) != source_count else "",
+        ]
+    )
+    return {
+        "schema": "aoa_course_connection_profile_readiness_v1",
+        "status": "ok" if ready_for_connected_run else "warning",
+        "network_touched": False,
+        "read_only": True,
+        "source_count": source_count,
+        "registered_source_count": len(registered_sources),
+        "browser_source_count": browser_source_count,
+        "browser_auth_ready_count": len(browser_ready),
+        "connected_plan_count": len(connected_plans),
+        "ready_connected_plan_count": len(ready_plans),
+        "ready_for_connected_run": ready_for_connected_run,
+        "ready_for_semantic_build": ready_for_semantic_build,
+        "connected_run_commands": connected_run_commands,
+        "blocked_by": blocked_by,
+        "semantic_blocked_by": semantic_blockers,
+        "next_commands": next_commands,
+    }
+
+
+def _live_readiness_blockers(
+    *,
+    source_handoffs: list[dict[str, object]],
+    browser_handoffs: list[dict[str, object]],
+    connected_plans: list[dict[str, object]],
+    apply_command: str,
+) -> list[str]:
+    blockers: list[str] = []
+    if not source_handoffs:
+        blockers.append("connection profile has no sources")
+    for source in source_handoffs:
+        if not source.get("registered"):
+            blockers.append(f"{source.get('platform')}: source is not registered: {source.get('source_ref')}")
+    for handoff in browser_handoffs:
+        if not handoff.get("state_ready"):
+            blockers.append(f"{handoff.get('platform')}: browser state is not ready for {handoff.get('source_ref')}")
+    for plan in connected_plans:
+        if plan.get("ready"):
+            continue
+        nested = plan.get("plan") if isinstance(plan.get("plan"), dict) else {}
+        handoff = nested.get("connected_run_handoff") if isinstance(nested.get("connected_run_handoff"), dict) else {}
+        blocked = handoff.get("blocked_by") if isinstance(handoff.get("blocked_by"), list) else []
+        if blocked:
+            blockers.extend([f"{plan.get('platform')}: {item}" for item in blocked])
+        else:
+            blockers.append(f"{plan.get('platform')}: connected plan is not ready")
+    if apply_command and any(not source.get("registered") for source in source_handoffs):
+        blockers.append("run connect apply to register profile sources before live connected-run")
+    return _dedupe(blockers)
+
+
+def _connected_run_command(plan: dict[str, object]) -> str:
+    nested = plan.get("plan") if isinstance(plan.get("plan"), dict) else {}
+    handoff = nested.get("connected_run_handoff") if isinstance(nested.get("connected_run_handoff"), dict) else {}
+    return str(handoff.get("command") or "")
+
+
+def _semantic_blockers(semantic_preflight: dict[str, object]) -> list[str]:
+    blockers: list[str] = []
+    checks = semantic_preflight.get("checks") if isinstance(semantic_preflight.get("checks"), list) else []
+    for check in checks:
+        if not isinstance(check, dict) or check.get("ready"):
+            continue
+        blocker = str(check.get("blocker") or "")
+        if blocker:
+            blockers.append(blocker)
+    return _dedupe(blockers)
+
+
 def _profile_sources(profile: dict[str, object]) -> list[dict[str, object]]:
     return [item for item in profile.get("sources", []) if isinstance(item, dict)] if isinstance(profile.get("sources"), list) else []
+
+
+def _source_id_for_profile_source(source_handoffs: list[dict[str, object]], source: dict[str, object]) -> str:
+    platform = str(source.get("platform") or "")
+    source_ref = str(source.get("source_ref") or "")
+    for handoff in source_handoffs:
+        if handoff.get("platform") == platform and handoff.get("source_ref") == source_ref:
+            return str(handoff.get("source_id") or "")
+    return ""
 
 
 def _dict_items(value: object) -> list[dict[str, object]]:
