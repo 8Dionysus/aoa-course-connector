@@ -77,7 +77,11 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError("connected_run_handoff ready command did not expose executable live route")
     if handoff.get("ready") is False and not handoff.get("blocked_by"):
         raise StdioVerificationError("blocked connected_run_handoff did not explain blockers")
-    audit = _require_tool_success(responses, 6, "goal_audit")
+    semantic = _require_tool_success(responses, 6, "semantic_provider_preflight")
+    semantic_payload = semantic.get("preflight")
+    if not isinstance(semantic_payload, dict) or semantic_payload.get("network_touched") is not False:
+        raise StdioVerificationError("semantic_provider_preflight stdio response did not prove read-only provider preflight")
+    audit = _require_tool_success(responses, 7, "goal_audit")
     if audit.get("ready_for_operator_connection") is not True:
         raise StdioVerificationError("goal_audit stdio response did not report ready_for_operator_connection")
     if audit.get("goal_complete") is not False:
@@ -114,6 +118,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "materialize", "stepik-live", "--help"],
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "stepik-account", "--from-fixture", "--run", "stepik-account-discovery-fixture", "--register", "--source-limit", "1"],
             [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "live", "--platform", "stepik"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "semantic-provider", "--run", "starter-fixture", "--require-ready"],
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "stepik", "67", "--register", "--title", "Stepik course 67"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "stepik-fixture", "--run", "stepik-sync-fixture", "--build-artifacts"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "status", "--run", "stepik-sync-fixture", "--platform", "stepik"],
@@ -155,8 +160,10 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "adapter-authority"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "live-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "live"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "semantic-provider", "--run", "starter-fixture", "--require-ready"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "live_preflight", "{}"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_source_plan", '{"live_scope":"bounded"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_provider_preflight", '{"run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "crawl", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-crawl-fixture"],
             [sys.executable, "-m", "aoa_course_connector.cli", "build-index", "--run", "getcourse-browser-crawl-fixture"],
@@ -191,7 +198,8 @@ def main(argv: list[str] | None = None) -> int:
             '{"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"search","arguments":{"query":"rollback","run":"starter-fixture"}}}',
             '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"live_preflight","arguments":{}}}',
             '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}',
-            '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"goal_audit","arguments":{"runs":["starter-fixture"],"connected_run":"connected-calibration"}}}',
+            '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"semantic_provider_preflight","arguments":{"run":"starter-fixture"}}}',
+            '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"goal_audit","arguments":{"runs":["starter-fixture"],"connected_run":"connected-calibration"}}}',
             "",
         ])
         result = subprocess.run(

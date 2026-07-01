@@ -51,6 +51,7 @@ aoa-course calibration build --run connected-live-calibration --report "${AOA_CO
 aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
 aoa-course build-semantic-index --run starter-fixture
+aoa-course preflight semantic-provider --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --require-ready
 aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
 aoa-course build-graph --run starter-fixture
 aoa-course query "rollback" --run starter-fixture
@@ -81,6 +82,7 @@ aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","ru
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
+aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
@@ -138,13 +140,20 @@ and MCP `mcp_commands` for `search`, `lesson_context`, and `evidence_report`.
 Use `readiness` when an agent or operator needs one read-only route audit before
 continuing. It emits `aoa_course_connector_readiness_v1` with install route
 files, storage roots, source registry counts, per-run `agent_query_ready`,
-connected-source `connected_live_ready`, connected-run receipt status, MCP tool
-coverage, embedded `connected_run_handoff`, and next commands. For
+connected-source `connected_live_ready`, semantic provider readiness,
+`semantic_provider_ready`, connected-run receipt status, MCP tool coverage, embedded
+`connected_run_handoff`, and next commands. For
 browser-session sources, `--link-pattern` flows into the embedded connected
 plan and its ready connected-run handoff. `--max-lessons`, `--max-pages`,
 `--max-sources`, `--live-scope`, and `--include-step-sources` also flow into
 the embedded connected plan, so a readiness packet can preserve either a bounded
 browser crawl or an explicit Stepik full-course/source-enrichment handoff.
+Pass `--semantic-provider http_json_v1`, `--embedding-endpoint`,
+`--embedding-model`, and `--embedding-token-env` when the readiness packet
+should verify an operator-selected external embedding endpoint route. The
+check is read-only: it verifies normalized bundle presence, endpoint/model
+configuration, token env presence, and redaction policy without calling the
+endpoint.
 If the selected connected-run receipt is missing, `next_commands` still points
 to fixture bootstrap. If the selected receipt exists as a partial connected-run
 with `repair_lanes`, `readiness` surfaces those repair lane commands directly,
@@ -166,3 +175,12 @@ and external embedding calibration as explicit operator-access prerequisites.
 The same packet is exposed through MCP `goal_audit`, so an MCP-only agent can
 inspect the DoD handoff without switching back to shell commands or touching
 the network.
+
+Use `preflight semantic-provider` before external vector calibration. The
+`local_hashing_v1` route is ready whenever the normalized bundle exists.
+The `http_json_v1` route requires an operator-configured endpoint, model name,
+and token environment variable with a value. The packet is
+`aoa_course_semantic_provider_preflight_v1`; it reports
+`token_env_present`, `token_value_logged: false`, `network_touched: false`,
+and exact `build-semantic-index`, semantic query, hybrid answer, and MCP
+`semantic_search` commands. It never prints the token value.

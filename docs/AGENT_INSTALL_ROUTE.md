@@ -17,8 +17,13 @@
    `goal_complete: false`, with live account calibration listed under
    `remaining_live_requirements`.
 9. Run the offline starter proof.
-10. Build the semantic index with `build-semantic-index` and run at least one
-   `--mode hybrid` answer to prove the vector contract.
+10. Run `preflight semantic-provider --run starter-fixture --require-ready`,
+   then build the semantic index with `build-semantic-index` and run at least
+   one `--mode hybrid` answer to prove the vector contract. For
+   `http_json_v1`, run the same preflight with `--embedding-endpoint`,
+   `--embedding-model`, and `--embedding-token-env`; it must report
+   `token_env_present` without printing the token value before the first
+   network-touching semantic build.
 11. Register a Stepik course with `discover stepik 67 --register`, then run
    `sync stepik-fixture --source-id "<registered-source-id>" --build-artifacts`
    to prove source-scoped clean API checkpoints without network access.
@@ -36,8 +41,9 @@
 16. After starter, Stepik fixture, and GetCourse browser fixture artifacts are
     built, run `eval answer-quality` to prove top-result path, source id,
     freshness, snippet, and evidence-field quality.
-17. Run MCP calls for `connector_readiness`, `goal_audit`, `graph_neighbors`,
-    `freshness_report`, `evidence_report`, and `refresh_plan` against
+17. Run MCP calls for `connector_readiness`, `goal_audit`,
+    `semantic_provider_preflight`, `graph_neighbors`, `freshness_report`,
+    `evidence_report`, and `refresh_plan` against
     `starter-fixture` to prove agents can audit connector readiness, inspect
     the DoD-oriented remaining live prerequisites, traverse graph
     neighborhoods, inspect source evidence/freshness, and plan a refresh cycle

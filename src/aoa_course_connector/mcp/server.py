@@ -16,8 +16,9 @@ from typing import Any, TextIO
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.goal_audit import goal_audit
+from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet
-from aoa_course_connector.readiness import connected_source_plan, live_preflight
+from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.status import connector_readiness, ingest_status
@@ -72,6 +73,13 @@ def _connector_readiness_schema() -> dict[str, object]:
             "link_pattern": _string_schema("Optional browser lesson/course link glob for connected browser live commands."),
             "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
             "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to planned commands."},
+            "semantic_provider": {"type": "string", "enum": [LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], "description": "Semantic index provider to preflight."},
+            "dimensions": _integer_schema("Local hashing vector dimensions.", 8),
+            "embedding_endpoint": _string_schema("Operator-configured http_json_v1 embedding endpoint."),
+            "embedding_model": _string_schema("Embedding model name for http_json_v1."),
+            "embedding_token_env": _string_schema("Environment variable that holds the embedding endpoint token."),
+            "embedding_batch_size": _integer_schema("Embedding request batch size.", 1),
+            "embedding_timeout_seconds": _number_schema("Embedding request timeout seconds.", 0.1),
         }
     )
 
@@ -131,6 +139,21 @@ def _connected_source_plan_schema() -> dict[str, object]:
     )
 
 
+def _semantic_provider_preflight_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "run": _string_schema("Connector run id."),
+            "provider": {"type": "string", "enum": [LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], "description": "Semantic index provider to preflight."},
+            "dimensions": _integer_schema("Local hashing vector dimensions.", 8),
+            "embedding_endpoint": _string_schema("Operator-configured http_json_v1 embedding endpoint."),
+            "embedding_model": _string_schema("Embedding model name for http_json_v1."),
+            "embedding_token_env": _string_schema("Environment variable that holds the embedding endpoint token."),
+            "embedding_batch_size": _integer_schema("Embedding request batch size.", 1),
+            "embedding_timeout_seconds": _number_schema("Embedding request timeout seconds.", 0.1),
+        }
+    )
+
+
 def _refresh_plan_schema() -> dict[str, object]:
     properties = {
         "query": _string_schema("Search query to refresh from evidence."),
@@ -156,6 +179,10 @@ def _integer_schema(description: str, minimum: int) -> dict[str, Any]:
     return {"type": "integer", "minimum": minimum, "description": description}
 
 
+def _number_schema(description: str, minimum: float) -> dict[str, Any]:
+    return {"type": "number", "minimum": minimum, "description": description}
+
+
 def _source_ids_schema(description: str) -> dict[str, object]:
     return {"type": "array", "items": {"type": "string"}, "description": description}
 
@@ -168,6 +195,7 @@ TOOLS = [
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
     {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, connected-run, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
+    {"name": "semantic_provider_preflight", "description": "Inspect semantic provider build readiness without touching the network or printing token values.", "inputSchema": _semantic_provider_preflight_schema()},
     {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
     {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
@@ -203,6 +231,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_live_preflight(roots, args)}
     if name == "connected_source_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "plan": _call_connected_source_plan(roots, args)}
+    if name == "semantic_provider_preflight":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_semantic_provider_preflight(roots, args)}
     if name == "connected_run_status":
         connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=connected_run_id)}
@@ -325,6 +355,13 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
         link_pattern=str(args.get("link_pattern") or "") or None,
         live_scope=str(args.get("live_scope") or "bounded"),
         include_step_sources=bool(args.get("include_step_sources", False)),
+        semantic_provider=str(args.get("semantic_provider") or LOCAL_HASHING_PROVIDER),
+        dimensions=int(args.get("dimensions") or 256),
+        embedding_endpoint=str(args.get("embedding_endpoint") or "") or None,
+        embedding_model=str(args.get("embedding_model") or "") or None,
+        embedding_token_env=str(args.get("embedding_token_env") or "AOA_COURSE_EMBEDDING_TOKEN"),
+        embedding_batch_size=int(args.get("embedding_batch_size") or 32),
+        embedding_timeout_seconds=float(args.get("embedding_timeout_seconds") or 30.0),
         mcp_tool_names=TOOL_NAMES,
     )
 
@@ -367,6 +404,20 @@ def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) ->
         calibration_run=str(args.get("calibration_run") or "connected-live-calibration"),
         live_scope=str(args.get("live_scope") or "bounded"),
         include_step_sources=bool(args.get("include_step_sources", False)),
+    )
+
+
+def _call_semantic_provider_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    return semantic_provider_preflight(
+        roots,
+        run_id=str(args.get("run") or DEFAULT_RUN),
+        provider=str(args.get("provider") or LOCAL_HASHING_PROVIDER),
+        dimensions=int(args.get("dimensions") or 256),
+        embedding_endpoint=str(args.get("embedding_endpoint") or "") or None,
+        embedding_model=str(args.get("embedding_model") or "") or None,
+        embedding_token_env=str(args.get("embedding_token_env") or "AOA_COURSE_EMBEDDING_TOKEN"),
+        embedding_batch_size=int(args.get("embedding_batch_size") or 32),
+        embedding_timeout_seconds=float(args.get("embedding_timeout_seconds") or 30.0),
     )
 
 

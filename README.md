@@ -18,6 +18,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starte
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli preflight semantic-provider --run starter-fixture --require-ready
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
@@ -43,8 +44,9 @@ and returns the final readiness packet without touching the network.
 `readiness` is the read-only agent handoff for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry
 counts, run/index/graph readiness, connected-source handoff status, MCP tool
-coverage, `operational_ready`, `connected_live_ready`, and concrete next
-commands without touching the network. For browser-session sources,
+coverage, semantic provider readiness, `operational_ready`,
+`connected_live_ready`, and concrete next commands without touching the
+network. For browser-session sources,
 `--link-pattern` flows into the embedded connected-source plan so a ready
 readiness packet can expose the same narrowed `connected_run_handoff` command.
 Use `--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
@@ -57,13 +59,17 @@ endpoint, keep the token in the environment and pass only the env var name:
 
 ```bash
 export AOA_COURSE_EMBEDDING_TOKEN=...
+PYTHONPATH=src python -m aoa_course_connector.cli preflight semantic-provider --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --require-ready
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
 PYTHONPATH=src python -m aoa_course_connector.cli query "bootloader rollback" --run starter-fixture --mode semantic
 ```
 
-The semantic index artifact records provider metadata and the token environment
-variable name, but not the token value. MCP `semantic_search` reads the same
-provider contract as the CLI query route.
+`preflight semantic-provider` is read-only and does not call the endpoint. It
+checks the normalized bundle, endpoint/model configuration, token environment
+variable presence, and redaction policy before the first network-touching
+semantic build. The semantic index artifact records provider metadata and the
+token environment variable name, but not the token value. MCP
+`semantic_search` reads the same provider contract as the CLI query route.
 
 The retrieval loop also exposes a base relevance `score`,
 `authority_tier`, and a freshness/authority/provenance adjusted `rank_score`.
@@ -393,6 +399,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_provider_preflight '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call goal_audit '{"runs":["starter-fixture"],"connected_run":"connected-calibration"}'
 ```
