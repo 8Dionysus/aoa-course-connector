@@ -12,7 +12,7 @@ from aoa_course_connector.adapters.browser import build_browser_catalog_discover
 from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.sources import upsert_source
-from aoa_course_connector.storage import create_storage_roots
+from aoa_course_connector.storage import create_storage_roots, discovery_data_dir
 
 
 CATALOG_FIXTURES = {
@@ -37,7 +37,7 @@ def discover_browser_fixture(
     repo_root = find_repo_root()
     fixture_path = fixture or repo_root / CATALOG_FIXTURES[platform]
     resolved_run = run_id or f"{platform}-browser-discovery-fixture"
-    data_dir = roots.data / "discovery" / resolved_run
+    data_dir = discovery_data_dir(roots, resolved_run)
     raw_dir = data_dir / "raw"
     create_storage_roots(roots)
     raw_dir.mkdir(parents=True, exist_ok=True)
@@ -76,7 +76,7 @@ def discover_browser_snapshot(
         raw.setdefault("source", {})["platform"] = platform
     resolved_platform = str(raw.get("platform") or raw.get("source", {}).get("platform") or "browser")
     resolved_run = run_id or f"{resolved_platform}-browser-discovery-snapshot"
-    data_dir = roots.data / "discovery" / resolved_run
+    data_dir = discovery_data_dir(roots, resolved_run)
     raw_dir = data_dir / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     raw_copy = raw_dir / raw_input.name
@@ -136,7 +136,7 @@ def discover_browser_live(
             "pages": pages,
         }
         browser.close()
-    data_dir = roots.data / "discovery" / run_id
+    data_dir = discovery_data_dir(roots, run_id)
     raw_dir = data_dir / "raw"
     raw_dir.mkdir(parents=True, exist_ok=True)
     raw_path = raw_dir / f"{platform}_browser_live_discovery.json"
@@ -223,7 +223,7 @@ def _receipt_from_raw(
         "completed_at": _now(),
         "network_touched": network_touched,
     }
-    data_dir = roots.data / "discovery" / run_id
+    data_dir = discovery_data_dir(roots, run_id)
     data_dir.mkdir(parents=True, exist_ok=True)
     receipt_path = data_dir / "browser_discovery_receipt.json"
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")

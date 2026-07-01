@@ -26,6 +26,29 @@ def run_cli(tmp_path: Path, *args: str) -> dict[str, object]:
     return json.loads(result.stdout)
 
 
+def test_cli_rejects_path_like_run_id_before_writing_runtime_artifacts(tmp_path: Path) -> None:
+    escape = tmp_path / "absolute-run-escape"
+    result = subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "aoa_course_connector.cli",
+            "materialize",
+            "fixture",
+            "--run",
+            str(escape),
+        ],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=cli_env(tmp_path),
+    )
+
+    assert result.returncode != 0
+    assert "portable runtime id" in result.stderr + result.stdout
+    assert not escape.exists()
+
+
 def test_cli_starter_flow(tmp_path: Path) -> None:
     assert run_cli(tmp_path, "doctor")["status"] == "ok"
     adapters = run_cli(tmp_path, "adapters", "list")

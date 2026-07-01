@@ -12,7 +12,7 @@ from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
 from aoa_course_connector.ingest import materialize_stepik_fixture, materialize_stepik_live
 from aoa_course_connector.sources import load_registry
-from aoa_course_connector.storage import create_storage_roots
+from aoa_course_connector.storage import create_storage_roots, sync_data_dir
 from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, upsert_checkpoint
 
 
@@ -215,7 +215,7 @@ def _finish_receipt(roots: StorageRoots, receipt: dict[str, object], *, empty_er
     elif failed:
         receipt["status"] = "partial"
     sync_run_id = str(receipt.get("sync_run_id") or "sync")
-    sync_dir = roots.data / "sync" / sync_run_id
+    sync_dir = sync_data_dir(roots, sync_run_id)
     sync_dir.mkdir(parents=True, exist_ok=True)
     receipt_path = sync_dir / "sync_receipt.json"
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")

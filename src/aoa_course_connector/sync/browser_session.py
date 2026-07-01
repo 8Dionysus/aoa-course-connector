@@ -16,7 +16,7 @@ from aoa_course_connector.ingest.browser_session import FIXTURES
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.sources import load_registry
-from aoa_course_connector.storage import create_storage_roots, run_data_dir
+from aoa_course_connector.storage import create_storage_roots, run_data_dir, sync_data_dir
 from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, upsert_checkpoint
 
 
@@ -221,7 +221,7 @@ def _finish_receipt(roots: StorageRoots, receipt: dict[str, object]) -> dict[str
     elif failed:
         receipt["status"] = "partial"
     sync_run_id = str(receipt.get("sync_run_id") or "sync")
-    sync_dir = roots.data / "sync" / sync_run_id
+    sync_dir = sync_data_dir(roots, sync_run_id)
     sync_dir.mkdir(parents=True, exist_ok=True)
     receipt_path = sync_dir / "sync_receipt.json"
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")

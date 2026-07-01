@@ -12,7 +12,7 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import LOCAL_HASHING_PROVIDER
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, registry_path
-from aoa_course_connector.storage import storage_status
+from aoa_course_connector.storage import run_artifact_dir, run_data_dir, storage_status
 
 
 DEFAULT_RUN = "starter-fixture"
@@ -184,8 +184,8 @@ def connector_readiness(
 def ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
     """Inspect one local run without reading raw private payloads."""
 
-    data_dir = roots.data / "runs" / run_id
-    artifact_dir = roots.artifact / "runs" / run_id
+    data_dir = run_data_dir(roots, run_id)
+    artifact_dir = run_artifact_dir(roots, run_id)
     normalized_path = data_dir / "normalized" / "course_bundle.json"
     keyword_path = artifact_dir / "indexes" / "keyword_index.json"
     semantic_path = artifact_dir / "indexes" / "semantic_index.json"

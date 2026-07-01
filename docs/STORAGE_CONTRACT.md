@@ -14,3 +14,8 @@ AOA_COURSE_ARTIFACT_ROOT
 ```
 
 Stable objects should be rebuildable from raw or normalized artifacts.
+
+Runtime ids such as `--run`, `--sync-run`, and discovery run names are portable
+storage slugs, not filesystem paths. Use 1-160 letters, digits, dots,
+underscores, or hyphens, starting with a letter or digit. The connector rejects
+path-like ids before writing run, discovery, or sync artifacts.
