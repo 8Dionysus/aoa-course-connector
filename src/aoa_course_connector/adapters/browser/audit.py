@@ -8,7 +8,7 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from aoa_course_connector.adapters.browser.captions import caption_text_from_resource, is_caption_asset, resource_looks_like_caption
+from aoa_course_connector.adapters.browser.captions import caption_resource_key, caption_text_from_resource, is_caption_asset, resource_looks_like_caption
 from aoa_course_connector.adapters.browser.crawl import discover_lesson_links
 from aoa_course_connector.adapters.browser.discovery import discover_course_links
 from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
@@ -46,7 +46,7 @@ def audit_browser_snapshot(
     resolved_platform = str(platform or raw.get("platform") or raw.get("source", {}).get("platform") or "browser")
     source = raw.get("source") if isinstance(raw.get("source"), dict) else {}
     pages = [page for page in raw.get("pages", []) if isinstance(page, dict)]
-    resources = [resource for resource in raw.get("resources", []) if isinstance(resource, dict)]
+    resources = _snapshot_resources(raw, pages)
     resource_urls = _resource_urls(resources)
     counts: Counter[str] = Counter()
     page_kind_counts: Counter[str] = Counter()
@@ -72,7 +72,7 @@ def audit_browser_snapshot(
         caption_assets = [asset for asset in snapshot.assets if is_caption_asset(asset)]
         for asset in caption_assets:
             asset_url = str(asset.get("url") or "")
-            if asset_url and asset_url not in resource_urls:
+            if asset_url and caption_resource_key(asset_url) not in resource_urls:
                 missing_caption_resources.append(
                     {
                         "page_id": str(page.get("page_id") or f"page-{index}"),
@@ -332,6 +332,24 @@ def _caption_resource_parse_errors(resources: list[dict[str, object]]) -> list[d
     return errors
 
 
+def _snapshot_resources(raw: dict[str, Any], pages: list[dict[str, Any]]) -> list[dict[str, object]]:
+    resources_by_url: dict[str, dict[str, object]] = {}
+    anonymous_resources: list[dict[str, object]] = []
+    for container in [raw, *pages]:
+        resources = container.get("resources") if isinstance(container, dict) else None
+        if not isinstance(resources, list):
+            continue
+        for resource in resources:
+            if not isinstance(resource, dict):
+                continue
+            url = str(resource.get("url") or resource.get("source_url") or "")
+            if url:
+                resources_by_url[caption_resource_key(url)] = resource
+            else:
+                anonymous_resources.append(resource)
+    return [*resources_by_url.values(), *anonymous_resources]
+
+
 def _is_caption_resource(resource: dict[str, object]) -> bool:
     return resource_looks_like_caption(
         str(resource.get("url") or resource.get("source_url") or ""),
@@ -344,7 +362,7 @@ def _resource_urls(resources: list[dict[str, object]]) -> set[str]:
     for resource in resources:
         url = str(resource.get("url") or resource.get("source_url") or "")
         if url:
-            urls.add(url)
+            urls.add(caption_resource_key(url))
     return urls
 
 

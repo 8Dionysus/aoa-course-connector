@@ -90,3 +90,54 @@ def test_browser_snapshot_audit_flags_missing_caption_resource(tmp_path: Path) -
     assert report["counts"]["caption_resource_missing_payload_count"] == 1
     assert any(failure["surface"] == "caption_sidecar" for failure in report["failures"])
     assert any(lane["lane"] == "caption_sidecar" for lane in report["repair_lanes"])
+
+
+def test_browser_snapshot_audit_accepts_page_scoped_caption_resource(tmp_path: Path) -> None:
+    snapshot_path = tmp_path / "page-caption-resource.json"
+    snapshot_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_browser_snapshot_v1",
+                "platform": "skillspace",
+                "captured_at": "2026-06-30T00:00:00Z",
+                "source": {
+                    "source_id": "source:skillspace:demo",
+                    "platform": "skillspace",
+                    "source_ref": "https://academy.example/course/demo",
+                    "access_mode": "browser_session",
+                },
+                "pages": [
+                    {
+                        "page_id": "lesson-1",
+                        "kind": "lesson",
+                        "url": "https://academy.example/course/demo/lesson/1",
+                        "title": "Page scoped captions",
+                        "html": """
+                        <article>
+                          <h1>Page scoped captions</h1>
+                          <p>Lesson text is visible.</p>
+                          <video><track kind="subtitles" src="/captions/page.vtt" srclang="en"></video>
+                        </article>
+                        """,
+                        "resources": [
+                            {
+                                "url": "https://academy.example/captions/page.vtt",
+                                "content_type": "text/vtt",
+                                "text": "WEBVTT\n\n00:00:00.000 --> 00:00:01.000\ncaptured caption",
+                            }
+                        ],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    report = audit_browser_snapshot_file(snapshot_path, platform="skillspace")
+
+    assert report["status"] == "ok"
+    assert report["counts"]["caption_asset_count"] == 1
+    assert report["counts"]["caption_resource_count"] == 1
+    assert report["counts"]["caption_resource_missing_payload_count"] == 0
+    assert not any(failure["surface"] == "caption_sidecar" for failure in report["failures"])
+    assert not any(lane["lane"] == "caption_sidecar" for lane in report["repair_lanes"])
