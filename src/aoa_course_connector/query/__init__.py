@@ -210,28 +210,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
         evidence_id = result.get("evidence_id")
         if evidence_id and str(evidence_id) not in seen:
             seen.add(str(evidence_id))
-            evidence_chain.append(
-                {
-                    "evidence_id": evidence_id,
-                    "doc_id": result.get("doc_id"),
-                    "kind": result.get("kind"),
-                    "source_id": result.get("source_id"),
-                    "source_url": result.get("source_url"),
-                    "fetched_at": result.get("fetched_at"),
-                    "platform": result.get("platform"),
-                    "path": result.get("path"),
-                    "lesson_id": result.get("lesson_id"),
-                    "lesson_title": result.get("lesson_title"),
-                    "freshness_state": result.get("freshness_state"),
-                    "authority_tier": result.get("authority_tier"),
-                    "authority_label": result.get("authority_label"),
-                    "source_authority": result.get("source_authority"),
-                    "score": result.get("score"),
-                    "rank_score": result.get("rank_score"),
-                    "rank_features": result.get("rank_features"),
-                    "refresh_hint": result.get("refresh_hint"),
-                }
-            )
+            evidence_chain.append(_evidence_chain_item(result, evidence_id))
     return {
         "schema": "aoa_course_answer_packet_v1",
         "run_id": run_id,
@@ -250,6 +229,30 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
         },
         "refresh_report": _refresh_report(results),
     }
+
+
+def _evidence_chain_item(result: dict[str, object], evidence_id: object) -> dict[str, object]:
+    item = {
+        "evidence_id": evidence_id,
+        "doc_id": result.get("doc_id"),
+        "kind": result.get("kind"),
+        "source_id": result.get("source_id"),
+        "source_url": result.get("source_url"),
+        "fetched_at": result.get("fetched_at"),
+        "platform": result.get("platform"),
+        "path": result.get("path"),
+        "lesson_id": result.get("lesson_id"),
+        "lesson_title": result.get("lesson_title"),
+        "freshness_state": result.get("freshness_state"),
+        "authority_tier": result.get("authority_tier"),
+        "authority_label": result.get("authority_label"),
+        "source_authority": result.get("source_authority"),
+        "score": result.get("score"),
+        "rank_score": result.get("rank_score"),
+        "rank_features": result.get("rank_features"),
+        "refresh_hint": result.get("refresh_hint"),
+    }
+    return {key: value for key, value in item.items() if value is not None}
 
 
 def write_answer_packet(packet: dict[str, object], roots: StorageRoots, run_id: str) -> Path:
