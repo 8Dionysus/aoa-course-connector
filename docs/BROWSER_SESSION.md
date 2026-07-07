@@ -104,6 +104,17 @@ authority is `browser_course_index_link`, and their graph nodes retain the
 `discovered_not_fetched` or `fetch_error` freshness state so agents can ask for
 source refresh before treating them as complete course knowledge.
 
+When a fetched browser lesson page is actually an access-denied, locked, gated,
+or prerequisite notice, the adapter keeps that as access-state evidence instead
+of treating the notice page as the lesson body. The normalized lesson carries
+`freshness_state: access_denied` and `access_state: access_denied`; its step
+uses `authority_tier: access_notice` and
+`source_authority: browser_access_denied`. The step text is a generic access
+notice, so prerequisite-page boilerplate or linked lesson titles do not pollute
+the knowledge index as if they were available course content. Graph confidence
+for these lesson edges is reduced, while queries about locked or unavailable
+lessons can still retrieve the access notice intentionally.
+
 ## Progress, Comments, And Transcripts Proof
 
 Browser snapshots extract visible progress/status blocks and visible discussion

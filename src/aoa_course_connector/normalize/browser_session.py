@@ -17,6 +17,7 @@ KNOWN_AUTHORITY_TIERS = {
     "learner_comment",
     "transcript",
     "asset_metadata",
+    "access_notice",
     "progress_metadata",
     "discussion_comment",
     "unknown",
@@ -96,9 +97,11 @@ def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[st
     resources = caption_resource_index(raw, page)
     lesson_id = f"{platform}:lesson:{_slug(page.get('page_id') or url or order)}"
     lesson_evidence = _evidence(evidence, platform, url, captured_at, f"lesson:{lesson_id}", raw_ref)
-    step_text = snapshot.text or str(page.get("title") or snapshot.title or lesson_id)
+    detected_state = _lesson_access_state(page, snapshot.text)
+    freshness_state = str(page.get("freshness_state") or detected_state or "current")
+    access_state = detected_state or ("access_denied" if freshness_state == "access_denied" else "available")
+    step_text = _step_text(page, snapshot, lesson_id, access_state)
     step_evidence = _evidence(evidence, platform, url, captured_at, f"step:{lesson_id}:body", raw_ref)
-    freshness_state = str(page.get("freshness_state") or "current")
     lesson = {
         "lesson_id": lesson_id,
         "course_id": course["course_id"],
@@ -107,6 +110,7 @@ def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[st
         "url": url,
         "order": int(page.get("order") or order),
         "freshness_state": freshness_state,
+        "access_state": access_state,
         "steps": [
             {
                 "step_id": f"{lesson_id}:body",
@@ -124,7 +128,7 @@ def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[st
         "transcripts": [],
         "assignments": [],
         "comment_threads": [],
-        "topics": [platform, "browser-session", str(page.get("module_title") or page.get("module") or "").casefold()],
+        "topics": [platform, "browser-session", access_state, str(page.get("module_title") or page.get("module") or "").casefold()],
         "entities": [{"entity_id": f"entity:{platform}_lesson:{_slug(page.get('page_id') or url or order)}", "kind": f"{platform}_lesson", "value": str(page.get("page_id") or url), "evidence_refs": [lesson_evidence["evidence_id"]]}],
         "evidence": lesson_evidence,
     }
@@ -189,16 +193,22 @@ def _step_kind(freshness_state: str) -> str:
         return "browser_fetch_error_link"
     if freshness_state == "discovered_not_fetched":
         return "browser_discovered_link"
+    if freshness_state == "access_denied":
+        return "browser_access_denied_notice"
     return "browser_html_text"
 
 
 def _step_authority_tier(freshness_state: str) -> str:
+    if freshness_state == "access_denied":
+        return "access_notice"
     if freshness_state in {"discovered_not_fetched", "fetch_error"}:
         return "discovered_link"
     return "official_lesson"
 
 
 def _step_authority_label(platform: str, freshness_state: str) -> str:
+    if freshness_state == "access_denied":
+        return f"{platform} lesson access notice; content not visible to connected account"
     if freshness_state == "fetch_error":
         return f"{platform} course index link with failed lesson fetch"
     if freshness_state == "discovered_not_fetched":
@@ -207,9 +217,39 @@ def _step_authority_label(platform: str, freshness_state: str) -> str:
 
 
 def _step_source_authority(freshness_state: str) -> str:
+    if freshness_state == "access_denied":
+        return "browser_access_denied"
     if freshness_state in {"discovered_not_fetched", "fetch_error"}:
         return "browser_course_index_link"
     return "browser_visible_lesson"
+
+
+def _lesson_access_state(page: dict[str, Any], text: str) -> str:
+    explicit = str(page.get("access_state") or "").casefold()
+    if explicit in {"access_denied", "locked", "gated", "unavailable"}:
+        return "access_denied"
+    lowered = " ".join(str(text or "").casefold().split())
+    if not lowered:
+        return ""
+    if "у вас нет доступа к этому уроку" in lowered:
+        return "access_denied"
+    if "чтобы получить доступ" in lowered and "выполните задание" in lowered:
+        return "access_denied"
+    if "access denied" in lowered or "you do not have access" in lowered or "you don't have access" in lowered:
+        return "access_denied"
+    if "no access" in lowered and "lesson" in lowered:
+        return "access_denied"
+    return ""
+
+
+def _step_text(page: dict[str, Any], snapshot: object, lesson_id: str, access_state: str) -> str:
+    if access_state == "access_denied":
+        return (
+            "Нет доступа к содержанию урока. Платформа сообщает, что connected account "
+            "должен выполнить предварительное условие или получить доступ, прежде чем "
+            "текст урока можно считать доступным course evidence."
+        )
+    return str(getattr(snapshot, "text", "") or page.get("title") or getattr(snapshot, "title", "") or lesson_id)
 
 
 def _sidecar_transcripts(

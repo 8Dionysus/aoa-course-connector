@@ -6,7 +6,7 @@ from pathlib import Path
 from aoa_course_connector.adapters.browser.crawl import build_crawled_snapshot, discover_lesson_links
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import crawl_browser_fixture, materialize_browser_snapshot
 from aoa_course_connector.query import query_keyword_index, render_answer_packet
 from aoa_course_connector.sources import upsert_source
@@ -165,3 +165,97 @@ def test_crawl_placeholder_links_remain_discovery_evidence_in_query_and_graph(tm
     assert step_node["authority_tier"] == "discovered_link"
     assert step_node["source_authority"] == "browser_course_index_link"
     assert any(edge["kind"] == "module_contains_lesson" and edge["confidence"] == 0.45 for edge in graph["edges"])
+
+
+def test_getcourse_access_denied_lessons_remain_access_notices(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source_ref = "https://school.operator.edu/teach/control/stream"
+    source, _path, _state = upsert_source(storage.data, "getcourse", source_ref, "Gated School")
+    raw = {
+        "schema": "aoa_course_browser_snapshot_v1",
+        "platform": "getcourse",
+        "captured_at": "2026-07-07T00:00:00Z",
+        "source": {
+            "source_id": source["source_id"],
+            "platform": "getcourse",
+            "source_ref": source_ref,
+            "access_mode": "browser_session",
+            "title": "Gated School",
+        },
+        "pages": [
+            {
+                "page_id": "gated-index",
+                "kind": "course_index",
+                "url": source_ref,
+                "title": "Gated School",
+                "html": """
+                <main>
+                  <a data-aoa-kind="lesson" href="/teach/control/lesson/view/id/100">Visible launch lesson</a>
+                  <a data-aoa-kind="lesson" href="/teach/control/lesson/view/id/200">Locked future lesson</a>
+                </main>
+                """,
+            },
+            {
+                "page_id": "visible-lesson",
+                "kind": "lesson",
+                "url": "https://school.operator.edu/teach/control/lesson/view/id/100",
+                "title": "Visible launch lesson",
+                "html": "<article><h1>Visible launch lesson</h1><p>Launch checklist evidence for the first lesson.</p></article>",
+            },
+            {
+                "page_id": "locked-lesson",
+                "kind": "lesson",
+                "url": "https://school.operator.edu/teach/control/lesson/view/id/200",
+                "title": "Locked future lesson",
+                "html": """
+                <article>
+                  <h1>Нет доступа</h1>
+                  <p>У вас нет доступа к этому уроку</p>
+                  <p>Чтобы получить доступ - выполните задание в уроке: Visible launch lesson</p>
+                </article>
+                """,
+            },
+        ],
+    }
+    crawled = build_crawled_snapshot(raw, platform="getcourse")
+    raw_path = tmp_path / "gated-crawl.json"
+    raw_path.write_text(json.dumps(crawled), encoding="utf-8")
+
+    materialize_browser_snapshot(storage, raw_path, platform="getcourse", run_id="gated-crawl")
+    bundle = json.loads((storage.data / "runs/gated-crawl/normalized/course_bundle.json").read_text(encoding="utf-8"))
+    lessons = bundle["courses"][0]["modules"][0]["lessons"]
+    locked = next(lesson for lesson in lessons if lesson["title"] == "Locked future lesson")
+    step = locked["steps"][0]
+    assert locked["freshness_state"] == "access_denied"
+    assert locked["access_state"] == "access_denied"
+    assert step["kind"] == "browser_access_denied_notice"
+    assert step["authority_tier"] == "access_notice"
+    assert step["source_authority"] == "browser_access_denied"
+    assert "Нет доступа" in step["text"]
+    assert "Visible launch lesson" not in step["text"]
+
+    build_keyword_index(storage, run_id="gated-crawl")
+    build_semantic_index(storage, run_id="gated-crawl")
+    graph_path = build_graph(storage, run_id="gated-crawl")
+    denied_results = query_keyword_index(storage, "нет доступа connected account", run_id="gated-crawl")
+    assert denied_results
+    assert denied_results[0]["freshness_state"] == "access_denied"
+    assert denied_results[0]["authority_tier"] == "access_notice"
+    assert denied_results[0]["source_authority"] == "browser_access_denied"
+    assert denied_results[0]["rank_features"]["freshness_boost"] < 0
+    assert denied_results[0]["rank_features"]["authority_boost"] < 0
+    assert denied_results[0]["rank_features"]["intent"] == "access_state"
+    assert denied_results[0]["rank_features"]["intent_boost"] > 0
+    denied_packet = render_answer_packet(storage, "нет доступа к уроку", run_id="gated-crawl", mode="hybrid")
+    assert denied_packet["results"][0]["authority_tier"] == "access_notice"
+    assert denied_packet["results"][0]["freshness_state"] == "access_denied"
+    launch_results = query_keyword_index(storage, "launch checklist first lesson", run_id="gated-crawl")
+    assert launch_results[0]["lesson_title"] == "Visible launch lesson"
+
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    lesson_node = next(node for node in graph["nodes"] if node["node_id"] == locked["lesson_id"])
+    step_node = next(node for node in graph["nodes"] if node["node_id"] == step["step_id"])
+    assert lesson_node["freshness_state"] == "access_denied"
+    assert step_node["authority_tier"] == "access_notice"
+    assert step_node["source_authority"] == "browser_access_denied"
+    assert any(edge["kind"] == "module_contains_lesson" and edge["to_node"] == locked["lesson_id"] and edge["confidence"] == 0.45 for edge in graph["edges"])

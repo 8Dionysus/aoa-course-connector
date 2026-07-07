@@ -46,7 +46,7 @@ def build_graph(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
                     **_node(lesson_id, "lesson", lesson.get("title"), [lesson_url]),
                     "freshness_state": lesson_freshness,
                 }
-                lesson_confidence = 0.45 if lesson_freshness in {"discovered_not_fetched", "fetch_error"} else 1.0
+                lesson_confidence = 0.45 if lesson_freshness in {"discovered_not_fetched", "fetch_error", "access_denied"} else 1.0
                 _edge(edges, "module_contains_lesson", module_id, lesson_id, lesson_url, lesson_confidence)
                 for step in lesson.get("steps", []):
                     if isinstance(step, dict):
@@ -57,7 +57,7 @@ def build_graph(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
                             "authority_tier": str(step.get("authority_tier") or ""),
                             "source_authority": str(step.get("source_authority") or ""),
                         }
-                        step_confidence = 0.45 if lesson_freshness in {"discovered_not_fetched", "fetch_error"} else 1.0
+                        step_confidence = 0.45 if lesson_freshness in {"discovered_not_fetched", "fetch_error", "access_denied"} else 1.0
                         _edge(edges, "lesson_contains_step", lesson_id, step_id, lesson_url, step_confidence)
                 for asset in lesson.get("assets", []):
                     if isinstance(asset, dict):
