@@ -1,7 +1,7 @@
 {
   "classification_summary": {
     "artifact_kind": {
-      "config": 30,
+      "config": 31,
       "directory_marker": 4,
       "document": 48,
       "index": 1,
@@ -12,7 +12,6 @@
       "schema": 25,
       "source_code": 51,
       "test": 21,
-      "unknown": 1,
       "validator": 1
     },
     "command_role": {
@@ -38,8 +37,7 @@
       "artifact": 8,
       "command": 22,
       "document": 48,
-      "surface": 110,
-      "unknown": 1
+      "surface": 111
     },
     "surface_state": {
       "authored_source": 185,
@@ -57,12 +55,12 @@
     "schema_count": 25,
     "script_count": 0,
     "test_count": 21,
-    "unknown_count": 1,
+    "unknown_count": 0,
     "validator_count": 1
   },
   "index_identity": {
     "artifact_kind": "source_surface_index",
-    "content_digest": "618cb615c504c643a20a29a3ccd048fcf5ca52ce81237f6ea8b5cdcdf3eaa47a",
+    "content_digest": "1d50f83910265cdbc1ca94b1e9641fb7c1d581907df56136e77ae380faaa89da",
     "local_id": "index:repo-local:source-surfaces",
     "schema_ref": "aoa-kag:schemas/repo-local-kag-index.schema.json"
   },
@@ -608,8 +606,8 @@
     {
       "abi": {
         "abi_epoch": "source",
-        "artifact_class": "unknown",
-        "compatibility": "unknown",
+        "artifact_class": "config",
+        "compatibility": "stable",
         "contract_version": "none",
         "schema_version": "none"
       },
@@ -617,10 +615,10 @@
         "scope": "public",
         "secrets_risk": "none"
       },
-      "artifact_kind": "unknown",
+      "artifact_kind": "config",
       "classification": {
-        "confidence": "low",
-        "primary_kind": "unknown"
+        "confidence": "high",
+        "primary_kind": "surface"
       },
       "code_role": "none",
       "command_role": "none",
