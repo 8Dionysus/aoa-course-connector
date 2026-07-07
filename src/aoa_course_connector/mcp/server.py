@@ -44,6 +44,17 @@ def _query_schema(*, mode: bool = False) -> dict[str, object]:
     return _object_schema(properties, required=["query"])
 
 
+def _lesson_context_schema() -> dict[str, object]:
+    properties = {
+        "query": _string_schema("Search query."),
+        "run": _string_schema("Connector run id."),
+        "limit": _integer_schema("Maximum result count.", 1),
+        "mode": {"type": "string", "enum": ["keyword", "semantic", "hybrid"], "description": "Query mode."},
+        "graph_limit": _integer_schema("Maximum graph edge count per evidence lesson.", 1),
+    }
+    return _object_schema(properties, required=["query"])
+
+
 def _run_schema() -> dict[str, object]:
     return _object_schema({"run": _string_schema("Connector run id.")})
 
@@ -212,7 +223,7 @@ TOOLS = [
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
     {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined.", "inputSchema": _query_schema()},
-    {"name": "lesson_context", "description": "Return source-backed lesson context for a query.", "inputSchema": _query_schema(mode=True)},
+    {"name": "lesson_context", "description": "Return source-backed lesson context and nearby course graph context for a query.", "inputSchema": _lesson_context_schema()},
     {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods.", "inputSchema": _object_schema({"node_id": _string_schema("Graph node id."), "run": _string_schema("Connector run id."), "limit": _integer_schema("Maximum neighbor count.", 1)})},
     {"name": "freshness_report", "description": "Report result freshness states.", "inputSchema": _run_schema()},
     {"name": "evidence_report", "description": "Report source evidence, freshness, and authority for query results.", "inputSchema": _query_schema(mode=True)},
@@ -265,7 +276,13 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "hybrid_search":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "hybrid", "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), "hybrid")}
     if name == "lesson_context":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "answer_packet": render_answer_packet(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), str(args.get("mode") or "keyword"))}
+        packet = render_answer_packet(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), str(args.get("mode") or "keyword"))
+        return {
+            "schema": "aoa_course_mcp_result_v1",
+            "tool": name,
+            "answer_packet": packet,
+            "graph_context": _lesson_graph_context(roots, packet, run_id=run_id, graph_limit=int(args.get("graph_limit") or 12)),
+        }
     if name == "graph_neighbors":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "graph": graph_neighbors(roots, str(args.get("node_id") or ""), run_id, int(args.get("limit") or 20))}
     if name == "freshness_report":
@@ -326,6 +343,52 @@ def _evidence_result_refs(packet: dict[str, object]) -> list[dict[str, object]]:
             )
         )
     return refs
+
+
+def _lesson_graph_context(roots: StorageRoots, packet: dict[str, object], *, run_id: str, graph_limit: int) -> dict[str, object]:
+    evidence_chain = packet.get("evidence_chain") if isinstance(packet.get("evidence_chain"), list) else []
+    contexts: list[dict[str, object]] = []
+    seen_nodes: set[str] = set()
+    missing: list[dict[str, object]] = []
+    for evidence in evidence_chain:
+        if not isinstance(evidence, dict):
+            continue
+        node_id = str(evidence.get("lesson_id") or evidence.get("doc_id") or "")
+        if not node_id or node_id in seen_nodes:
+            continue
+        seen_nodes.add(node_id)
+        try:
+            graph = graph_neighbors(roots, node_id, run_id, graph_limit)
+        except (OSError, json.JSONDecodeError) as exc:
+            missing.append(
+                {
+                    "node_id": node_id,
+                    "evidence_id": evidence.get("evidence_id"),
+                    "reason": exc.__class__.__name__,
+                    "next_command": f"aoa-course build-graph --run {run_id}",
+                }
+            )
+            continue
+        contexts.append(
+            {
+                "node_id": node_id,
+                "node_status": "ready" if graph.get("node") else "missing_node",
+                "evidence_id": evidence.get("evidence_id"),
+                "doc_id": evidence.get("doc_id"),
+                "lesson_id": evidence.get("lesson_id"),
+                "lesson_title": evidence.get("lesson_title"),
+                "graph": graph,
+            }
+        )
+    return {
+        "schema": "aoa_course_lesson_graph_context_v1",
+        "run_id": run_id,
+        "graph_limit": graph_limit,
+        "status": "ready" if contexts else "missing_graph" if missing else "empty",
+        "context_count": len(contexts),
+        "contexts": contexts,
+        "missing": missing,
+    }
 
 
 def _compact_dict(value: dict[str, object]) -> dict[str, object]:

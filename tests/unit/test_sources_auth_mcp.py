@@ -452,6 +452,14 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     graph = call_tool("graph_neighbors", {"node_id": "lesson:starter:unlock-risk", "run": "starter-fixture"})
     assert graph["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
     assert graph["graph"]["neighbors"]
+    context = call_tool("lesson_context", {"query": "bootloader rollback", "run": "starter-fixture", "graph_limit": 6})
+    assert context["answer_packet"]["evidence_chain"]
+    assert context["graph_context"]["schema"] == "aoa_course_lesson_graph_context_v1"
+    assert context["graph_context"]["status"] == "ready"
+    assert context["graph_context"]["contexts"][0]["evidence_id"] == context["answer_packet"]["evidence_chain"][0]["evidence_id"]
+    assert context["graph_context"]["contexts"][0]["node_id"] == context["answer_packet"]["evidence_chain"][0]["lesson_id"]
+    assert context["graph_context"]["contexts"][0]["graph"]["node"]["kind"] == "lesson"
+    assert context["graph_context"]["contexts"][0]["graph"]["neighbors"]
     freshness = call_tool("freshness_report", {"run": "starter-fixture"})
     assert freshness["freshness"]["states"]
     evidence = call_tool("evidence_report", {"query": "rollback", "run": "starter-fixture"})
@@ -841,6 +849,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     browser_snapshot_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "browser_snapshot_audit")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
+    lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
     assert "runs" in readiness_tool["inputSchema"]["properties"]
     assert "link_pattern" in readiness_tool["inputSchema"]["properties"]
@@ -860,6 +869,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert browser_snapshot_audit_tool["inputSchema"]["required"] == ["snapshot_path"]
     assert browser_snapshot_audit_tool["inputSchema"]["properties"]["platform"]["enum"] == ["getcourse", "skillspace"]
     assert connected_run_tool["inputSchema"]["required"] == []
+    assert lesson_context_tool["inputSchema"]["required"] == ["query"]
+    assert "graph_limit" in lesson_context_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
     assert refresh_tool["inputSchema"]["required"] == ["query"]
 

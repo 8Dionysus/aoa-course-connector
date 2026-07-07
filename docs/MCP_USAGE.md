@@ -34,7 +34,7 @@ aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
-aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
+aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture","graph_limit":12}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
@@ -147,7 +147,10 @@ printf '%s\n' \
 Tool calls return both text content and `structuredContent` so agents can keep
 source-backed result objects, `score`/`rank_score`, `authority_tier`,
 rank features, evidence chains, freshness/authority reports, refresh hints, and
-graph packets without reparsing prose.
+graph packets without reparsing prose. `lesson_context` returns the answer
+packet plus `aoa_course_lesson_graph_context_v1`, which follows each distinct
+evidence lesson into nearby course/module/topic/asset/comment/transcript graph
+neighbors. Use `graph_limit` to bound the per-lesson neighborhood.
 
 `evidence_report` is the compact agent plan for a query. It returns the
 evidence chain, freshness report, authority report, refresh report, and result

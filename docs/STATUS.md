@@ -69,8 +69,10 @@ This proves:
   `connection_profile_status` return `aoa_course_connection_profile_status_v1`
   with `ready_for_connected_run`, `ready_for_semantic_build`, blockers,
   source/auth/plan counts, and ready live connected-run commands;
-- MCP agent routes for graph neighborhoods, freshness reports, and compact
-  evidence reports with source URL, course path, fetched timestamp, freshness
+- MCP agent routes for lesson context, graph neighborhoods, freshness reports,
+  and compact evidence reports. `lesson_context` now returns the source-backed
+  answer packet plus per-evidence lesson graph neighborhoods, while
+  `evidence_report` keeps source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh
   hints;
 - answer/search/evidence packets now tell agents how to rebuild local indexes
