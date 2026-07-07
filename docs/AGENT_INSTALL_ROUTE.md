@@ -103,6 +103,10 @@
     `connected_run_query` to prove the connected receipt produces source-backed
     answer, lesson context, evidence report, freshness, authority, and graph
     context packets with `network_touched: false`.
+1. Run `calibration query-matrix --run connected-fixture-proof --kind smoke
+    --query ... --query ...` or MCP `connected_run_query_matrix` to prove the
+    same connected receipt can answer several course-specific questions from
+    local indexes and graphs without repeating live source access.
 1. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`. The plan/capture commands should carry

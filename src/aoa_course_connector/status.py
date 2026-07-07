@@ -39,6 +39,7 @@ REQUIRED_MCP_TOOLS = [
     "connected_run",
     "connected_run_status",
     "connected_run_query",
+    "connected_run_query_matrix",
     "refresh_plan",
     "search",
     "semantic_search",
