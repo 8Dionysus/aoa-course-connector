@@ -798,13 +798,19 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert missing["catalog"]["missing_source_ids"] == ["source:stepik:missing"]
     assert missing["catalog"]["selected_source_count"] == 0
 
-    run_connected_calibration(
+    connected_receipt = run_connected_calibration(
         storage,
         run_id="source-catalog-connected",
         mode="fixture",
         platforms=["stepik"],
         query="Stepik public API evidence",
     )
+    receipt_path = Path(str(connected_receipt["receipt_path"]))
+    receipt_payload = json.loads(receipt_path.read_text(encoding="utf-8"))
+    for entry in receipt_payload["query_plan"]["entries"]:
+        entry.get("mcp_commands", {}).pop("source_answer", None)
+    receipt_path.write_text(json.dumps(receipt_payload, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
+    assert "source_answer" not in receipt_path.read_text(encoding="utf-8")
 
     with_runs = call_tool(
         "list_sources",
@@ -829,6 +835,8 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert latest_runs[0]["source_id"] == stepik["source_id"]
     assert latest_runs[0]["query_ready"] is True
     assert latest_runs[0]["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
+    assert latest_runs[0]["mcp_commands"]["source_answer"].startswith("aoa-course mcp call source_answer ")
+    assert f'"source_id":"{stepik["source_id"]}"' in latest_runs[0]["mcp_commands"]["source_answer"]
     if "stable_identity" in latest_runs[0]:
         assert "fingerprint" in latest_runs[0]["stable_identity"]
         assert "samples" not in latest_runs[0]["stable_identity"]

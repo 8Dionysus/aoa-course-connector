@@ -99,6 +99,9 @@ connected-run receipts and attaches per-source `latest_connected_runs[]`
 entries with query-ready run ids, query mode, artifact paths, CLI commands, and
 MCP commands. The top-level `connected_runs` summary reports receipt scan
 limits, sources with query-ready entries, and any unreadable receipt errors.
+For older receipts written before `source_answer` existed, the catalog derives
+that MCP command from the entry's `source_id`, query placeholder or saved query,
+and query mode without mutating the receipt.
 Pass `platforms`, `source_ids`, or `include_disabled` to narrow a large
 registry before planning work. Pass `connected_run_limit` and
 `connected_receipt_limit` to bound the receipt scan, or
