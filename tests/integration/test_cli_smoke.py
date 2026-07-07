@@ -873,6 +873,8 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert connected_status["read_only"] is True
     assert connected_status["snapshot_audit"] == connected["snapshot_audit"]
     status_entry = connected_status["query_plan"]["entries"][0]
+    assert status_entry["commands"]["lesson_context"].startswith("aoa-course lesson-context ")
+    assert "--graph-limit 12" in status_entry["commands"]["lesson_context"]
     assert status_entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert "lesson_context" in status_entry["mcp_commands"]
     assert "evidence_report" in status_entry["mcp_commands"]
@@ -882,6 +884,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert mcp_connected_status["result"]["connected_run"]["snapshot_audit"]["status"] == "ok"
     mcp_entry = mcp_connected_status["result"]["connected_run"]["query_plan"]["entries"][0]
     assert mcp_entry["mcp_commands"]["lesson_context"].startswith("aoa-course mcp call lesson_context ")
+    assert '"graph_limit":12' in mcp_entry["mcp_commands"]["lesson_context"]
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

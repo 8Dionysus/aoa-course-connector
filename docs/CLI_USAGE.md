@@ -152,8 +152,8 @@ connected-run plan.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network. The status packet includes
 `snapshot_audit`, `repair_lanes` for partial runs, and `query_plan` entries
-with CLI commands and MCP `mcp_commands` for `search`, `lesson_context`, and
-`evidence_report`.
+with CLI `query`, `answer`, and `lesson-context` commands plus MCP
+`mcp_commands` for `search`, `lesson_context`, and `evidence_report`.
 
 Use `inspect browser-snapshot` before materializing operator snapshots. The
 packet is `aoa_course_browser_snapshot_audit_v1`: it reports whether the file is

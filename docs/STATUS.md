@@ -248,9 +248,10 @@ This proves:
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,
   artifact paths, `execution_options`, and `query_plan` entries after fixture
   or gated live runs. Query plan entries now include CLI commands and MCP `mcp_commands`
-  for `search`, `lesson_context`, and `evidence_report`, so agents can stay on
-  the MCP surface after a connected run. Partial connected-run receipts also
-  include `repair_lanes` for network gate, source auth/readiness, source
+  for `search`, `lesson_context`, and `evidence_report`, plus direct CLI
+  `lesson-context`, so agents can inspect source-backed answer and graph
+  context after a connected run. Partial connected-run receipts also include
+  `repair_lanes` for network gate, source auth/readiness, source
   selection, source sync, live smoke/selector, and calibration-packet intake
   failures with concrete next commands.
 
