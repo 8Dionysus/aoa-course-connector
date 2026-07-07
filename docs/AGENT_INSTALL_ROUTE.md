@@ -133,9 +133,10 @@
     Use MCP `list_sources` first when the agent needs the configured-source
     catalog before choosing those ids; pass `include_source_refs:false` when
     counts and ids are enough. If the selected source already has
-    `latest_connected_runs[]`, prefer its attached MCP `answer`,
-    `lesson_context`, or `evidence_report` command before planning another
-    live run.
+    `latest_connected_runs[]`, prefer MCP `source_answer` with that `source_id`
+    for a direct answer/context/evidence packet before planning another live
+    run. Use the attached MCP `answer`, `lesson_context`, or `evidence_report`
+    commands only when the agent intentionally wants the lower-level run id.
 1. Run the plan's exact
     `calibration connected-run --mode live --allow-network` plan only after
     the connected plan shows the selected sources are ready.

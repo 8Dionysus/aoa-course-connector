@@ -391,6 +391,12 @@ sync entries, and returns `aoa_course_connected_run_query_packet_v1` with
 source-backed answer, lesson context, evidence report, freshness, authority,
 graph context, blockers, and `network_touched: false`. Pass `--query` for
 sync-only entries that do not already have a smoke query.
+Use MCP `source_answer` when the agent already knows a configured `source_id`
+from `list_sources`: it selects that source's latest query-ready connected run,
+prefers sync entries when available, and returns the answer packet, lesson
+context, evidence report, and selected run metadata without repeating live
+source access. By default it keeps `source_ref` out of the result; pass
+`include_source_refs:true` only when the operator wants those refs in context.
 Use `calibration query-matrix --run <run> --query ... --query ...` or MCP
 `connected_run_query_matrix` when one saved connected run needs to prove several
 course questions at once. It reuses the same local query plan without repeating
@@ -401,8 +407,9 @@ keeps per-question evidence, freshness, graph-context, blockers, and
 Status packets also include `query_plan`, a compact list of queryable
 sync/smoke run ids with index, semantic index, graph, answer packet paths,
 selected `query_mode`, and ready-to-run CLI `query`, `answer`, and
-`lesson-context` commands plus MCP `search`, `answer`, `lesson_context`, and
-`evidence_report` commands for agents that should stay on the MCP surface.
+`lesson-context` commands plus MCP `source_answer`, `search`, `answer`,
+`lesson_context`, and `evidence_report` commands for agents that should stay on
+the MCP surface.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
@@ -473,6 +480,7 @@ stdio, and exposes the same local artifacts used by the CLI:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'

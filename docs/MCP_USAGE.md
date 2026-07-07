@@ -5,6 +5,7 @@ The server package name is `aoa-course-connector-mcp`.
 Initial tools:
 
 - `list_sources`
+- `source_answer`
 - `connector_readiness`
 - `ingest_status`
 - `sync_status`
@@ -34,6 +35,7 @@ CLI smoke:
 ```bash
 aoa-course mcp tools
 aoa-course mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
+aoa-course mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
@@ -104,6 +106,16 @@ registry before planning work. Pass `connected_run_limit` and
 `include_source_refs: false` when the agent only needs ids/counts and should
 avoid echoing operator source URLs into downstream context; this also removes
 `source_ref` from attached connected-run entries.
+
+`source_answer` is the direct source-scoped answer route for MCP-side agents. It
+accepts `query` plus either `source_id` or a platform scope that resolves to one
+configured source, scans that source's recent `latest_connected_runs[]`, prefers
+query-ready sync entries when available, and returns
+`aoa_course_source_answer_packet_v1` with the selected source, selected
+connected-run entry, `aoa_course_connected_run_query_packet_v1`, answer packet,
+lesson context, evidence report, quality summary, and `network_touched: false`.
+By default `include_source_refs` is false, so source refs are removed from the
+selected source, selected run entry, responses, and blocked-entry details.
 
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,
@@ -301,10 +313,10 @@ and traversal bounds used by the connected run without exposing token values.
 `query_plan` gives agents the run ids, local keyword/semantic/graph/answer
 paths, the selected `query_mode`, and ready CLI `query`, `answer`, and
 `lesson-context` commands produced by sync and smoke actions. Each entry also
-includes `mcp_commands` for `search`, `answer`, `lesson_context`, and
-`evidence_report`, so an MCP-side agent can query the connected run without
-switching back to shell planning or reparsing artifact paths. It never executes
-network work; missing receipts return
+includes `mcp_commands` for `source_answer`, `search`, `answer`,
+`lesson_context`, and `evidence_report`, so an MCP-side agent can query the
+connected run without switching back to shell planning or reparsing artifact
+paths. It never executes network work; missing receipts return
 `status: "missing"` so agents can ask for the fixture or live connected-run
 command instead of guessing from the
 filesystem.
@@ -318,6 +330,9 @@ read-only, returns `network_touched: false`, and accepts `platforms`,
 `source_ids`, `kinds`, `mode`, `limit`, `graph_limit`, and `entry_limit`.
 Smoke entries can reuse their saved query; sync entries should pass `query` so
 the agent asks the newly indexed course run a real question.
+When the agent is answering from one configured source rather than auditing a
+whole connected receipt, prefer `source_answer`; it wraps this same retrieval
+contract with source selection and privacy defaults.
 
 `connected_run_query_matrix` is the MCP route for breadth checks after one
 fixture or gated live connected run. Pass `queries` as an array and optional
