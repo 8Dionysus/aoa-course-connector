@@ -116,7 +116,15 @@ def crawl_browser_snapshot(
     )
 
 
-def capture_browser_live(roots: StorageRoots, url: str, platform: str, run_id: str, state_file: Path | None = None, wait_until: str = "domcontentloaded") -> dict[str, object]:
+def capture_browser_live(
+    roots: StorageRoots,
+    url: str,
+    platform: str,
+    run_id: str,
+    state_file: Path | None = None,
+    wait_until: str = "domcontentloaded",
+    source: dict[str, Any] | None = None,
+) -> dict[str, object]:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:  # pragma: no cover - optional dependency guard
@@ -144,13 +152,7 @@ def capture_browser_live(roots: StorageRoots, url: str, platform: str, run_id: s
         "schema": "aoa_course_browser_snapshot_v1",
         "platform": platform,
         "captured_at": captured_at,
-        "source": {
-            "source_id": f"source:{platform}:browser-live",
-            "platform": platform,
-            "source_ref": url,
-            "access_mode": "browser_session",
-            "title": title or url,
-        },
+        "source": _browser_source(source, platform=platform, url=url, title=title or url, fallback_suffix="browser-live"),
         "pages": [{"page_id": "live-page", "kind": "lesson", "url": current_url, "title": title, "html": html}],
     }
     if caption_resources:
@@ -173,6 +175,7 @@ def crawl_browser_live(
     wait_until: str = "domcontentloaded",
     max_lessons: int = 20,
     link_pattern: str | None = None,
+    source: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     try:
         from playwright.sync_api import Error as PlaywrightError
@@ -233,13 +236,13 @@ def crawl_browser_live(
         "schema": "aoa_course_browser_snapshot_v1",
         "platform": platform,
         "captured_at": captured_at,
-        "source": {
-            "source_id": f"source:{platform}:browser-live-crawl",
-            "platform": platform,
-            "source_ref": url,
-            "access_mode": "browser_session",
-            "title": str(pages[0].get("title") or url) if pages else url,
-        },
+        "source": _browser_source(
+            source,
+            platform=platform,
+            url=url,
+            title=str(pages[0].get("title") or url) if pages else url,
+            fallback_suffix="browser-live-crawl",
+        ),
         "pages": pages,
         "crawl": {
             "schema": "aoa_course_browser_crawl_v1",
@@ -266,6 +269,24 @@ def crawl_browser_live(
         raw_name=f"{platform}_browser_live_crawl_snapshot.json",
         network_touched=True,
     )
+
+
+def _browser_source(source: dict[str, Any] | None, *, platform: str, url: str, title: str, fallback_suffix: str) -> dict[str, object]:
+    if source:
+        return {
+            "source_id": source.get("source_id") or f"source:{platform}:{fallback_suffix}",
+            "platform": source.get("platform") or platform,
+            "source_ref": source.get("source_ref") or url,
+            "access_mode": source.get("access_mode") or "browser_session",
+            "title": source.get("title") or title or source.get("source_ref") or url,
+        }
+    return {
+        "source_id": f"source:{platform}:{fallback_suffix}",
+        "platform": platform,
+        "source_ref": url,
+        "access_mode": "browser_session",
+        "title": title or url,
+    }
 
 
 def _materialize_browser_raw(

@@ -222,6 +222,9 @@ discussion comments, and paginated catalog receipts flow into answer packets,
 indexes, and graphs. The `smoke` route combines discovery, course
 materialization, keyword/semantic/graph build, and optional answer checks into
 one operator-facing report for fixture, snapshot, or gated live sources.
+For direct live browser crawl, materialize, or smoke commands, pass the
+registered `--source-id` (or use an exact registered course URL) so normalized
+bundles, answer evidence, and refresh hints remain tied to the source registry.
 
 For live operator-owned browser sessions, create and inspect auth state first:
 

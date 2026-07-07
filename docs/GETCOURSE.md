@@ -68,6 +68,7 @@ aoa-course discover browser-live "https://school.example/teach/control/stream" \
 aoa-course crawl browser-live "https://school.example/teach/control/stream" \
   --platform getcourse \
   --run getcourse-live-crawl \
+  --source-id "source:getcourse:..." \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --max-lessons 50
 
@@ -82,8 +83,15 @@ aoa-course sync browser-live \
 aoa-course smoke browser-live \
   --platform getcourse \
   --run getcourse-live-smoke \
+  --source-id "source:getcourse:..." \
   --catalog-url "https://school.example/teach/control/stream" \
   --course-url "https://school.example/teach/control/stream/view/id/201" \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --query "course-specific question"
 ```
+
+Pass the registered `--source-id` (or use the exact registered course URL so the
+CLI can resolve it from the local registry) when running live crawl, materialize,
+or smoke commands directly. This preserves the registry-backed source id in
+normalized bundles, answer evidence, and refresh hints, so agents can refresh
+the original course source instead of registering individual lesson URLs.

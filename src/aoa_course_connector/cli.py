@@ -355,6 +355,7 @@ def build_parser() -> argparse.ArgumentParser:
     browser_live.add_argument("url")
     browser_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
     browser_live.add_argument("--run")
+    browser_live.add_argument("--source-id")
     browser_live.add_argument("--state-file", type=Path)
     browser_live.add_argument("--wait-until", default="domcontentloaded")
     browser_live.set_defaults(func=cmd_materialize_browser_live)
@@ -395,6 +396,7 @@ def build_parser() -> argparse.ArgumentParser:
     crawl_live.add_argument("url")
     crawl_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
     crawl_live.add_argument("--run")
+    crawl_live.add_argument("--source-id")
     crawl_live.add_argument("--state-file", type=Path)
     crawl_live.add_argument("--wait-until", default="domcontentloaded")
     crawl_live.add_argument("--max-lessons", type=int, default=20)
@@ -468,6 +470,7 @@ def build_parser() -> argparse.ArgumentParser:
     smoke_live = smoke_sub.add_parser("browser-live")
     smoke_live.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
     smoke_live.add_argument("--run")
+    smoke_live.add_argument("--source-id")
     smoke_live.add_argument("--catalog-url")
     smoke_live.add_argument("--course-url")
     smoke_live.add_argument("--state-file", type=Path)
@@ -1236,6 +1239,26 @@ def cmd_discover_browser_live(args: argparse.Namespace) -> int:
     return 0
 
 
+def _browser_registry_source(roots: StorageRoots, *, platform: str, source_ref: str, source_id: str | None = None) -> dict[str, object] | None:
+    registry = load_registry(roots.data)
+    sources = [
+        source
+        for source in registry.get("sources", [])
+        if isinstance(source, dict)
+        and source.get("enabled", True)
+        and source.get("platform") == platform
+        and source.get("access_mode") == "browser_session"
+    ]
+    if source_id:
+        for source in sources:
+            if str(source.get("source_id") or "") == source_id:
+                return source
+        raise ValueError(f"browser source id not found in local registry: {source_id}")
+    if not source_ref:
+        return None
+    return next((source for source in sources if str(source.get("source_ref") or "") == source_ref), None)
+
+
 def cmd_materialize_fixture(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     receipt = materialize_fixture(roots, run_id=args.run, fixture=args.fixture)
@@ -1261,8 +1284,9 @@ def cmd_materialize_browser_live(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     run_id = args.run or f"{args.platform}-browser-live"
     try:
-        receipt = capture_browser_live(roots, url=args.url, platform=args.platform, run_id=run_id, state_file=args.state_file, wait_until=args.wait_until)
-    except RuntimeError as exc:
+        source = _browser_registry_source(roots, platform=args.platform, source_ref=args.url, source_id=args.source_id)
+        receipt = capture_browser_live(roots, url=args.url, platform=args.platform, run_id=run_id, state_file=args.state_file, wait_until=args.wait_until, source=source)
+    except (RuntimeError, ValueError) as exc:
         _emit({"schema": "aoa_course_browser_live_receipt_v1", "status": "error", "error": str(exc), "network_touched": False})
         return 2
     _emit(receipt)
@@ -1301,6 +1325,7 @@ def cmd_crawl_browser_live(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     run_id = args.run or f"{args.platform}-browser-live-crawl"
     try:
+        source = _browser_registry_source(roots, platform=args.platform, source_ref=args.url, source_id=args.source_id)
         receipt = crawl_browser_live(
             roots,
             url=args.url,
@@ -1310,8 +1335,9 @@ def cmd_crawl_browser_live(args: argparse.Namespace) -> int:
             wait_until=args.wait_until,
             max_lessons=args.max_lessons,
             link_pattern=args.link_pattern,
+            source=source,
         )
-    except RuntimeError as exc:
+    except (RuntimeError, ValueError) as exc:
         _emit({"schema": "aoa_course_browser_crawl_receipt_v1", "status": "error", "error": str(exc), "network_touched": False})
         return 2
     _emit(receipt)
@@ -1430,6 +1456,7 @@ def cmd_smoke_browser_snapshot(args: argparse.Namespace) -> int:
 def cmd_smoke_browser_live(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     try:
+        source = _browser_registry_source(roots, platform=args.platform, source_ref=args.course_url or "", source_id=args.source_id)
         report = smoke_browser_live_route(
             roots,
             platform=args.platform,
@@ -1445,6 +1472,7 @@ def cmd_smoke_browser_live(args: argparse.Namespace) -> int:
             query=args.query,
             register=args.register,
             build_artifacts=not args.skip_artifacts,
+            source=source,
         )
     except (RuntimeError, ValueError) as exc:
         _emit({"schema": "aoa_course_browser_smoke_report_v1", "status": "error", "error": str(exc), "network_touched": False})
