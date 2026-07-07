@@ -1033,6 +1033,8 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     status_entry = connected_status["query_plan"]["entries"][0]
     assert status_entry["query_mode"] in {"hybrid", "keyword"}
     assert f"--mode {status_entry['query_mode']}" in status_entry["commands"]["query"]
+    assert status_entry["commands"]["sources_answer"].startswith("aoa-course sources answer ")
+    assert "--source-id " in status_entry["commands"]["sources_answer"]
     assert status_entry["commands"]["lesson_context"].startswith("aoa-course lesson-context ")
     assert "--graph-limit 12" in status_entry["commands"]["lesson_context"]
     assert status_entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
@@ -1054,6 +1056,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert mcp_connected_status["result"]["connected_run"]["network_touched"] is False
     assert mcp_connected_status["result"]["connected_run"]["snapshot_audit"]["status"] == "ok"
     mcp_entry = mcp_connected_status["result"]["connected_run"]["query_plan"]["entries"][0]
+    assert mcp_entry["commands"]["sources_answer"].startswith("aoa-course sources answer ")
     assert mcp_entry["mcp_commands"]["source_answer"].startswith("aoa-course mcp call source_answer ")
     assert mcp_entry["mcp_commands"]["lesson_context"].startswith("aoa-course mcp call lesson_context ")
     assert mcp_entry["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")

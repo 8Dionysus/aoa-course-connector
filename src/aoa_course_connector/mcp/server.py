@@ -820,6 +820,7 @@ def _sources_answer_next_commands(query: str, source_ids: list[str] | None, plat
     if mode:
         payload["mode"] = mode
     return [
+        _sources_answer_cli_command(query, source_ids=source_ids, platforms=platforms, mode=mode),
         f"aoa-course mcp call sources_answer {shlex.quote(json.dumps(payload, ensure_ascii=True, separators=(',', ':')))}",
         "aoa-course mcp call list_sources '{\"include_source_refs\":false,\"connected_run_limit\":5}'",
     ]
@@ -901,9 +902,33 @@ def _source_answer_next_commands(source: dict[str, object], selected_entry: dict
         "entry_limit": 1,
     }
     return [
+        _sources_answer_cli_command(query, source_ids=[source_id] if source_id else None, kinds=[kind] if kind else None, mode=mode),
         f"aoa-course mcp call source_answer {shlex.quote(json.dumps(source_answer_payload, ensure_ascii=True, separators=(',', ':')))}",
         f"aoa-course mcp call connected_run_query {shlex.quote(json.dumps(connected_query_payload, ensure_ascii=True, separators=(',', ':')))}",
     ]
+
+
+def _sources_answer_cli_command(
+    query: str,
+    *,
+    source_ids: list[str] | None = None,
+    platforms: list[str] | None = None,
+    kinds: list[str] | None = None,
+    mode: str | None = None,
+) -> str:
+    parts = ["aoa-course", "sources", "answer", shlex.quote(query)]
+    for source_id in source_ids or []:
+        if source_id:
+            parts.extend(["--source-id", shlex.quote(source_id)])
+    for platform in platforms or []:
+        if platform:
+            parts.extend(["--platform", shlex.quote(platform)])
+    for kind in kinds or []:
+        if kind:
+            parts.extend(["--kind", shlex.quote(kind)])
+    if mode:
+        parts.extend(["--mode", shlex.quote(mode)])
+    return " ".join(parts)
 
 
 def _drop_source_refs(value: object) -> object:

@@ -418,8 +418,8 @@ keeps per-question evidence, freshness, graph-context, blockers, and
 `network_touched: false`.
 Status packets also include `query_plan`, a compact list of queryable
 sync/smoke run ids with index, semantic index, graph, answer packet paths,
-selected `query_mode`, and ready-to-run CLI `query`, `answer`, and
-`lesson-context` commands plus MCP `source_answer`, `search`, `answer`,
+selected `query_mode`, and ready-to-run CLI `query`, `answer`,
+`sources answer`, and `lesson-context` commands plus MCP `source_answer`, `search`, `answer`,
 `lesson_context`, and `evidence_report` commands for agents that should stay on
 the MCP surface.
 

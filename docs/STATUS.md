@@ -67,6 +67,10 @@ This proves:
   returns per-source answer/context/evidence packets with aggregate quality,
   blockers, and `network_touched: false`, preserving provenance instead of
   collapsing results into an opaque summary;
+- connected-run query plans and source catalogs now attach direct CLI
+  `sources answer` commands beside lower-level run-id `query`, `answer`, and
+  `lesson-context` commands, so shell-side agents can ask one question against
+  selected source ids without hand-writing MCP JSON;
 - MCP `ingest_status` returns a read-only run readiness packet with normalized
   counts, materialization receipts, index/semantic/graph metadata, next
   commands, and `agent_query_ready`;

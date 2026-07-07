@@ -1626,6 +1626,7 @@ def _query_plan_entry(
         "commands": {
             "query": f"aoa-course query {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {query_mode}",
             "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {query_mode}",
+            "sources_answer": _sources_answer_command(query_text, source_id=source_id, platform=platform, kind=kind, mode=query_mode),
             "lesson_context": f"aoa-course lesson-context {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {query_mode} --graph-limit 12",
             "graph": f"aoa-course build-graph --run {shlex.quote(run_id)}",
         },
@@ -1640,6 +1641,19 @@ def _query_plan_entry(
     if stable_identity is not None:
         entry["stable_identity"] = stable_identity
     return entry
+
+
+def _sources_answer_command(query: str, *, source_id: str, platform: str, kind: str, mode: str) -> str:
+    parts = ["aoa-course", "sources", "answer", shlex.quote(query)]
+    if source_id:
+        parts.extend(["--source-id", shlex.quote(source_id)])
+    elif platform:
+        parts.extend(["--platform", shlex.quote(platform)])
+    if kind:
+        parts.extend(["--kind", shlex.quote(kind)])
+    if mode:
+        parts.extend(["--mode", shlex.quote(mode)])
+    return " ".join(parts)
 
 
 def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:

@@ -808,9 +808,11 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     receipt_path = Path(str(connected_receipt["receipt_path"]))
     receipt_payload = json.loads(receipt_path.read_text(encoding="utf-8"))
     for entry in receipt_payload["query_plan"]["entries"]:
+        entry.get("commands", {}).pop("sources_answer", None)
         entry.get("mcp_commands", {}).pop("source_answer", None)
     receipt_path.write_text(json.dumps(receipt_payload, ensure_ascii=True, indent=2) + "\n", encoding="utf-8")
     assert "source_answer" not in receipt_path.read_text(encoding="utf-8")
+    assert "sources answer" not in receipt_path.read_text(encoding="utf-8")
 
     with_runs = call_tool(
         "list_sources",
@@ -834,6 +836,9 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert latest_runs[0]["connected_run_id"] == "source-catalog-connected"
     assert latest_runs[0]["source_id"] == stepik["source_id"]
     assert latest_runs[0]["query_ready"] is True
+    assert latest_runs[0]["commands"]["sources_answer"].startswith("aoa-course sources answer ")
+    assert f"--source-id {stepik['source_id']}" in latest_runs[0]["commands"]["sources_answer"]
+    assert "--kind smoke" in latest_runs[0]["commands"]["sources_answer"]
     assert latest_runs[0]["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
     assert latest_runs[0]["mcp_commands"]["source_answer"].startswith("aoa-course mcp call source_answer ")
     assert f'"source_id":"{stepik["source_id"]}"' in latest_runs[0]["mcp_commands"]["source_answer"]
@@ -865,6 +870,8 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert source_answer_packet["answer_packet"]["quality"]["ready"] is True
     assert source_answer_packet["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
     assert source_answer_packet["evidence_report"]["result_refs"]
+    assert source_answer_packet["next_commands"][0].startswith("aoa-course sources answer ")
+    assert f"--source-id {stepik['source_id']}" in source_answer_packet["next_commands"][0]
     assert any("source_answer" in command for command in source_answer_packet["next_commands"])
     assert '"source_ref"' not in rendered_source_answer
     assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_source_answer
@@ -887,6 +894,8 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert sources_answer_packet["quality"]["ready"] is True
     assert sources_answer_packet["responses"][0]["answer_packet"]["quality"]["ready"] is True
     assert sources_answer_packet["responses"][0]["evidence_report"]["result_refs"]
+    assert sources_answer_packet["next_commands"][0].startswith("aoa-course sources answer ")
+    assert f"--source-id {stepik['source_id']}" in sources_answer_packet["next_commands"][0]
     assert '"source_ref"' not in rendered_sources_answer
     assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_sources_answer
 

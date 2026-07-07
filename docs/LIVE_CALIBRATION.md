@@ -109,8 +109,9 @@ includes `source_selection`, stage summaries, packet quality, privacy flags,
 failures, `repair_lanes`, next steps, runtime artifact paths,
 `execution_options`, and `query_plan` entries for the sync/smoke runs that
 already have local indexes, graphs, answer packets, selected `query_mode`, CLI
-`query`, `answer`, and `lesson-context` commands, and `mcp_commands` for MCP
-`search`, `answer`, `lesson_context`, and `evidence_report` plans.
+`query`, `answer`, `sources answer`, and `lesson-context` commands, and
+`mcp_commands` for MCP `source_answer`, `search`, `answer`, `lesson_context`,
+and `evidence_report` plans.
 Then use `calibration query --run <run>` or MCP `connected_run_query` to execute
 that query plan against the local artifacts. The returned
 `aoa_course_connected_run_query_packet_v1` includes source-backed

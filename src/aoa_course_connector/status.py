@@ -456,9 +456,19 @@ def _connected_receipt_paths(roots: StorageRoots, *, limit: int) -> list[Path]:
 
 
 def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict[str, object], *, include_source_refs: bool) -> dict[str, object]:
+    commands = entry.get("commands") if isinstance(entry.get("commands"), dict) else {}
+    commands = dict(commands)
     mcp_commands = entry.get("mcp_commands") if isinstance(entry.get("mcp_commands"), dict) else {}
     mcp_commands = dict(mcp_commands)
     source_id = str(entry.get("source_id") or "")
+    if "sources_answer" not in commands:
+        commands["sources_answer"] = _sources_answer_command(
+            str(entry.get("query") or "<course-specific question>"),
+            source_id=source_id,
+            platform=str(entry.get("platform") or ""),
+            kind=str(entry.get("kind") or ""),
+            mode=str(entry.get("query_mode") or "keyword"),
+        )
     if source_id and "source_answer" not in mcp_commands:
         mcp_commands["source_answer"] = _mcp_call_command(
             "source_answer",
@@ -490,7 +500,7 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         "answer_result_count": int(entry.get("answer_result_count") or 0),
         "answer_evidence_count": int(entry.get("answer_evidence_count") or 0),
         "paths": entry.get("paths") if isinstance(entry.get("paths"), dict) else {},
-        "commands": entry.get("commands") if isinstance(entry.get("commands"), dict) else {},
+        "commands": commands,
         "mcp_commands": mcp_commands,
     }
     if include_source_refs:
@@ -525,6 +535,19 @@ def _connected_query_run_sort_key(item: dict[str, object]) -> tuple[str, str, st
 def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:
     encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
     return f"aoa-course mcp call {tool} {shlex.quote(encoded)}"
+
+
+def _sources_answer_command(query: str, *, source_id: str, platform: str, kind: str, mode: str) -> str:
+    parts = ["aoa-course", "sources", "answer", shlex.quote(query)]
+    if source_id:
+        parts.extend(["--source-id", shlex.quote(source_id)])
+    elif platform:
+        parts.extend(["--platform", shlex.quote(platform)])
+    if kind:
+        parts.extend(["--kind", shlex.quote(kind)])
+    if mode:
+        parts.extend(["--mode", shlex.quote(mode)])
+    return " ".join(parts)
 
 
 def _mcp_surface(tool_names: list[str] | set[str] | None) -> dict[str, object]:
