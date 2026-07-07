@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import shlex
 from collections import Counter
 from pathlib import Path
 
@@ -454,6 +455,18 @@ def _connected_receipt_paths(roots: StorageRoots, *, limit: int) -> list[Path]:
 
 
 def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict[str, object], *, include_source_refs: bool) -> dict[str, object]:
+    mcp_commands = entry.get("mcp_commands") if isinstance(entry.get("mcp_commands"), dict) else {}
+    mcp_commands = dict(mcp_commands)
+    source_id = str(entry.get("source_id") or "")
+    if source_id and "source_answer" not in mcp_commands:
+        mcp_commands["source_answer"] = _mcp_call_command(
+            "source_answer",
+            {
+                "query": str(entry.get("query") or "<course-specific question>"),
+                "source_id": source_id,
+                "mode": str(entry.get("query_mode") or "keyword"),
+            },
+        )
     payload = {
         "connected_run_id": receipt.get("run_id") or path.parent.parent.name,
         "connected_run_status": receipt.get("status") or "unknown",
@@ -477,7 +490,7 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         "answer_evidence_count": int(entry.get("answer_evidence_count") or 0),
         "paths": entry.get("paths") if isinstance(entry.get("paths"), dict) else {},
         "commands": entry.get("commands") if isinstance(entry.get("commands"), dict) else {},
-        "mcp_commands": entry.get("mcp_commands") if isinstance(entry.get("mcp_commands"), dict) else {},
+        "mcp_commands": mcp_commands,
     }
     if include_source_refs:
         payload["source_ref"] = entry.get("source_ref")
@@ -506,6 +519,11 @@ def _connected_query_run_sort_key(item: dict[str, object]) -> tuple[str, str, st
         str(item.get("connected_started_at") or ""),
         str(item.get("connected_run_id") or ""),
     )
+
+
+def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:
+    encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    return f"aoa-course mcp call {tool} {shlex.quote(encoded)}"
 
 
 def _mcp_surface(tool_names: list[str] | set[str] | None) -> dict[str, object]:
