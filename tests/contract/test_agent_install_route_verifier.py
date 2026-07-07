@@ -85,7 +85,8 @@ def test_stdio_verifier_rejects_tool_error_with_structured_content() -> None:
 def test_stdio_verifier_requires_direct_answer_packet() -> None:
     verifier = load_verifier_module()
     responses = _healthy_stdio_responses()
-    responses[-2]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] = False
+    answer = next(response for response in responses if response["id"] == 8)
+    answer["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] = False
     stdout = "\n".join(json.dumps(response) for response in responses)
 
     with pytest.raises(verifier.StdioVerificationError, match="answer stdio response quality is not ready"):
@@ -95,7 +96,8 @@ def test_stdio_verifier_requires_direct_answer_packet() -> None:
 def test_stdio_verifier_requires_connected_run_ok() -> None:
     verifier = load_verifier_module()
     responses = _healthy_stdio_responses()
-    responses[-1]["result"]["structuredContent"]["connected_run"]["status"] = "partial"
+    connected_run = next(response for response in responses if response["id"] == 9)
+    connected_run["result"]["structuredContent"]["connected_run"]["status"] = "partial"
     stdout = "\n".join(json.dumps(response) for response in responses)
 
     with pytest.raises(verifier.StdioVerificationError, match="connected_run stdio response was not ok"):
@@ -201,6 +203,23 @@ def _healthy_stdio_responses() -> list[dict[str, object]]:
                         "schema": "aoa_course_connected_calibration_run_receipt_v1",
                         "status": "ok",
                         "network_touched": False,
+                    },
+                },
+                "isError": False,
+            },
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 10,
+            "result": {
+                "structuredContent": {
+                    "tool": "connected_run_query",
+                    "query_packet": {
+                        "schema": "aoa_course_connected_run_query_packet_v1",
+                        "status": "ok",
+                        "network_touched": False,
+                        "response_count": 1,
+                        "quality": {"ready": True},
                     },
                 },
                 "isError": False,

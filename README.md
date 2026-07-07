@@ -294,6 +294,7 @@ Before expanding connected-source work, run the fixture-safe calibration eval:
 PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
 PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run --mode fixture --run connected-fixture-proof
 PYTHONPATH=src python -m aoa_course_connector.cli calibration status --run connected-fixture-proof
+PYTHONPATH=src python -m aoa_course_connector.cli calibration query --run connected-fixture-proof --kind smoke
 ```
 
 For operator-connected sources, save `preflight live`, `smoke browser-live`,
@@ -368,12 +369,18 @@ gate, source readiness, source selection, sync, smoke/selector, and packet
 intake failures into concrete next commands. CLI `readiness` and MCP
 `connector_readiness` surface those lane commands at the top-level when a
 selected connected-run receipt is partial, while a missing receipt still points
-to fixture bootstrap. They also include `query_plan`,
-a compact list of queryable sync/smoke run ids with index, semantic index,
-graph, answer packet paths, selected `query_mode`, and ready-to-run CLI
-`query`, `answer`, and `lesson-context` commands plus MCP `search`, `answer`,
-`lesson_context`, and `evidence_report` commands for agents that should stay on
-the MCP surface.
+to fixture bootstrap or connected-run commands.
+Use `calibration query --run <run>` or MCP `connected_run_query` for the next
+retrieval proof: it reads the connected receipt, selects query-ready smoke or
+sync entries, and returns `aoa_course_connected_run_query_packet_v1` with
+source-backed answer, lesson context, evidence report, freshness, authority,
+graph context, blockers, and `network_touched: false`. Pass `--query` for
+sync-only entries that do not already have a smoke query.
+Status packets also include `query_plan`, a compact list of queryable
+sync/smoke run ids with index, semantic index, graph, answer packet paths,
+selected `query_mode`, and ready-to-run CLI `query`, `answer`, and
+`lesson-context` commands plus MCP `search`, `answer`, `lesson_context`, and
+`evidence_report` commands for agents that should stay on the MCP surface.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"

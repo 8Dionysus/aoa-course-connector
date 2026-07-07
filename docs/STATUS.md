@@ -292,6 +292,13 @@ This proves:
   `repair_lanes` for network gate, source auth/readiness, source
   selection, source sync, live smoke/selector, and calibration-packet intake
   failures with concrete next commands.
+- CLI `calibration query` and MCP `connected_run_query` execute that
+  connected-run query plan without touching the network, returning
+  `aoa_course_connected_run_query_packet_v1` with per-entry source-backed
+  answer packets, lesson context, evidence reports, freshness/authority quality
+  summaries, graph-context status, rebuild/query blockers, and direct
+  `network_touched: false` retrieval proof after fixture or gated live
+  connected runs.
 
 ## Remaining Connector Work
 

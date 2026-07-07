@@ -112,6 +112,17 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError(f"connected_run stdio response was not ok: {connected_run_payload.get('status')}")
     if connected_run_payload.get("network_touched") is not False:
         raise StdioVerificationError("connected_run stdio fixture response touched network")
+    connected_query = _require_tool_success(responses, 10, "connected_run_query")
+    query_packet = connected_query.get("query_packet")
+    if not isinstance(query_packet, dict) or query_packet.get("schema") != "aoa_course_connected_run_query_packet_v1":
+        raise StdioVerificationError("connected_run_query stdio response did not return connected-run query packet")
+    if query_packet.get("status") != "ok":
+        raise StdioVerificationError(f"connected_run_query stdio response was not ok: {query_packet.get('status')}")
+    if query_packet.get("network_touched") is not False:
+        raise StdioVerificationError("connected_run_query stdio response touched network")
+    quality = query_packet.get("quality") if isinstance(query_packet.get("quality"), dict) else {}
+    if quality.get("ready") is not True or int(query_packet.get("response_count") or 0) < 1:
+        raise StdioVerificationError(f"connected_run_query stdio response did not prove retrieval readiness: {quality}")
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
@@ -229,6 +240,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "live_preflight", "{}"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_source_plan", '{"live_scope":"bounded"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_run", '{"run":"mcp-install-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_run_query", '{"run":"mcp-install-fixture","kinds":["smoke"]}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_provider_preflight", '{"run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connector_readiness", '{"runs":["starter-fixture"]}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture"],
@@ -279,6 +291,7 @@ def main(argv: list[str] | None = None) -> int:
             '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}',
             '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"answer","arguments":{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}}}',
             '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"connected_run","arguments":{"run":"stdio-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}}}',
+            '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"connected_run_query","arguments":{"run":"stdio-connected-fixture","kinds":["smoke"]}}}',
             "",
         ])
         result = subprocess.run(

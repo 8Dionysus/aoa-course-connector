@@ -38,6 +38,7 @@ REQUIRED_MCP_TOOLS = [
     "semantic_provider_preflight",
     "connected_run",
     "connected_run_status",
+    "connected_run_query",
     "refresh_plan",
     "search",
     "semantic_search",

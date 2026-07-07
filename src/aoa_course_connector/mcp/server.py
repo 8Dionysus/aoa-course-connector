@@ -15,7 +15,7 @@ from typing import Any, TextIO
 
 from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
 from aoa_course_connector.connection_profile import connection_profile_run_plan, connection_profile_status, inspect_connection_profile, load_connection_profile
-from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
+from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, query_connected_calibration, run_connected_calibration
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet, render_lesson_context_packet
@@ -165,6 +165,30 @@ def _connected_run_schema() -> dict[str, object]:
     )
 
 
+def _connected_run_query_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "run": _string_schema("Connected calibration run id."),
+            "query": _string_schema("Optional query override. Required for sync entries that did not save a smoke query."),
+            "platforms": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
+                "description": "Optional platforms to select from the connected-run query plan.",
+            },
+            "source_ids": _source_ids_schema("Optional source ids to select from the connected-run query plan."),
+            "kinds": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["smoke", "sync"]},
+                "description": "Optional query-plan entry kinds to select.",
+            },
+            "limit": _integer_schema("Maximum result count per selected entry.", 1),
+            "mode": {"type": "string", "enum": ["keyword", "semantic", "hybrid"], "description": "Optional query mode override."},
+            "graph_limit": _integer_schema("Maximum graph edge count per evidence lesson.", 1),
+            "entry_limit": _integer_schema("Maximum query-plan entries to execute.", 1),
+        }
+    )
+
+
 def _connection_profile_inspect_schema() -> dict[str, object]:
     return _object_schema({"profile_path": _string_schema("Local runtime connection profile JSON path.")}, required=["profile_path"])
 
@@ -259,6 +283,7 @@ TOOLS = [
     {"name": "browser_snapshot_audit", "description": "Inspect a local GetCourse/Skillspace browser snapshot for discovery, crawl, transcript, caption, comment, progress, pagination, and repair readiness without printing raw HTML.", "inputSchema": _browser_snapshot_audit_schema()},
     {"name": "connected_run", "description": "Execute the connected-source calibration route. Fixture mode is network-free; live mode requires explicit allow_network.", "inputSchema": _connected_run_schema()},
     {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
+    {"name": "connected_run_query", "description": "Read a connected-run receipt and execute source-backed answer, lesson_context, and evidence packets for query-ready entries without touching the network.", "inputSchema": _connected_run_query_schema()},
     {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
@@ -307,6 +332,9 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "connected_run_status":
         connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=connected_run_id)}
+    if name == "connected_run_query":
+        connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "query_packet": _call_connected_run_query(roots, {**args, "run": connected_run_id})}
     if name == "refresh_plan":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "refresh": _call_refresh_plan(roots, args)}
     if name == "search":
@@ -588,6 +616,24 @@ def _call_connected_run(roots: StorageRoots, args: dict[str, object]) -> dict[st
         max_sources=int(args.get("max_sources") or 50),
         link_pattern=str(args.get("link_pattern") or "") or None,
         source_limit=source_limit,
+    )
+
+
+def _call_connected_run_query(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    mode_value = args.get("mode")
+    if mode_value is not None and not isinstance(mode_value, str):
+        raise ValueError("connected_run_query mode must be a string")
+    return query_connected_calibration(
+        roots,
+        run_id=str(args.get("run") or DEFAULT_CONNECTED_RUN),
+        query=str(args.get("query") or "") or None,
+        platforms=_platform_arg(args.get("platforms"), tool_name="connected_run_query"),
+        source_ids=_string_array_arg(args.get("source_ids"), tool_name="connected_run_query", field_name="source_ids"),
+        kinds=_string_array_arg(args.get("kinds"), tool_name="connected_run_query", field_name="kinds"),
+        limit=int(args.get("limit") or 5),
+        mode=mode_value,
+        graph_limit=int(args.get("graph_limit") or 12),
+        entry_limit=int(args.get("entry_limit") or 5),
     )
 
 

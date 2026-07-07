@@ -13,13 +13,13 @@
    install/source/run/MCP audit and its next commands.
 1. Run `aoa-course eval install-route` to prove the fresh-agent route end to
    end: docs, storage, bootstrap, readiness, CLI answer, MCP answer,
-   connected-run status, query-plan entries, and source registry without
-   touching the network.
+   connected-run status, query-plan entries, `connected_run_query` retrieval,
+   and source registry without touching the network.
 1. For the full public-repo verifier, run
    `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
    repository to a temporary install-like workspace, executes the offline route,
    checks MCP stdio, and requires direct MCP `answer` plus fixture-safe MCP
-   `connected_run` packets.
+   `connected_run` and `connected_run_query` packets.
 1. When operator source refs are available, run `aoa-course connect profile`
     with real GetCourse/Skillspace URLs, Stepik course ids, state-file paths,
     and semantic-provider settings, then run `connect inspect` and `connect
@@ -91,6 +91,10 @@
     to prove source-registry sync, smoke reports, connected plan/runbook,
     calibration packet, intake, and one connected run receipt without touching
     live sources.
+1. Run `calibration query --run connected-fixture-proof --kind smoke` or MCP
+    `connected_run_query` to prove the connected receipt produces source-backed
+    answer, lesson context, evidence report, freshness, authority, and graph
+    context packets with `network_touched: false`.
 1. Before live browser sources, run `auth plan-browser-state`, capture the
     local Playwright state with `auth capture-browser-state`, and verify it with
     `auth inspect-browser-state`. The plan/capture commands should carry

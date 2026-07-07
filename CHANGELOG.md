@@ -145,6 +145,10 @@
   intake, answer evidence, timestamps, and privacy guards.
 - Added read-only connected-run receipt inspection through CLI
   `calibration status` and MCP `connected_run_status`.
+- Added CLI `calibration query` and MCP `connected_run_query` so agents can
+  execute connected-run query-plan entries into source-backed answer, lesson
+  context, evidence, freshness, authority, and graph-context packets without
+  touching the network.
 - Hardened live connected-run browser execution so ready GetCourse/Skillspace
   sources use the same default account storage-state checked by preflight and
   receipts expose `source_selection` for source-scoped auditability.
