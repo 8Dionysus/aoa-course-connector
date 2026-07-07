@@ -401,6 +401,14 @@ Use MCP `sources_answer` when one question should be asked across every selected
 query-ready source. It returns one per-source answer/context/evidence packet
 plus aggregate quality, blockers, and `network_touched: false`, preserving each
 source's provenance instead of merging evidence into an untraceable summary.
+Use the CLI equivalent when a shell-side agent should do the same without
+handwriting MCP JSON:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
+```
+
 Use `calibration query-matrix --run <run> --query ... --query ...` or MCP
 `connected_run_query_matrix` when one saved connected run needs to prove several
 course questions at once. It reuses the same local query plan without repeating

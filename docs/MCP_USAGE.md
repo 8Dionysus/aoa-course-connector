@@ -129,6 +129,10 @@ source, blocked-source details, aggregate quality, and `network_touched: false`.
 It keeps per-source answer/context/evidence packets separate so agents can cite
 the exact course source that supported each result. Like `source_answer`, it
 defaults to `include_source_refs: false`.
+For shell-side use, the equivalent local command is
+`aoa-course sources answer "<query>" --platform stepik --mode hybrid`;
+it returns the same `aoa_course_sources_answer_packet_v1` without requiring a
+manual `mcp call` JSON wrapper.
 
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,

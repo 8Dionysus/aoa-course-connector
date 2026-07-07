@@ -249,6 +249,20 @@ def build_parser() -> argparse.ArgumentParser:
     sources_add.add_argument("--disabled", action="store_true")
     sources_add.set_defaults(func=cmd_sources_add)
     sources_sub.add_parser("list").set_defaults(func=cmd_sources_list)
+    sources_answer = sources_sub.add_parser("answer")
+    sources_answer.add_argument("query")
+    sources_answer.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    sources_answer.add_argument("--source-id", action="append")
+    sources_answer.add_argument("--kind", choices=["smoke", "sync"], action="append")
+    sources_answer.add_argument("--limit", type=int, default=5)
+    sources_answer.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
+    sources_answer.add_argument("--graph-limit", type=int, default=12)
+    sources_answer.add_argument("--source-limit", type=int, default=10)
+    sources_answer.add_argument("--connected-run-limit", type=int, default=5)
+    sources_answer.add_argument("--connected-receipt-limit", type=int, default=50)
+    sources_answer.add_argument("--include-disabled", action="store_true")
+    sources_answer.add_argument("--include-source-refs", action="store_true")
+    sources_answer.set_defaults(func=cmd_sources_answer)
 
     auth = sub.add_parser("auth")
     auth_sub = auth.add_subparsers(dest="auth_command", required=True)
@@ -1013,6 +1027,33 @@ def cmd_sources_list(_args: argparse.Namespace) -> int:
     catalog = source_registry_catalog(roots, registry, include_source_refs=True, include_connected_runs=True)
     _emit({"schema": "aoa_course_source_registry_list_v1", "registry_path": str(registry_path(roots.data)), "catalog": catalog, "registry": registry})
     return 0
+
+
+def cmd_sources_answer(args: argparse.Namespace) -> int:
+    try:
+        result = call_tool(
+            "sources_answer",
+            {
+                "query": args.query,
+                "platforms": args.platform,
+                "source_ids": args.source_id,
+                "kinds": args.kind,
+                "limit": args.limit,
+                "mode": args.mode,
+                "graph_limit": args.graph_limit,
+                "source_limit": args.source_limit,
+                "connected_run_limit": args.connected_run_limit,
+                "connected_receipt_limit": args.connected_receipt_limit,
+                "include_disabled": args.include_disabled,
+                "include_source_refs": args.include_source_refs,
+            },
+        )
+    except ValueError as exc:
+        _emit({"schema": "aoa_course_sources_answer_cli_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    packet = result.get("sources_answer") if isinstance(result.get("sources_answer"), dict) else {}
+    _emit(packet)
+    return 0 if packet.get("status") in {"ok", "partial"} else 1
 
 
 def cmd_auth_plan_browser_state(args: argparse.Namespace) -> int:

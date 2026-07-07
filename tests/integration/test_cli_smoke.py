@@ -1069,6 +1069,29 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert mcp_connected_query["result"]["query_packet"]["status"] == "ok"
     assert mcp_connected_query["result"]["query_packet"]["response_count"] == 2
     assert mcp_connected_query["result"]["query_packet"]["quality"]["ready"] is True
+    sources_answer = run_cli(
+        tmp_path,
+        "sources",
+        "answer",
+        "Stepik public API evidence",
+        "--platform",
+        "stepik",
+        "--kind",
+        "smoke",
+        "--mode",
+        "hybrid",
+    )
+    rendered_sources_answer = json.dumps(sources_answer)
+    assert sources_answer["schema"] == "aoa_course_sources_answer_packet_v1"
+    assert sources_answer["status"] == "ok"
+    assert sources_answer["network_touched"] is False
+    assert sources_answer["read_only"] is True
+    assert sources_answer["source_refs_included"] is False
+    assert sources_answer["response_count"] == 1
+    assert sources_answer["quality"]["ready"] is True
+    assert sources_answer["responses"][0]["answer_packet"]["quality"]["ready"] is True
+    assert sources_answer["responses"][0]["evidence_report"]["result_refs"]
+    assert '"source_ref"' not in rendered_sources_answer
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:
