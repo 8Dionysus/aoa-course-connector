@@ -25,7 +25,6 @@
 /exports/full/
 !kag/indexes/
 !kag/indexes/*.json
-kag/indexes/source_surface_index.json
 *.sqlite
 *.sqlite3
 *.parquet

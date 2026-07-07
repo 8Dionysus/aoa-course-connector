@@ -97,6 +97,7 @@ REQUIRED_FILES = [
     "kag/README.md",
     "kag/edges/source_routes_to_storage_boundary.json",
     "kag/indexes/source_inventory.json",
+    "kag/indexes/source_surface_index.json",
     "kag/manifest.json",
     "kag/nodes/source_home.json",
     "kag/nodes/storage_boundary.json",
@@ -214,11 +215,10 @@ REQUIRED_GITIGNORE = [
     "*.cookies.json",
     "!kag/indexes/",
     "!kag/indexes/*.json",
-    "kag/indexes/source_surface_index.json",
 ]
 
 FORBIDDEN_HEAVY_ROOTS = {"data", "cache", "auth", "artifacts", "raw", "indexes", "vectors", "graphs", "exports"}
-FORBIDDEN_GENERATED_GIT_FILES = {"kag/indexes/source_surface_index.json"}
+FORBIDDEN_GENERATED_GIT_FILES: set[str] = set()
 IGNORED_LOCAL_CACHE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv"}
 KAG_RECORD_FILES = {
     "node": [
