@@ -542,6 +542,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "answer" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "evidence_report" for tool in tools_manifest()["tools"])
     ingest = call_tool("ingest_status", {"run": "starter-fixture"})
     assert ingest["schema"] == "aoa_course_ingest_status_v1"
@@ -562,6 +563,12 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert missing_ingest["next_commands"]
     result = call_tool("search", {"query": "rollback", "run": "starter-fixture"})
     assert result["results"]
+    answer = call_tool("answer", {"query": "bootloader rollback", "run": "starter-fixture", "mode": "keyword"})
+    assert answer["tool"] == "answer"
+    assert answer["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert answer["answer_packet"]["quality"]["ready"] is True
+    assert answer["answer_packet"]["evidence_chain"]
+    assert answer["answer_packet"]["refresh_report"]["network_touched"] is False
     graph = call_tool("graph_neighbors", {"node_id": "lesson:starter:unlock-risk", "run": "starter-fixture"})
     assert graph["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
     assert graph["graph"]["neighbors"]
@@ -973,6 +980,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     semantic_provider_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "semantic_provider_preflight")
     browser_snapshot_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "browser_snapshot_audit")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
+    answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "answer")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
     refresh_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "refresh_plan")
@@ -984,6 +992,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "max_pages" in readiness_tool["inputSchema"]["properties"]
     assert "max_sources" in readiness_tool["inputSchema"]["properties"]
     assert search_tool["inputSchema"]["required"] == ["query"]
+    assert answer_tool["inputSchema"]["required"] == ["query"]
+    assert answer_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
     assert "platforms" in preflight_tool["inputSchema"]["properties"]
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
@@ -1011,6 +1021,16 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert result["isError"] is False
     assert result["structuredContent"]["tool"] == "search"
     assert result["structuredContent"]["results"]
+
+    answer = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 30,
+        "method": "tools/call",
+        "params": {"name": "answer", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "keyword"}},
+    })
+    assert answer["result"]["structuredContent"]["tool"] == "answer"
+    assert answer["result"]["structuredContent"]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert answer["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] is True
 
     evidence = handle_jsonrpc_message({
         "jsonrpc": "2.0",

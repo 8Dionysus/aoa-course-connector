@@ -37,12 +37,12 @@ This proves:
   evidence lesson;
 - CLI `eval retrieval-loop` prepares starter, GetCourse, Skillspace, and
   Stepik fixture runs, builds keyword/semantic indexes and graphs, and verifies
-  CLI answer, CLI lesson-context, MCP search, MCP lesson_context, and MCP
-  evidence_report in one network-free agent retrieval contract;
+  CLI answer, CLI lesson-context, MCP search, MCP answer, MCP lesson_context,
+  and MCP evidence_report in one network-free agent retrieval contract;
 - evidence chains preserve freshness state, authority tier, source authority,
   rank score, rank features, and refresh hints alongside source URLs and
   fetched timestamps, so agents can cite and refresh the exact proof item;
-- answer packets and MCP `evidence_report` expose
+- answer packets and MCP `answer`/`evidence_report` expose
   `aoa_course_answer_quality_summary_v1`, giving agents a compact `ready` flag,
   blockers, result/evidence counts, provenance coverage, refresh-hint coverage,
   and top-result identity before citation;
@@ -86,9 +86,10 @@ This proves:
   `aoa_course_connection_profile_run_receipt_v1` for CLI and
   `aoa_course_connection_profile_run_plan_v1` for MCP, with live execution only
   behind explicit CLI `--allow-network`;
-- MCP agent routes for lesson context, graph neighborhoods, freshness reports,
-  and compact evidence reports. `lesson_context` now returns the source-backed
-  answer packet plus per-evidence lesson graph neighborhoods, while
+- MCP agent routes for direct answer packets, lesson context, graph
+  neighborhoods, freshness reports, and compact evidence reports. `answer`
+  returns the source-backed `aoa_course_answer_packet_v1`, `lesson_context`
+  returns that answer packet plus per-evidence lesson graph neighborhoods, and
   `evidence_report` keeps source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh
   hints;
@@ -269,8 +270,8 @@ This proves:
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,
   artifact paths, `execution_options`, and `query_plan` entries after fixture
   or gated live runs. Query plan entries now include selected `query_mode`, CLI
-  commands, and MCP `mcp_commands` for `search`, `lesson_context`, and
-  `evidence_report`, plus direct CLI `lesson-context`, so agents can inspect
+  commands, and MCP `mcp_commands` for `search`, `answer`, `lesson_context`,
+  and `evidence_report`, plus direct CLI `lesson-context`, so agents can inspect
   source-backed answer and graph
   context after a connected run. Partial connected-run receipts also include
   `repair_lanes` for network gate, source auth/readiness, source

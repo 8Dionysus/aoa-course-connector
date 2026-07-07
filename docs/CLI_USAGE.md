@@ -86,6 +86,7 @@ aoa-course mcp tools
 aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
+aoa-course mcp call answer '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
@@ -103,7 +104,7 @@ answer and nearby course graph context. It returns
 `aoa_course_lesson_context_packet_v1`, including the answer packet and
 `aoa_course_lesson_graph_context_v1`; `--graph-limit` bounds the per-evidence
 lesson neighborhood.
-`answer`, `lesson-context`, and MCP `evidence_report` expose
+`answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before
 citing an answer.
@@ -165,7 +166,7 @@ Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network. The status packet includes
 `snapshot_audit`, `repair_lanes` for partial runs, and `query_plan` entries
 with a selected `query_mode`, CLI `query`, `answer`, and `lesson-context`
-commands plus MCP `mcp_commands` for `search`, `lesson_context`, and
+commands plus MCP `mcp_commands` for `search`, `answer`, `lesson_context`, and
 `evidence_report`. Sync-backed entries also carry `stable_identity` with a
 fingerprint, counts, and samples for the canonical IDs that should survive
 repeat refreshes of the same registered source.
@@ -173,8 +174,8 @@ repeat refreshes of the same registered source.
 Use `eval retrieval-loop` for the offline agent retrieval contract. It prepares
 the starter, GetCourse, Skillspace, and Stepik fixture runs, builds
 keyword/semantic indexes and graphs, and verifies CLI answer, CLI
-lesson-context, MCP search, MCP lesson_context, and MCP evidence_report without
-touching the network.
+lesson-context, MCP search, MCP answer, MCP lesson_context, and MCP
+evidence_report without touching the network.
 
 Use `inspect browser-snapshot` before materializing operator snapshots. The
 packet is `aoa_course_browser_snapshot_audit_v1`: it reports whether the file is

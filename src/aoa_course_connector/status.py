@@ -41,6 +41,7 @@ REQUIRED_MCP_TOOLS = [
     "search",
     "semantic_search",
     "hybrid_search",
+    "answer",
     "lesson_context",
     "graph_neighbors",
     "freshness_report",

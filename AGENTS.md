@@ -122,6 +122,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-b
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-crawl
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call answer '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_status '{"run":"connected-fixture-proof"}'

@@ -103,7 +103,7 @@ failures, `repair_lanes`, next steps, runtime artifact paths,
 `execution_options`, and `query_plan` entries for the sync/smoke runs that
 already have local indexes, graphs, answer packets, selected `query_mode`, CLI
 `query`, `answer`, and `lesson-context` commands, and `mcp_commands` for MCP
-`search`, `lesson_context`, and `evidence_report` plans.
+`search`, `answer`, `lesson_context`, and `evidence_report` plans.
 It also includes `snapshot_audit`, a compact
 `aoa_course_connected_snapshot_audit_status_v1` block with browser smoke audit
 coverage, failure counts, filtered `browser_snapshot_diagnostics` repair lanes,
