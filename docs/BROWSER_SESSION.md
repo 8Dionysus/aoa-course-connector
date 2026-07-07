@@ -97,7 +97,11 @@ aoa-course eval browser-crawl
 The crawler extracts lesson links from the course index, keeps module hints from
 link metadata, matches already captured lesson pages by URL, and creates
 `discovered_not_fetched` placeholders only when a linked lesson page is absent
-from the snapshot.
+from the snapshot. Those placeholders are indexed as discovery evidence, not as
+full lesson content: their step authority is `discovered_link`, their source
+authority is `browser_course_index_link`, and their graph nodes retain the
+`discovered_not_fetched` or `fetch_error` freshness state so agents can ask for
+source refresh before treating them as complete course knowledge.
 
 ## Progress, Comments, And Transcripts Proof
 

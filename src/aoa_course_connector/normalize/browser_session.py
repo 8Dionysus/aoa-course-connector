@@ -98,6 +98,7 @@ def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[st
     lesson_evidence = _evidence(evidence, platform, url, captured_at, f"lesson:{lesson_id}", raw_ref)
     step_text = snapshot.text or str(page.get("title") or snapshot.title or lesson_id)
     step_evidence = _evidence(evidence, platform, url, captured_at, f"step:{lesson_id}:body", raw_ref)
+    freshness_state = str(page.get("freshness_state") or "current")
     lesson = {
         "lesson_id": lesson_id,
         "course_id": course["course_id"],
@@ -105,17 +106,17 @@ def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[st
         "title": page.get("title") or snapshot.title or f"Browser lesson {order}",
         "url": url,
         "order": int(page.get("order") or order),
-        "freshness_state": str(page.get("freshness_state") or "current"),
+        "freshness_state": freshness_state,
         "steps": [
             {
                 "step_id": f"{lesson_id}:body",
                 "lesson_id": lesson_id,
-                "kind": "browser_html_text",
+                "kind": _step_kind(freshness_state),
                 "order": 1,
                 "text": step_text,
-                "authority_tier": "official_lesson",
-                "authority_label": f"{platform} lesson page",
-                "source_authority": "browser_visible_lesson",
+                "authority_tier": _step_authority_tier(freshness_state),
+                "authority_label": _step_authority_label(platform, freshness_state),
+                "source_authority": _step_source_authority(freshness_state),
                 "evidence": step_evidence,
             }
         ],
@@ -181,6 +182,34 @@ def _lesson_from_page(raw: dict[str, Any], page: dict[str, Any], course: dict[st
     for thread in _comment_threads_from_snapshot(snapshot.comments, lesson_id, lesson_evidence, evidence, platform, url, captured_at, raw_ref):
         lesson["comment_threads"].append(thread)
     return lesson
+
+
+def _step_kind(freshness_state: str) -> str:
+    if freshness_state == "fetch_error":
+        return "browser_fetch_error_link"
+    if freshness_state == "discovered_not_fetched":
+        return "browser_discovered_link"
+    return "browser_html_text"
+
+
+def _step_authority_tier(freshness_state: str) -> str:
+    if freshness_state in {"discovered_not_fetched", "fetch_error"}:
+        return "discovered_link"
+    return "official_lesson"
+
+
+def _step_authority_label(platform: str, freshness_state: str) -> str:
+    if freshness_state == "fetch_error":
+        return f"{platform} course index link with failed lesson fetch"
+    if freshness_state == "discovered_not_fetched":
+        return f"{platform} course index link; lesson page not fetched"
+    return f"{platform} lesson page"
+
+
+def _step_source_authority(freshness_state: str) -> str:
+    if freshness_state in {"discovered_not_fetched", "fetch_error"}:
+        return "browser_course_index_link"
+    return "browser_visible_lesson"
 
 
 def _sidecar_transcripts(
