@@ -18,7 +18,8 @@
 1. For the full public-repo verifier, run
    `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
    repository to a temporary install-like workspace, executes the offline route,
-   checks MCP stdio, and requires the direct MCP `answer` packet.
+   checks MCP stdio, and requires direct MCP `answer` plus fixture-safe MCP
+   `connected_run` packets.
 1. When operator source refs are available, run `aoa-course connect profile`
     with real GetCourse/Skillspace URLs, Stepik course ids, state-file paths,
     and semantic-provider settings, then run `connect inspect` and `connect
@@ -61,10 +62,10 @@
     freshness, snippet, and evidence-field quality.
 1. Run MCP calls for `connector_readiness`, `connection_profile_inspect`,
     `connection_profile_status`, `connection_profile_run_plan`,
-    `semantic_provider_preflight`, `graph_neighbors`, `freshness_report`,
+    `semantic_provider_preflight`, `connected_run`, `graph_neighbors`, `freshness_report`,
     `answer`, `evidence_report`, and `refresh_plan` against `starter-fixture` to prove
     agents can inspect connector readiness, profile readiness, selected
-    profile run plans, graph neighborhoods, full answer packets, source
+    profile run plans, execute the fixture connected route, graph neighborhoods, full answer packets, source
     evidence/freshness, and plan a refresh cycle
     without shelling into lower-level CLI internals.
 1. After a registry-backed Stepik fixture sync, run `refresh query

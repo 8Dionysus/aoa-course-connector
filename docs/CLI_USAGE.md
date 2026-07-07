@@ -96,6 +96,7 @@ aoa-course mcp call connection_profile_status '{"profile_path":"${AOA_COURSE_ART
 aoa-course mcp call connection_profile_run_plan '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json","platform":"getcourse"}'
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```

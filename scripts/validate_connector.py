@@ -377,7 +377,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing browser transcript/caption eval")
     if "preflight semantic-provider --run starter-fixture --require-ready" not in agents:
         errors.append("AGENTS route missing semantic provider preflight validation")
-    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run_status", "mcp call ingest_status", "mcp call semantic_provider_preflight"]:
+    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run", "mcp call connected_run_status", "mcp call ingest_status", "mcp call semantic_provider_preflight"]:
         if token not in agents:
             errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
     for token in ["getcourse", "skillspace", "coursera", "teachable", "thinkific", "kajabi", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
@@ -409,7 +409,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "connection_profile_inspect", "connection_profile_status", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_connection_profile_v1", "aoa_course_connection_profile_inspection_v1", "aoa_course_connection_profile_status_v1", "aoa_course_connection_profile_readiness_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run_status", "connected_run_plan", "source_selection", "query_plan", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run", "connected_run_status", "connected_run_plan", "source_selection", "query_plan", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -463,7 +463,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "connected_run_plan", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "mcp call connected_run", "connected_run_plan", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")
@@ -473,6 +473,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Agent install verifier missing executable install-route eval")
     if '"mcp", "call", "answer"' not in verifier_raw or '"name":"answer"' not in verifier_raw:
         errors.append("Agent install verifier missing direct MCP answer proof")
+    if '"mcp", "call", "connected_run"' not in verifier_raw or '"name":"connected_run"' not in verifier_raw:
+        errors.append("Agent install verifier missing MCP connected-run proof")
     connected_run_raw = (repo_root / "src" / "aoa_course_connector" / "calibration" / "connected_run.py").read_text(encoding="utf-8")
     for token in ["repair_lanes", "repair_lane_count", "network_gate", "source_auth_or_readiness", "source_selection", "source_sync", "live_smoke_or_selector", "calibration_packet_intake"]:
         if token not in connected_run_raw:
@@ -485,6 +487,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "REQUIRED_MCP_TOOLS",
         "load_connected_calibration_status",
         "connected_source_plan",
+        "connected_run",
         "connected_run_plan",
         "link_pattern",
         "max_lessons",

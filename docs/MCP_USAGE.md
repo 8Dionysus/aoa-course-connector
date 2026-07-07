@@ -15,6 +15,7 @@ Initial tools:
 - `connection_profile_run_plan`
 - `semantic_provider_preflight`
 - `browser_snapshot_audit`
+- `connected_run`
 - `connected_run_status`
 - `refresh_plan`
 - `search`
@@ -51,6 +52,7 @@ aoa-course mcp call connection_profile_status '{"profile_path":".connector-state
 aoa-course mcp call connection_profile_run_plan '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json","platform":"getcourse"}'
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
+aoa-course mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
@@ -142,9 +144,10 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":4,"method":"tools/call","params":{"name":"refresh_plan","arguments":{"query":"rollback","run":"starter-fixture","mode":"keyword"}}}' \
   '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"live_preflight","arguments":{}}}' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}' \
-  '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"connected-fixture-proof"}}}' \
-  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"browser_snapshot_audit","arguments":{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}}}' \
-  '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
+  '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run","arguments":{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"]}}}' \
+  '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"mcp-connected-fixture"}}}' \
+  '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"browser_snapshot_audit","arguments":{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}}}' \
+  '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
   | aoa-course-connector-mcp
 ```
 
@@ -243,8 +246,16 @@ optional `source_ids` without touching the network. MCP remains read-only here;
 use CLI `connect run <profile> --platform <platform> --allow-network` only when
 the operator wants explicit live execution from the selected profile route.
 
-`connected_run_status` is the read-only MCP plan after a CLI
-`calibration connected-run`. It returns
+`connected_run` executes the same connected-source calibration backend as CLI
+`calibration connected-run`. Use `mode: "fixture"` for a no-network MCP proof
+that writes the connected receipt, plan, runbook, smoke reports, calibration
+packet, intake report, and query plan under runtime artifact storage. Use
+`mode: "live"` only after `connected_source_plan` is ready; live mode still
+returns a partial network-gate receipt unless `allow_network: true` is present.
+The result schema is `aoa_course_connected_calibration_run_receipt_v1`.
+
+`connected_run_status` is the read-only MCP plan after CLI
+`calibration connected-run` or MCP `connected_run`. It returns
 `aoa_course_connected_calibration_run_status_v1` with status, stages,
 artifact paths, `source_selection`, `execution_options`, `query_plan`,
 packet quality, privacy flags, failures, `repair_lanes`, and next steps from
