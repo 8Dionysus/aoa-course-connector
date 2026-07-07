@@ -136,6 +136,7 @@ def main(argv: list[str] | None = None) -> int:
         env = os.environ.copy()
         env["PYTHONPATH"] = "src"
         env["AOA_COURSE_INSTANCE_ROOT"] = str(Path(tmp) / "state")
+        env.pop("AOA_COURSE_PREAUTH_EVAL_STEPIK_TOKEN", None)
         connection_profile_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live.connection-profile.json"
         connection_profile_runbook_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live.runbook.md"
         applied_profile_runbook_path = Path(tmp) / "state" / "artifacts" / "connections" / "operator-live-applied.runbook.md"
@@ -146,6 +147,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "readiness", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "install-route"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "eval", "preauth-readiness"],
             [
                 sys.executable,
                 "-m",

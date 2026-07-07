@@ -75,6 +75,12 @@ from aoa_course_connector.sync import (
 
 
 DEFAULT_RUN = "starter-fixture"
+PREAUTH_PROFILE_NAME = "operator-preauth"
+PREAUTH_CONNECTED_RUN = "preauth-connected-fixture"
+PREAUTH_LIVE_RUN = "preauth-live-calibration"
+PREAUTH_TOKEN_ENV = "AOA_COURSE_PREAUTH_EVAL_STEPIK_TOKEN"
+PREAUTH_QUERY = "course-specific question"
+PREAUTH_PLATFORMS = ["getcourse", "skillspace", "stepik"]
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -635,6 +641,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_parser = sub.add_parser("eval")
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
     eval_sub.add_parser("install-route").set_defaults(func=cmd_eval_install_route)
+    eval_sub.add_parser("preauth-readiness").set_defaults(func=cmd_eval_preauth_readiness)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
     eval_sub.add_parser("retrieval-loop").set_defaults(func=cmd_eval_retrieval_loop)
@@ -1830,6 +1837,374 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
         }
     )
     return 0 if not failures else 1
+
+
+def cmd_eval_preauth_readiness(_args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
+    bootstrap = bootstrap_fixture(
+        repo_root,
+        roots,
+        run_id=DEFAULT_RUN,
+        connected_run=PREAUTH_CONNECTED_RUN,
+        mcp_tool_names=tools,
+    )
+    storage = storage_status(repo_root, roots)
+    profile = build_connection_profile(
+        roots,
+        name=PREAUTH_PROFILE_NAME,
+        getcourse_urls=["https://school.operator.edu/teach/control/stream"],
+        skillspace_urls=["https://academy.operator.edu/course/demo"],
+        stepik_course_ids=["67"],
+        stepik_token_env=PREAUTH_TOKEN_ENV,
+        run_id=PREAUTH_LIVE_RUN,
+        query=PREAUTH_QUERY,
+        live_scope="bounded",
+        max_lessons=7,
+        max_pages=3,
+        max_sources=4,
+        link_pattern="*/lessons/*",
+        semantic_provider=LOCAL_HASHING_PROVIDER,
+    )
+    profile_path = default_connection_profile_path(roots.artifact, PREAUTH_PROFILE_NAME)
+    profile_write = write_connection_profile(profile, profile_path)
+    loaded_profile = load_connection_profile(profile_path)
+    profile_inspection = inspect_connection_profile(roots, loaded_profile, profile_path=profile_path)
+    profile_runbook_path = roots.artifact / "connections" / f"{PREAUTH_PROFILE_NAME}.runbook.md"
+    profile_runbook = write_connection_profile_runbook(profile_inspection, profile_runbook_path)
+    profile_apply = apply_connection_profile(roots, loaded_profile, profile_path=profile_path)
+    applied_inspection = profile_apply.get("inspection") if isinstance(profile_apply.get("inspection"), dict) else {}
+    applied_runbook_path = roots.artifact / "connections" / f"{PREAUTH_PROFILE_NAME}-applied.runbook.md"
+    applied_runbook = write_connection_profile_runbook(applied_inspection, applied_runbook_path)
+    profile_status = connection_profile_status(applied_inspection)
+    live = live_preflight(roots, platforms=PREAUTH_PLATFORMS, stepik_token_env=PREAUTH_TOKEN_ENV)
+    connected_plan = connected_source_plan(
+        roots,
+        platforms=PREAUTH_PLATFORMS,
+        stepik_token_env=PREAUTH_TOKEN_ENV,
+        query=PREAUTH_QUERY,
+        max_lessons=7,
+        max_pages=3,
+        max_sources=4,
+        link_pattern="*/lessons/*",
+        calibration_run=PREAUTH_LIVE_RUN,
+        live_scope="bounded",
+    )
+    connected_runbook_path = roots.artifact / "connections" / f"{PREAUTH_PROFILE_NAME}.connected-source-runbook.md"
+    connected_runbook = write_connected_source_runbook(connected_plan, connected_runbook_path)
+    readiness = connector_readiness(
+        repo_root,
+        roots,
+        runs=[DEFAULT_RUN],
+        platforms=PREAUTH_PLATFORMS,
+        connected_run=PREAUTH_CONNECTED_RUN,
+        stepik_token_env=PREAUTH_TOKEN_ENV,
+        query=PREAUTH_QUERY,
+        max_lessons=7,
+        max_pages=3,
+        max_sources=4,
+        link_pattern="*/lessons/*",
+        live_scope="bounded",
+        mcp_tool_names=tools,
+    )
+    connected_status = load_connected_calibration_status(roots, run_id=PREAUTH_CONNECTED_RUN)
+    connected_query = query_connected_calibration(
+        roots,
+        run_id=PREAUTH_CONNECTED_RUN,
+        kinds=["smoke"],
+        mode="hybrid",
+        entry_limit=2,
+    )
+    mcp_profile_inspection = call_tool("connection_profile_inspect", {"profile_path": str(profile_path)})
+    mcp_profile_status = call_tool("connection_profile_status", {"profile_path": str(profile_path)})
+    mcp_live = call_tool("live_preflight", {"platforms": PREAUTH_PLATFORMS, "stepik_token_env": PREAUTH_TOKEN_ENV})
+    mcp_plan = call_tool(
+        "connected_source_plan",
+        {
+            "platforms": PREAUTH_PLATFORMS,
+            "stepik_token_env": PREAUTH_TOKEN_ENV,
+            "query": PREAUTH_QUERY,
+            "max_lessons": 7,
+            "max_pages": 3,
+            "max_sources": 4,
+            "link_pattern": "*/lessons/*",
+            "calibration_run": PREAUTH_LIVE_RUN,
+            "live_scope": "bounded",
+        },
+    )
+    mcp_connected_query = call_tool("connected_run_query", {"run": PREAUTH_CONNECTED_RUN, "kinds": ["smoke"], "mode": "hybrid", "entry_limit": 2})
+    next_commands = _preauth_next_commands(profile_status, live, connected_plan)
+    profile_live_readiness = profile_status.get("live_readiness") if isinstance(profile_status.get("live_readiness"), dict) else {}
+    connected_run_plan = connected_plan.get("connected_run_plan") if isinstance(connected_plan.get("connected_run_plan"), dict) else {}
+    mcp_status_payload = mcp_profile_status.get("status") if isinstance(mcp_profile_status.get("status"), dict) else {}
+    mcp_live_payload = mcp_live.get("preflight") if isinstance(mcp_live.get("preflight"), dict) else {}
+    mcp_plan_payload = mcp_plan.get("plan") if isinstance(mcp_plan.get("plan"), dict) else {}
+    mcp_connected_query_payload = mcp_connected_query.get("query_packet") if isinstance(mcp_connected_query.get("query_packet"), dict) else {}
+    artifacts = {
+        "profile_path": str(profile_path),
+        "profile_runbook_path": str(profile_runbook_path),
+        "applied_profile_runbook_path": str(applied_runbook_path),
+        "connected_source_runbook_path": str(connected_runbook_path),
+        "connected_run_artifact": str(roots.artifact / "runs" / PREAUTH_CONNECTED_RUN),
+    }
+    payload: dict[str, object] = {
+        "schema": "aoa_course_eval_preauth_readiness_v1",
+        "status": "pending",
+        "ready_until_authorization": False,
+        "pause_boundary": "authorization_required",
+        "goal_pause_recommended": False,
+        "network_touched": False,
+        "read_only": True,
+        "secret_values_logged": False,
+        "run_id": DEFAULT_RUN,
+        "connected_run": PREAUTH_CONNECTED_RUN,
+        "live_run": PREAUTH_LIVE_RUN,
+        "platforms": PREAUTH_PLATFORMS,
+        "storage": {
+            "mode": storage.get("mode"),
+            "exists": storage.get("exists"),
+            "git_private": storage.get("git_private"),
+        },
+        "bootstrap": {
+            "status": bootstrap.get("status"),
+            "network_touched": bootstrap.get("network_touched"),
+            "connected_status": (bootstrap.get("connected_receipt") if isinstance(bootstrap.get("connected_receipt"), dict) else {}).get("status"),
+        },
+        "profile": {
+            "name": PREAUTH_PROFILE_NAME,
+            "write_status": profile_write.get("status"),
+            "source_count": (profile_inspection.get("profile") if isinstance(profile_inspection.get("profile"), dict) else {}).get("source_count"),
+            "initial_registered_profile_source_count": (profile_inspection.get("source_registry") if isinstance(profile_inspection.get("source_registry"), dict) else {}).get("registered_profile_source_count"),
+            "apply_status": profile_apply.get("status"),
+            "applied_source_count": len(profile_apply.get("applied", [])) if isinstance(profile_apply.get("applied"), list) else 0,
+            "registered_profile_source_count": (applied_inspection.get("source_registry") if isinstance(applied_inspection.get("source_registry"), dict) else {}).get("registered_profile_source_count"),
+            "status": profile_status.get("status"),
+            "ready_for_connected_run": profile_live_readiness.get("ready_for_connected_run"),
+            "ready_for_semantic_build": profile_live_readiness.get("ready_for_semantic_build"),
+            "blocked_by": profile_live_readiness.get("blocked_by", []) if isinstance(profile_live_readiness.get("blocked_by"), list) else [],
+            "runbooks": [profile_runbook, applied_runbook],
+        },
+        "live_preflight": {
+            "schema": live.get("schema"),
+            "status": live.get("status"),
+            "ready": live.get("ready"),
+            "network_touched": live.get("network_touched"),
+            "selected_source_count": (live.get("source_registry") if isinstance(live.get("source_registry"), dict) else {}).get("selected_source_count"),
+        },
+        "connected_plan": {
+            "schema": connected_plan.get("schema"),
+            "status": connected_plan.get("status"),
+            "ready": connected_plan.get("ready"),
+            "network_touched": connected_plan.get("network_touched"),
+            "connected_run_plan_ready": connected_run_plan.get("ready"),
+            "connected_run_plan_blocked_by": connected_run_plan.get("blocked_by", []) if isinstance(connected_run_plan.get("blocked_by"), list) else [],
+            "runbook": connected_runbook,
+        },
+        "readiness": {
+            "schema": readiness.get("schema"),
+            "status": readiness.get("status"),
+            "operational_ready": readiness.get("operational_ready"),
+            "connected_live_ready": readiness.get("connected_live_ready"),
+            "mcp_ready": (readiness.get("mcp") if isinstance(readiness.get("mcp"), dict) else {}).get("ready"),
+        },
+        "connected_fixture_query": {
+            "status": connected_query.get("status"),
+            "schema": connected_query.get("schema"),
+            "network_touched": connected_query.get("network_touched"),
+            "response_count": connected_query.get("response_count"),
+            "quality_ready": (connected_query.get("quality") if isinstance(connected_query.get("quality"), dict) else {}).get("ready"),
+        },
+        "connected_status": {
+            "status": connected_status.get("status"),
+            "network_touched": connected_status.get("network_touched"),
+            "query_plan_ready_count": _ready_query_entry_count(connected_status),
+        },
+        "mcp": {
+            "connection_profile_inspect_tool": mcp_profile_inspection.get("tool"),
+            "connection_profile_status_tool": mcp_profile_status.get("tool"),
+            "connection_profile_status_ready": (mcp_status_payload.get("live_readiness") if isinstance(mcp_status_payload.get("live_readiness"), dict) else {}).get("ready_for_connected_run"),
+            "live_preflight_ready": mcp_live_payload.get("ready"),
+            "live_preflight_network_touched": mcp_live_payload.get("network_touched"),
+            "connected_plan_ready": mcp_plan_payload.get("ready"),
+            "connected_plan_network_touched": mcp_plan_payload.get("network_touched"),
+            "connected_run_query_tool": mcp_connected_query.get("tool"),
+            "connected_run_query_status": mcp_connected_query_payload.get("status"),
+            "connected_run_query_quality_ready": (mcp_connected_query_payload.get("quality") if isinstance(mcp_connected_query_payload.get("quality"), dict) else {}).get("ready"),
+        },
+        "authorization_handoff": {
+            "requires": [
+                "capture GetCourse browser storage state for the operator account",
+                "capture Skillspace browser storage state for the operator account",
+                f"set {PREAUTH_TOKEN_ENV} for authenticated Stepik access when needed",
+                "rerun the generated profile status and connected-source preflight commands",
+            ],
+            "next_commands": next_commands,
+        },
+        "artifacts": artifacts,
+        "failures": [],
+    }
+    failures = _preauth_readiness_failures(
+        storage=storage,
+        bootstrap=bootstrap,
+        profile_write=profile_write,
+        profile_apply=profile_apply,
+        profile_status=profile_status,
+        live=live,
+        connected_plan=connected_plan,
+        readiness=readiness,
+        connected_status=connected_status,
+        connected_query=connected_query,
+        mcp_profile_inspection=mcp_profile_inspection,
+        mcp_profile_status=mcp_profile_status,
+        mcp_live=mcp_live,
+        mcp_plan=mcp_plan,
+        mcp_connected_query=mcp_connected_query,
+        runbooks=[profile_runbook, applied_runbook, connected_runbook],
+        next_commands=next_commands,
+        payload=payload,
+    )
+    payload["failures"] = failures
+    payload["status"] = "ok" if not failures else "error"
+    payload["ready_until_authorization"] = not failures
+    payload["goal_pause_recommended"] = not failures
+    _emit(payload)
+    return 0 if not failures else 1
+
+
+def _preauth_readiness_failures(
+    *,
+    storage: dict[str, object],
+    bootstrap: dict[str, object],
+    profile_write: dict[str, object],
+    profile_apply: dict[str, object],
+    profile_status: dict[str, object],
+    live: dict[str, object],
+    connected_plan: dict[str, object],
+    readiness: dict[str, object],
+    connected_status: dict[str, object],
+    connected_query: dict[str, object],
+    mcp_profile_inspection: dict[str, object],
+    mcp_profile_status: dict[str, object],
+    mcp_live: dict[str, object],
+    mcp_plan: dict[str, object],
+    mcp_connected_query: dict[str, object],
+    runbooks: list[dict[str, object]],
+    next_commands: list[str],
+    payload: dict[str, object],
+) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    exists = storage.get("exists") if isinstance(storage.get("exists"), dict) else {}
+    for key in ["data", "cache", "auth", "artifact"]:
+        if exists.get(key) is not True:
+            failures.append({"surface": "storage", "root": key, "expected": True, "actual": exists.get(key)})
+    if storage.get("git_private") is not True:
+        failures.append({"surface": "storage", "field": "git_private", "expected": True, "actual": storage.get("git_private")})
+    if bootstrap.get("status") != "ok":
+        failures.append({"surface": "bootstrap", "field": "status", "expected": "ok", "actual": bootstrap.get("status")})
+    if bootstrap.get("network_touched") is not False:
+        failures.append({"surface": "bootstrap", "field": "network_touched", "expected": False, "actual": bootstrap.get("network_touched")})
+    connected_receipt = bootstrap.get("connected_receipt") if isinstance(bootstrap.get("connected_receipt"), dict) else {}
+    if connected_receipt.get("status") != "ok":
+        failures.append({"surface": "bootstrap.connected_receipt", "field": "status", "expected": "ok", "actual": connected_receipt.get("status")})
+    if profile_write.get("status") != "ok":
+        failures.append({"surface": "profile.write", "field": "status", "expected": "ok", "actual": profile_write.get("status")})
+    if profile_apply.get("status") != "ok":
+        failures.append({"surface": "profile.apply", "field": "status", "expected": "ok", "actual": profile_apply.get("status")})
+    applied = profile_apply.get("applied") if isinstance(profile_apply.get("applied"), list) else []
+    if len(applied) < 3:
+        failures.append({"surface": "profile.apply", "missing": "three operator source refs", "actual": len(applied)})
+    profile_live = profile_status.get("live_readiness") if isinstance(profile_status.get("live_readiness"), dict) else {}
+    if profile_status.get("schema") != "aoa_course_connection_profile_status_v1":
+        failures.append({"surface": "profile.status", "field": "schema", "expected": "aoa_course_connection_profile_status_v1", "actual": profile_status.get("schema")})
+    if profile_status.get("network_touched") is not False:
+        failures.append({"surface": "profile.status", "field": "network_touched", "expected": False, "actual": profile_status.get("network_touched")})
+    if profile_live.get("ready_for_connected_run") is not False:
+        failures.append({"surface": "profile.status.live_readiness", "field": "ready_for_connected_run", "expected": False, "actual": profile_live.get("ready_for_connected_run")})
+    if not profile_live.get("blocked_by"):
+        failures.append({"surface": "profile.status.live_readiness", "missing": "authorization blockers"})
+    if live.get("schema") != "aoa_course_live_preflight_v1":
+        failures.append({"surface": "live_preflight", "field": "schema", "expected": "aoa_course_live_preflight_v1", "actual": live.get("schema")})
+    if live.get("network_touched") is not False:
+        failures.append({"surface": "live_preflight", "field": "network_touched", "expected": False, "actual": live.get("network_touched")})
+    if live.get("ready") is not False:
+        failures.append({"surface": "live_preflight", "field": "ready", "expected": False, "actual": live.get("ready")})
+    if connected_plan.get("schema") != "aoa_course_connected_source_plan_v1":
+        failures.append({"surface": "connected_plan", "field": "schema", "expected": "aoa_course_connected_source_plan_v1", "actual": connected_plan.get("schema")})
+    if connected_plan.get("network_touched") is not False:
+        failures.append({"surface": "connected_plan", "field": "network_touched", "expected": False, "actual": connected_plan.get("network_touched")})
+    if connected_plan.get("ready") is not False:
+        failures.append({"surface": "connected_plan", "field": "ready", "expected": False, "actual": connected_plan.get("ready")})
+    connected_run_plan = connected_plan.get("connected_run_plan") if isinstance(connected_plan.get("connected_run_plan"), dict) else {}
+    if connected_run_plan.get("ready") is not False:
+        failures.append({"surface": "connected_plan.connected_run_plan", "field": "ready", "expected": False, "actual": connected_run_plan.get("ready")})
+    if not connected_run_plan.get("blocked_by"):
+        failures.append({"surface": "connected_plan.connected_run_plan", "missing": "authorization blockers"})
+    if readiness.get("operational_ready") is not True:
+        failures.append({"surface": "readiness", "field": "operational_ready", "expected": True, "actual": readiness.get("operational_ready")})
+    if readiness.get("connected_live_ready") is not False:
+        failures.append({"surface": "readiness", "field": "connected_live_ready", "expected": False, "actual": readiness.get("connected_live_ready")})
+    readiness_mcp = readiness.get("mcp") if isinstance(readiness.get("mcp"), dict) else {}
+    if readiness_mcp.get("ready") is not True:
+        failures.append({"surface": "readiness.mcp", "field": "ready", "expected": True, "actual": readiness_mcp.get("ready")})
+    if connected_status.get("status") != "ok":
+        failures.append({"surface": "connected_status", "field": "status", "expected": "ok", "actual": connected_status.get("status")})
+    if connected_status.get("network_touched") is not False:
+        failures.append({"surface": "connected_status", "field": "network_touched", "expected": False, "actual": connected_status.get("network_touched")})
+    if _ready_query_entry_count(connected_status) < 1:
+        failures.append({"surface": "connected_status.query_plan", "missing": "ready query entries"})
+    if connected_query.get("schema") != "aoa_course_connected_run_query_packet_v1":
+        failures.append({"surface": "connected_fixture_query", "field": "schema", "expected": "aoa_course_connected_run_query_packet_v1", "actual": connected_query.get("schema")})
+    if connected_query.get("status") != "ok":
+        failures.append({"surface": "connected_fixture_query", "field": "status", "expected": "ok", "actual": connected_query.get("status")})
+    if connected_query.get("network_touched") is not False:
+        failures.append({"surface": "connected_fixture_query", "field": "network_touched", "expected": False, "actual": connected_query.get("network_touched")})
+    query_quality = connected_query.get("quality") if isinstance(connected_query.get("quality"), dict) else {}
+    if query_quality.get("ready") is not True or int(connected_query.get("response_count") or 0) < 1:
+        failures.append({"surface": "connected_fixture_query.quality", "field": "ready", "expected": True, "actual": query_quality.get("ready"), "response_count": connected_query.get("response_count")})
+    if mcp_profile_inspection.get("tool") != "connection_profile_inspect":
+        failures.append({"surface": "mcp.connection_profile_inspect", "field": "tool", "expected": "connection_profile_inspect", "actual": mcp_profile_inspection.get("tool")})
+    mcp_status = mcp_profile_status.get("status") if isinstance(mcp_profile_status.get("status"), dict) else {}
+    if mcp_profile_status.get("tool") != "connection_profile_status" or mcp_status.get("network_touched") is not False:
+        failures.append({"surface": "mcp.connection_profile_status", "field": "network_touched/tool", "expected": "tool and read-only status", "actual": mcp_profile_status.get("tool")})
+    mcp_live_payload = mcp_live.get("preflight") if isinstance(mcp_live.get("preflight"), dict) else {}
+    if mcp_live.get("tool") != "live_preflight" or mcp_live_payload.get("network_touched") is not False:
+        failures.append({"surface": "mcp.live_preflight", "field": "network_touched/tool", "expected": "tool and read-only preflight", "actual": mcp_live.get("tool")})
+    mcp_plan_payload = mcp_plan.get("plan") if isinstance(mcp_plan.get("plan"), dict) else {}
+    if mcp_plan.get("tool") != "connected_source_plan" or mcp_plan_payload.get("network_touched") is not False:
+        failures.append({"surface": "mcp.connected_source_plan", "field": "network_touched/tool", "expected": "tool and read-only plan", "actual": mcp_plan.get("tool")})
+    mcp_query = mcp_connected_query.get("query_packet") if isinstance(mcp_connected_query.get("query_packet"), dict) else {}
+    mcp_query_quality = mcp_query.get("quality") if isinstance(mcp_query.get("quality"), dict) else {}
+    if mcp_connected_query.get("tool") != "connected_run_query" or mcp_query.get("status") != "ok" or mcp_query_quality.get("ready") is not True:
+        failures.append({"surface": "mcp.connected_run_query", "field": "status/quality", "expected": "ok and ready", "actual": mcp_query.get("status")})
+    for runbook in runbooks:
+        if (runbook.get("status") not in {None, "ok"}) or runbook.get("written") is not True or runbook.get("network_touched") is not False:
+            failures.append({"surface": "runbook", "field": "status/written/network_touched", "expected": "ok/written/read-only", "actual": runbook})
+    command_text = "\n".join(next_commands)
+    for token in ["auth capture-browser-state getcourse", "auth capture-browser-state skillspace", f"export {PREAUTH_TOKEN_ENV}=<stepik-api-token>", "preflight connected-plan"]:
+        if token not in command_text:
+            failures.append({"surface": "authorization_handoff.next_commands", "missing": token})
+    rendered_payload = json.dumps(payload, sort_keys=True)
+    for marker in ["SUPER_SECRET", "SUPER_PRIVATE", "PRIVATE_COOKIE", "PRIVATE_TOKEN", "sk-", "ghp_", "gho_", "xoxb-"]:
+        if marker in rendered_payload:
+            failures.append({"surface": "privacy", "forbidden_marker": marker})
+    return failures
+
+
+def _preauth_next_commands(*packets: dict[str, object]) -> list[str]:
+    commands: list[str] = []
+    for packet in packets:
+        commands.extend([str(item) for item in packet.get("next_commands", []) if str(item)] if isinstance(packet.get("next_commands"), list) else [])
+        readiness = packet.get("live_readiness") if isinstance(packet.get("live_readiness"), dict) else {}
+        commands.extend([str(item) for item in readiness.get("next_commands", []) if str(item)] if isinstance(readiness.get("next_commands"), list) else [])
+    seen: set[str] = set()
+    deduped: list[str] = []
+    for command in commands:
+        if command in seen:
+            continue
+        seen.add(command)
+        deduped.append(command)
+    return deduped
 
 
 def _install_route_failures(

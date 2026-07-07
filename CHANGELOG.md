@@ -149,6 +149,12 @@
   execute connected-run query-plan entries into source-backed answer, lesson
   context, evidence, freshness, authority, and graph-context packets without
   touching the network.
+- Added `eval preauth-readiness` as the executable stop-line before operator
+  authorization: it prepares the starter proof, writes/applies an
+  `operator-preauth` profile, creates redacted runbooks, verifies CLI/MCP
+  profile/preflight/plan/query routes, and returns
+  `aoa_course_eval_preauth_readiness_v1` with
+  `ready_until_authorization` and `pause_boundary`.
 - Hardened live connected-run browser execution so ready GetCourse/Skillspace
   sources use the same default account storage-state checked by preflight and
   receipts expose `source_selection` for source-scoped auditability.

@@ -17,6 +17,7 @@ aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
 aoa-course eval install-route
+aoa-course eval preauth-readiness
 aoa-course preflight live
 ```
 
@@ -28,6 +29,13 @@ receipt without network or secrets.
 It checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer,
 MCP answer, connected-run status, query-plan readiness, and source registry
 setup with `network_touched: false`.
+`eval preauth-readiness` is the executable pre-authorization proof. It prepares
+the starter run, writes and applies an `operator-preauth` connection profile,
+creates redacted profile and connected-source runbooks, checks CLI/MCP profile
+status, live preflight, connected-source plan, and fixture `connected_run_query`,
+then returns `aoa_course_eval_preauth_readiness_v1` with
+`ready_until_authorization: true` and
+`pause_boundary: authorization_required`.
 
 `readiness` is the broad read-only route audit for the connector. It reports
 install files, storage roots, local run/index/graph readiness, source registry

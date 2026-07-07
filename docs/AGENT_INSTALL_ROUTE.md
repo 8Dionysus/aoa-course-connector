@@ -15,6 +15,14 @@
    end: docs, storage, bootstrap, readiness, CLI answer, MCP answer,
    connected-run status, query-plan entries, `connected_run_query` retrieval,
    and source registry without touching the network.
+1. Run `aoa-course eval preauth-readiness` to prove the repository is ready up
+   to the operator authorization boundary. The packet is
+   `aoa_course_eval_preauth_readiness_v1`; it must return
+   `ready_until_authorization: true`, `pause_boundary:
+   authorization_required`, `network_touched: false`, concrete
+   `authorization_handoff.next_commands`, redacted profile/runbook artifacts,
+   and CLI/MCP checks for profile status, live preflight, connected-source
+   plan, and fixture `connected_run_query`.
 1. For the full public-repo verifier, run
    `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
    repository to a temporary install-like workspace, executes the offline route,
