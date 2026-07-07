@@ -72,6 +72,7 @@ aoa-course refresh query "course-specific question" --run "<checkpoint-run-id>" 
 aoa-course graph neighbors lesson:starter:unlock-risk --run starter-fixture
 aoa-course evidence inspect "rollback" --run starter-fixture --mode hybrid
 aoa-course eval install-route
+aoa-course eval preauth-readiness
 aoa-course eval answer-quality
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 aoa-course build-index --run freshness-ranking-fixture
@@ -133,6 +134,14 @@ returns `aoa_course_fixture_bootstrap_receipt_v1` with embedded readiness. By
 default it proves GetCourse, Skillspace, and Stepik fixture routes; pass
 `--platform` only to narrow a diagnostic run. It is fixture-only and reports
 `network_touched: false`.
+
+Use `eval preauth-readiness` as the full stop-line before operator login or
+API-token work. It emits `aoa_course_eval_preauth_readiness_v1` with
+`ready_until_authorization`, `pause_boundary: authorization_required`,
+`goal_pause_recommended`, profile/runbook artifact paths, and
+`authorization_handoff.next_commands` after proving CLI/MCP profile status,
+live preflight, connected-source planning, and fixture `connected_run_query`
+without touching the network.
 
 Use `auth plan-browser-state` before browser live work. Its capture and inspect
 commands include `--expect-origin-contains` when the source ref has a host.

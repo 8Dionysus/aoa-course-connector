@@ -25,6 +25,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock roll
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
+PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
@@ -53,6 +54,13 @@ and returns the final readiness packet without touching the network.
 checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer, MCP
 answer, connected-run status, query-plan readiness, and source registry setup
 with `network_touched: false`.
+`eval preauth-readiness` is the executable stop-line before operator
+authorization. It builds the starter proof, writes an `operator-preauth`
+connection profile and redacted runbooks, applies only registry-safe source
+refs, checks CLI/MCP profile status, live preflight, connected-source plan, and
+fixture `connected_run_query`, then returns
+`aoa_course_eval_preauth_readiness_v1` with `ready_until_authorization: true`,
+`pause_boundary: authorization_required`, and the exact next auth commands.
 
 `connect profile` turns those operator inputs into a local runtime JSON
 contract, `aoa_course_connection_profile_v1`. It stores source refs, state-file
