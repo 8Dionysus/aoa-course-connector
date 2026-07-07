@@ -1,7 +1,83 @@
 {
-  "schema": "aoa_kag_manifest_v1",
+  "schema_version": "aoa-local-kag-manifest-v1",
   "repo": "aoa-course-connector",
-  "role": "course-platform connector source home",
-  "nodes": ["kag/nodes/source_home.json", "kag/nodes/storage_boundary.json"],
-  "edges": ["kag/edges/source_routes_to_storage_boundary.json"]
+  "owner_surface": "kag/AGENTS.md",
+  "source_surfaces": [
+    {
+      "repo": "aoa-course-connector",
+      "path": "connector/README.md",
+      "source_class": "connector_source",
+      "role": "primary",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "BOUNDARIES.md",
+      "source_class": "connector_source",
+      "role": "owner_route",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "connector/SOURCE_POLICY.md",
+      "source_class": "connector_source",
+      "role": "supporting",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "connector/STORAGE_POLICY.md",
+      "source_class": "connector_source",
+      "role": "supporting",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "docs/RUNTIME_CONTRACT.md",
+      "source_class": "connector_source",
+      "role": "consumer_route",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "scripts/validate_connector.py",
+      "source_class": "connector_source",
+      "role": "supporting",
+      "authority": "authored_source"
+    }
+  ],
+  "record_classes": [
+    "node",
+    "edge",
+    "index",
+    "projection",
+    "receipt"
+  ],
+  "storage_posture": {
+    "git_surface": "portable_records",
+    "payload_class": "manifest",
+    "runtime_route": "source-repo"
+  },
+  "validation_routes": [
+    {
+      "route": "scripts/validate_connector.py",
+      "lane": "owner-local"
+    },
+    {
+      "route": "aoa-kag:scripts/validate_kag.py",
+      "lane": "local-kag"
+    }
+  ],
+  "consumer_routes": [
+    "aoa-kag registry",
+    "aoa-kag-mcp resource",
+    "abyss-stack connector runtime"
+  ],
+  "owner_return_routes": [
+    {
+      "repo": "aoa-course-connector",
+      "surface": "BOUNDARIES.md",
+      "route_kind": "authored_meaning"
+    }
+  ]
 }

@@ -95,7 +95,13 @@ REQUIRED_FILES = [
     "evals/suites/stepik_clean_api_answer_packets.json",
     "kag/AGENTS.md",
     "kag/README.md",
+    "kag/edges/source_routes_to_storage_boundary.json",
+    "kag/indexes/source_inventory.json",
     "kag/manifest.json",
+    "kag/nodes/source_home.json",
+    "kag/nodes/storage_boundary.json",
+    "kag/projections/source_return.json",
+    "kag/receipts/validation_receipt.json",
     "src/aoa_course_connector/bootstrap.py",
     "src/aoa_course_connector/cli.py",
     "src/aoa_course_connector/connection_profile.py",
@@ -154,6 +160,12 @@ REQUIRED_DIRS = [
     "tests/integration",
     "evals/intake",
     "evals/reports",
+    "kag",
+    "kag/edges",
+    "kag/indexes",
+    "kag/nodes",
+    "kag/projections",
+    "kag/receipts",
 ]
 
 REQUIRED_SCHEMAS = [
@@ -200,10 +212,33 @@ REQUIRED_GITIGNORE = [
     "*.parquet",
     "*.storage-state.json",
     "*.cookies.json",
+    "!kag/indexes/",
+    "!kag/indexes/*.json",
+    "kag/indexes/source_surface_index.json",
 ]
 
 FORBIDDEN_HEAVY_ROOTS = {"data", "cache", "auth", "artifacts", "raw", "indexes", "vectors", "graphs", "exports"}
+FORBIDDEN_GENERATED_GIT_FILES = {"kag/indexes/source_surface_index.json"}
 IGNORED_LOCAL_CACHE_DIR_NAMES = {"__pycache__", ".pytest_cache", ".mypy_cache", ".ruff_cache", ".venv"}
+KAG_RECORD_FILES = {
+    "node": [
+        "kag/nodes/source_home.json",
+        "kag/nodes/storage_boundary.json",
+    ],
+    "edge": [
+        "kag/edges/source_routes_to_storage_boundary.json",
+    ],
+    "index": [
+        "kag/indexes/source_inventory.json",
+    ],
+    "projection": [
+        "kag/projections/source_return.json",
+    ],
+    "receipt": [
+        "kag/receipts/validation_receipt.json",
+    ],
+}
+KAG_REQUIRED_RECORD_CLASSES = set(KAG_RECORD_FILES)
 
 
 def _documented_commands(text: str) -> list[str]:
@@ -268,6 +303,10 @@ def main() -> int:
     for rel in FORBIDDEN_HEAVY_ROOTS:
         if (repo_root / rel).exists():
             errors.append(f"heavy/private artifact path exists inside repository root: {rel}")
+    tracked_files = set(_tracked_files(repo_root, errors))
+    for rel in FORBIDDEN_GENERATED_GIT_FILES:
+        if rel in tracked_files:
+            errors.append(f"generated KAG file must stay out of git: {rel}")
     for path in repo_root.rglob("*"):
         if ".git" in path.parts:
             continue
@@ -278,6 +317,7 @@ def main() -> int:
             continue
         if path.is_dir() and rel_parts and rel_parts[0] in FORBIDDEN_HEAVY_ROOTS and not _is_allowed_kag_indexes(rel_parts):
             errors.append(f"forbidden generated/private directory exists inside repository: {path.relative_to(repo_root)}")
+    _check_kag_provider(repo_root, errors)
     _check_text(repo_root, errors, warnings)
     payload = {
         "schema": "aoa_course_connector_validation_v1",
@@ -300,6 +340,137 @@ def _load_json(path: Path, errors: list[str]) -> None:
         json.loads(path.read_text(encoding="utf-8"))
     except json.JSONDecodeError as exc:
         errors.append(f"invalid json {path}: {exc}")
+
+
+def _read_json(path: Path, errors: list[str]) -> object:
+    try:
+        return json.loads(path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        errors.append(f"invalid json {path}: {exc}")
+    except OSError as exc:
+        errors.append(f"unable to read json {path}: {exc}")
+    return {}
+
+
+def _tracked_files(repo_root: Path, errors: list[str]) -> list[str]:
+    if not (repo_root / ".git").exists():
+        return []
+    try:
+        import subprocess
+
+        result = subprocess.run(
+            ["git", "ls-files"],
+            cwd=repo_root,
+            check=True,
+            capture_output=True,
+            text=True,
+        )
+    except Exception as exc:  # pragma: no cover - defensive validator path
+        errors.append(f"unable to list tracked files: {exc}")
+        return []
+    return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _check_kag_provider(repo_root: Path, errors: list[str]) -> None:
+    manifest = _read_json(repo_root / "kag" / "manifest.json", errors)
+    if not isinstance(manifest, dict):
+        errors.append("KAG manifest must be a JSON object")
+        return
+    if manifest.get("schema_version") != "aoa-local-kag-manifest-v1":
+        errors.append("KAG manifest schema_version must be aoa-local-kag-manifest-v1")
+    if manifest.get("repo") != "aoa-course-connector":
+        errors.append("KAG manifest repo must be aoa-course-connector")
+    if manifest.get("owner_surface") != "kag/AGENTS.md":
+        errors.append("KAG manifest owner_surface must be kag/AGENTS.md")
+    if set(manifest.get("record_classes", [])) != KAG_REQUIRED_RECORD_CLASSES:
+        errors.append("KAG manifest must declare node, edge, index, projection, and receipt classes")
+    source_surfaces = manifest.get("source_surfaces")
+    if not isinstance(source_surfaces, list) or len(source_surfaces) < 4:
+        errors.append("KAG manifest must keep source_surfaces for source, boundary, route, and validation owners")
+        source_surface_paths: set[str] = set()
+    else:
+        source_surface_paths = {
+            str(surface.get("path"))
+            for surface in source_surfaces
+            if isinstance(surface, dict) and surface.get("path")
+        }
+    for required_surface in [
+        "connector/README.md",
+        "BOUNDARIES.md",
+        "connector/SOURCE_POLICY.md",
+        "connector/STORAGE_POLICY.md",
+        "docs/RUNTIME_CONTRACT.md",
+        "scripts/validate_connector.py",
+    ]:
+        if required_surface not in source_surface_paths:
+            errors.append(f"KAG manifest missing source surface: {required_surface}")
+    records = []
+    seen_ids: set[str] = set()
+    node_ids: set[str] = set()
+    for expected_class, rels in KAG_RECORD_FILES.items():
+        for rel in rels:
+            payload = _read_json(repo_root / rel, errors)
+            if not isinstance(payload, dict):
+                errors.append(f"KAG record must be a JSON object: {rel}")
+                continue
+            _check_kag_record(repo_root, rel, payload, expected_class, errors)
+            local_id = payload.get("local_id")
+            if isinstance(local_id, str):
+                if local_id in seen_ids:
+                    errors.append(f"KAG record local_id repeated: {local_id}")
+                seen_ids.add(local_id)
+                if expected_class == "node":
+                    node_ids.add(local_id)
+            records.append((rel, expected_class, payload))
+    for rel, expected_class, payload in records:
+        if expected_class == "edge":
+            for key in ("from_id", "to_id"):
+                if payload.get(key) not in node_ids:
+                    errors.append(f"KAG edge {rel} {key} must reference a local node")
+            if not payload.get("edge_trace"):
+                errors.append(f"KAG edge {rel} must keep edge_trace")
+        if expected_class in {"index", "projection"}:
+            ids = payload.get("source_record_ids")
+            if not isinstance(ids, list) or not ids:
+                errors.append(f"KAG {expected_class} record {rel} must keep source_record_ids")
+            else:
+                missing = [str(record_id) for record_id in ids if record_id not in seen_ids]
+                if missing:
+                    errors.append(f"KAG {expected_class} record {rel} references unknown records: {', '.join(missing)}")
+        if expected_class == "receipt" and not payload.get("fallback_route"):
+            errors.append(f"KAG receipt {rel} must keep fallback_route")
+
+
+def _check_kag_record(repo_root: Path, rel: str, payload: dict[str, object], expected_class: str, errors: list[str]) -> None:
+    if payload.get("schema_version") != "aoa-local-kag-record-v1":
+        errors.append(f"KAG record {rel} schema_version must be aoa-local-kag-record-v1")
+    if payload.get("repo") != "aoa-course-connector":
+        errors.append(f"KAG record {rel} repo must be aoa-course-connector")
+    if payload.get("record_class") != expected_class:
+        errors.append(f"KAG record {rel} class must be {expected_class}")
+    if not isinstance(payload.get("local_id"), str) or not payload.get("local_id"):
+        errors.append(f"KAG record {rel} must keep local_id")
+    _check_source_refs(repo_root, rel, payload.get("source_refs"), errors)
+    freshness = payload.get("freshness")
+    if not isinstance(freshness, dict):
+        errors.append(f"KAG record {rel} must keep freshness")
+    elif not freshness.get("checked_ref"):
+        errors.append(f"KAG record {rel} freshness must keep checked_ref")
+
+
+def _check_source_refs(repo_root: Path, rel: str, source_refs: object, errors: list[str]) -> None:
+    if not isinstance(source_refs, list) or not source_refs:
+        errors.append(f"KAG record {rel} must keep source_refs")
+        return
+    for source_ref in source_refs:
+        if not isinstance(source_ref, dict):
+            errors.append(f"KAG record {rel} source_refs entries must be objects")
+            continue
+        path = source_ref.get("path")
+        if not isinstance(path, str) or not path:
+            errors.append(f"KAG record {rel} source_ref missing path")
+        elif not (repo_root / path).exists():
+            errors.append(f"KAG record {rel} source_ref missing local file: {path}")
 
 
 def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None:
