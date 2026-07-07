@@ -1106,6 +1106,7 @@ def _query_plan_entry(
         },
         "mcp_commands": {
             "search": _mcp_call_command("search", {"query": query_text, "run": run_id, "mode": query_mode}),
+            "answer": _mcp_call_command("answer", {"query": query_text, "run": run_id, "mode": query_mode}),
             "lesson_context": _mcp_call_command("lesson_context", {"query": query_text, "run": run_id, "mode": query_mode, "graph_limit": 12}),
             "evidence_report": _mcp_call_command("evidence_report", {"query": query_text, "run": run_id, "mode": query_mode}),
         },

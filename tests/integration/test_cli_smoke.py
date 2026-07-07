@@ -127,6 +127,10 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert graph["result"]["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
     freshness = run_cli(tmp_path, "mcp", "call", "freshness_report", '{"run":"starter-fixture"}')
     assert freshness["result"]["freshness"]["states"]
+    mcp_answer = run_cli(tmp_path, "mcp", "call", "answer", '{"query":"bootloader rollback","run":"starter-fixture","mode":"keyword"}')
+    assert mcp_answer["result"]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert mcp_answer["result"]["answer_packet"]["quality"]["ready"] is True
+    assert mcp_answer["result"]["answer_packet"]["evidence_chain"]
     evidence = run_cli(tmp_path, "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}')
     assert evidence["result"]["evidence_chain"]
     assert evidence["result"]["quality"]["ready"] is True
@@ -431,6 +435,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
+        {"jsonrpc": "2.0", "id": 31, "method": "tools/call", "params": {"name": "answer", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "hybrid"}}},
         {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "evidence_report", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 5, "method": "tools/call", "params": {"name": "refresh_plan", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "keyword"}}},
         {"jsonrpc": "2.0", "id": 6, "method": "tools/call", "params": {"name": "live_preflight", "arguments": {"platforms": ["stepik"]}}},
@@ -453,23 +458,26 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert [response["id"] for response in responses] == [1, 2, 3, 31, 4, 5, 6, 7, 8, 9, 10, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
+    assert any(tool["name"] == "answer" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["results"]
-    assert responses[3]["result"]["structuredContent"]["evidence_chain"]
-    assert responses[4]["result"]["structuredContent"]["refresh"]["network_touched"] is False
-    assert responses[5]["result"]["structuredContent"]["preflight"]["network_touched"] is False
-    assert responses[6]["result"]["structuredContent"]["plan"]["network_touched"] is False
-    assert responses[7]["result"]["structuredContent"]["preflight"]["schema"] == "aoa_course_semantic_provider_preflight_v1"
-    assert responses[7]["result"]["structuredContent"]["preflight"]["network_touched"] is False
-    assert responses[8]["result"]["structuredContent"]["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
-    assert responses[8]["result"]["structuredContent"]["audit"]["network_touched"] is False
-    assert responses[8]["result"]["structuredContent"]["audit"]["privacy"]["raw_html_included"] is False
-    assert responses[9]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
-    assert responses[10]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[10]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[10]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[3]["result"]["structuredContent"]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert responses[3]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] is True
+    assert responses[4]["result"]["structuredContent"]["evidence_chain"]
+    assert responses[5]["result"]["structuredContent"]["refresh"]["network_touched"] is False
+    assert responses[6]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[7]["result"]["structuredContent"]["plan"]["network_touched"] is False
+    assert responses[8]["result"]["structuredContent"]["preflight"]["schema"] == "aoa_course_semantic_provider_preflight_v1"
+    assert responses[8]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[9]["result"]["structuredContent"]["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert responses[9]["result"]["structuredContent"]["audit"]["network_touched"] is False
+    assert responses[9]["result"]["structuredContent"]["audit"]["privacy"]["raw_html_included"] is False
+    assert responses[10]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
+    assert responses[11]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[11]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[11]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -932,6 +940,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert status_entry["commands"]["lesson_context"].startswith("aoa-course lesson-context ")
     assert "--graph-limit 12" in status_entry["commands"]["lesson_context"]
     assert status_entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
+    assert status_entry["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
     assert "lesson_context" in status_entry["mcp_commands"]
     assert "evidence_report" in status_entry["mcp_commands"]
     mcp_connected_status = run_cli(tmp_path, "mcp", "call", "connected_run_status", '{"run":"connected-fixture-cli"}')
@@ -940,6 +949,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert mcp_connected_status["result"]["connected_run"]["snapshot_audit"]["status"] == "ok"
     mcp_entry = mcp_connected_status["result"]["connected_run"]["query_plan"]["entries"][0]
     assert mcp_entry["mcp_commands"]["lesson_context"].startswith("aoa-course mcp call lesson_context ")
+    assert mcp_entry["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
     assert '"graph_limit":12' in mcp_entry["mcp_commands"]["lesson_context"]
 
 

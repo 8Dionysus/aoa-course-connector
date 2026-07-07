@@ -235,6 +235,7 @@ TOOLS = [
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
     {"name": "semantic_search", "description": "Search the local semantic/vector index.", "inputSchema": _query_schema()},
     {"name": "hybrid_search", "description": "Search with keyword and semantic scores combined.", "inputSchema": _query_schema()},
+    {"name": "answer", "description": "Return a source-backed aoa_course_answer_packet_v1 with evidence, freshness, authority, refresh, and quality reports.", "inputSchema": _query_schema(mode=True)},
     {"name": "lesson_context", "description": "Return source-backed lesson context and nearby course graph context for a query.", "inputSchema": _lesson_context_schema()},
     {"name": "graph_neighbors", "description": "Traverse course graph neighborhoods.", "inputSchema": _object_schema({"node_id": _string_schema("Graph node id."), "run": _string_schema("Connector run id."), "limit": _integer_schema("Maximum neighbor count.", 1)})},
     {"name": "freshness_report", "description": "Report result freshness states.", "inputSchema": _run_schema()},
@@ -289,6 +290,18 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "semantic", "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), "semantic")}
     if name == "hybrid_search":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "mode": "hybrid", "results": query_index(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), "hybrid")}
+    if name == "answer":
+        return {
+            "schema": "aoa_course_mcp_result_v1",
+            "tool": name,
+            "answer_packet": render_answer_packet(
+                roots,
+                str(args.get("query") or ""),
+                run_id,
+                int(args.get("limit") or 5),
+                str(args.get("mode") or "keyword"),
+            ),
+        }
     if name == "lesson_context":
         packet = render_lesson_context_packet(roots, str(args.get("query") or ""), run_id, int(args.get("limit") or 5), str(args.get("mode") or "keyword"), int(args.get("graph_limit") or 12))
         return {

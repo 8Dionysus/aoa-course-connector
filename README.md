@@ -40,8 +40,9 @@ The starter path creates:
 `eval retrieval-loop` is the fixture-safe agent contract for the complete
 retrieval path. It prepares starter, GetCourse, Skillspace, and Stepik runs,
 builds keyword/semantic indexes and graphs, then checks CLI answer, CLI
-lesson-context, MCP search, MCP lesson_context, and MCP evidence_report with
-source evidence, graph context, and answer `quality` readiness.
+lesson-context, MCP search, MCP answer, MCP lesson_context, and MCP
+evidence_report with source evidence, graph context, and answer `quality`
+readiness.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,
@@ -365,8 +366,9 @@ selected connected-run receipt is partial, while a missing receipt still points
 to fixture bootstrap. They also include `query_plan`,
 a compact list of queryable sync/smoke run ids with index, semantic index,
 graph, answer packet paths, selected `query_mode`, and ready-to-run CLI
-`query`, `answer`, and `lesson-context` commands plus MCP `search`, `lesson_context`, and
-`evidence_report` commands for agents that should stay on the MCP surface.
+`query`, `answer`, and `lesson-context` commands plus MCP `search`, `answer`,
+`lesson_context`, and `evidence_report` commands for agents that should stay on
+the MCP surface.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
@@ -439,6 +441,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call answer '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"run":"starter-fixture"}'

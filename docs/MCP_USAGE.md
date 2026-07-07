@@ -20,6 +20,7 @@ Initial tools:
 - `search`
 - `semantic_search`
 - `hybrid_search`
+- `answer`
 - `lesson_context`
 - `graph_neighbors`
 - `freshness_report`
@@ -33,6 +34,7 @@ aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
+aoa-course mcp call answer '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture","graph_limit":12}'
@@ -149,7 +151,9 @@ printf '%s\n' \
 Tool calls return both text content and `structuredContent` so agents can keep
 source-backed result objects, `score`/`rank_score`, `authority_tier`,
 rank features, evidence chains, freshness/authority reports, refresh hints, and
-graph packets without reparsing prose. `lesson_context` returns the answer
+graph packets without reparsing prose. `answer` returns the full
+`aoa_course_answer_packet_v1` through MCP, including evidence, freshness,
+authority, refresh, and quality reports. `lesson_context` returns the answer
 packet plus `aoa_course_lesson_graph_context_v1`, which follows each distinct
 evidence lesson into nearby course/module/topic/asset/comment/transcript graph
 neighbors. Use `graph_limit` to bound the per-lesson neighborhood.
@@ -257,15 +261,15 @@ and traversal bounds used by the connected run without exposing token values.
 `query_plan` gives agents the run ids, local keyword/semantic/graph/answer
 paths, the selected `query_mode`, and ready CLI `query`, `answer`, and
 `lesson-context` commands produced by sync and smoke actions. Each entry also
-includes `mcp_commands` for `search`,
-`lesson_context`, and `evidence_report`, so an MCP-side agent can query the
-connected run without switching back to shell planning or reparsing artifact
-paths. It never executes network work; missing receipts return
+includes `mcp_commands` for `search`, `answer`, `lesson_context`, and
+`evidence_report`, so an MCP-side agent can query the connected run without
+switching back to shell planning or reparsing artifact paths. It never executes
+network work; missing receipts return
 `status: "missing"` so agents can ask for the fixture or live connected-run
 command instead of guessing from the
 filesystem.
 
 `aoa-course eval retrieval-loop` is the fixture-safe MCP/CLI contract check: it
 prepares starter, GetCourse, Skillspace, and Stepik runs, then verifies MCP
-`search`, `lesson_context`, and `evidence_report` alongside CLI answer and
-lesson-context packets.
+`search`, `answer`, `lesson_context`, and `evidence_report` alongside CLI
+answer and lesson-context packets.
