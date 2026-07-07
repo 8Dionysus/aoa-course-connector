@@ -469,6 +469,10 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")
     if "connector_readiness" not in verifier_raw or "connected_source_plan" not in verifier_raw:
         errors.append("Agent install verifier missing connector readiness/plan route")
+    if '"eval", "install-route"' not in verifier_raw:
+        errors.append("Agent install verifier missing executable install-route eval")
+    if '"mcp", "call", "answer"' not in verifier_raw or '"name":"answer"' not in verifier_raw:
+        errors.append("Agent install verifier missing direct MCP answer proof")
     connected_run_raw = (repo_root / "src" / "aoa_course_connector" / "calibration" / "connected_run.py").read_text(encoding="utf-8")
     for token in ["repair_lanes", "repair_lane_count", "network_gate", "source_auth_or_readiness", "source_selection", "source_sync", "live_smoke_or_selector", "calibration_packet_intake"]:
         if token not in connected_run_raw:
