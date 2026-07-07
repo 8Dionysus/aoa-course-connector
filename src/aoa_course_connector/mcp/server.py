@@ -318,6 +318,7 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
             "mode": packet.get("mode"),
             "result_count": packet.get("result_count"),
             "evidence_chain": packet.get("evidence_chain"),
+            "quality": packet.get("quality"),
             "freshness_report": packet.get("freshness_report"),
             "authority_report": packet.get("authority_report"),
             "refresh_report": packet.get("refresh_report"),

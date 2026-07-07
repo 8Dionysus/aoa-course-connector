@@ -1735,6 +1735,7 @@ def cmd_eval_answer_quality(_args: argparse.Namespace) -> int:
                 "mode": case.get("mode") or "keyword",
                 "result_count": packet.get("result_count"),
                 "top_doc_id": packet.get("results", [{}])[0].get("doc_id") if packet.get("results") else "",
+                "quality_ready": (packet.get("quality") if isinstance(packet.get("quality"), dict) else {}).get("ready"),
                 "failure_count": len(case_failures),
             }
         )
@@ -1929,6 +1930,13 @@ def _answer_quality_failures(packet: dict[str, object], case: dict[str, object])
     if len(results) < min_results:
         failures.append({**context, "missing": "minimum results", "expected": min_results, "actual": len(results)})
         return failures
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    if quality.get("schema") != "aoa_course_answer_quality_summary_v1":
+        failures.append({**context, "missing": "answer quality summary"})
+    elif quality.get("ready") is not True:
+        failures.append({**context, "field": "quality.ready", "expected": True, "actual": quality.get("ready"), "blockers": quality.get("blockers", [])})
+    elif int(quality.get("result_count") or -1) != len(results):
+        failures.append({**context, "field": "quality.result_count", "expected": len(results), "actual": quality.get("result_count")})
     top = results[0]
     for key, field in [
         ("expected_top_kind", "kind"),
