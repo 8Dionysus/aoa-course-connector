@@ -234,6 +234,73 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
     }
 
 
+def render_lesson_context_packet(
+    roots: StorageRoots,
+    query: str,
+    run_id: str = "starter-fixture",
+    limit: int = 5,
+    mode: str = "keyword",
+    graph_limit: int = 12,
+) -> dict[str, object]:
+    answer_packet = render_answer_packet(roots, query=query, run_id=run_id, limit=limit, mode=mode)
+    return {
+        "schema": "aoa_course_lesson_context_packet_v1",
+        "run_id": run_id,
+        "query": query,
+        "mode": mode,
+        "generated_at": answer_packet.get("generated_at"),
+        "answer_packet": answer_packet,
+        "graph_context": lesson_graph_context(roots, answer_packet, run_id=run_id, graph_limit=graph_limit),
+    }
+
+
+def lesson_graph_context(roots: StorageRoots, packet: dict[str, object], *, run_id: str, graph_limit: int = 12) -> dict[str, object]:
+    graph_limit = max(1, int(graph_limit))
+    evidence_chain = packet.get("evidence_chain") if isinstance(packet.get("evidence_chain"), list) else []
+    contexts: list[dict[str, object]] = []
+    seen_nodes: set[str] = set()
+    missing: list[dict[str, object]] = []
+    for evidence in evidence_chain:
+        if not isinstance(evidence, dict):
+            continue
+        node_id = str(evidence.get("lesson_id") or evidence.get("doc_id") or "")
+        if not node_id or node_id in seen_nodes:
+            continue
+        seen_nodes.add(node_id)
+        try:
+            graph = graph_neighbors(roots, node_id, run_id, graph_limit)
+        except (OSError, json.JSONDecodeError) as exc:
+            missing.append(
+                {
+                    "node_id": node_id,
+                    "evidence_id": evidence.get("evidence_id"),
+                    "reason": exc.__class__.__name__,
+                    "next_command": f"aoa-course build-graph --run {run_id}",
+                }
+            )
+            continue
+        contexts.append(
+            {
+                "node_id": node_id,
+                "node_status": "ready" if graph.get("node") else "missing_node",
+                "evidence_id": evidence.get("evidence_id"),
+                "doc_id": evidence.get("doc_id"),
+                "lesson_id": evidence.get("lesson_id"),
+                "lesson_title": evidence.get("lesson_title"),
+                "graph": graph,
+            }
+        )
+    return {
+        "schema": "aoa_course_lesson_graph_context_v1",
+        "run_id": run_id,
+        "graph_limit": graph_limit,
+        "status": "ready" if contexts else "missing_graph" if missing else "empty",
+        "context_count": len(contexts),
+        "contexts": contexts,
+        "missing": missing,
+    }
+
+
 def _evidence_chain_item(result: dict[str, object], evidence_id: object) -> dict[str, object]:
     item = {
         "evidence_id": evidence_id,

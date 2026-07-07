@@ -453,7 +453,10 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert graph["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
     assert graph["graph"]["neighbors"]
     context = call_tool("lesson_context", {"query": "bootloader rollback", "run": "starter-fixture", "graph_limit": 6})
+    assert context["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
     assert context["answer_packet"]["evidence_chain"]
+    assert context["lesson_context"]["answer_packet"] == context["answer_packet"]
+    assert context["lesson_context"]["graph_context"] == context["graph_context"]
     assert context["graph_context"]["schema"] == "aoa_course_lesson_graph_context_v1"
     assert context["graph_context"]["status"] == "ready"
     assert context["graph_context"]["contexts"][0]["evidence_id"] == context["answer_packet"]["evidence_chain"][0]["evidence_id"]

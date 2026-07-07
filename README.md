@@ -23,6 +23,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run sta
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
 ```
 
 The starter path creates:

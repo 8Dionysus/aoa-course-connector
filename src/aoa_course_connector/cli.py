@@ -51,7 +51,7 @@ from aoa_course_connector.ingest import (
     materialize_stepik_live,
 )
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
-from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, write_answer_packet
+from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, render_lesson_context_packet, write_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight, write_connected_source_runbook
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.smoke import (
@@ -554,6 +554,14 @@ def build_parser() -> argparse.ArgumentParser:
     answer.add_argument("--limit", type=int, default=5)
     answer.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
     answer.set_defaults(func=cmd_answer)
+
+    lesson_context = sub.add_parser("lesson-context")
+    lesson_context.add_argument("query")
+    lesson_context.add_argument("--run", default=DEFAULT_RUN)
+    lesson_context.add_argument("--limit", type=int, default=5)
+    lesson_context.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
+    lesson_context.add_argument("--graph-limit", type=int, default=12)
+    lesson_context.set_defaults(func=cmd_lesson_context)
 
     graph = sub.add_parser("graph")
     graph_sub = graph.add_subparsers(dest="graph_command", required=True)
@@ -1536,6 +1544,12 @@ def cmd_answer(args: argparse.Namespace) -> int:
     packet = render_answer_packet(roots, args.query, args.run, args.limit, args.mode)
     path = write_answer_packet(packet, roots, args.run)
     _emit({"status": "ok", "answer_path": str(path), **packet})
+    return 0
+
+
+def cmd_lesson_context(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    _emit(render_lesson_context_packet(roots, args.query, args.run, args.limit, args.mode, args.graph_limit))
     return 0
 
 

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aoa_course_lesson_context_packet.schema.json",
+  "title": "LessonContextPacket",
+  "type": "object",
+  "required": ["schema", "run_id", "query", "mode", "answer_packet", "graph_context"],
+  "properties": {
+    "schema": {"const": "aoa_course_lesson_context_packet_v1"},
+    "run_id": {"type": "string"},
+    "query": {"type": "string"},
+    "mode": {"type": "string"},
+    "generated_at": {"type": "string"},
+    "answer_packet": {"type": "object"},
+    "graph_context": {
+      "type": "object",
+      "required": ["schema", "run_id", "graph_limit", "status", "context_count", "contexts", "missing"],
+      "properties": {
+        "schema": {"const": "aoa_course_lesson_graph_context_v1"},
+        "run_id": {"type": "string"},
+        "graph_limit": {"type": "integer", "minimum": 1},
+        "status": {"type": "string", "enum": ["ready", "missing_graph", "empty"]},
+        "context_count": {"type": "integer", "minimum": 0},
+        "contexts": {"type": "array"},
+        "missing": {"type": "array"}
+      }
+    }
+  }
+}

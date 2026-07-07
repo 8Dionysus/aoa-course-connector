@@ -31,6 +31,9 @@ This proves:
   `network_touched: false`;
 - graph construction for course/module/lesson/step/asset/topic/entity;
 - answer packets with evidence chains and freshness timestamps;
+- CLI `lesson-context` returns one `aoa_course_lesson_context_packet_v1` with
+  source-backed answer evidence plus nearby graph context for each distinct
+  evidence lesson;
 - evidence chains preserve freshness state, authority tier, source authority,
   rank score, rank features, and refresh hints alongside source URLs and
   fetched timestamps, so agents can cite and refresh the exact proof item;
