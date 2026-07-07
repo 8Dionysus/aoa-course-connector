@@ -49,6 +49,30 @@ def test_link_pattern_rejects_nonmatching_lesson_hints() -> None:
     assert [link["href"] for link in links] == ["https://school.example/course/allowed/lesson-1"]
 
 
+def test_getcourse_crawler_extracts_embedded_lesson_urls_without_stream_noise() -> None:
+    html = """
+    <main>
+      <a href="/teach/control/stream/index">Training list</a>
+      <script>
+        window.gcLessons = [
+          "/teach/control/lesson/view/id/334953645",
+          "\\/teach\\/control\\/lesson\\/view\\/id\\/334953653",
+          "/teach/control/lesson/view/id/334953645"
+        ];
+      </script>
+      <div data-url="/teach/control/lesson/view/id/334953661">locked lesson</div>
+    </main>
+    """
+
+    links = discover_lesson_links(html, "https://getcourse.ru/teach/control/stream/view/id/911642804", platform="getcourse", max_lessons=10)
+
+    assert [link["href"] for link in links] == [
+        "https://getcourse.ru/teach/control/lesson/view/id/334953645",
+        "https://getcourse.ru/teach/control/lesson/view/id/334953653",
+        "https://getcourse.ru/teach/control/lesson/view/id/334953661",
+    ]
+
+
 def test_getcourse_browser_crawl_fixture_to_answer_packet(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     receipt = crawl_browser_fixture(storage, "getcourse", run_id="getcourse-browser-crawl-fixture")

@@ -61,7 +61,7 @@ def sync_browser_live_sources(
     platforms: list[str] | None = None,
     source_ids: list[str] | None = None,
     state_file: Path | None = None,
-    wait_until: str = "networkidle",
+    wait_until: str = "domcontentloaded",
     max_lessons: int = 20,
     link_pattern: str | None = None,
     source_limit: int | None = None,

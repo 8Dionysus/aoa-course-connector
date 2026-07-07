@@ -2,9 +2,11 @@
 
 from __future__ import annotations
 
+import re
 from fnmatch import fnmatch
+from html import unescape
 from typing import Any
-from urllib.parse import urldefrag, urlsplit, urlunsplit
+from urllib.parse import urldefrag, urljoin, urlsplit, urlunsplit
 
 from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
 
@@ -17,6 +19,7 @@ LESSON_URL_HINTS = (
     "/training/",
     "/module/",
 )
+GETCOURSE_EMBEDDED_LESSON_RE = re.compile(r"(?P<url>(?:https?://[^\"'\\<>\s]+)?/teach/control/lesson/view/id/\d+)", re.IGNORECASE)
 
 
 def build_crawled_snapshot(
@@ -43,7 +46,13 @@ def build_crawled_snapshot(
         resolved["crawl"] = _crawl_meta(max_lessons=max_lessons, discovered=0, included=0, missing=0, link_pattern=link_pattern)
         return resolved
     index_url = str(index_page.get("url") or raw.get("source", {}).get("source_ref") or "")
-    lesson_links = discover_lesson_links(str(index_page.get("html") or ""), index_url, max_lessons=max_lessons, link_pattern=link_pattern)
+    lesson_links = discover_lesson_links(
+        str(index_page.get("html") or ""),
+        index_url,
+        platform=platform,
+        max_lessons=max_lessons,
+        link_pattern=link_pattern,
+    )
     page_by_url = {_canonical_url(str(page.get("url") or "")): page for page in pages if page.get("url")}
     expanded_pages: list[dict[str, Any]] = [dict(index_page, kind="course_index")]
     missing = 0
@@ -73,18 +82,28 @@ def build_crawled_snapshot(
     return resolved
 
 
-def discover_lesson_links(html: str, base_url: str, *, max_lessons: int = 20, link_pattern: str | None = None) -> list[dict[str, str]]:
+def discover_lesson_links(
+    html: str,
+    base_url: str,
+    *,
+    platform: str | None = None,
+    max_lessons: int = 20,
+    link_pattern: str | None = None,
+) -> list[dict[str, str]]:
     if max_lessons <= 0:
         return []
     snapshot = parse_html_snapshot(html, base_url)
+    candidates = list(snapshot.links)
+    if str(platform or "").casefold() == "getcourse":
+        candidates.extend(_embedded_getcourse_lesson_links(html, base_url))
     links: list[dict[str, str]] = []
     seen: set[str] = set()
-    for link in snapshot.links:
+    for link in candidates:
         href = str(link.get("href") or "")
         canonical = _canonical_url(href)
         if not canonical or canonical in seen:
             continue
-        if not is_lesson_link(link, link_pattern=link_pattern):
+        if not is_lesson_link(link, platform=platform, link_pattern=link_pattern):
             continue
         seen.add(canonical)
         links.append(
@@ -101,7 +120,7 @@ def discover_lesson_links(html: str, base_url: str, *, max_lessons: int = 20, li
     return links
 
 
-def is_lesson_link(link: dict[str, str], *, link_pattern: str | None = None) -> bool:
+def is_lesson_link(link: dict[str, str], *, platform: str | None = None, link_pattern: str | None = None) -> bool:
     href = str(link.get("href") or "")
     if not href:
         return False
@@ -110,6 +129,8 @@ def is_lesson_link(link: dict[str, str], *, link_pattern: str | None = None) -> 
     if str(link.get("kind") or "").casefold() == "lesson":
         return True
     lowered = href.casefold()
+    if str(platform or "").casefold() == "getcourse":
+        return "/teach/control/lesson/" in lowered
     return any(hint in lowered for hint in LESSON_URL_HINTS)
 
 
@@ -134,6 +155,20 @@ def first_page(pages: list[dict[str, Any]], kind: str) -> dict[str, Any] | None:
         if str(page.get("kind") or "").casefold() == kind:
             return page
     return None
+
+
+def _embedded_getcourse_lesson_links(html: str, base_url: str) -> list[dict[str, str]]:
+    normalized = unescape(html).replace("\\/", "/")
+    links: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for match in GETCOURSE_EMBEDDED_LESSON_RE.finditer(normalized):
+        href = urljoin(base_url, match.group("url"))
+        canonical = _canonical_url(href)
+        if not canonical or canonical in seen:
+            continue
+        seen.add(canonical)
+        links.append({"href": href, "text": "", "kind": "lesson", "module": "", "title": ""})
+    return links
 
 
 def _crawl_meta(*, max_lessons: int, discovered: int, included: int, missing: int, link_pattern: str | None) -> dict[str, object]:
