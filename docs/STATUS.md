@@ -189,7 +189,10 @@ This proves:
   scope, and browser `link_pattern` in the one-command
   `calibration connected-run --mode live --allow-network` route. Stepik launch
   plans default to bounded live smoke/sync commands, with
-  full-course/source-enrichment commands gated behind explicit options.
+  full-course/source-enrichment commands gated behind explicit options. Ready
+  `connected_run_plan` entries now also expose `mcp_tool_call` and
+  `mcp_command` for MCP `connected_run`, preserving source ids, traversal
+  bounds, live scope, and explicit `allow_network`;
 - `preflight live`, `preflight connected-plan`, `readiness`, and MCP
   `source_ids` support source-scoped planning, so one ready registered source
   can produce its own preflight, sync, smoke, and connected-run plan without

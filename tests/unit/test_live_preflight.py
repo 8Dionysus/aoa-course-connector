@@ -205,8 +205,10 @@ def test_connected_source_plan_can_scope_browser_work_to_one_ready_source(tmp_pa
     assert scoped["platform_plans"][0]["ready_source_count"] == 1
     assert scoped["platform_plans"][0]["blocked_source_count"] == 0
     assert scoped["connected_run_plan"]["source_ids"] == [source_a["source_id"]]
+    assert scoped["connected_run_plan"]["mcp_tool_call"]["arguments"]["source_ids"] == [source_a["source_id"]]
     assert f"--source-id {source_a['source_id']}" in scoped["connected_run_plan"]["command"]
     assert str(source_b["source_id"]) not in scoped["connected_run_plan"]["command"]
+    assert str(source_b["source_id"]) not in scoped["connected_run_plan"]["mcp_command"]
     assert any("sync browser-live" in command and str(source_a["source_id"]) in command for command in scoped["next_commands"])
     rendered = json.dumps(scoped)
     assert "SUPER_SECRET_COOKIE" not in rendered
@@ -335,6 +337,22 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert "--source-id" in connected_run["command"]
     assert "--query 'course-specific question'" in connected_run["command"]
     assert "--link-pattern '*/lessons/*'" in connected_run["command"]
+    assert connected_run["mcp_tool_call"]["tool"] == "connected_run"
+    assert connected_run["mcp_tool_call"]["network_touched"] is True
+    mcp_args = connected_run["mcp_tool_call"]["arguments"]
+    assert mcp_args["run"] == "connected-live-calibration"
+    assert mcp_args["mode"] == "live"
+    assert mcp_args["platforms"] == ["getcourse"]
+    assert mcp_args["source_ids"] == [plan["source_plans"][0]["source_id"]]
+    assert mcp_args["query"] == "course-specific question"
+    assert mcp_args["live_scope"] == "bounded"
+    assert mcp_args["allow_network"] is True
+    assert mcp_args["max_lessons"] == 50
+    assert mcp_args["max_pages"] == 5
+    assert mcp_args["max_sources"] == 50
+    assert mcp_args["link_pattern"] == "*/lessons/*"
+    assert connected_run["mcp_command"].startswith("aoa-course mcp call connected_run ")
+    assert '"allow_network":true' in connected_run["mcp_command"]
     assert plan["connected_run_plan"] == connected_run
     assert any("calibration build" in action["command"] for action in stage_actions["calibration_packet"])
     assert plan["source_plans"][0]["smoke_report_path"].startswith("${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/")

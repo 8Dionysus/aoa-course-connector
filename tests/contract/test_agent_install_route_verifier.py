@@ -102,6 +102,22 @@ def test_stdio_verifier_requires_connected_run_ok() -> None:
         verifier._verify_stdio_tool_responses(stdout)
 
 
+def test_stdio_verifier_requires_ready_connected_run_mcp_call() -> None:
+    verifier = load_verifier_module()
+    responses = _healthy_stdio_responses()
+    plan = responses[2]["result"]["structuredContent"]["plan"]["connected_run_plan"]
+    plan.update(
+        {
+            "ready": True,
+            "command": "aoa-course calibration connected-run --mode live --allow-network",
+        }
+    )
+    stdout = "\n".join(json.dumps(response) for response in responses)
+
+    with pytest.raises(verifier.StdioVerificationError, match="did not expose MCP connected_run tool call"):
+        verifier._verify_stdio_tool_responses(stdout)
+
+
 def test_stdio_verifier_accepts_full_mcp_route() -> None:
     verifier = load_verifier_module()
     stdout = "\n".join(json.dumps(response) for response in _healthy_stdio_responses())

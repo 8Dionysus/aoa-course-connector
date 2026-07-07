@@ -349,6 +349,9 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Connected-source plan code missing portable artifact root expression")
     if "runs/{calibration_run}/calibration/live_calibration_packet.json" not in readiness_raw:
         errors.append("Connected-source plan code missing runs/<run> calibration artifact path")
+    for token in ["mcp_tool_call", "mcp_command", "_mcp_call_command"]:
+        if token not in readiness_raw:
+            errors.append(f"Connected-source plan code missing MCP connected-run plan token: {token}")
     for token in ["state_file_candidates", "_host_state_file_candidates", "source_id_flags"]:
         if token not in readiness_raw:
             errors.append(f"Readiness code missing per-host auth candidate token: {token}")
@@ -409,7 +412,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["graph_neighbors", "freshness_report", "evidence_report", "refresh_plan", "ingest_status", "connector_readiness", "connection_profile_inspect", "connection_profile_status", "semantic_provider_preflight", "aoa_course_connector_readiness_v1", "aoa_course_connection_profile_v1", "aoa_course_connection_profile_inspection_v1", "aoa_course_connection_profile_status_v1", "aoa_course_connection_profile_readiness_v1", "aoa_course_semantic_provider_preflight_v1", "operational_ready", "connected_live_ready", "semantic provider", "agent_query_ready", "source url", "authority report", "refresh report", "refresh_hint"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing evidence/graph token: {token}")
-    for token in ["live_preflight", "connected_source_plan", "connected_run", "connected_run_status", "connected_run_plan", "source_selection", "query_plan", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
+    for token in ["live_preflight", "connected_source_plan", "connected_run", "connected_run_status", "connected_run_plan", "mcp_tool_call", "mcp_command", "source_selection", "query_plan", "repair_lanes", "mcp_commands", "link_pattern", "live_scope", "include_step_sources", "full-course", "network_touched", "secret values", "structuredcontent", "full priority set", "fixture_or_example_source", "operator_live_candidate", "source_ids", "selected_source_ids"]:
         if token not in mcp.casefold():
             errors.append(f"MCP usage missing live preflight token: {token}")
     for token in ["unsupported protocol version", "2025-11-25"]:
@@ -463,7 +466,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "mcp call connected_run", "connected_run_plan", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
+    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "mcp call connected_run", "mcp_tool_call", "mcp_command", "connected_run_plan", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
         if token not in cli_usage_doc:
             errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
     verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")

@@ -150,7 +150,9 @@ connected run receipt all write to portable runtime artifact storage. Use
 selected sources are ready; when the plan is ready, its `connected_run_plan`
 contains the exact `calibration connected-run --mode live --allow-network`
 command for the same platforms, source ids, query, live scope, and browser
-`--link-pattern`.
+`--link-pattern`. The same plan also carries `mcp_tool_call` and `mcp_command`
+for MCP `connected_run`, preserving the same source ids, traversal bounds,
+live scope, and explicit `allow_network`.
 By default, `preflight connected-plan` and the MCP `connected_source_plan` route
 cover GetCourse, Skillspace, and Stepik together; pass `--platform`/`platforms`
 to narrow a diagnostic run and `--source-id`/`source_ids` to plan only one

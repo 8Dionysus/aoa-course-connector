@@ -934,6 +934,12 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert "--max-lessons 7" in plan["plan"]["connected_run_plan"]["command"]
     assert "--max-pages 3" in plan["plan"]["connected_run_plan"]["command"]
     assert "--max-sources 4" in plan["plan"]["connected_run_plan"]["command"]
+    plan_mcp_call = plan["plan"]["connected_run_plan"]["mcp_tool_call"]
+    assert plan_mcp_call["tool"] == "connected_run"
+    assert plan_mcp_call["arguments"]["allow_network"] is True
+    assert plan_mcp_call["arguments"]["link_pattern"] == "*/lessons/*"
+    assert plan_mcp_call["arguments"]["max_lessons"] == 7
+    assert "aoa-course mcp call connected_run" in plan["plan"]["connected_run_plan"]["mcp_command"]
     plan = plan["plan"]["browser_auth_plans"][0]
     assert plan["ready"] is True
     assert plan["source_hosts"] == ["school.operator.edu"]
@@ -1205,3 +1211,6 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "--max-lessons 9" in compact_plan["connected_run_plan"]["command"]
     assert "--max-pages 4" in compact_plan["connected_run_plan"]["command"]
     assert "--max-sources 2" in compact_plan["connected_run_plan"]["command"]
+    assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["live_scope"] == "full-course"
+    assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["include_step_sources"] is True
+    assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["max_lessons"] == 9
