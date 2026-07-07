@@ -74,7 +74,9 @@ still requires the later explicit preflight/auth/network-gated commands.
 profile JSON. `connect status` returns
 `aoa_course_connection_profile_status_v1`, the compact go/no-go packet for
 registered sources, browser auth readiness, connected-plan readiness, blockers,
-and ready live connected-run commands.
+and ready live connected-run commands. MCP `connection_profile_run_plan`
+returns the same selected `aoa_course_connection_profile_run_plan_v1` without
+network access for agents operating through MCP.
 `connect run` reads the same profile and selected platform/source. Without
 `--allow-network` it is a no-network plan receipt; with `--allow-network` it
 executes the ready live connected-run for that selected profile route.

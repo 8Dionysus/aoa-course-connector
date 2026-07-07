@@ -52,10 +52,12 @@
     built, run `eval answer-quality` to prove top-result path, source id,
     freshness, snippet, and evidence-field quality.
 1. Run MCP calls for `connector_readiness`, `connection_profile_inspect`,
+    `connection_profile_status`, `connection_profile_run_plan`,
     `semantic_provider_preflight`, `graph_neighbors`, `freshness_report`,
     `evidence_report`, and `refresh_plan` against `starter-fixture` to prove
-    agents can inspect connector readiness, traverse graph
-    neighborhoods, inspect source evidence/freshness, and plan a refresh cycle
+    agents can inspect connector readiness, profile readiness, selected
+    profile run plans, graph neighborhoods, source evidence/freshness, and plan
+    a refresh cycle
     without shelling into lower-level CLI internals.
 1. After a registry-backed Stepik fixture sync, run `refresh query
     "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid

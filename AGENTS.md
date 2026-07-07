@@ -41,6 +41,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli connect apply "${AOA_COURSE_AR
 PYTHONPATH=src python -m aoa_course_connector.cli connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --platform getcourse
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connection_profile_inspect '{"profile_path":"'${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}'/connections/operator-live.connection-profile.json"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connection_profile_status '{"profile_path":"'${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}'/connections/operator-live.connection-profile.json"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call connection_profile_run_plan '{"profile_path":"'${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}'/connections/operator-live.connection-profile.json","platform":"getcourse"}'
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture
