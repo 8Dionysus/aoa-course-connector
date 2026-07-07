@@ -6,6 +6,7 @@ Initial tools:
 
 - `list_sources`
 - `source_answer`
+- `sources_answer`
 - `connector_readiness`
 - `ingest_status`
 - `sync_status`
@@ -36,6 +37,7 @@ CLI smoke:
 aoa-course mcp tools
 aoa-course mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 aoa-course mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
+aoa-course mcp call sources_answer '{"platforms":["stepik"],"query":"Stepik public API evidence"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
@@ -119,6 +121,14 @@ connected-run entry, `aoa_course_connected_run_query_packet_v1`, answer packet,
 lesson context, evidence report, quality summary, and `network_touched: false`.
 By default `include_source_refs` is false, so source refs are removed from the
 selected source, selected run entry, responses, and blocked-entry details.
+`sources_answer` is the plural route for asking the same question across a
+selected source set. It accepts `query`, optional `platforms`, `source_ids`,
+`kinds`, `mode`, `limit`, `graph_limit`, `source_limit`, and connected-run scan
+limits, then returns `aoa_course_sources_answer_packet_v1` with one response per
+source, blocked-source details, aggregate quality, and `network_touched: false`.
+It keeps per-source answer/context/evidence packets separate so agents can cite
+the exact course source that supported each result. Like `source_answer`, it
+defaults to `include_source_refs: false`.
 
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,

@@ -489,6 +489,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
         {"jsonrpc": "2.0", "id": 101, "method": "tools/call", "params": {"name": "connected_run_query", "arguments": {"run": "connected-calibration", "kinds": ["smoke"], "entry_limit": 1}}},
         {"jsonrpc": "2.0", "id": 102, "method": "tools/call", "params": {"name": "source_answer", "arguments": {"platforms": ["stepik"], "query": "Stepik public API evidence"}}},
+        {"jsonrpc": "2.0", "id": 103, "method": "tools/call", "params": {"name": "sources_answer", "arguments": {"platforms": ["stepik"], "query": "Stepik public API evidence"}}},
         {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
@@ -504,11 +505,12 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 21, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 102, 11]
+    assert [response["id"] for response in responses] == [1, 2, 21, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 102, 103, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "answer" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "source_answer" for tool in responses[1]["result"]["tools"])
+    assert any(tool["name"] == "sources_answer" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["catalog"]["network_touched"] is False
     assert responses[2]["result"]["structuredContent"]["catalog"]["source_refs_included"] is False
     assert responses[2]["result"]["structuredContent"]["catalog"]["connected_runs"]["included"] is True
@@ -532,9 +534,13 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[13]["result"]["structuredContent"]["source_answer"]["status"] == "ok"
     assert responses[13]["result"]["structuredContent"]["source_answer"]["network_touched"] is False
     assert responses[13]["result"]["structuredContent"]["source_answer"]["answer_packet"]["quality"]["ready"] is True
-    assert responses[14]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[14]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[14]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[14]["result"]["structuredContent"]["sources_answer"]["schema"] == "aoa_course_sources_answer_packet_v1"
+    assert responses[14]["result"]["structuredContent"]["sources_answer"]["status"] == "ok"
+    assert responses[14]["result"]["structuredContent"]["sources_answer"]["network_touched"] is False
+    assert responses[14]["result"]["structuredContent"]["sources_answer"]["response_count"] == 1
+    assert responses[15]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[15]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[15]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

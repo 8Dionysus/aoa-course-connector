@@ -33,6 +33,7 @@ REQUIRED_MCP_TOOLS = [
     "connector_readiness",
     "list_sources",
     "source_answer",
+    "sources_answer",
     "ingest_status",
     "sync_status",
     "live_preflight",

@@ -137,6 +137,9 @@
     for a direct answer/context/evidence packet before planning another live
     run. Use the attached MCP `answer`, `lesson_context`, or `evidence_report`
     commands only when the agent intentionally wants the lower-level run id.
+    When the question should be checked across several ready sources, use MCP
+    `sources_answer` with `source_ids` or `platforms` so each source keeps its
+    own evidence chain and quality state.
 1. Run the plan's exact
     `calibration connected-run --mode live --allow-network` plan only after
     the connected plan shows the selected sources are ready.
