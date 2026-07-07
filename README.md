@@ -397,6 +397,10 @@ prefers sync entries when available, and returns the answer packet, lesson
 context, evidence report, and selected run metadata without repeating live
 source access. By default it keeps `source_ref` out of the result; pass
 `include_source_refs:true` only when the operator wants those refs in context.
+Use MCP `sources_answer` when one question should be asked across every selected
+query-ready source. It returns one per-source answer/context/evidence packet
+plus aggregate quality, blockers, and `network_touched: false`, preserving each
+source's provenance instead of merging evidence into an untraceable summary.
 Use `calibration query-matrix --run <run> --query ... --query ...` or MCP
 `connected_run_query_matrix` when one saved connected run needs to prove several
 course questions at once. It reuses the same local query plan without repeating
@@ -481,6 +485,7 @@ stdio, and exposes the same local artifacts used by the CLI:
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call sources_answer '{"platforms":["stepik"],"query":"Stepik public API evidence"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'

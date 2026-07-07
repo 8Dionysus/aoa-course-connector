@@ -869,6 +869,33 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert '"source_ref"' not in rendered_source_answer
     assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_source_answer
 
+    sources_answer = call_tool(
+        "sources_answer",
+        {
+            "source_ids": [stepik["source_id"]],
+            "query": "Stepik public API evidence",
+        },
+    )
+    sources_answer_packet = sources_answer["sources_answer"]
+    rendered_sources_answer = json.dumps(sources_answer)
+    assert sources_answer["tool"] == "sources_answer"
+    assert sources_answer_packet["schema"] == "aoa_course_sources_answer_packet_v1"
+    assert sources_answer_packet["status"] == "ok"
+    assert sources_answer_packet["network_touched"] is False
+    assert sources_answer_packet["source_refs_included"] is False
+    assert sources_answer_packet["response_count"] == 1
+    assert sources_answer_packet["quality"]["ready"] is True
+    assert sources_answer_packet["responses"][0]["answer_packet"]["quality"]["ready"] is True
+    assert sources_answer_packet["responses"][0]["evidence_report"]["result_refs"]
+    assert '"source_ref"' not in rendered_sources_answer
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_sources_answer
+
+    partial_sources_answer = call_tool("sources_answer", {"query": "Stepik public API evidence"})
+    assert partial_sources_answer["sources_answer"]["status"] == "partial"
+    assert partial_sources_answer["sources_answer"]["response_count"] == 1
+    assert partial_sources_answer["sources_answer"]["blocked_source_count"] == 1
+    assert partial_sources_answer["sources_answer"]["blocked_sources"][0]["reason"] == "no_query_ready_connected_run"
+
     ambiguous = call_tool("source_answer", {"query": "Stepik public API evidence"})
     assert ambiguous["source_answer"]["status"] == "blocked"
     assert ambiguous["source_answer"]["reason"] == "ambiguous_source"
@@ -1234,6 +1261,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     connected_run_query_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query")
     connected_run_query_matrix_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query_matrix")
     source_answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "source_answer")
+    sources_answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "sources_answer")
     answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "answer")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
@@ -1273,6 +1301,11 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert source_answer_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
     assert source_answer_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
     assert "include_source_refs" in source_answer_tool["inputSchema"]["properties"]
+    assert sources_answer_tool["inputSchema"]["required"] == ["query"]
+    assert sources_answer_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
+    assert sources_answer_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
+    assert "source_ids" in sources_answer_tool["inputSchema"]["properties"]
+    assert "source_limit" in sources_answer_tool["inputSchema"]["properties"]
     assert lesson_context_tool["inputSchema"]["required"] == ["query"]
     assert "graph_limit" in lesson_context_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]

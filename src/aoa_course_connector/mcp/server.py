@@ -110,6 +110,14 @@ def _source_answer_schema() -> dict[str, object]:
     )
 
 
+def _sources_answer_schema() -> dict[str, object]:
+    properties = dict(_source_answer_schema()["properties"])
+    properties.pop("source_id", None)
+    properties["source_ids"] = _source_ids_schema("Optional source ids to select from the registry.")
+    properties["source_limit"] = _integer_schema("Maximum selected sources to answer from.", 1)
+    return _object_schema(properties, required=["query"])
+
+
 def _connector_readiness_schema() -> dict[str, object]:
     return _object_schema(
         {
@@ -334,6 +342,7 @@ def _source_ids_schema(description: str) -> dict[str, object]:
 TOOLS = [
     {"name": "list_sources", "description": "List configured course sources as a read-only catalog with counts, filters, registry path, and privacy flags.", "inputSchema": _list_sources_schema()},
     {"name": "source_answer", "description": "Select one configured source and answer a course question from its latest query-ready connected run without touching the network.", "inputSchema": _source_answer_schema()},
+    {"name": "sources_answer", "description": "Answer one course question across selected query-ready sources and return per-source evidence packets without touching the network.", "inputSchema": _sources_answer_schema()},
     {"name": "connector_readiness", "description": "Inspect install, storage, source, run, connected-run, and MCP readiness without touching the network.", "inputSchema": _connector_readiness_schema()},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
@@ -388,6 +397,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "catalog": catalog, "registry": registry_view}
     if name == "source_answer":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "source_answer": _call_source_answer(roots, args)}
+    if name == "sources_answer":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sources_answer": _call_sources_answer(roots, args)}
     if name == "connector_readiness":
         return _call_connector_readiness(roots, args)
     if name == "ingest_status":
@@ -554,15 +565,7 @@ def _call_source_answer(roots: StorageRoots, args: dict[str, object]) -> dict[st
     if len(sources) != 1:
         return _source_answer_blocked(catalog, str(query_value), "ambiguous_source", "pass source_id or a narrower platform scope so exactly one source is selected")
     source = sources[0] if isinstance(sources[0], dict) else {}
-    entries = source.get("latest_connected_runs") if isinstance(source.get("latest_connected_runs"), list) else []
-    if kinds:
-        kind_set = set(kinds)
-        entries = [entry for entry in entries if isinstance(entry, dict) and str(entry.get("kind") or "") in kind_set]
-    else:
-        sync_entries = [entry for entry in entries if isinstance(entry, dict) and entry.get("kind") == "sync"]
-        if sync_entries:
-            entries = sync_entries
-    entries = [entry for entry in entries if isinstance(entry, dict) and bool(entry.get("query_ready"))]
+    entries = _source_answer_entries(source, kinds)
     if not entries:
         return _source_answer_blocked(catalog, str(query_value), "no_query_ready_connected_run", "selected source has no local query-ready connected run yet")
     selected_entry = entries[0]
@@ -610,6 +613,216 @@ def _call_source_answer(roots: StorageRoots, args: dict[str, object]) -> dict[st
         "quality": query_packet.get("quality", {}),
         "next_commands": _source_answer_next_commands(source, selected_entry, str(query_value), mode_value),
     }
+
+
+def _call_sources_answer(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    query_value = args.get("query")
+    if not isinstance(query_value, str) or not query_value.strip():
+        raise ValueError("sources_answer query must be a non-empty string")
+    mode_value = args.get("mode")
+    if mode_value is not None and not isinstance(mode_value, str):
+        raise ValueError("sources_answer mode must be a string")
+    include_source_refs = _bool_arg(args.get("include_source_refs"), default=False, tool_name="sources_answer", field_name="include_source_refs")
+    platforms = _platform_arg(args.get("platforms"), tool_name="sources_answer")
+    source_ids = _string_array_arg(args.get("source_ids"), tool_name="sources_answer", field_name="source_ids")
+    kinds = _string_array_arg(args.get("kinds"), tool_name="sources_answer", field_name="kinds")
+    source_limit = _positive_int_arg(args.get("source_limit"), default=10, tool_name="sources_answer", field_name="source_limit")
+    catalog = source_registry_catalog(
+        roots,
+        load_registry(roots.data),
+        include_disabled=_bool_arg(args.get("include_disabled"), default=False, tool_name="sources_answer", field_name="include_disabled"),
+        platforms=platforms,
+        source_ids=source_ids,
+        include_source_refs=include_source_refs,
+        include_connected_runs=True,
+        connected_run_limit=_positive_int_arg(args.get("connected_run_limit"), default=5, tool_name="sources_answer", field_name="connected_run_limit"),
+        connected_receipt_limit=_positive_int_arg(args.get("connected_receipt_limit"), default=50, tool_name="sources_answer", field_name="connected_receipt_limit"),
+    )
+    sources = catalog.get("sources") if isinstance(catalog.get("sources"), list) else []
+    selected_sources = [source for source in sources[:source_limit] if isinstance(source, dict)]
+    blocked_sources: list[dict[str, object]] = []
+    for missing_id in catalog.get("missing_source_ids", []) if isinstance(catalog.get("missing_source_ids"), list) else []:
+        blocked_sources.append({"source_id": missing_id, "reason": "missing_source", "detail": "selected source id is not present in the local registry"})
+    if len(sources) > source_limit:
+        for source in sources[source_limit:]:
+            if isinstance(source, dict):
+                blocked_sources.append(_source_blocked(source, "source_limit", "source was not queried because source_limit was reached"))
+    responses: list[dict[str, object]] = []
+    failures: list[dict[str, object]] = []
+    for source in selected_sources:
+        entries = _source_answer_entries(source, kinds)
+        if not entries:
+            blocked_sources.append(_source_blocked(source, "no_query_ready_connected_run", "selected source has no local query-ready connected run yet"))
+            continue
+        selected_entry = entries[0]
+        connected_run_id = str(selected_entry.get("connected_run_id") or "")
+        if not connected_run_id:
+            blocked_sources.append(_source_blocked(source, "missing_connected_run_id", "selected connected-run entry has no connected_run_id"))
+            continue
+        try:
+            query_packet = _call_connected_run_query(
+                roots,
+                {
+                    "run": connected_run_id,
+                    "query": query_value,
+                    "source_ids": [str(source.get("source_id") or "")],
+                    "kinds": [str(selected_entry.get("kind") or "")],
+                    "limit": int(args.get("limit") or 5),
+                    "mode": mode_value,
+                    "graph_limit": int(args.get("graph_limit") or 12),
+                    "entry_limit": 1,
+                },
+            )
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            failures.append(
+                {
+                    "source_id": source.get("source_id"),
+                    "platform": source.get("platform"),
+                    "title": source.get("title"),
+                    "connected_run_id": connected_run_id,
+                    "reason": exc.__class__.__name__,
+                    "error": str(exc),
+                }
+            )
+            continue
+        if not include_source_refs:
+            query_packet = _drop_source_refs(query_packet)
+        query_responses = query_packet.get("responses") if isinstance(query_packet.get("responses"), list) else []
+        response = query_responses[0] if query_responses and isinstance(query_responses[0], dict) else {}
+        if not response:
+            blocked_sources.append(
+                _source_blocked(
+                    source,
+                    str(query_packet.get("status") or "no_response"),
+                    "query-ready connected run returned no response for this source",
+                    selected_entry=selected_entry,
+                    query_packet=query_packet,
+                )
+            )
+            continue
+        answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
+        lesson_context = response.get("lesson_context") if isinstance(response.get("lesson_context"), dict) else {}
+        evidence_report = response.get("evidence_report") if isinstance(response.get("evidence_report"), dict) else {}
+        responses.append(
+            {
+                "source_id": source.get("source_id"),
+                "platform": source.get("platform"),
+                "title": source.get("title"),
+                "selected_source": source,
+                "selected_entry": selected_entry,
+                "connected_run_id": connected_run_id,
+                "status": query_packet.get("status"),
+                "answer_ready": bool(response.get("answer_ready")),
+                "result_count": answer_packet.get("result_count", 0),
+                "evidence_count": len(answer_packet.get("evidence_chain", [])) if isinstance(answer_packet.get("evidence_chain"), list) else 0,
+                "graph_status": (lesson_context.get("graph_context") if isinstance(lesson_context.get("graph_context"), dict) else {}).get("status"),
+                "query_packet": query_packet,
+                "answer_packet": answer_packet,
+                "lesson_context": lesson_context,
+                "evidence_report": evidence_report,
+                "quality": query_packet.get("quality", {}),
+            }
+        )
+    quality = _sources_answer_quality(responses, blocked_sources, failures)
+    return {
+        "schema": "aoa_course_sources_answer_packet_v1",
+        "status": _sources_answer_status(responses, blocked_sources, failures),
+        "network_touched": False,
+        "read_only": True,
+        "query": str(query_value),
+        "source_refs_included": include_source_refs,
+        "candidate_source_count": len(sources),
+        "selected_source_count": len(selected_sources),
+        "response_count": len(responses),
+        "blocked_source_count": len(blocked_sources),
+        "failure_count": len(failures),
+        "source_limit": source_limit,
+        "catalog_summary": _source_answer_catalog_summary(catalog),
+        "responses": responses,
+        "blocked_sources": blocked_sources,
+        "failures": failures,
+        "quality": quality,
+        "next_commands": _sources_answer_next_commands(str(query_value), source_ids, platforms, mode_value),
+    }
+
+
+def _source_answer_entries(source: dict[str, object], kinds: list[str] | None) -> list[dict[str, object]]:
+    entries = source.get("latest_connected_runs") if isinstance(source.get("latest_connected_runs"), list) else []
+    if kinds:
+        kind_set = set(kinds)
+        entries = [entry for entry in entries if isinstance(entry, dict) and str(entry.get("kind") or "") in kind_set]
+    else:
+        sync_entries = [entry for entry in entries if isinstance(entry, dict) and entry.get("kind") == "sync"]
+        if sync_entries:
+            entries = sync_entries
+    return [entry for entry in entries if isinstance(entry, dict) and bool(entry.get("query_ready"))]
+
+
+def _source_blocked(
+    source: dict[str, object],
+    reason: str,
+    detail: str,
+    *,
+    selected_entry: dict[str, object] | None = None,
+    query_packet: dict[str, object] | None = None,
+) -> dict[str, object]:
+    payload = _compact_dict(
+        {
+            "source_id": source.get("source_id"),
+            "platform": source.get("platform"),
+            "title": source.get("title"),
+            "access_mode": source.get("access_mode"),
+            "reason": reason,
+            "detail": detail,
+            "selected_entry": selected_entry,
+            "query_packet_status": query_packet.get("status") if isinstance(query_packet, dict) else None,
+            "query_packet_blocked_entries": query_packet.get("blocked_entries") if isinstance(query_packet, dict) else None,
+            "query_packet_failures": query_packet.get("failures") if isinstance(query_packet, dict) else None,
+        }
+    )
+    return _drop_source_refs(payload) if isinstance(payload, dict) else payload
+
+
+def _sources_answer_quality(responses: list[dict[str, object]], blocked_sources: list[dict[str, object]], failures: list[dict[str, object]]) -> dict[str, object]:
+    answer_ready_count = sum(1 for response in responses if bool(response.get("answer_ready")))
+    evidence_count_total = sum(int(response.get("evidence_count") or 0) for response in responses)
+    result_count_total = sum(int(response.get("result_count") or 0) for response in responses)
+    return {
+        "ready": bool(responses) and answer_ready_count == len(responses) and not blocked_sources and not failures,
+        "response_count": len(responses),
+        "answer_ready_count": answer_ready_count,
+        "result_count_total": result_count_total,
+        "evidence_count_total": evidence_count_total,
+        "blocked_source_count": len(blocked_sources),
+        "failure_count": len(failures),
+        "platforms": sorted({str(response.get("platform") or "") for response in responses if response.get("platform")}),
+        "source_ids": sorted({str(response.get("source_id") or "") for response in responses if response.get("source_id")}),
+        "all_responses_have_evidence": bool(responses) and all(int(response.get("evidence_count") or 0) > 0 for response in responses),
+    }
+
+
+def _sources_answer_status(responses: list[dict[str, object]], blocked_sources: list[dict[str, object]], failures: list[dict[str, object]]) -> str:
+    if responses and not blocked_sources and not failures and all(bool(response.get("answer_ready")) for response in responses):
+        return "ok"
+    if responses:
+        return "partial"
+    if blocked_sources or failures:
+        return "blocked"
+    return "missing"
+
+
+def _sources_answer_next_commands(query: str, source_ids: list[str] | None, platforms: list[str] | None, mode: str | None) -> list[str]:
+    payload: dict[str, object] = {"query": query}
+    if source_ids:
+        payload["source_ids"] = source_ids
+    if platforms:
+        payload["platforms"] = platforms
+    if mode:
+        payload["mode"] = mode
+    return [
+        f"aoa-course mcp call sources_answer {shlex.quote(json.dumps(payload, ensure_ascii=True, separators=(',', ':')))}",
+        "aoa-course mcp call list_sources '{\"include_source_refs\":false,\"connected_run_limit\":5}'",
+    ]
 
 
 def _source_answer_blocked(
