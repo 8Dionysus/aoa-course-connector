@@ -4,8 +4,11 @@ from pathlib import Path
 
 import pytest
 
+import aoa_course_connector.smoke.browser_session as browser_smoke_module
 from aoa_course_connector.config import StorageRoots, find_repo_root
+from aoa_course_connector.ingest.browser_session import _materialize_browser_raw
 from aoa_course_connector.smoke import smoke_browser_fixture, smoke_browser_snapshot
+from aoa_course_connector.sources import upsert_source
 
 
 def roots(tmp_path: Path) -> StorageRoots:
@@ -92,3 +95,62 @@ def test_browser_snapshot_smoke_flags_catalog_only_query_without_course_material
 def test_browser_snapshot_smoke_requires_input(tmp_path: Path) -> None:
     with pytest.raises(ValueError, match="provide --catalog-snapshot"):
         smoke_browser_snapshot(roots(tmp_path), platform="getcourse", run_id="empty-smoke")
+
+
+def test_browser_live_smoke_preserves_registry_source_in_report_and_answer(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "getcourse", "https://school.operator.edu/course", "Operator School")
+    captured: dict[str, object] = {}
+
+    def fake_crawl_browser_live(*args, **kwargs):
+        roots_arg = args[0]
+        run_id = str(kwargs["run_id"])
+        crawl_source = kwargs.get("source")
+        captured["source"] = crawl_source
+        raw = {
+            "schema": "aoa_course_browser_snapshot_v1",
+            "platform": "getcourse",
+            "captured_at": "2026-07-07T00:00:00Z",
+            "source": crawl_source,
+            "pages": [
+                {
+                    "page_id": "course-index",
+                    "kind": "course_index",
+                    "url": source["source_ref"],
+                    "title": "Operator School",
+                    "html": "<main><a data-aoa-kind='lesson' href='/lesson/one'>Lesson</a></main>",
+                },
+                {
+                    "page_id": "lesson-one",
+                    "kind": "lesson",
+                    "url": "https://school.operator.edu/lesson/one",
+                    "title": "Registry-backed live lesson",
+                    "html": "<article><h1>Registry-backed live lesson</h1><p>live smoke registry marker</p></article>",
+                },
+            ],
+        }
+        return _materialize_browser_raw(
+            roots_arg,
+            run_id=run_id,
+            source_mode="getcourse_browser_live_crawl",
+            raw=raw,
+            raw_name="getcourse_browser_live_crawl_snapshot.json",
+            network_touched=True,
+        )
+
+    monkeypatch.setattr(browser_smoke_module, "crawl_browser_live", fake_crawl_browser_live)
+
+    report = browser_smoke_module.smoke_browser_live(
+        storage,
+        platform="getcourse",
+        run_id="browser-live-source-smoke",
+        course_url=str(source["source_ref"]),
+        query="live smoke registry marker",
+        source=source,
+    )
+
+    assert captured["source"]["source_id"] == source["source_id"]
+    assert report["status"] == "ok"
+    assert report["source"]["source_id"] == source["source_id"]
+    assert report["source"]["registry_backed"] is True
+    assert report["artifacts"]["answer"]["quality"]["top_result"]["source_id"] == source["source_id"]

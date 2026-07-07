@@ -128,6 +128,12 @@ This proves:
 - source-registry sync routes and connected-source plan commands support
   `--source-id` scoped refreshes, so an agent can refresh one selected source
   without forcing a full platform sync;
+- browser live crawl, materialize, sync, smoke, and connected-run routes
+  preserve registered source ids in normalized bundles, answer evidence, stable
+  identity summaries, and refresh hints. Generated browser smoke commands now
+  include `--source-id`, so direct operator runs remain registry-refreshable
+  instead of falling back to generic crawl source ids or lesson URL
+  registration;
 - sync checkpoints now carry a `stable_identity` fingerprint over canonical
   source/course/module/lesson/step/asset/transcript/assignment/discussion/evidence
   IDs, and evals require that fingerprint alongside keyword/semantic/graph
@@ -289,6 +295,12 @@ This proves:
   produced an `ok` connected-source plan, live sync, live smoke, calibration
   packet, and intake with source-backed answer evidence, timestamps, and clean
   raw/secret privacy guards.
+- Operator-owned GetCourse live connected-run has been exercised locally with
+  runtime-only artifacts: preflight, live sync, smoke, calibration packet,
+  intake, CLI `calibration query`, and MCP `connected_run_query` returned `ok`;
+  answer evidence and refresh hints preserved the registered source id with
+  `registry_match: true` and no raw payloads or secret values in shareable
+  packets.
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,
@@ -311,12 +323,13 @@ This proves:
 
 ## Remaining Connector Work
 
-The next layer is live connected-source work:
+The next layer is broader live connected-source work:
 
-- run gated live smoke with connected GetCourse and Skillspace accounts to
-  calibrate real login redirects, theme selectors, and pagination behavior
-  after `preflight connected-plan` reports ready local auth/source state and
-  emits the runtime smoke/calibration commands;
+- run gated live smoke with connected Skillspace accounts and additional
+  operator-owned GetCourse courses to calibrate real login redirects, theme
+  selectors, and pagination behavior after `preflight connected-plan` reports
+  ready local auth/source state and emits the runtime smoke/calibration
+  commands;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress, comment, transcript, caption, and caption-sidecar resources use
   unusual markup or protected text-resource behavior;

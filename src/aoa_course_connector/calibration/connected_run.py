@@ -684,6 +684,7 @@ def _run_live(
                     link_pattern=link_pattern,
                     query=query,
                     build_artifacts=True,
+                    source=source,
                 ),
                 network_touched=True,
             )

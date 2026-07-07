@@ -6,8 +6,10 @@ from pathlib import Path
 import pytest
 
 import aoa_course_connector.refresh as refresh_module
+import aoa_course_connector.sync.browser_session as browser_sync_module
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.discover import discover_browser_fixture
+from aoa_course_connector.ingest.browser_session import _materialize_browser_raw
 from aoa_course_connector.index import build_semantic_index
 from aoa_course_connector.query import render_answer_packet
 from aoa_course_connector.sources import upsert_source
@@ -263,3 +265,66 @@ def test_browser_fixture_sync_can_target_one_source_id(tmp_path: Path) -> None:
     assert receipt["synced_count"] == 1
     assert receipt["synced_sources"][0]["source_id"] == second["source_id"]
     assert receipt["synced_sources"][0]["source_id"] != first["source_id"]
+
+
+def test_browser_live_sync_preserves_registry_source_in_answer_refresh_hints(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "getcourse", "https://school.operator.edu/course", "Operator School")
+    captured: dict[str, object] = {}
+
+    def fake_crawl_browser_live(*args, **kwargs):
+        roots_arg = args[0]
+        run_id = str(kwargs["run_id"])
+        crawl_source = kwargs.get("source")
+        captured["source"] = crawl_source
+        raw = {
+            "schema": "aoa_course_browser_snapshot_v1",
+            "platform": "getcourse",
+            "captured_at": "2026-07-07T00:00:00Z",
+            "source": crawl_source,
+            "pages": [
+                {
+                    "page_id": "course-index",
+                    "kind": "course_index",
+                    "url": source["source_ref"],
+                    "title": "Operator School",
+                    "html": "<main><a data-aoa-kind='lesson' href='/lesson/one'>Lesson</a></main>",
+                },
+                {
+                    "page_id": "lesson-one",
+                    "kind": "lesson",
+                    "url": "https://school.operator.edu/lesson/one",
+                    "title": "Registry-backed live lesson",
+                    "html": "<article><h1>Registry-backed live lesson</h1><p>bootloader rollback registry marker</p></article>",
+                },
+            ],
+        }
+        return _materialize_browser_raw(
+            roots_arg,
+            run_id=run_id,
+            source_mode="getcourse_browser_live_crawl",
+            raw=raw,
+            raw_name="getcourse_browser_live_crawl_snapshot.json",
+            network_touched=True,
+        )
+
+    monkeypatch.setattr(browser_sync_module, "crawl_browser_live", fake_crawl_browser_live)
+
+    receipt = browser_sync_module.sync_browser_live_sources(
+        storage,
+        sync_run_id="browser-live-source-preservation",
+        platforms=["getcourse"],
+        source_ids=[str(source["source_id"])],
+        build_artifacts=True,
+    )
+
+    checkpoint = receipt["synced_sources"][0]
+    packet = render_answer_packet(storage, "bootloader rollback registry marker", run_id=str(checkpoint["run_id"]), mode="hybrid")
+    hint = packet["results"][0]["refresh_hint"]
+
+    assert captured["source"]["source_id"] == source["source_id"]
+    assert packet["results"][0]["source_id"] == source["source_id"]
+    assert packet["evidence_chain"][0]["source_id"] == source["source_id"]
+    assert hint["registry_match"] is True
+    assert hint["source_refresh"]["registry_match"] is True
+    assert f"--source-id {source['source_id']}" in hint["source_refresh"]["sync_command"]

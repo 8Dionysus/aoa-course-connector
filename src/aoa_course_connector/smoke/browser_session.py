@@ -100,6 +100,7 @@ def smoke_browser_live(
     query: str | None = None,
     register: bool = False,
     build_artifacts: bool = True,
+    source: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     if not catalog_url and not course_url:
         raise ValueError("provide --catalog-url, --course-url, or both")
@@ -130,6 +131,7 @@ def smoke_browser_live(
             wait_until=wait_until,
             max_lessons=max_lessons,
             link_pattern=link_pattern,
+            source=source,
         )
         if course_url
         else None
@@ -144,6 +146,7 @@ def smoke_browser_live(
         query=query,
         build_artifacts=build_artifacts,
         network_touched=True,
+        source=source,
     )
 
 
@@ -158,6 +161,7 @@ def _report(
     query: str | None,
     build_artifacts: bool,
     network_touched: bool,
+    source: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     run_for_artifacts = str(materialized.get("run_id")) if materialized else ""
     course_summary = _course_summary(materialized)
@@ -179,6 +183,7 @@ def _report(
         "network_touched": network_touched,
         "failures": failures,
         "discovery": _discovery_summary(discovery),
+        "source": _source_summary(source, materialized),
         "course": course_summary,
         "snapshot_audits": snapshot_audits,
         "artifacts": artifact_summary,
@@ -187,6 +192,36 @@ def _report(
             "raw_paths_are_local_runtime_state": True,
             "do_not_commit_raw_html_or_auth_state": True,
         },
+    }
+
+
+def _source_summary(source: dict[str, Any] | None, materialized: dict[str, object] | None) -> dict[str, object]:
+    if source:
+        return {
+            "source_id": source.get("source_id"),
+            "platform": source.get("platform"),
+            "source_ref": source.get("source_ref"),
+            "title": source.get("title"),
+            "access_mode": source.get("access_mode"),
+            "registry_backed": True,
+        }
+    if not materialized:
+        return {"registry_backed": False}
+    normalized_path = Path(str(materialized.get("normalized_path") or ""))
+    if not normalized_path.is_file():
+        return {"registry_backed": False}
+    try:
+        bundle = json.loads(normalized_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError:
+        return {"registry_backed": False}
+    bundle_source = bundle.get("source") if isinstance(bundle.get("source"), dict) else {}
+    return {
+        "source_id": bundle_source.get("source_id"),
+        "platform": bundle_source.get("platform"),
+        "source_ref": bundle_source.get("source_ref"),
+        "title": bundle_source.get("title"),
+        "access_mode": bundle_source.get("access_mode"),
+        "registry_backed": False,
     }
 
 

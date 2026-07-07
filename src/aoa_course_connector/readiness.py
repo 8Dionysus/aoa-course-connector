@@ -908,9 +908,11 @@ def _smoke_actions(
         slug = _source_slug(source)
         artifact = f"{ARTIFACT_ROOT_EXPR}/{platform}-live-smoke-{slug}.json"
         if platform in BROWSER_PLATFORMS:
+            source_id = str(source.get("source_id") or "")
             command = (
                 f"aoa-course smoke browser-live --platform {platform} --run {platform}-live-smoke-{slug} "
-                f"--course-url {shlex.quote(source_ref)} --state-file {_state_file_arg(platform, browser_state_file)} "
+                f"--source-id {shlex.quote(source_id)} --course-url {shlex.quote(source_ref)} "
+                f"--state-file {_state_file_arg(platform, browser_state_file)} "
                 f"--max-sources {max_sources} --max-pages {max_pages} --max-lessons {max_lessons}"
             )
             if link_pattern:

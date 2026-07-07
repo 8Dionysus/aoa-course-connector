@@ -83,6 +83,7 @@ def sync_browser_live_sources(
                 wait_until=wait_until,
                 max_lessons=max_lessons,
                 link_pattern=link_pattern,
+                source=source,
             )
             checkpoint = _checkpoint_from_materialized(roots, source, sync_run_id, child_run, materialized, build_artifacts=build_artifacts)
             receipt["synced_sources"].append(checkpoint)
