@@ -914,6 +914,14 @@ def test_cli_install_route_eval_proves_fresh_agent_route(tmp_path: Path) -> None
     assert result["connected_status"]["status"] == "ok"
     assert result["connected_status"]["query_plan_ready_count"] >= 1
     assert result["source_registry"]["source_count"] >= 1
+    assert result["sources_answer"]["tool"] == "sources_answer"
+    assert result["sources_answer"]["schema"] == "aoa_course_sources_answer_packet_v1"
+    assert result["sources_answer"]["status"] == "ok"
+    assert result["sources_answer"]["network_touched"] is False
+    assert result["sources_answer"]["quality_ready"] is True
+    assert result["sources_answer"]["response_count"] >= 1
+    assert result["sources_answer"]["evidence_count_total"] >= 1
+    assert result["sources_answer"]["source_refs_included"] is False
 
 
 def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Path) -> None:

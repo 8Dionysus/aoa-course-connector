@@ -32,6 +32,8 @@ jobs:
       - run: aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
       - run: aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
       - run: aoa-course sources list
+      - run: aoa-course eval install-route
+      - run: aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
       - run: aoa-course eval browser-discovery
       - run: aoa-course sync browser-fixture --run browser-sync-fixture --build-artifacts
       - run: aoa-course sync status --run browser-sync-fixture

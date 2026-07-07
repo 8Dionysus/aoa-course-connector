@@ -12,6 +12,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixt
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback" --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
@@ -95,7 +96,8 @@ This proves:
 - CLI `eval install-route` returns `aoa_course_eval_install_route_v1` and proves
   the fresh-agent install path without network access: route docs, storage
   roots, bootstrap, readiness, CLI hybrid answer, MCP answer, connected-run
-  status, query-plan readiness, and source registry setup;
+  status, query-plan readiness, source registry setup, and CLI/MCP
+  source-scoped `sources_answer` retrieval;
 - CLI `eval preauth-readiness` returns
   `aoa_course_eval_preauth_readiness_v1` and proves the repository is ready up
   to the operator authorization boundary: starter bootstrap, runtime
@@ -106,7 +108,8 @@ This proves:
   `authorization_handoff.next_commands`, all with `network_touched: false`;
 - `scripts/verify_agent_install_route.py --skip-pytest` copies the repo into a
   temporary install-like workspace and verifies the same offline route plus MCP
-  stdio direct `answer` packets;
+  stdio direct `answer`, `connected_run_query`, and `sources_answer` packets
+  plus the direct CLI `sources answer` route;
 - CLI `connect profile`, `connect inspect`, `connect apply`, and MCP
   `connection_profile_inspect` provide the next operator-connection plan:
   a local `aoa_course_connection_profile_v1` runtime artifact for source refs,

@@ -25,6 +25,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock roll
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
@@ -52,8 +53,8 @@ runs fixture connected-source calibration for GetCourse, Skillspace, and Stepik,
 and returns the final readiness packet without touching the network.
 `eval install-route` is the executable fresh-agent proof for that route: it
 checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer, MCP
-answer, connected-run status, query-plan readiness, and source registry setup
-with `network_touched: false`.
+answer, CLI/MCP source-scoped `sources_answer`, connected-run status,
+query-plan readiness, and source registry setup with `network_touched: false`.
 `eval preauth-readiness` is the executable stop-line before operator
 authorization. It builds the starter proof, writes an `operator-preauth`
 connection profile and redacted runbooks, applies only registry-safe source

@@ -13,8 +13,9 @@
    install/source/run/MCP audit and its next commands.
 1. Run `aoa-course eval install-route` to prove the fresh-agent route end to
    end: docs, storage, bootstrap, readiness, CLI answer, MCP answer,
-   connected-run status, query-plan entries, `connected_run_query` retrieval,
-   and source registry without touching the network.
+   CLI/MCP source-scoped `sources_answer`, connected-run status, query-plan
+   entries, `connected_run_query` retrieval, and source registry without
+   touching the network.
 1. Run `aoa-course eval preauth-readiness` to prove the repository is ready up
    to the operator authorization boundary. The packet is
    `aoa_course_eval_preauth_readiness_v1`; it must return
@@ -26,8 +27,9 @@
 1. For the full public-repo verifier, run
    `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
    repository to a temporary install-like workspace, executes the offline route,
-   checks MCP stdio, and requires direct MCP `answer` plus fixture-safe MCP
-   `connected_run` and `connected_run_query` packets.
+   checks MCP stdio, and requires direct CLI `sources answer`, MCP `answer`,
+   fixture-safe MCP `connected_run`, MCP `connected_run_query`, and MCP
+   `sources_answer` packets.
 1. When operator source refs are available, run `aoa-course connect profile`
     with real GetCourse/Skillspace URLs, Stepik course ids, state-file paths,
     and semantic-provider settings, then run `connect inspect` and `connect

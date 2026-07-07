@@ -27,8 +27,8 @@ semantic index, graph, and a GetCourse/Skillspace/Stepik fixture connected-run
 receipt without network or secrets.
 `eval install-route` is the executable fresh-agent proof for that install path.
 It checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer,
-MCP answer, connected-run status, query-plan readiness, and source registry
-setup with `network_touched: false`.
+MCP answer, CLI/MCP source-scoped `sources_answer`, connected-run status,
+query-plan readiness, and source registry setup with `network_touched: false`.
 `eval preauth-readiness` is the executable pre-authorization proof. It prepares
 the starter run, writes and applies an `operator-preauth` connection profile,
 creates redacted profile and connected-source runbooks, checks CLI/MCP profile

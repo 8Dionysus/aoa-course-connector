@@ -1862,6 +1862,10 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
     mcp_readiness = call_tool("connector_readiness", {"runs": [DEFAULT_RUN], "connected_run": connected_run})
     connected_status = load_connected_calibration_status(roots, run_id=connected_run)
     sources = call_tool("list_sources", {})
+    sources_answer = call_tool(
+        "sources_answer",
+        {"platforms": ["stepik"], "query": "Stepik public API evidence", "mode": "hybrid"},
+    )
     doc_paths = [
         "README.md",
         "docs/INSTALL.md",
@@ -1883,6 +1887,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
         mcp_readiness=mcp_readiness,
         connected_status=connected_status,
         sources=sources,
+        sources_answer=sources_answer,
     )
     query_plan_ready_count = _ready_query_entry_count(connected_status)
     source_count = _source_registry_count(sources)
@@ -1900,7 +1905,9 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
                 f"aoa-course bootstrap fixture --run {DEFAULT_RUN} --connected-run {connected_run}",
                 f"aoa-course readiness --run {DEFAULT_RUN} --connected-run {connected_run}",
                 f'aoa-course answer "bootloader rollback" --run {DEFAULT_RUN} --mode hybrid',
+                'aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid',
                 f'aoa-course mcp call answer \'{{"query":"bootloader rollback","run":"{DEFAULT_RUN}","mode":"hybrid"}}\'',
+                'aoa-course mcp call sources_answer \'{"platforms":["stepik"],"query":"Stepik public API evidence","mode":"hybrid"}\'',
                 f"aoa-course calibration status --run {connected_run}",
             ],
             "storage": {
@@ -1938,6 +1945,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
                 "query_plan_ready_count": query_plan_ready_count,
             },
             "source_registry": {"source_count": source_count},
+            "sources_answer": _sources_answer_summary(sources_answer),
             "failures": failures,
         }
     )
@@ -2324,6 +2332,7 @@ def _install_route_failures(
     mcp_readiness: dict[str, object],
     connected_status: dict[str, object],
     sources: dict[str, object],
+    sources_answer: dict[str, object],
 ) -> list[dict[str, object]]:
     failures: list[dict[str, object]] = []
     missing_docs = [path for path in doc_paths if not (repo_root / path).exists()]
@@ -2381,7 +2390,71 @@ def _install_route_failures(
         failures.append({"surface": "connected_status.query_plan", "missing": "ready query entries"})
     if _source_registry_count(sources) < 1:
         failures.append({"surface": "source_registry", "missing": "registered sources"})
+    sources_answer_packet = (
+        sources_answer.get("sources_answer")
+        if isinstance(sources_answer.get("sources_answer"), dict)
+        else {}
+    )
+    sources_answer_quality = (
+        sources_answer_packet.get("quality")
+        if isinstance(sources_answer_packet.get("quality"), dict)
+        else {}
+    )
+    if sources_answer.get("tool") != "sources_answer":
+        failures.append({
+            "surface": "mcp.sources_answer",
+            "field": "tool",
+            "expected": "sources_answer",
+            "actual": sources_answer.get("tool"),
+        })
+    if sources_answer_packet.get("schema") != "aoa_course_sources_answer_packet_v1":
+        failures.append({
+            "surface": "sources_answer",
+            "field": "schema",
+            "expected": "aoa_course_sources_answer_packet_v1",
+            "actual": sources_answer_packet.get("schema"),
+        })
+    if sources_answer_packet.get("status") != "ok":
+        failures.append({
+            "surface": "sources_answer",
+            "field": "status",
+            "expected": "ok",
+            "actual": sources_answer_packet.get("status"),
+        })
+    if sources_answer_packet.get("network_touched") is not False:
+        failures.append({
+            "surface": "sources_answer",
+            "field": "network_touched",
+            "expected": False,
+            "actual": sources_answer_packet.get("network_touched"),
+        })
+    if int(sources_answer_packet.get("response_count") or 0) < 1:
+        failures.append({"surface": "sources_answer", "missing": "responses"})
+    if sources_answer_quality.get("ready") is not True:
+        failures.append({
+            "surface": "sources_answer.quality",
+            "field": "ready",
+            "expected": True,
+            "actual": sources_answer_quality.get("ready"),
+        })
+    if int(sources_answer_quality.get("evidence_count_total") or 0) < 1:
+        failures.append({"surface": "sources_answer.quality", "missing": "evidence"})
     return failures
+
+
+def _sources_answer_summary(result: dict[str, object]) -> dict[str, object]:
+    packet = result.get("sources_answer") if isinstance(result.get("sources_answer"), dict) else {}
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    return {
+        "tool": result.get("tool"),
+        "schema": packet.get("schema"),
+        "status": packet.get("status"),
+        "network_touched": packet.get("network_touched"),
+        "response_count": packet.get("response_count"),
+        "quality_ready": quality.get("ready"),
+        "evidence_count_total": quality.get("evidence_count_total"),
+        "source_refs_included": packet.get("source_refs_included"),
+    }
 
 
 def _ready_query_entry_count(status: dict[str, object]) -> int:
