@@ -820,6 +820,29 @@ def test_cli_retrieval_loop_eval_proves_cli_and_mcp_context(tmp_path: Path) -> N
     assert {case["lesson_graph_status"] for case in result["case_results"]} == {"ready"}
 
 
+def test_cli_install_route_eval_proves_fresh_agent_route(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "eval", "install-route")
+
+    assert result["schema"] == "aoa_course_eval_install_route_v1"
+    assert result["status"] == "ok"
+    assert result["network_touched"] is False
+    assert result["failures"] == []
+    assert result["storage"]["exists"] == {"artifact": True, "auth": True, "cache": True, "data": True}
+    assert result["bootstrap"]["status"] == "ok"
+    assert result["bootstrap"]["connected_status"] == "ok"
+    assert result["readiness"]["operational_ready"] is True
+    assert result["readiness"]["mcp_ready"] is True
+    assert result["answer"]["schema"] == "aoa_course_answer_packet_v1"
+    assert result["answer"]["mode"] == "hybrid"
+    assert result["answer"]["quality_ready"] is True
+    assert result["answer"]["evidence_count"] >= 1
+    assert result["mcp"]["answer_tool"] == "answer"
+    assert result["mcp"]["answer_quality_ready"] is True
+    assert result["connected_status"]["status"] == "ok"
+    assert result["connected_status"]["query_plan_ready_count"] >= 1
+    assert result["source_registry"]["source_count"] >= 1
+
+
 def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Path) -> None:
     fixture = Path("connector/fixtures/course/freshness_conflict_course.json")
     run_cli(tmp_path, "materialize", "fixture", "--run", "freshness-ranking-fixture", "--fixture", str(fixture))

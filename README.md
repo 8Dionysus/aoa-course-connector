@@ -24,6 +24,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixt
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
+PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
@@ -48,6 +49,10 @@ readiness.
 materializes the starter fixture, builds keyword/semantic indexes and the graph,
 runs fixture connected-source calibration for GetCourse, Skillspace, and Stepik,
 and returns the final readiness packet without touching the network.
+`eval install-route` is the executable fresh-agent proof for that route: it
+checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer, MCP
+answer, connected-run status, query-plan readiness, and source registry setup
+with `network_touched: false`.
 
 `connect profile` turns those operator inputs into a local runtime JSON
 contract, `aoa_course_connection_profile_v1`. It stores source refs, state-file

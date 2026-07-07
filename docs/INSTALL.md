@@ -16,6 +16,7 @@ aoa-course init
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
+aoa-course eval install-route
 aoa-course preflight live
 ```
 
@@ -23,6 +24,10 @@ aoa-course preflight live
 It creates storage roots, builds the starter normalized bundle, keyword index,
 semantic index, graph, and a GetCourse/Skillspace/Stepik fixture connected-run
 receipt without network or secrets.
+`eval install-route` is the executable fresh-agent proof for that install path.
+It checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer,
+MCP answer, connected-run status, query-plan readiness, and source registry
+setup with `network_touched: false`.
 
 `readiness` is the broad read-only route audit for the connector. It reports
 install files, storage roots, local run/index/graph readiness, source registry

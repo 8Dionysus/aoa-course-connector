@@ -69,6 +69,7 @@ aoa-course refresh query "Stepik public API evidence" --run "<checkpoint-run-id>
 aoa-course refresh query "course-specific question" --run "<checkpoint-run-id>" --strategy live --execute --allow-network --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
 aoa-course graph neighbors lesson:starter:unlock-risk --run starter-fixture
 aoa-course evidence inspect "rollback" --run starter-fixture --mode hybrid
+aoa-course eval install-route
 aoa-course eval answer-quality
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 aoa-course build-index --run freshness-ranking-fixture

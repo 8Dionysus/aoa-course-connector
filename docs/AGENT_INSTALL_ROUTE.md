@@ -11,6 +11,10 @@
    network access.
 1. Run `aoa-course readiness --run starter-fixture` to get the read-only
    install/source/run/MCP audit and its next commands.
+1. Run `aoa-course eval install-route` to prove the fresh-agent route end to
+   end: docs, storage, bootstrap, readiness, CLI answer, MCP answer,
+   connected-run status, query-plan entries, and source registry without
+   touching the network.
 1. When operator source refs are available, run `aoa-course connect profile`
     with real GetCourse/Skillspace URLs, Stepik course ids, state-file paths,
     and semantic-provider settings, then run `connect inspect` and `connect
