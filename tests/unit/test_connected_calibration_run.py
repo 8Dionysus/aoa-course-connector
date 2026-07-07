@@ -56,9 +56,11 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     sync_entries = [entry for entry in receipt["query_plan"]["entries"] if entry["kind"] == "sync"]
     assert {entry["platform"] for entry in smoke_entries} == {"getcourse", "skillspace", "stepik"}
     assert all(entry["query_ready"] is True for entry in smoke_entries)
+    assert all(entry["query_mode"] == "hybrid" for entry in smoke_entries)
     assert all(entry["semantic_query_ready"] is True for entry in smoke_entries)
     assert all(entry["graph_ready"] is True for entry in smoke_entries)
     assert all(entry["answer_ready"] is True for entry in smoke_entries)
+    assert all("--mode hybrid" in entry["commands"]["query"] for entry in smoke_entries)
     assert all(entry["commands"]["answer"].startswith("aoa-course answer ") for entry in smoke_entries)
     assert all("--mode hybrid" in entry["commands"]["answer"] for entry in smoke_entries)
     assert all(entry["commands"]["lesson_context"].startswith("aoa-course lesson-context ") for entry in smoke_entries)
@@ -70,8 +72,10 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all('"mode":"hybrid"' in entry["mcp_commands"]["lesson_context"] for entry in smoke_entries)
     assert all('"graph_limit":12' in entry["mcp_commands"]["lesson_context"] for entry in smoke_entries)
     assert sync_entries
+    assert all(entry["query_mode"] == "hybrid" for entry in sync_entries)
     assert all(entry["semantic_query_ready"] is True for entry in sync_entries)
     assert all(entry["paths"]["semantic_index_path"] for entry in sync_entries)
+    assert all("--mode hybrid" in entry["commands"]["query"] for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["answer"] for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["lesson_context"] for entry in sync_entries)
     assert all('"mode":"hybrid"' in entry["mcp_commands"]["search"] for entry in sync_entries)

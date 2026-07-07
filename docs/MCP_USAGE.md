@@ -246,8 +246,9 @@ calibration-packet intake routes with concrete next commands.
 `execution_options` records the query, browser `link_pattern`, source limit,
 and traversal bounds used by the connected run without exposing token values.
 `query_plan` gives agents the run ids, local keyword/semantic/graph/answer
-paths, and ready CLI `query`, `answer`, and `lesson-context` commands produced
-by sync and smoke actions. Each entry also includes `mcp_commands` for `search`,
+paths, the selected `query_mode`, and ready CLI `query`, `answer`, and
+`lesson-context` commands produced by sync and smoke actions. Each entry also
+includes `mcp_commands` for `search`,
 `lesson_context`, and `evidence_report`, so an MCP-side agent can query the
 connected run without switching back to shell planning or reparsing artifact
 paths. It never executes network work; missing receipts return
