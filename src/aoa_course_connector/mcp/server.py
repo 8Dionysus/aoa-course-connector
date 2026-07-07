@@ -15,7 +15,7 @@ from typing import Any, TextIO
 
 from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
 from aoa_course_connector.connection_profile import connection_profile_run_plan, connection_profile_status, inspect_connection_profile, load_connection_profile
-from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
+from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet, render_lesson_context_packet
@@ -138,6 +138,33 @@ def _connected_source_plan_schema() -> dict[str, object]:
     )
 
 
+def _connected_run_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "run": _string_schema("Connected calibration run id."),
+            "mode": {"type": "string", "enum": ["fixture", "live"], "description": "Use fixture mode for no-network proof or live mode for gated connected sources."},
+            "platforms": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
+                "description": "Optional connected platforms to run.",
+            },
+            "source_ids": _source_ids_schema("Optional source ids to select from the registry for live mode."),
+            "query": _string_schema("Optional course-specific smoke query."),
+            "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
+            "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to live Stepik runs."},
+            "allow_network": {"type": "boolean", "description": "Required before live mode can touch connected sources."},
+            "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
+            "state_file": _string_schema("Optional browser storage-state file."),
+            "expect_origin": _string_schema("Expected browser auth origin or host fragment."),
+            "max_lessons": _integer_schema("Maximum lessons for browser live smoke/sync commands.", 1),
+            "max_pages": _integer_schema("Maximum catalog pages for browser live smoke commands.", 1),
+            "max_sources": _integer_schema("Maximum discovered sources for browser live smoke commands.", 1),
+            "link_pattern": _string_schema("Optional browser lesson/course link glob for connected browser live commands."),
+            "source_limit": _integer_schema("Maximum selected sources to execute.", 1),
+        }
+    )
+
+
 def _connection_profile_inspect_schema() -> dict[str, object]:
     return _object_schema({"profile_path": _string_schema("Local runtime connection profile JSON path.")}, required=["profile_path"])
 
@@ -230,6 +257,7 @@ TOOLS = [
     {"name": "connection_profile_run_plan", "description": "Return one selected aoa_course_connection_profile_run_plan_v1 executable connected-run plan from a local connection profile without touching the network.", "inputSchema": _connection_profile_run_plan_schema()},
     {"name": "semantic_provider_preflight", "description": "Inspect semantic provider build readiness without touching the network or printing token values.", "inputSchema": _semantic_provider_preflight_schema()},
     {"name": "browser_snapshot_audit", "description": "Inspect a local GetCourse/Skillspace browser snapshot for discovery, crawl, transcript, caption, comment, progress, pagination, and repair readiness without printing raw HTML.", "inputSchema": _browser_snapshot_audit_schema()},
+    {"name": "connected_run", "description": "Execute the connected-source calibration route. Fixture mode is network-free; live mode requires explicit allow_network.", "inputSchema": _connected_run_schema()},
     {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
     {"name": "refresh_plan", "description": "Plan a query refresh cycle from current evidence without touching the network.", "inputSchema": _refresh_plan_schema()},
     {"name": "search", "description": "Search indexed course knowledge.", "inputSchema": _query_schema(mode=True)},
@@ -274,6 +302,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_semantic_provider_preflight(roots, args)}
     if name == "browser_snapshot_audit":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "audit": _call_browser_snapshot_audit(args)}
+    if name == "connected_run":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": _call_connected_run(roots, args)}
     if name == "connected_run_status":
         connected_run_id = str(args.get("run") or DEFAULT_CONNECTED_RUN)
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": load_connected_calibration_status(roots, run_id=connected_run_id)}
@@ -531,6 +561,33 @@ def _call_browser_snapshot_audit(args: dict[str, object]) -> dict[str, object]:
         max_sources=int(args.get("max_sources") or 50),
         max_lessons=int(args.get("max_lessons") or 50),
         link_pattern=str(args.get("link_pattern") or "") or None,
+    )
+
+
+def _call_connected_run(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    state_file = args.get("state_file")
+    if state_file is not None and not isinstance(state_file, str):
+        raise ValueError("connected_run state_file must be a string")
+    source_limit_value = args.get("source_limit")
+    source_limit = int(source_limit_value) if source_limit_value is not None else None
+    return run_connected_calibration(
+        roots,
+        run_id=str(args.get("run") or DEFAULT_CONNECTED_RUN),
+        mode=str(args.get("mode") or "fixture"),
+        platforms=_platform_arg(args.get("platforms"), tool_name="connected_run"),
+        source_ids=_string_array_arg(args.get("source_ids"), tool_name="connected_run", field_name="source_ids"),
+        query=str(args.get("query") or "") or None,
+        live_scope=str(args.get("live_scope") or "bounded"),
+        include_step_sources=bool(args.get("include_step_sources", False)),
+        allow_network=bool(args.get("allow_network", False)),
+        stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
+        browser_state_file=Path(state_file) if state_file else None,
+        expect_origin_contains=str(args.get("expect_origin") or "") or None,
+        max_lessons=int(args.get("max_lessons") or 50),
+        max_pages=int(args.get("max_pages") or 5),
+        max_sources=int(args.get("max_sources") or 50),
+        link_pattern=str(args.get("link_pattern") or "") or None,
+        source_limit=source_limit,
     )
 
 

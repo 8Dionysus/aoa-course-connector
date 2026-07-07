@@ -110,6 +110,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --liv
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --live-scope bounded --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_provider_preflight '{"run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
 PYTHONPATH=src python -m aoa_course_connector.cli readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 7 --max-pages 3 --max-sources 4 --live-scope bounded

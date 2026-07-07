@@ -95,6 +95,14 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError("connector_readiness stdio response reported wrong schema")
     if readiness.get("network_touched") is not False:
         raise StdioVerificationError("connector_readiness stdio response touched network")
+    connected_run = _require_tool_success(responses, 9, "connected_run")
+    connected_run_payload = connected_run.get("connected_run")
+    if not isinstance(connected_run_payload, dict) or connected_run_payload.get("schema") != "aoa_course_connected_calibration_run_receipt_v1":
+        raise StdioVerificationError("connected_run stdio response did not return connected calibration receipt")
+    if connected_run_payload.get("status") != "ok":
+        raise StdioVerificationError(f"connected_run stdio response was not ok: {connected_run_payload.get('status')}")
+    if connected_run_payload.get("network_touched") is not False:
+        raise StdioVerificationError("connected_run stdio fixture response touched network")
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
@@ -211,6 +219,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "preflight", "semantic-provider", "--run", "starter-fixture", "--require-ready"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "live_preflight", "{}"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_source_plan", '{"live_scope":"bounded"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connected_run", '{"run":"mcp-install-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_provider_preflight", '{"run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "connector_readiness", '{"runs":["starter-fixture"]}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "smoke", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-smoke-fixture"],
@@ -260,6 +269,7 @@ def main(argv: list[str] | None = None) -> int:
             '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"semantic_provider_preflight","arguments":{"run":"starter-fixture"}}}',
             '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}',
             '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"answer","arguments":{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}}}',
+            '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"connected_run","arguments":{"run":"stdio-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}}}',
             "",
         ])
         result = subprocess.run(

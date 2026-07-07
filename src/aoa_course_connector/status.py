@@ -36,6 +36,7 @@ REQUIRED_MCP_TOOLS = [
     "live_preflight",
     "connected_source_plan",
     "semantic_provider_preflight",
+    "connected_run",
     "connected_run_status",
     "refresh_plan",
     "search",

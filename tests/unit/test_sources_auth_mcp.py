@@ -538,6 +538,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "semantic_provider_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "browser_snapshot_audit" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connection_profile_run_plan" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "connected_run" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_run_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
@@ -633,6 +634,15 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert plan["plan"]["network_touched"] is False
     assert plan["plan"]["live_scope"] == "bounded"
     assert plan["plan"]["source_plans"]
+    mcp_connected_run = call_tool(
+        "connected_run",
+        {"run": "mcp-connected-run-tool", "mode": "fixture", "platforms": ["stepik"], "query": "Stepik public API evidence"},
+    )
+    assert mcp_connected_run["tool"] == "connected_run"
+    assert mcp_connected_run["connected_run"]["schema"] == "aoa_course_connected_calibration_run_receipt_v1"
+    assert mcp_connected_run["connected_run"]["status"] == "ok"
+    assert mcp_connected_run["connected_run"]["network_touched"] is False
+    assert Path(str(mcp_connected_run["connected_run"]["receipt_path"])).is_file()
     missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
     assert missing_connected_run["tool"] == "connected_run_status"
     assert missing_connected_run["connected_run"]["status"] == "missing"
@@ -664,6 +674,40 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert refresh["refresh"]["status"] == "planned"
     assert refresh["refresh"]["network_touched"] is False
     assert any("lesson-context" in command for command in refresh["refresh"]["planned_commands"]["local_query_commands"])
+
+
+def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    upsert_source(storage.data, "stepik", "https://stepik.org/course/67/syllabus", "Stepik Public", access_mode="public_api")
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    result = call_tool(
+        "connected_run",
+        {"run": "mcp-live-blocked", "mode": "live", "platforms": ["stepik"], "source_limit": 1},
+    )
+
+    receipt = result["connected_run"]
+    assert result["tool"] == "connected_run"
+    assert receipt["schema"] == "aoa_course_connected_calibration_run_receipt_v1"
+    assert receipt["status"] == "partial"
+    assert receipt["mode"] == "live"
+    assert receipt["allow_network"] is False
+    assert receipt["network_touched"] is False
+    assert any(failure["reason"] == "live mode requires --allow-network" for failure in receipt["failures"])
+    assert any(lane["lane"] == "network_gate" for lane in receipt["repair_lanes"])
+
+    status = call_tool("connected_run_status", {"run": "mcp-live-blocked"})
+    assert status["connected_run"]["status"] == "partial"
+    assert status["connected_run"]["network_touched"] is False
 
 
 def test_semantic_provider_preflight_redacts_token_values(tmp_path: Path, monkeypatch) -> None:
@@ -979,7 +1023,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     profile_run_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connection_profile_run_plan")
     semantic_provider_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "semantic_provider_preflight")
     browser_snapshot_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "browser_snapshot_audit")
-    connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
+    connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run")
+    connected_run_status_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "answer")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
@@ -1006,6 +1051,9 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert browser_snapshot_audit_tool["inputSchema"]["required"] == ["snapshot_path"]
     assert browser_snapshot_audit_tool["inputSchema"]["properties"]["platform"]["enum"] == ["getcourse", "skillspace"]
     assert connected_run_tool["inputSchema"]["required"] == []
+    assert connected_run_tool["inputSchema"]["properties"]["mode"]["enum"] == ["fixture", "live"]
+    assert "allow_network" in connected_run_tool["inputSchema"]["properties"]
+    assert connected_run_status_tool["inputSchema"]["required"] == []
     assert lesson_context_tool["inputSchema"]["required"] == ["query"]
     assert "graph_limit" in lesson_context_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
@@ -1103,6 +1151,18 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_plan["result"]["structuredContent"]["plan"]["network_touched"] is False
     assert connected_plan["result"]["structuredContent"]["plan"]["live_scope"] == "full-course"
     assert connected_plan["result"]["structuredContent"]["plan"]["include_step_sources"] is True
+    connected_run = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 411,
+        "method": "tools/call",
+        "params": {
+            "name": "connected_run",
+            "arguments": {"run": "jsonrpc-connected-fixture", "mode": "fixture", "platforms": ["stepik"]},
+        },
+    })
+    assert connected_run["result"]["structuredContent"]["tool"] == "connected_run"
+    assert connected_run["result"]["structuredContent"]["connected_run"]["status"] == "ok"
+    assert connected_run["result"]["structuredContent"]["connected_run"]["network_touched"] is False
     connected_status = handle_jsonrpc_message({
         "jsonrpc": "2.0",
         "id": 42,

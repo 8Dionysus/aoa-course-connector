@@ -40,6 +40,21 @@ def test_stdio_verifier_rejects_tool_error_with_structured_content() -> None:
         },
         {
             "jsonrpc": "2.0",
+            "id": 9,
+            "result": {
+                "structuredContent": {
+                    "tool": "connected_run",
+                    "connected_run": {
+                        "schema": "aoa_course_connected_calibration_run_receipt_v1",
+                        "status": "ok",
+                        "network_touched": False,
+                    },
+                },
+                "isError": False,
+            },
+        },
+        {
+            "jsonrpc": "2.0",
             "id": 4,
             "result": {
                 "structuredContent": {
@@ -70,10 +85,20 @@ def test_stdio_verifier_rejects_tool_error_with_structured_content() -> None:
 def test_stdio_verifier_requires_direct_answer_packet() -> None:
     verifier = load_verifier_module()
     responses = _healthy_stdio_responses()
-    responses[-1]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] = False
+    responses[-2]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] = False
     stdout = "\n".join(json.dumps(response) for response in responses)
 
     with pytest.raises(verifier.StdioVerificationError, match="answer stdio response quality is not ready"):
+        verifier._verify_stdio_tool_responses(stdout)
+
+
+def test_stdio_verifier_requires_connected_run_ok() -> None:
+    verifier = load_verifier_module()
+    responses = _healthy_stdio_responses()
+    responses[-1]["result"]["structuredContent"]["connected_run"]["status"] = "partial"
+    stdout = "\n".join(json.dumps(response) for response in responses)
+
+    with pytest.raises(verifier.StdioVerificationError, match="connected_run stdio response was not ok"):
         verifier._verify_stdio_tool_responses(stdout)
 
 
@@ -145,6 +170,21 @@ def _healthy_stdio_responses() -> list[dict[str, object]]:
                         "schema": "aoa_course_answer_packet_v1",
                         "quality": {"ready": True},
                         "evidence_chain": [{"evidence_id": "evidence:test"}],
+                    },
+                },
+                "isError": False,
+            },
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 9,
+            "result": {
+                "structuredContent": {
+                    "tool": "connected_run",
+                    "connected_run": {
+                        "schema": "aoa_course_connected_calibration_run_receipt_v1",
+                        "status": "ok",
+                        "network_touched": False,
                     },
                 },
                 "isError": False,

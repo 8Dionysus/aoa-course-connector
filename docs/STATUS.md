@@ -101,6 +101,10 @@ This proves:
   `evidence_report` keeps source URL, course path, fetched timestamp, freshness
   state, authority tier, rank score, refresh report, and per-result refresh
   hints;
+- MCP `connected_run` executes the same connected-source calibration backend as
+  CLI `calibration connected-run`: fixture mode proves the full connected route
+  without network access and live mode remains gated behind explicit
+  `allow_network`;
 - answer/search/evidence packets now tell agents how to rebuild local indexes
   and graphs for the current run, how to run a bounded connected-source
   preflight, which local `answer`, `lesson-context`, and `evidence inspect`
