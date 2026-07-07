@@ -347,9 +347,9 @@ intake failures into concrete next commands. CLI `readiness` and MCP
 selected connected-run receipt is partial, while a missing receipt still points
 to fixture bootstrap. They also include `query_plan`,
 a compact list of queryable sync/smoke run ids with index, semantic index,
-graph, answer packet paths, and ready-to-run CLI `query`/`answer` commands plus
-MCP `search`, `lesson_context`, and `evidence_report` commands for agents that
-should stay on the MCP surface.
+graph, answer packet paths, and ready-to-run CLI `query`, `answer`, and
+`lesson-context` commands plus MCP `search`, `lesson_context`, and
+`evidence_report` commands for agents that should stay on the MCP surface.
 
 ```bash
 ARTIFACT_ROOT="${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}"
