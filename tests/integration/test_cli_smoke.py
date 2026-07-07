@@ -477,6 +477,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 1, "method": "initialize", "params": {"protocolVersion": "2025-11-25", "capabilities": {}, "clientInfo": {"name": "pytest", "version": "0"}}},
         {"jsonrpc": "2.0", "method": "notifications/initialized"},
         {"jsonrpc": "2.0", "id": 2, "method": "tools/list"},
+        {"jsonrpc": "2.0", "id": 21, "method": "tools/call", "params": {"name": "list_sources", "arguments": {"include_source_refs": False}}},
         {"jsonrpc": "2.0", "id": 3, "method": "tools/call", "params": {"name": "search", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 31, "method": "tools/call", "params": {"name": "answer", "arguments": {"query": "rollback", "run": "starter-fixture", "mode": "hybrid"}}},
         {"jsonrpc": "2.0", "id": 4, "method": "tools/call", "params": {"name": "evidence_report", "arguments": {"query": "rollback", "run": "starter-fixture"}}},
@@ -502,28 +503,30 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 11]
+    assert [response["id"] for response in responses] == [1, 2, 21, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "answer" for tool in responses[1]["result"]["tools"])
-    assert responses[2]["result"]["structuredContent"]["results"]
-    assert responses[3]["result"]["structuredContent"]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
-    assert responses[3]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] is True
-    assert responses[4]["result"]["structuredContent"]["evidence_chain"]
-    assert responses[5]["result"]["structuredContent"]["refresh"]["network_touched"] is False
-    assert responses[6]["result"]["structuredContent"]["preflight"]["network_touched"] is False
-    assert responses[7]["result"]["structuredContent"]["plan"]["network_touched"] is False
-    assert responses[8]["result"]["structuredContent"]["preflight"]["schema"] == "aoa_course_semantic_provider_preflight_v1"
-    assert responses[8]["result"]["structuredContent"]["preflight"]["network_touched"] is False
-    assert responses[9]["result"]["structuredContent"]["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
-    assert responses[9]["result"]["structuredContent"]["audit"]["network_touched"] is False
-    assert responses[9]["result"]["structuredContent"]["audit"]["privacy"]["raw_html_included"] is False
-    assert responses[10]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
-    assert responses[11]["result"]["structuredContent"]["query_packet"]["status"] == "ok"
-    assert responses[11]["result"]["structuredContent"]["query_packet"]["response_count"] == 1
-    assert responses[12]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[12]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[12]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[2]["result"]["structuredContent"]["catalog"]["network_touched"] is False
+    assert responses[2]["result"]["structuredContent"]["catalog"]["source_refs_included"] is False
+    assert responses[3]["result"]["structuredContent"]["results"]
+    assert responses[4]["result"]["structuredContent"]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert responses[4]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] is True
+    assert responses[5]["result"]["structuredContent"]["evidence_chain"]
+    assert responses[6]["result"]["structuredContent"]["refresh"]["network_touched"] is False
+    assert responses[7]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[8]["result"]["structuredContent"]["plan"]["network_touched"] is False
+    assert responses[9]["result"]["structuredContent"]["preflight"]["schema"] == "aoa_course_semantic_provider_preflight_v1"
+    assert responses[9]["result"]["structuredContent"]["preflight"]["network_touched"] is False
+    assert responses[10]["result"]["structuredContent"]["audit"]["schema"] == "aoa_course_browser_snapshot_audit_v1"
+    assert responses[10]["result"]["structuredContent"]["audit"]["network_touched"] is False
+    assert responses[10]["result"]["structuredContent"]["audit"]["privacy"]["raw_html_included"] is False
+    assert responses[11]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
+    assert responses[12]["result"]["structuredContent"]["query_packet"]["status"] == "ok"
+    assert responses[12]["result"]["structuredContent"]["query_packet"]["response_count"] == 1
+    assert responses[13]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[13]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[13]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:

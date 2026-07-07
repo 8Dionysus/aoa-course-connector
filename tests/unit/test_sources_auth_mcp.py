@@ -579,6 +579,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "connector_readiness" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "list_sources" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "semantic_provider_preflight" for tool in tools_manifest()["tools"])
@@ -746,6 +747,56 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert refresh["refresh"]["status"] == "planned"
     assert refresh["refresh"]["network_touched"] is False
     assert any("lesson-context" in command for command in refresh["refresh"]["planned_commands"]["local_query_commands"])
+
+
+def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    getcourse, _, _ = upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+    disabled, _, _ = upsert_source(storage.data, "skillspace", "https://academy.example/course/demo", "Disabled", enabled=False)
+    stepik, _, _ = upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+    monkeypatch.setenv("STEPIK_API_TOKEN", "SUPER_SECRET_STEPIK_TOKEN")
+
+    result = call_tool("list_sources", {"platforms": ["getcourse"], "include_source_refs": False})
+
+    catalog = result["catalog"]
+    rendered = json.dumps(result)
+    assert result["tool"] == "list_sources"
+    assert catalog["schema"] == "aoa_course_source_registry_list_v1"
+    assert catalog["network_touched"] is False
+    assert catalog["read_only"] is True
+    assert catalog["contains_secret_values"] is False
+    assert catalog["source_refs_included"] is False
+    assert catalog["selected_platforms"] == ["getcourse"]
+    assert catalog["source_count"] == 3
+    assert catalog["enabled_source_count"] == 2
+    assert catalog["selected_source_count"] == 1
+    assert catalog["sources"][0]["source_id"] == getcourse["source_id"]
+    assert "source_ref" not in catalog["sources"][0]
+    assert "source_ref" not in result["registry"]["sources"][0]
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered
+
+    selected = call_tool("list_sources", {"source_ids": [stepik["source_id"]]})
+    assert selected["catalog"]["selected_source_ids"] == [stepik["source_id"]]
+    assert selected["catalog"]["selected_source_count"] == 1
+    assert selected["catalog"]["sources"][0]["source_ref"] == "67"
+
+    with_disabled = call_tool("list_sources", {"source_ids": [disabled["source_id"]], "include_disabled": True})
+    assert with_disabled["catalog"]["selected_source_count"] == 1
+    assert with_disabled["catalog"]["sources"][0]["enabled"] is False
+
+    missing = call_tool("list_sources", {"source_ids": ["source:stepik:missing"]})
+    assert missing["catalog"]["missing_source_ids"] == ["source:stepik:missing"]
+    assert missing["catalog"]["selected_source_count"] == 0
 
 
 def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:

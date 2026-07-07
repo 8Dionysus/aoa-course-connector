@@ -27,7 +27,7 @@ from aoa_course_connector.query import freshness_report, graph_neighbors, query_
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import load_registry
-from aoa_course_connector.status import connector_readiness, ingest_status
+from aoa_course_connector.status import connector_readiness, ingest_status, source_registry_catalog
 from aoa_course_connector.sync import load_sync_status
 
 
@@ -62,6 +62,21 @@ def _lesson_context_schema() -> dict[str, object]:
 
 def _run_schema() -> dict[str, object]:
     return _object_schema({"run": _string_schema("Connector run id.")})
+
+
+def _list_sources_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "platforms": {
+                "type": "array",
+                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
+                "description": "Optional platforms to select from the registry.",
+            },
+            "source_ids": _source_ids_schema("Optional source ids to select from the registry."),
+            "include_disabled": {"type": "boolean", "description": "Include disabled sources in the catalog."},
+            "include_source_refs": {"type": "boolean", "description": "Include operator source refs in catalog sources. They are not secrets, but can be private runtime context."},
+        }
+    )
 
 
 def _connector_readiness_schema() -> dict[str, object]:
@@ -286,7 +301,7 @@ def _source_ids_schema(description: str) -> dict[str, object]:
 
 
 TOOLS = [
-    {"name": "list_sources", "description": "List configured course sources.", "inputSchema": _object_schema({})},
+    {"name": "list_sources", "description": "List configured course sources as a read-only catalog with counts, filters, registry path, and privacy flags.", "inputSchema": _list_sources_schema()},
     {"name": "connector_readiness", "description": "Inspect install, storage, source, run, connected-run, and MCP readiness without touching the network.", "inputSchema": _connector_readiness_schema()},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
@@ -323,7 +338,18 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     roots = StorageRoots.from_env(find_repo_root())
     run_id = str(args.get("run") or DEFAULT_RUN)
     if name == "list_sources":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "registry": load_registry(roots.data)}
+        registry = load_registry(roots.data)
+        include_source_refs = _bool_arg(args.get("include_source_refs"), default=True, tool_name="list_sources", field_name="include_source_refs")
+        catalog = source_registry_catalog(
+            roots,
+            registry,
+            include_disabled=_bool_arg(args.get("include_disabled"), default=False, tool_name="list_sources", field_name="include_disabled"),
+            platforms=_platform_arg(args.get("platforms"), tool_name="list_sources"),
+            source_ids=_string_array_arg(args.get("source_ids"), tool_name="list_sources", field_name="source_ids"),
+            include_source_refs=include_source_refs,
+        )
+        registry_view = registry if include_source_refs else {"schema": registry.get("schema"), "sources": catalog.get("sources", [])}
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "catalog": catalog, "registry": registry_view}
     if name == "connector_readiness":
         return _call_connector_readiness(roots, args)
     if name == "ingest_status":
@@ -710,6 +736,14 @@ def _string_array_arg(value: object, *, tool_name: str, field_name: str) -> list
     if isinstance(value, list) and all(isinstance(item, str) for item in value):
         return value
     raise ValueError(f"{tool_name} {field_name} must be an array of strings")
+
+
+def _bool_arg(value: object, *, default: bool, tool_name: str, field_name: str) -> bool:
+    if value is None:
+        return default
+    if isinstance(value, bool):
+        return value
+    raise ValueError(f"{tool_name} {field_name} must be a boolean")
 
 
 def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:

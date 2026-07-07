@@ -68,6 +68,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval clean-api
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
 PYTHONPATH=src python -m aoa_course_connector.cli sources list
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false}'
 PYTHONPATH=src python -m aoa_course_connector.cli eval browser-discovery
 PYTHONPATH=src python -m aoa_course_connector.cli sync browser-fixture --run browser-sync-fixture --build-artifacts
 PYTHONPATH=src python -m aoa_course_connector.cli sync status --run browser-sync-fixture

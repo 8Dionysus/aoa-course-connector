@@ -33,6 +33,7 @@ CLI smoke:
 
 ```bash
 aoa-course mcp tools
+aoa-course mcp call list_sources '{"include_source_refs":false}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
@@ -87,6 +88,14 @@ not include raw HTML or caption text in `structuredContent`.
 bundle counts, materialization receipt summaries, keyword/semantic index
 metadata, graph node/edge counts, `agent_query_ready`, and next build/query
 commands without reading private raw payloads into `structuredContent`.
+
+`list_sources` is the read-only source catalog for MCP-side agents. It returns
+`catalog.schema: aoa_course_source_registry_list_v1`, registry path, total and
+selected source counts, platform/access-mode counts, `missing_source_ids`,
+`network_touched: false`, and privacy flags. Pass `platforms`, `source_ids`,
+or `include_disabled` to narrow a large registry before planning work. Pass
+`include_source_refs: false` when the agent only needs ids/counts and should
+avoid echoing operator source URLs into downstream context.
 
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,

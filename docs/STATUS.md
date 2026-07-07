@@ -50,6 +50,12 @@ This proves:
   and top-result identity before citation;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
   `tools/call` responses;
+- MCP `list_sources` returns a read-only
+  `aoa_course_source_registry_list_v1` catalog with registry path,
+  platform/access-mode counts, `source_ids` and platform filters,
+  disabled-source inclusion, `network_touched: false`, privacy flags, and an
+  `include_source_refs: false` mode for agents that only need source ids and
+  counts;
 - MCP `ingest_status` returns a read-only run readiness packet with normalized
   counts, materialization receipts, index/semantic/graph metadata, next
   commands, and `agent_query_ready`;

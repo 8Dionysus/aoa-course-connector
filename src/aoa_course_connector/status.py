@@ -248,41 +248,85 @@ def ingest_status(roots: StorageRoots, run_id: str) -> dict[str, object]:
     }
 
 
-def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *, include_disabled: bool, source_ids: list[str] | None = None) -> dict[str, object]:
-    sources = [source for source in registry.get("sources", []) if isinstance(source, dict)]
-    selected_ids = list(dict.fromkeys([str(source_id) for source_id in (source_ids or []) if str(source_id)]))
+def source_registry_catalog(
+    roots: StorageRoots,
+    registry: dict[str, object] | None = None,
+    *,
+    include_disabled: bool = False,
+    platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
+    include_source_refs: bool = True,
+) -> dict[str, object]:
+    """Return a read-only, secret-free catalog view of configured sources."""
+
+    registry_data = registry or load_registry(roots.data)
+    selected_platforms = _dedupe([str(platform) for platform in (platforms or []) if str(platform)])
+    selected_ids = _dedupe([str(source_id) for source_id in (source_ids or []) if str(source_id)])
+    sources = [source for source in registry_data.get("sources", []) if isinstance(source, dict)]
     selected_sources = [
         source
         for source in sources
         if (include_disabled or source.get("enabled", True))
+        and (not selected_platforms or str(source.get("platform") or "") in selected_platforms)
         and (not selected_ids or str(source.get("source_id") or "") in selected_ids)
     ]
     available_ids = {str(source.get("source_id") or "") for source in sources}
     platform_counts = Counter(str(source.get("platform") or "unknown") for source in selected_sources)
     access_mode_counts = Counter(str(source.get("access_mode") or "unknown") for source in selected_sources)
+    catalog_sources: list[dict[str, object]] = []
+    for source in selected_sources:
+        item = {
+            "source_id": source.get("source_id"),
+            "platform": source.get("platform"),
+            "title": source.get("title"),
+            "access_mode": source.get("access_mode"),
+            "enabled": source.get("enabled", True),
+            "updated_at": source.get("updated_at"),
+        }
+        if include_source_refs:
+            item["source_ref"] = source.get("source_ref")
+        catalog_sources.append(item)
     return {
-        "schema": registry.get("schema"),
+        "schema": "aoa_course_source_registry_list_v1",
+        "registry_schema": registry_data.get("schema"),
         "path": str(registry_path(roots.data)),
         "exists": registry_path(roots.data).exists(),
+        "network_touched": False,
+        "read_only": True,
+        "contains_secret_values": False,
+        "secret_values_logged": False,
+        "source_refs_included": bool(include_source_refs),
+        "include_disabled": bool(include_disabled),
+        "selected_platforms": selected_platforms,
+        "selected_source_ids": selected_ids,
+        "missing_source_ids": [source_id for source_id in selected_ids if source_id not in available_ids],
         "source_count": len(sources),
         "enabled_source_count": len([source for source in sources if source.get("enabled", True)]),
         "selected_source_count": len(selected_sources),
-        "selected_source_ids": selected_ids,
-        "missing_source_ids": [source_id for source_id in selected_ids if source_id not in available_ids],
         "platform_counts": dict(sorted(platform_counts.items())),
         "access_mode_counts": dict(sorted(access_mode_counts.items())),
-        "sources": [
-            {
-                "source_id": source.get("source_id"),
-                "platform": source.get("platform"),
-                "title": source.get("title"),
-                "access_mode": source.get("access_mode"),
-                "enabled": source.get("enabled", True),
-                "updated_at": source.get("updated_at"),
-            }
-            for source in selected_sources
+        "sources": catalog_sources,
+        "privacy": {
+            "contains_secret_values": False,
+            "secret_values_logged": False,
+            "source_refs_included": bool(include_source_refs),
+            "do_not_commit_runtime_registry": True,
+        },
+        "next_commands": [
+            "aoa-course sources list",
+            "aoa-course preflight connected-plan --live-scope bounded",
         ],
     }
+
+
+def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *, include_disabled: bool, source_ids: list[str] | None = None) -> dict[str, object]:
+    return source_registry_catalog(
+        roots,
+        registry,
+        include_disabled=include_disabled,
+        source_ids=source_ids,
+        include_source_refs=False,
+    )
 
 
 def _mcp_surface(tool_names: list[str] | set[str] | None) -> dict[str, object]:
