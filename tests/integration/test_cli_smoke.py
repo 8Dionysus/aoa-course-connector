@@ -509,6 +509,8 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert any(tool["name"] == "answer" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["catalog"]["network_touched"] is False
     assert responses[2]["result"]["structuredContent"]["catalog"]["source_refs_included"] is False
+    assert responses[2]["result"]["structuredContent"]["catalog"]["connected_runs"]["included"] is True
+    assert responses[2]["result"]["structuredContent"]["catalog"]["connected_runs"]["query_ready_entry_count"] >= 1
     assert responses[3]["result"]["structuredContent"]["results"]
     assert responses[4]["result"]["structuredContent"]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
     assert responses[4]["result"]["structuredContent"]["answer_packet"]["quality"]["ready"] is True

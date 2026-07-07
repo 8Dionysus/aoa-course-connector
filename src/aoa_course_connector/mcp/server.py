@@ -75,6 +75,9 @@ def _list_sources_schema() -> dict[str, object]:
             "source_ids": _source_ids_schema("Optional source ids to select from the registry."),
             "include_disabled": {"type": "boolean", "description": "Include disabled sources in the catalog."},
             "include_source_refs": {"type": "boolean", "description": "Include operator source refs in catalog sources. They are not secrets, but can be private runtime context."},
+            "include_connected_runs": {"type": "boolean", "description": "Include latest query-ready connected-run entries for each selected source."},
+            "connected_run_limit": _integer_schema("Maximum query-ready connected-run entries per source.", 1),
+            "connected_receipt_limit": _integer_schema("Maximum connected-run receipts to scan.", 1),
         }
     )
 
@@ -340,6 +343,7 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
     if name == "list_sources":
         registry = load_registry(roots.data)
         include_source_refs = _bool_arg(args.get("include_source_refs"), default=True, tool_name="list_sources", field_name="include_source_refs")
+        include_connected_runs = _bool_arg(args.get("include_connected_runs"), default=True, tool_name="list_sources", field_name="include_connected_runs")
         catalog = source_registry_catalog(
             roots,
             registry,
@@ -347,6 +351,9 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
             platforms=_platform_arg(args.get("platforms"), tool_name="list_sources"),
             source_ids=_string_array_arg(args.get("source_ids"), tool_name="list_sources", field_name="source_ids"),
             include_source_refs=include_source_refs,
+            include_connected_runs=include_connected_runs,
+            connected_run_limit=_positive_int_arg(args.get("connected_run_limit"), default=3, tool_name="list_sources", field_name="connected_run_limit"),
+            connected_receipt_limit=_positive_int_arg(args.get("connected_receipt_limit"), default=50, tool_name="list_sources", field_name="connected_receipt_limit"),
         )
         registry_view = registry if include_source_refs else {"schema": registry.get("schema"), "sources": catalog.get("sources", [])}
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "catalog": catalog, "registry": registry_view}
@@ -744,6 +751,14 @@ def _bool_arg(value: object, *, default: bool, tool_name: str, field_name: str) 
     if isinstance(value, bool):
         return value
     raise ValueError(f"{tool_name} {field_name} must be a boolean")
+
+
+def _positive_int_arg(value: object, *, default: int, tool_name: str, field_name: str) -> int:
+    if value is None:
+        return default
+    if isinstance(value, int) and value >= 1:
+        return value
+    raise ValueError(f"{tool_name} {field_name} must be an integer >= 1")
 
 
 def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:

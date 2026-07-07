@@ -472,7 +472,7 @@ stdio, and exposes the same local artifacts used by the CLI:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'

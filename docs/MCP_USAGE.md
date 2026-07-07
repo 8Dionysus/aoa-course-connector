@@ -33,7 +33,7 @@ CLI smoke:
 
 ```bash
 aoa-course mcp tools
-aoa-course mcp call list_sources '{"include_source_refs":false}'
+aoa-course mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
@@ -92,10 +92,18 @@ commands without reading private raw payloads into `structuredContent`.
 `list_sources` is the read-only source catalog for MCP-side agents. It returns
 `catalog.schema: aoa_course_source_registry_list_v1`, registry path, total and
 selected source counts, platform/access-mode counts, `missing_source_ids`,
-`network_touched: false`, and privacy flags. Pass `platforms`, `source_ids`,
-or `include_disabled` to narrow a large registry before planning work. Pass
+`network_touched: false`, and privacy flags. By default it also scans recent
+connected-run receipts and attaches per-source `latest_connected_runs[]`
+entries with query-ready run ids, query mode, artifact paths, CLI commands, and
+MCP commands. The top-level `connected_runs` summary reports receipt scan
+limits, sources with query-ready entries, and any unreadable receipt errors.
+Pass `platforms`, `source_ids`, or `include_disabled` to narrow a large
+registry before planning work. Pass `connected_run_limit` and
+`connected_receipt_limit` to bound the receipt scan, or
+`include_connected_runs: false` for registry-only listing. Pass
 `include_source_refs: false` when the agent only needs ids/counts and should
-avoid echoing operator source URLs into downstream context.
+avoid echoing operator source URLs into downstream context; this also removes
+`source_ref` from attached connected-run entries.
 
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,

@@ -55,7 +55,10 @@ This proves:
   platform/access-mode counts, `source_ids` and platform filters,
   disabled-source inclusion, `network_touched: false`, privacy flags, and an
   `include_source_refs: false` mode for agents that only need source ids and
-  counts;
+  counts. The catalog also attaches bounded per-source
+  `latest_connected_runs[]` from recent connected-run receipts, giving agents
+  local query-ready run ids, query modes, artifact paths, CLI commands, and MCP
+  commands without touching the network;
 - MCP `ingest_status` returns a read-only run readiness packet with normalized
   counts, materialization receipts, index/semantic/graph metadata, next
   commands, and `agent_query_ready`;
