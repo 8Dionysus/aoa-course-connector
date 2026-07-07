@@ -835,6 +835,38 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert "source_ref" not in latest_runs[0]
     assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_runs
 
+    source_answer = call_tool(
+        "source_answer",
+        {
+            "source_id": stepik["source_id"],
+            "query": "Stepik public API evidence",
+        },
+    )
+    source_answer_packet = source_answer["source_answer"]
+    rendered_source_answer = json.dumps(source_answer)
+    assert source_answer["tool"] == "source_answer"
+    assert source_answer_packet["schema"] == "aoa_course_source_answer_packet_v1"
+    assert source_answer_packet["status"] == "ok"
+    assert source_answer_packet["network_touched"] is False
+    assert source_answer_packet["read_only"] is True
+    assert source_answer_packet["source_refs_included"] is False
+    assert source_answer_packet["selected_source"]["source_id"] == stepik["source_id"]
+    assert source_answer_packet["selected_entry"]["connected_run_id"] == "source-catalog-connected"
+    assert source_answer_packet["query_packet"]["response_count"] == 1
+    assert source_answer_packet["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert source_answer_packet["answer_packet"]["quality"]["ready"] is True
+    assert source_answer_packet["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
+    assert source_answer_packet["evidence_report"]["result_refs"]
+    assert any("source_answer" in command for command in source_answer_packet["next_commands"])
+    assert '"source_ref"' not in rendered_source_answer
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_source_answer
+
+    ambiguous = call_tool("source_answer", {"query": "Stepik public API evidence"})
+    assert ambiguous["source_answer"]["status"] == "blocked"
+    assert ambiguous["source_answer"]["reason"] == "ambiguous_source"
+    assert ambiguous["source_answer"]["candidate_source_count"] == 2
+    assert '"source_ref"' not in json.dumps(ambiguous)
+
 
 def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
@@ -1193,6 +1225,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     connected_run_status_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     connected_run_query_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query")
     connected_run_query_matrix_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query_matrix")
+    source_answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "source_answer")
     answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "answer")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
@@ -1228,6 +1261,10 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_run_query_matrix_tool["inputSchema"]["required"] == ["queries"]
     assert connected_run_query_matrix_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
     assert connected_run_query_matrix_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
+    assert source_answer_tool["inputSchema"]["required"] == ["query"]
+    assert source_answer_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
+    assert source_answer_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
+    assert "include_source_refs" in source_answer_tool["inputSchema"]["properties"]
     assert lesson_context_tool["inputSchema"]["required"] == ["query"]
     assert "graph_limit" in lesson_context_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
