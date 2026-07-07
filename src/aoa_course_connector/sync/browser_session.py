@@ -10,7 +10,7 @@ from typing import Any
 from aoa_course_connector.adapters.browser import build_crawled_snapshot
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import crawl_browser_live
 from aoa_course_connector.ingest.browser_session import FIXTURES
 from aoa_course_connector.normalize import write_normalized_bundle
@@ -180,9 +180,11 @@ def _checkpoint_from_materialized(
     build_artifacts: bool,
 ) -> dict[str, object]:
     index_path = ""
+    semantic_index_path = ""
     graph_path = ""
     if build_artifacts:
         index_path = str(build_keyword_index(roots, run_id=child_run))
+        semantic_index_path = str(build_semantic_index(roots, run_id=child_run))
         graph_path = str(build_graph(roots, run_id=child_run))
     checkpoint = make_checkpoint(
         source=source,
@@ -193,6 +195,7 @@ def _checkpoint_from_materialized(
         receipt_path=str(materialized.get("receipt_path") or ""),
         normalized_path=str(materialized.get("normalized_path") or ""),
         index_path=index_path,
+        semantic_index_path=semantic_index_path,
         graph_path=graph_path,
     )
     upsert_checkpoint(roots, checkpoint)

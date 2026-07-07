@@ -47,7 +47,9 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert checkpoint["status"] == "ok"
     assert checkpoint["normalized_path"]
     assert checkpoint["index_path"]
+    assert checkpoint["semantic_index_path"]
     assert checkpoint["graph_path"]
+    assert Path(str(checkpoint["semantic_index_path"])).is_file()
     raw = json.loads(Path(str(checkpoint["cursor"])).read_text(encoding="utf-8"))
     assert raw["source"]["source_id"] == source["source_id"]
     assert raw["source"]["source_ref"] == "67"

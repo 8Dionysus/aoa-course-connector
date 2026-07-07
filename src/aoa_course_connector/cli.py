@@ -2259,10 +2259,11 @@ def cmd_eval_browser_sync(_args: argparse.Namespace) -> int:
             and item.get("status") == "ok"
             and item.get("normalized_path")
             and item.get("index_path")
+            and item.get("semantic_index_path")
             and item.get("graph_path")
         ]
         if not matches:
-            failures.append({"platform": platform, "missing": "ok checkpoint with normalized/index/graph paths"})
+            failures.append({"platform": platform, "missing": "ok checkpoint with normalized/index/semantic-index/graph paths"})
     _emit({"schema": "aoa_course_eval_browser_sync_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
@@ -2280,13 +2281,14 @@ def cmd_eval_stepik_sync(_args: argparse.Namespace) -> int:
         and item.get("status") == "ok"
         and item.get("normalized_path")
         and item.get("index_path")
+        and item.get("semantic_index_path")
         and item.get("graph_path")
     ]
     if not matches:
         failures.append(
             {
                 "platform": "stepik",
-                "missing": "ok checkpoint with normalized/index/graph paths",
+                "missing": "ok checkpoint with normalized/index/semantic-index/graph paths",
             }
         )
     _emit({"schema": "aoa_course_eval_stepik_sync_v1", "status": "ok" if not failures else "error", "failures": failures})

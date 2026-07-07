@@ -41,7 +41,9 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert checkpoint["status"] == "ok"
     assert checkpoint["normalized_path"]
     assert checkpoint["index_path"]
+    assert checkpoint["semantic_index_path"]
     assert checkpoint["graph_path"]
+    assert Path(str(checkpoint["semantic_index_path"])).is_file()
     status = load_sync_status(storage, sync_run_id="browser-sync-fixture", platform="getcourse")
     assert status["ok_count"] == 1
     packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=checkpoint["run_id"])
@@ -57,9 +59,11 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert f"--source-id {checkpoint['source_id']}" in sync_command
     assert '--state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json"' in sync_command
     assert hint["source_refresh"]["post_sync_rebuild_commands"] == [
+        "aoa-course build-index --run <checkpoint-run-id>",
         "aoa-course build-semantic-index --run <checkpoint-run-id>",
+        "aoa-course build-graph --run <checkpoint-run-id>",
     ]
-    assert "semantic index" in hint["source_refresh"]["post_sync_guidance"]
+    assert "keyword/semantic/graph artifacts" in hint["source_refresh"]["post_sync_guidance"]
     assert "lesson-context" in hint["source_refresh"]["post_sync_guidance"]
     assert any("lesson-context" in command and "--mode keyword" in command for command in hint["local_query_commands"])
     assert any("lesson-context" in command for command in packet["refresh_report"]["local_query_commands"])

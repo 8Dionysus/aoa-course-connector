@@ -42,7 +42,7 @@
     Registered `public_api` Stepik sources can be sync-ready without a token;
     account discovery and token-gated sources still require the token.
 1. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
-   sync, index/graph, answer, and privacy-safe report route.
+   sync, keyword/semantic/graph, answer, and privacy-safe report route.
 1. Run browser fixture discovery with `--register` to prove the local source
    registry route.
 1. After starter, Stepik fixture, and GetCourse browser fixture artifacts are

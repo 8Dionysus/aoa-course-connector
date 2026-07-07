@@ -103,8 +103,8 @@ This proves:
   registry through fixtures, snapshot input, optional Playwright live discovery,
   bounded live next-page following, and source-registry evals.
 - GetCourse and Skillspace source-registry driven browser sync with
-  `SyncCheckpoint` records, optional per-source index/graph builds, CLI status,
-  MCP status, and evals.
+  `SyncCheckpoint` records, optional per-source keyword/semantic/graph builds,
+  CLI status, MCP status, and evals.
 - GetCourse and Skillspace bounded course-tree crawlers through fixtures,
   snapshot input, optional Playwright live traversal, and answer evals.
 - Browser course-tree placeholders for unfetched lesson links now remain
@@ -188,10 +188,10 @@ This proves:
   `api_token`/`oauth` sources and checks browser-session storage state against
   each registered source host before marking sync ready.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
-  index/graph builds, CLI status, MCP status, and eval coverage.
+  keyword/semantic/graph builds, CLI status, MCP status, and eval coverage.
 - Stepik fixture/live smoke report routes that combine source registration,
-  source-registry sync, index/graph build, answer evidence, and privacy-safe
-  local raw API path reporting.
+  source-registry sync, keyword/semantic/graph build, answer evidence, and
+  privacy-safe local raw API path reporting.
 - Bounded public Stepik live calibration has been exercised through the
   connected-source route: preflight plus `smoke stepik-live` produced an
   `ok` live calibration packet with source-backed answer evidence, timestamps,

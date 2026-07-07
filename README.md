@@ -189,8 +189,8 @@ links into a course-tree snapshot. The `sync` route runs configured sources and
 records checkpoints. Browser fixtures also prove visible progress/status,
 discussion comments, and paginated catalog receipts flow into answer packets,
 indexes, and graphs. The `smoke` route combines discovery, course
-materialization, index/graph build, and optional answer checks into one
-operator-facing report for fixture, snapshot, or gated live sources.
+materialization, keyword/semantic/graph build, and optional answer checks into
+one operator-facing report for fixture, snapshot, or gated live sources.
 
 For live operator-owned browser sessions, create and inspect auth state first:
 
@@ -387,9 +387,9 @@ evidence; central proof verdicts and scoring stay with `aoa-evals`.
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
-| Stepik | Working clean API reference adapter with fixture/live smoke reports, source-registry sync checkpoints, batched full-course materialization, and optional authenticated step-source enrichment |
+| GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints with keyword/semantic/graph artifacts, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints with keyword/semantic/graph artifacts, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| Stepik | Working clean API reference adapter with fixture/live smoke reports, source-registry sync checkpoints with keyword/semantic/graph artifacts, batched full-course materialization, and optional authenticated step-source enrichment |
 | Moodle / Canvas | Future clean LMS adapters |
 | Coursera / Teachable / Thinkific / Kajabi | Future platform adapters with OAuth/API/browser-session split |
 

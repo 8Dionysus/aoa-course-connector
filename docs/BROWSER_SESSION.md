@@ -13,9 +13,10 @@ The connector supports seven browser-session routes:
 5. `discover`: account/catalog discovery that finds visible course entrypoints
    and can register them as local sources.
 6. `sync`: source-registry driven refresh that writes checkpoints and optional
-   index/graph artifacts.
+   keyword/semantic/graph artifacts.
 7. `smoke`: gated operator check that combines discovery, course materialization,
-   index/graph build, and optional answer verification into one report.
+   keyword/semantic/graph build, and optional answer verification into one
+   report.
 
 ## Fixture Proof
 

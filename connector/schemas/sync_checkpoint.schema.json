@@ -1,1 +1,26 @@
-{"$schema":"https://json-schema.org/draft/2020-12/schema","$id":"aoa_course_sync_checkpoint.schema.json","title":"SyncCheckpoint","type":"object","required":["checkpoint_id","source_id","updated_at"],"properties":{"checkpoint_id":{"type":"string"},"source_id":{"type":"string"},"cursor":{"type":"string"},"updated_at":{"type":"string"}}}
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aoa_course_sync_checkpoint.schema.json",
+  "title": "SyncCheckpoint",
+  "type": "object",
+  "required": ["checkpoint_id", "source_id", "updated_at"],
+  "properties": {
+    "checkpoint_id": {"type": "string"},
+    "source_id": {"type": "string"},
+    "platform": {"type": "string"},
+    "source_ref": {"type": "string"},
+    "title": {"type": "string"},
+    "access_mode": {"type": "string"},
+    "sync_run_id": {"type": "string"},
+    "run_id": {"type": "string"},
+    "status": {"type": "string"},
+    "cursor": {"type": "string"},
+    "receipt_path": {"type": "string"},
+    "normalized_path": {"type": "string"},
+    "index_path": {"type": "string"},
+    "semantic_index_path": {"type": "string"},
+    "graph_path": {"type": "string"},
+    "error": {"type": "string"},
+    "updated_at": {"type": "string"}
+  }
+}
