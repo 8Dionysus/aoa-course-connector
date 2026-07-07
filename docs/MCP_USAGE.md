@@ -258,8 +258,12 @@ the operator wants explicit live execution from the selected profile route.
 `calibration connected-run`. Use `mode: "fixture"` for a no-network MCP proof
 that writes the connected receipt, plan, runbook, smoke reports, calibration
 packet, intake report, and query plan under runtime artifact storage. Use
-`mode: "live"` only after `connected_source_plan` is ready; live mode still
-returns a partial network-gate receipt unless `allow_network: true` is present.
+`mode: "live"` only after inspecting `connected_source_plan`. A plan can be
+top-level `partial` while its `connected_run_plan` is `ready` with
+`scope: "ready_subset"`; that MCP command is intentionally narrowed to the
+ready platform/source ids and keeps unrelated auth/token blockers visible.
+Live mode still returns a partial network-gate receipt unless
+`allow_network: true` is present.
 The result schema is `aoa_course_connected_calibration_run_receipt_v1`.
 
 `connected_run_status` is the read-only MCP plan after CLI

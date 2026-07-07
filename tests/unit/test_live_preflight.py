@@ -288,8 +288,65 @@ def test_connected_source_plan_defaults_to_all_priority_platforms(tmp_path: Path
     assert any("capture-browser-state getcourse" in command for command in plan["next_commands"])
     assert any("capture-browser-state skillspace" in command for command in plan["next_commands"])
     assert any("sync stepik-live" in command for command in plan["next_commands"])
+    stepik_source = next(source for source in plan["source_plans"] if source["platform"] == "stepik")
+    connected_run = plan["connected_run_plan"]
+    assert connected_run["ready"] is True
+    assert connected_run["scope"] == "ready_subset"
+    assert connected_run["covers_all_selected"] is False
+    assert connected_run["platforms"] == ["stepik"]
+    assert connected_run["selected_platforms"] == ["getcourse", "skillspace", "stepik"]
+    assert connected_run["source_ids"] == [stepik_source["source_id"]]
+    assert "getcourse workflow is not ready" in connected_run["blocked_by"]
+    assert "skillspace workflow is not ready" in connected_run["blocked_by"]
+    assert "--platform stepik" in connected_run["command"]
+    assert "--platform getcourse" not in connected_run["command"]
+    assert "--platform skillspace" not in connected_run["command"]
+    assert connected_run["mcp_tool_call"]["arguments"]["platforms"] == ["stepik"]
+    assert any(command == connected_run["command"] for command in plan["next_commands"])
     preflight_stage = next(stage for stage in plan["stages"] if stage["name"] == "preflight_reports")
     assert [action["platform"] for action in preflight_stage["actions"]] == ["getcourse", "skillspace", "stepik"]
+
+
+def test_connected_source_plan_default_keeps_ready_getcourse_subset_actionable(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    plan = connected_source_plan(storage, query="course-specific question", max_lessons=7, max_pages=3, max_sources=4)
+
+    assert plan["status"] == "partial"
+    assert plan["ready"] is False
+    connected_run = plan["connected_run_plan"]
+    assert connected_run["ready"] is True
+    assert connected_run["scope"] == "ready_subset"
+    assert connected_run["covers_all_selected"] is False
+    assert connected_run["selected_platforms"] == ["getcourse", "skillspace", "stepik"]
+    assert connected_run["platforms"] == ["getcourse"]
+    assert connected_run["source_ids"] == [source["source_id"]]
+    assert "skillspace workflow is not ready" in connected_run["blocked_by"]
+    assert "stepik workflow is not ready" in connected_run["blocked_by"]
+    assert "--platform getcourse" in connected_run["command"]
+    assert "--platform skillspace" not in connected_run["command"]
+    assert "--platform stepik" not in connected_run["command"]
+    assert "--max-lessons 7" in connected_run["command"]
+    assert "--max-pages 3" in connected_run["command"]
+    assert "--max-sources 4" in connected_run["command"]
+    assert connected_run["mcp_tool_call"]["arguments"]["platforms"] == ["getcourse"]
+    assert connected_run["mcp_tool_call"]["arguments"]["source_ids"] == [source["source_id"]]
+    assert any(command == connected_run["command"] for command in plan["next_commands"])
+    assert next(stage for stage in plan["stages"] if stage["name"] == "connected_run")["ready"] is True
+    rendered = json.dumps(plan)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
 
 
 def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration(tmp_path: Path) -> None:

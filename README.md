@@ -326,10 +326,14 @@ and one-command `calibration connected-run --mode live --allow-network`
 plans with runtime artifact paths. It is also exposed to agents as MCP
 `connected_source_plan`. The default `--live-scope bounded` plans GetCourse,
 Skillspace, and Stepik together, while keeping Stepik live sync/smoke commands
-under smoke limits. Use `--platform` only to narrow a diagnostic run, and use
-`--source-id` to plan one registered source without being blocked by other
-not-yet-authorized sources in the same registry. MCP accepts the same scope as
-`source_ids`. Use `--live-scope full-course --include-step-sources` only for an explicit
+under smoke limits. If only some selected platforms are ready, the plan remains
+`status: partial`/`ready: false`, but `connected_run_plan` can still be
+`ready: true` with `scope: ready_subset`; that command executes only the ready
+platform/source ids and keeps the missing platform blockers visible. Use
+`--platform` only to narrow a diagnostic run, and use `--source-id` to plan one
+registered source without being blocked by other not-yet-authorized sources in
+the same registry. MCP accepts the same scope as `source_ids`. Use
+`--live-scope full-course --include-step-sources` only for an explicit
 operator-selected full-course run. For browser-session sources,
 `--link-pattern` carries the same lesson/course URL glob into planned sync,
 smoke, and connected-run commands. `--write-runbook` writes the same redacted

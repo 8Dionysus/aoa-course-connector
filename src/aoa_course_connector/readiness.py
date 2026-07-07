@@ -516,6 +516,7 @@ def connected_source_plan(
         selected_platforms,
         source_checks,
         platform_plans,
+        smoke_actions,
         blocked_smoke_actions,
         ready=ready,
         calibration_run=calibration_run,
@@ -533,7 +534,7 @@ def connected_source_plan(
     stages = [
         {"name": "preflight_reports", "ready": True, "actions": preflight_actions},
         {"name": "setup_or_unblock", "ready": not setup_actions, "actions": setup_actions},
-        {"name": "connected_run", "ready": ready and bool(connected_run_actions) and bool(connected_run_actions[0].get("ready")), "actions": connected_run_actions},
+        {"name": "connected_run", "ready": bool(connected_run_actions) and bool(connected_run_actions[0].get("ready")), "actions": connected_run_actions},
         {"name": "live_sync", "ready": bool(sync_actions), "actions": sync_actions},
         {"name": "live_smoke", "ready": bool(smoke_actions) and not blocked_smoke_actions, "actions": smoke_actions},
         {"name": "calibration_packet", "ready": bool(calibration_actions), "actions": calibration_actions},
@@ -989,6 +990,7 @@ def _connected_run_actions(
     platforms: list[str],
     source_checks: list[dict[str, object]],
     platform_plans: list[dict[str, object]],
+    smoke_actions: list[dict[str, object]],
     blocked_smoke_actions: list[dict[str, object]],
     *,
     ready: bool,
@@ -1004,13 +1006,32 @@ def _connected_run_actions(
     live_scope: str,
     include_step_sources: bool,
 ) -> list[dict[str, object]]:
-    ready_source_ids = [
-        str(source.get("source_id"))
+    ready_smoke_source_ids = {
+        str(action.get("source_id"))
+        for action in smoke_actions
+        if action.get("ready") and action.get("source_id")
+    }
+    blocked_smoke_source_ids = {
+        str(action.get("source_id"))
+        for action in blocked_smoke_actions
+        if action.get("source_id")
+    }
+    ready_sources = [
+        source
         for source in source_checks
-        if source.get("ready") and source.get("source_id")
+        if source.get("ready")
+        and source.get("source_id")
+        and str(source.get("source_id")) in ready_smoke_source_ids
+        and str(source.get("source_id")) not in blocked_smoke_source_ids
+    ]
+    ready_source_ids = [str(source.get("source_id")) for source in ready_sources]
+    ready_platforms = [
+        platform
+        for platform in platforms
+        if any(str(source.get("platform") or "") == platform for source in ready_sources)
     ]
     blockers = _connected_run_blockers(platform_plans, blocked_smoke_actions, ready_source_ids=ready_source_ids)
-    if not ready or blockers:
+    if not ready_source_ids or not ready_platforms:
         return [
             {
                 "kind": "connected_run",
@@ -1019,6 +1040,7 @@ def _connected_run_actions(
                 "blocked_by": blockers or ["connected source plan is not ready"],
             }
         ]
+    covers_all_selected = ready and not blockers
     parts = [
         "aoa-course calibration connected-run",
         f"--mode live",
@@ -1026,13 +1048,13 @@ def _connected_run_actions(
         f"--run {shlex.quote(calibration_run)}",
         f"--live-scope {shlex.quote(live_scope)}",
     ]
-    for platform in platforms:
+    for platform in ready_platforms:
         parts.append(f"--platform {shlex.quote(platform)}")
     for source_id in ready_source_ids:
         parts.append(f"--source-id {shlex.quote(source_id)}")
     if query:
         parts.append(f"--query {shlex.quote(query)}")
-    if "stepik" in platforms:
+    if "stepik" in ready_platforms:
         parts.append(f"--stepik-token-env {shlex.quote(stepik_token_env)}")
     if browser_state_file:
         parts.append(f"--state-file {shlex.quote(str(browser_state_file.expanduser()))}")
@@ -1053,13 +1075,13 @@ def _connected_run_actions(
     mcp_arguments = _connected_run_mcp_arguments(
         run_id=calibration_run,
         mode="live",
-        platforms=platforms,
+        platforms=ready_platforms,
         source_ids=ready_source_ids,
         query=query,
         live_scope=live_scope,
         include_step_sources=include_step_sources,
         allow_network=True,
-        stepik_token_env=stepik_token_env if "stepik" in platforms else None,
+        stepik_token_env=stepik_token_env if "stepik" in ready_platforms else None,
         browser_state_file=browser_state_file,
         expect_origin_contains=expect_origin_contains,
         max_lessons=max_lessons,
@@ -1073,6 +1095,10 @@ def _connected_run_actions(
             "kind": "connected_run",
             "ready": True,
             "network_touched": True,
+            "scope": "selected" if covers_all_selected else "ready_subset",
+            "covers_all_selected": covers_all_selected,
+            "selected_platforms": platforms,
+            "platforms": ready_platforms,
             "source_ids": ready_source_ids,
             "command": command,
             "mcp_tool_call": {
@@ -1082,6 +1108,7 @@ def _connected_run_actions(
             },
             "mcp_command": _mcp_call_command("connected_run", mcp_arguments),
             "artifact_path": f"{ARTIFACT_ROOT_EXPR}/runs/{calibration_run}/connected/connected_calibration_receipt.json",
+            **({"blocked_by": blockers} if blockers else {}),
         }
     ]
 

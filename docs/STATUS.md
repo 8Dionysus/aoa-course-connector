@@ -214,7 +214,10 @@ This proves:
   full-course/source-enrichment commands gated behind explicit options. Ready
   `connected_run_plan` entries now also expose `mcp_tool_call` and
   `mcp_command` for MCP `connected_run`, preserving source ids, traversal
-  bounds, live scope, and explicit `allow_network`;
+  bounds, live scope, and explicit `allow_network`. Partial plans with at least
+  one smoke-ready source now expose a `scope: ready_subset`
+  `connected_run_plan` for the ready platform/source ids while keeping blockers
+  for missing Skillspace auth, Stepik tokens, or other unready sources visible;
 - `preflight live`, `preflight connected-plan`, `readiness`, and MCP
   `source_ids` support source-scoped planning, so one ready registered source
   can produce its own preflight, sync, smoke, and connected-run plan without
@@ -315,6 +318,14 @@ This proves:
   indexes/graphs, and ranked an access-intent query first to
   `access_notice`/`browser_access_denied` without touching the network during
   retrieval.
+- A runtime-only ready-subset GetCourse proof has been exercised locally: a
+  default connected-source plan stayed `partial` because Skillspace auth and
+  Stepik token state were not ready, but exposed a `scope: ready_subset`
+  `connected_run_plan` for two ready GetCourse source ids. The gated live run
+  returned `ok`, selected both sources, produced no repair lanes, kept
+  raw/secret privacy guards clean, and CLI/MCP `connected_run_query_matrix`
+  answered two questions across both sync runs with evidence, graph context,
+  and `network_touched: false`.
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,
