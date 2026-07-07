@@ -80,12 +80,15 @@ This proves:
   hints;
 - answer/search/evidence packets now tell agents how to rebuild local indexes
   and graphs for the current run, how to run a bounded connected-source
-  preflight, and which registry-matched live sync route can refresh GetCourse,
-  Skillspace, or Stepik sources without touching the network during planning;
+  preflight, which local `answer`, `lesson-context`, and `evidence inspect`
+  commands rerun the current query, and which registry-matched live sync route
+  can refresh GetCourse, Skillspace, or Stepik sources without touching the
+  network during planning;
 - `refresh query` now wraps those hints into `aoa_course_refresh_cycle_v1`:
-  a read-only plan by default, a fixture-executable sync/checkpoint/rebuild
-  loop for registered safe sources, and a live execution route gated behind
-  explicit `--allow-network`; MCP exposes the read-only `refresh_plan` tool;
+  a read-only plan by default with planned rebuild/query/source commands, a
+  fixture-executable sync/checkpoint/rebuild loop for registered safe sources,
+  and a live execution route gated behind explicit `--allow-network`; MCP
+  exposes the read-only `refresh_plan` tool;
 - source-registry sync routes and connected-source plan commands support
   `--source-id` scoped refreshes, so an agent can refresh one selected source
   without forcing a full platform sync;

@@ -102,6 +102,12 @@ answer and nearby course graph context. It returns
 `aoa_course_lesson_graph_context_v1`; `--graph-limit` bounds the per-evidence
 lesson neighborhood.
 
+Use `refresh query` or MCP `refresh_plan` when an agent needs the next exact
+steps from a result. The packet includes local rebuild commands, local
+`answer`, `lesson-context`, and `evidence inspect` commands for the same query,
+and source refresh commands when a registry-matched connected source can be
+refreshed.
+
 Use `--source-id` on `preflight live`, `preflight connected-plan`, `readiness`,
 and sync commands when an agent is preparing or refreshing one result from a
 large source registry. Omitting it keeps the broader platform/source-ref

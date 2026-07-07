@@ -188,11 +188,12 @@ def _result_ref(result: dict[str, object] | None) -> dict[str, object] | None:
 
 def _planned_commands(result: dict[str, object] | None) -> dict[str, object]:
     if not result:
-        return {"local_rebuild_commands": [], "source_commands": []}
+        return {"local_rebuild_commands": [], "local_query_commands": [], "source_commands": []}
     hint = result.get("refresh_hint") if isinstance(result.get("refresh_hint"), dict) else {}
     source_refresh = hint.get("source_refresh") if isinstance(hint.get("source_refresh"), dict) else {}
     return {
         "local_rebuild_commands": [str(command) for command in hint.get("local_rebuild_commands", []) if command],
+        "local_query_commands": [str(command) for command in hint.get("local_query_commands", []) if command],
         "source_commands": [
             str(source_refresh.get(key))
             for key in ["preflight_command", "register_command", "sync_command", "status_command"]

@@ -51,7 +51,9 @@ Each result exposes `rank_features`, including `freshness_state`,
 Each result also exposes `refresh_hint`. This is read-only plan metadata, not
 a network action. It always includes `local_rebuild_commands` for
 `build-index`, `build-semantic-index`, and `build-graph` against the current
-run. For connected platforms (`getcourse`, `skillspace`, `stepik`) it also
+run, plus `local_query_commands` for `answer`, `lesson-context`, and
+`evidence inspect` against the same run and query mode. For connected
+platforms (`getcourse`, `skillspace`, `stepik`) it also
 includes a bounded `preflight connected-plan` command. When the result's
 `source_id` matches the local source registry, `source_refresh.registry_match`
 is true and the hint includes a registry-driven live `sync` command scoped with
@@ -60,8 +62,8 @@ or a registry match is missing, the hint says what is blocked instead of
 pretending a live refresh can safely run.
 
 Answer packets summarize these per-result hints in `refresh_report` with
-unique source counts, registry-match counts, local rebuild commands, source
-commands, and `network_touched: false`.
+unique source counts, registry-match counts, local rebuild commands, local
+query commands, source commands, and `network_touched: false`.
 
 The `evidence_chain` is also proof-bearing. Each evidence item keeps the
 source URL/id, matched snippet, fetched timestamp, platform, path, freshness
@@ -71,8 +73,8 @@ without reopening the full result list.
 
 `aoa-course refresh query` wraps this into an `aoa_course_refresh_cycle_v1`
 packet. Without `--execute`, it is a read-only plan: current answer packet,
-selected source-backed result, planned rebuild/source commands, refresh hint,
-and optional connected-source plan. With `--strategy fixture --execute`, it
+selected source-backed result, planned rebuild/query/source commands, refresh
+hint, and optional connected-source plan. With `--strategy fixture --execute`, it
 proves the full loop against safe registered fixture sources: source sync,
 checkpoint selection, keyword/semantic/graph rebuild, refreshed answer packet,
 and a source-id comparison. Live execution is gated behind
