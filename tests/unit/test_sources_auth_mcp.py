@@ -540,6 +540,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "connection_profile_run_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_run" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_run_status" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "connected_run_query" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "freshness_report" for tool in tools_manifest()["tools"])
@@ -643,6 +644,16 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert mcp_connected_run["connected_run"]["status"] == "ok"
     assert mcp_connected_run["connected_run"]["network_touched"] is False
     assert Path(str(mcp_connected_run["connected_run"]["receipt_path"])).is_file()
+    mcp_connected_query = call_tool("connected_run_query", {"run": "mcp-connected-run-tool", "kinds": ["smoke"]})
+    assert mcp_connected_query["tool"] == "connected_run_query"
+    assert mcp_connected_query["query_packet"]["schema"] == "aoa_course_connected_run_query_packet_v1"
+    assert mcp_connected_query["query_packet"]["status"] == "ok"
+    assert mcp_connected_query["query_packet"]["network_touched"] is False
+    assert mcp_connected_query["query_packet"]["response_count"] == 1
+    assert mcp_connected_query["query_packet"]["quality"]["ready"] is True
+    assert mcp_connected_query["query_packet"]["responses"][0]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert mcp_connected_query["query_packet"]["responses"][0]["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
+    assert mcp_connected_query["query_packet"]["responses"][0]["evidence_report"]["result_refs"]
     missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
     assert missing_connected_run["tool"] == "connected_run_status"
     assert missing_connected_run["connected_run"]["status"] == "missing"
@@ -1031,6 +1042,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     browser_snapshot_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "browser_snapshot_audit")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run")
     connected_run_status_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
+    connected_run_query_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query")
     answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "answer")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
@@ -1060,6 +1072,9 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_run_tool["inputSchema"]["properties"]["mode"]["enum"] == ["fixture", "live"]
     assert "allow_network" in connected_run_tool["inputSchema"]["properties"]
     assert connected_run_status_tool["inputSchema"]["required"] == []
+    assert connected_run_query_tool["inputSchema"]["required"] == []
+    assert connected_run_query_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
+    assert connected_run_query_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
     assert lesson_context_tool["inputSchema"]["required"] == ["query"]
     assert "graph_limit" in lesson_context_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
@@ -1169,6 +1184,19 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_run["result"]["structuredContent"]["tool"] == "connected_run"
     assert connected_run["result"]["structuredContent"]["connected_run"]["status"] == "ok"
     assert connected_run["result"]["structuredContent"]["connected_run"]["network_touched"] is False
+    connected_query = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 412,
+        "method": "tools/call",
+        "params": {
+            "name": "connected_run_query",
+            "arguments": {"run": "jsonrpc-connected-fixture", "kinds": ["smoke"]},
+        },
+    })
+    assert connected_query["result"]["structuredContent"]["tool"] == "connected_run_query"
+    assert connected_query["result"]["structuredContent"]["query_packet"]["status"] == "ok"
+    assert connected_query["result"]["structuredContent"]["query_packet"]["quality"]["ready"] is True
+    assert connected_query["result"]["structuredContent"]["query_packet"]["response_count"] == 1
     connected_status = handle_jsonrpc_message({
         "jsonrpc": "2.0",
         "id": 42,

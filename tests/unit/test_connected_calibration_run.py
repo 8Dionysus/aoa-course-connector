@@ -4,7 +4,11 @@ import json
 from pathlib import Path
 
 import aoa_course_connector.calibration.connected_run as connected_run_module
-from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
+from aoa_course_connector.calibration.connected_run import (
+    load_connected_calibration_status,
+    query_connected_calibration,
+    run_connected_calibration,
+)
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.smoke.browser_session import smoke_browser_fixture
 from aoa_course_connector.smoke.stepik import smoke_stepik_fixture
@@ -106,6 +110,37 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["query_plan"]["entries"][0]["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert status["query_plan"]["entries"][0]["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
     assert status["privacy"]["contains_secret_values"] is False
+
+    query_packet = query_connected_calibration(storage, run_id="connected-fixture-proof", kinds=["smoke"])
+    assert query_packet["schema"] == "aoa_course_connected_run_query_packet_v1"
+    assert query_packet["status"] == "ok"
+    assert query_packet["network_touched"] is False
+    assert query_packet["read_only"] is True
+    assert query_packet["connected_run_status"] == "ok"
+    assert query_packet["response_count"] == 3
+    assert query_packet["quality"]["ready"] is True
+    assert query_packet["quality"]["answer_ready_count"] == 3
+    assert query_packet["quality"]["all_responses_have_evidence"] is True
+    assert query_packet["quality"]["all_responses_have_graph_context"] is True
+    assert {response["platform"] for response in query_packet["responses"]} == {"getcourse", "skillspace", "stepik"}
+    assert all(response["answer_packet"]["schema"] == "aoa_course_answer_packet_v1" for response in query_packet["responses"])
+    assert all(response["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1" for response in query_packet["responses"])
+    assert all(response["evidence_report"]["result_refs"] for response in query_packet["responses"])
+    assert all("mcp_commands" in response for response in query_packet["responses"])
+
+    sync_query = query_connected_calibration(
+        storage,
+        run_id="connected-fixture-proof",
+        query="bootloader rollback",
+        kinds=["sync"],
+        platforms=["getcourse"],
+        entry_limit=1,
+    )
+    assert sync_query["status"] == "ok"
+    assert sync_query["response_count"] == 1
+    assert sync_query["responses"][0]["kind"] == "sync"
+    assert sync_query["responses"][0]["platform"] == "getcourse"
+    assert sync_query["responses"][0]["query"] == "bootloader rollback"
 
 
 def test_connected_calibration_status_reports_missing_receipt(tmp_path: Path) -> None:

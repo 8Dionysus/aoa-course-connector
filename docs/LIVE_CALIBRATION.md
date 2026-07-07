@@ -104,6 +104,13 @@ failures, `repair_lanes`, next steps, runtime artifact paths,
 already have local indexes, graphs, answer packets, selected `query_mode`, CLI
 `query`, `answer`, and `lesson-context` commands, and `mcp_commands` for MCP
 `search`, `answer`, `lesson_context`, and `evidence_report` plans.
+Then use `calibration query --run <run>` or MCP `connected_run_query` to execute
+that query plan against the local artifacts. The returned
+`aoa_course_connected_run_query_packet_v1` includes source-backed
+`answer_packet`, `lesson_context`, `evidence_report`, freshness and authority
+summaries, graph context status, and blockers without touching the network.
+Smoke entries can reuse their saved query; sync entries should pass an explicit
+`--query`/`query`.
 It also includes `snapshot_audit`, a compact
 `aoa_course_connected_snapshot_audit_status_v1` block with browser smoke audit
 coverage, failure counts, filtered `browser_snapshot_diagnostics` repair lanes,

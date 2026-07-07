@@ -17,6 +17,7 @@ Initial tools:
 - `browser_snapshot_audit`
 - `connected_run`
 - `connected_run_status`
+- `connected_run_query`
 - `refresh_plan`
 - `search`
 - `semantic_search`
@@ -54,6 +55,7 @@ aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provi
 aoa-course mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
 aoa-course mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
+aoa-course mcp call connected_run_query '{"run":"connected-fixture-proof","kinds":["smoke"],"entry_limit":2}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
@@ -146,6 +148,7 @@ printf '%s\n' \
   '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}' \
   '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connected_run","arguments":{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"]}}}' \
   '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"connected_run_status","arguments":{"run":"mcp-connected-fixture"}}}' \
+  '{"jsonrpc":"2.0","id":81,"method":"tools/call","params":{"name":"connected_run_query","arguments":{"run":"mcp-connected-fixture","kinds":["smoke"],"entry_limit":1}}}' \
   '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"browser_snapshot_audit","arguments":{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}}}' \
   '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}' \
   | aoa-course-connector-mcp
@@ -282,6 +285,16 @@ network work; missing receipts return
 `status: "missing"` so agents can ask for the fixture or live connected-run
 command instead of guessing from the
 filesystem.
+
+`connected_run_query` is the direct MCP retrieval pass over that receipt. It
+returns `aoa_course_connected_run_query_packet_v1` with one response per
+selected query-ready entry: `answer_packet`, `lesson_context`,
+`evidence_report`, freshness/authority/quality summaries, graph context status,
+and blockers for entries that need rebuilds or an explicit query. It is
+read-only, returns `network_touched: false`, and accepts `platforms`,
+`source_ids`, `kinds`, `mode`, `limit`, `graph_limit`, and `entry_limit`.
+Smoke entries can reuse their saved query; sync entries should pass `query` so
+the agent asks the newly indexed course run a real question.
 
 `aoa-course eval retrieval-loop` is the fixture-safe MCP/CLI contract check: it
 prepares starter, GetCourse, Skillspace, and Stepik runs, then verifies MCP

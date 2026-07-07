@@ -18,7 +18,7 @@ from aoa_course_connector.calibration import (
     write_live_calibration_intake,
     write_live_calibration_packet,
 )
-from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, run_connected_calibration
+from aoa_course_connector.calibration.connected_run import load_connected_calibration_status, query_connected_calibration, run_connected_calibration
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
     build_connection_profile,
@@ -529,6 +529,17 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_status = calibration_sub.add_parser("status")
     calibration_status.add_argument("--run", default="connected-calibration")
     calibration_status.set_defaults(func=cmd_calibration_status)
+    calibration_query = calibration_sub.add_parser("query")
+    calibration_query.add_argument("--run", default="connected-calibration")
+    calibration_query.add_argument("--query")
+    calibration_query.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    calibration_query.add_argument("--source-id", action="append")
+    calibration_query.add_argument("--kind", choices=["smoke", "sync"], action="append")
+    calibration_query.add_argument("--limit", type=int, default=5)
+    calibration_query.add_argument("--mode", choices=["keyword", "semantic", "hybrid"])
+    calibration_query.add_argument("--graph-limit", type=int, default=12)
+    calibration_query.add_argument("--entry-limit", type=int, default=5)
+    calibration_query.set_defaults(func=cmd_calibration_query)
 
     build_index = sub.add_parser("build-index")
     build_index.add_argument("--run", default=DEFAULT_RUN)
@@ -1526,6 +1537,24 @@ def cmd_calibration_status(args: argparse.Namespace) -> int:
     status = load_connected_calibration_status(roots, run_id=args.run)
     _emit(status)
     return 0 if status.get("status") not in {"missing", "error"} else 1
+
+
+def cmd_calibration_query(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    packet = query_connected_calibration(
+        roots,
+        run_id=args.run,
+        query=args.query,
+        platforms=args.platform,
+        source_ids=args.source_id,
+        kinds=args.kind,
+        limit=args.limit,
+        mode=args.mode,
+        graph_limit=args.graph_limit,
+        entry_limit=args.entry_limit,
+    )
+    _emit(packet)
+    return 0 if packet.get("status") in {"ok", "partial"} else 1
 
 
 def cmd_materialize_stepik_fixture(args: argparse.Namespace) -> int:

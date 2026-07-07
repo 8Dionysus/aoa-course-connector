@@ -21,6 +21,7 @@ from aoa_course_connector.calibration import (
     write_live_calibration_packet,
 )
 from aoa_course_connector.config import StorageRoots
+from aoa_course_connector.query import render_answer_packet, render_lesson_context_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, write_connected_source_runbook
 from aoa_course_connector.smoke import smoke_browser_fixture, smoke_browser_live, smoke_stepik_fixture, smoke_stepik_live
 from aoa_course_connector.sources import load_registry, registry_path
@@ -120,6 +121,116 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
             "intake_path": artifacts.get("intake_path"),
             "sync_receipt_paths": artifacts.get("sync_receipt_paths", []),
         },
+        "read_only": True,
+    }
+
+
+def query_connected_calibration(
+    roots: StorageRoots,
+    *,
+    run_id: str,
+    query: str | None = None,
+    platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
+    kinds: list[str] | None = None,
+    limit: int = 5,
+    mode: str | None = None,
+    graph_limit: int = 12,
+    entry_limit: int = 5,
+) -> dict[str, object]:
+    """Run answer/context/evidence checks against query-ready connected runs."""
+
+    status = load_connected_calibration_status(roots, run_id=run_id)
+    query_plan = status.get("query_plan") if isinstance(status.get("query_plan"), dict) else {}
+    entries = query_plan.get("entries") if isinstance(query_plan.get("entries"), list) else []
+    selected_entries, blocked_entries = _select_query_entries(
+        entries,
+        query=query,
+        platforms=platforms,
+        source_ids=source_ids,
+        kinds=kinds,
+        entry_limit=max(1, int(entry_limit or 1)),
+    )
+    responses: list[dict[str, object]] = []
+    failures: list[dict[str, object]] = []
+    for entry in selected_entries:
+        if not isinstance(entry, dict):
+            continue
+        entry_query = str(query or entry.get("query") or "")
+        if not entry_query or entry_query == "<course-specific question>":
+            blocked_entries.append(_blocked_query_entry(entry, "missing_query", "pass --query or run calibration with a smoke query"))
+            continue
+        entry_run_id = str(entry.get("run_id") or "")
+        if not entry_run_id:
+            blocked_entries.append(_blocked_query_entry(entry, "missing_run_id", "query-plan entry has no run_id"))
+            continue
+        entry_mode = str(mode or entry.get("query_mode") or "keyword")
+        try:
+            answer_packet = render_answer_packet(roots, entry_query, entry_run_id, int(limit or 5), entry_mode)
+            lesson_context = render_lesson_context_packet(roots, entry_query, entry_run_id, int(limit or 5), entry_mode, int(graph_limit or 12))
+        except (OSError, json.JSONDecodeError, ValueError) as exc:
+            failures.append(
+                {
+                    "kind": entry.get("kind"),
+                    "platform": entry.get("platform"),
+                    "run_id": entry_run_id,
+                    "source_id": entry.get("source_id"),
+                    "reason": exc.__class__.__name__,
+                    "error": str(exc),
+                    "next_commands": _entry_rebuild_commands(entry_run_id),
+                }
+            )
+            continue
+        graph_context = lesson_context.get("graph_context") if isinstance(lesson_context.get("graph_context"), dict) else {}
+        quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+        responses.append(
+            {
+                "kind": entry.get("kind"),
+                "platform": entry.get("platform"),
+                "run_id": entry_run_id,
+                "source_id": entry.get("source_id"),
+                "source_ref": entry.get("source_ref"),
+                "title": entry.get("title"),
+                "query": entry_query,
+                "mode": entry_mode,
+                "query_ready": True,
+                "answer_ready": bool(quality.get("ready")),
+                "result_count": answer_packet.get("result_count", 0),
+                "evidence_count": len(answer_packet.get("evidence_chain", [])) if isinstance(answer_packet.get("evidence_chain"), list) else 0,
+                "graph_status": graph_context.get("status"),
+                "graph_context_count": graph_context.get("context_count", 0),
+                "quality": quality,
+                "answer_packet": answer_packet,
+                "lesson_context": lesson_context,
+                "evidence_report": _evidence_report_from_answer(answer_packet),
+                "commands": entry.get("commands", {}),
+                "mcp_commands": entry.get("mcp_commands", {}),
+            }
+        )
+    quality = _connected_query_quality(responses, blocked_entries, failures)
+    packet_status = _connected_query_status(status, responses, blocked_entries, failures)
+    return {
+        "schema": "aoa_course_connected_run_query_packet_v1",
+        "status": packet_status,
+        "connected_run_id": run_id,
+        "connected_run_status": status.get("status"),
+        "receipt_path": status.get("receipt_path"),
+        "query": query or "",
+        "limit": int(limit or 5),
+        "mode": mode or "",
+        "graph_limit": int(graph_limit or 12),
+        "entry_limit": int(entry_limit or 5),
+        "entry_count": len(entries),
+        "selected_entry_count": len(selected_entries),
+        "response_count": len(responses),
+        "blocked_entry_count": len(blocked_entries),
+        "failure_count": len(failures),
+        "responses": responses,
+        "blocked_entries": blocked_entries,
+        "failures": failures,
+        "quality": quality,
+        "next_commands": _connected_query_next_commands(status, blocked_entries, failures),
+        "network_touched": False,
         "read_only": True,
     }
 
@@ -991,6 +1102,195 @@ def _query_plan(stages: list[dict[str, object]]) -> dict[str, object]:
         "entry_count": len(entries),
         "entries": entries,
     }
+
+
+def _select_query_entries(
+    entries: list[object],
+    *,
+    query: str | None,
+    platforms: list[str] | None,
+    source_ids: list[str] | None,
+    kinds: list[str] | None,
+    entry_limit: int,
+) -> tuple[list[dict[str, object]], list[dict[str, object]]]:
+    platform_set = {str(platform) for platform in platforms or []}
+    source_set = {str(source_id) for source_id in source_ids or []}
+    kind_set = {str(kind) for kind in kinds or []}
+    selected: list[dict[str, object]] = []
+    blocked: list[dict[str, object]] = []
+    missing_query_entries: list[dict[str, object]] = []
+    for entry in entries:
+        if not isinstance(entry, dict):
+            continue
+        if platform_set and str(entry.get("platform") or "") not in platform_set:
+            continue
+        if source_set and str(entry.get("source_id") or "") not in source_set:
+            continue
+        if kind_set and str(entry.get("kind") or "") not in kind_set:
+            continue
+        if not bool(entry.get("query_ready")):
+            blocked.append(_blocked_query_entry(entry, "query_not_ready", "query-plan entry is not query ready"))
+            continue
+        if not query and not str(entry.get("query") or ""):
+            missing_query_entries.append(entry)
+            continue
+        if len(selected) < entry_limit:
+            selected.append(entry)
+    if not selected and missing_query_entries:
+        for entry in missing_query_entries[:entry_limit]:
+            blocked.append(_blocked_query_entry(entry, "missing_query", "pass --query or run calibration with a smoke query"))
+    return selected, blocked
+
+
+def _blocked_query_entry(entry: dict[str, object], reason: str, detail: str) -> dict[str, object]:
+    run_id = str(entry.get("run_id") or "")
+    payload = {
+        "kind": entry.get("kind"),
+        "platform": entry.get("platform"),
+        "run_id": run_id,
+        "source_id": entry.get("source_id"),
+        "source_ref": entry.get("source_ref"),
+        "reason": reason,
+        "detail": detail,
+        "query_ready": bool(entry.get("query_ready")),
+    }
+    if run_id:
+        payload["next_commands"] = _entry_rebuild_commands(run_id)
+    return payload
+
+
+def _entry_rebuild_commands(run_id: str) -> list[str]:
+    return [
+        f"aoa-course build-index --run {shlex.quote(run_id)}",
+        f"aoa-course build-semantic-index --run {shlex.quote(run_id)}",
+        f"aoa-course build-graph --run {shlex.quote(run_id)}",
+    ]
+
+
+def _evidence_report_from_answer(answer_packet: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema": "aoa_course_connected_run_evidence_report_v1",
+        "run_id": answer_packet.get("run_id"),
+        "query": answer_packet.get("query"),
+        "mode": answer_packet.get("mode"),
+        "result_count": answer_packet.get("result_count"),
+        "evidence_chain": answer_packet.get("evidence_chain", []),
+        "quality": answer_packet.get("quality", {}),
+        "freshness_report": answer_packet.get("freshness_report", {}),
+        "authority_report": answer_packet.get("authority_report", {}),
+        "refresh_report": answer_packet.get("refresh_report", {}),
+        "result_refs": _compact_result_refs(answer_packet),
+    }
+
+
+def _compact_result_refs(answer_packet: dict[str, object]) -> list[dict[str, object]]:
+    results = answer_packet.get("results") if isinstance(answer_packet.get("results"), list) else []
+    refs: list[dict[str, object]] = []
+    for result in results:
+        if not isinstance(result, dict):
+            continue
+        refs.append(
+            {
+                key: value
+                for key, value in {
+                    "doc_id": result.get("doc_id"),
+                    "kind": result.get("kind"),
+                    "source_id": result.get("source_id"),
+                    "source_url": result.get("source_url"),
+                    "evidence_id": result.get("evidence_id"),
+                    "snippet": result.get("snippet"),
+                    "platform": result.get("platform"),
+                    "path": result.get("path"),
+                    "lesson_id": result.get("lesson_id"),
+                    "lesson_title": result.get("lesson_title"),
+                    "fetched_at": result.get("fetched_at"),
+                    "freshness_state": result.get("freshness_state"),
+                    "authority_tier": result.get("authority_tier"),
+                    "authority_label": result.get("authority_label"),
+                    "source_authority": result.get("source_authority"),
+                    "score": result.get("score"),
+                    "rank_score": result.get("rank_score"),
+                    "rank_features": result.get("rank_features"),
+                    "refresh_hint": result.get("refresh_hint"),
+                }.items()
+                if value is not None
+            }
+        )
+    return refs
+
+
+def _connected_query_quality(
+    responses: list[dict[str, object]],
+    blocked_entries: list[dict[str, object]],
+    failures: list[dict[str, object]],
+) -> dict[str, object]:
+    answer_ready_count = sum(1 for response in responses if bool(response.get("answer_ready")))
+    graph_ready_count = sum(1 for response in responses if response.get("graph_status") == "ready")
+    evidence_count_total = sum(int(response.get("evidence_count") or 0) for response in responses)
+    result_count_total = sum(int(response.get("result_count") or 0) for response in responses)
+    return {
+        "ready": bool(responses) and answer_ready_count == len(responses) and not blocked_entries and not failures,
+        "response_count": len(responses),
+        "answer_ready_count": answer_ready_count,
+        "graph_ready_count": graph_ready_count,
+        "result_count_total": result_count_total,
+        "evidence_count_total": evidence_count_total,
+        "blocked_entry_count": len(blocked_entries),
+        "failure_count": len(failures),
+        "platforms": sorted({str(response.get("platform") or "") for response in responses if response.get("platform")}),
+        "run_ids": sorted({str(response.get("run_id") or "") for response in responses if response.get("run_id")}),
+        "source_ids": sorted({str(response.get("source_id") or "") for response in responses if response.get("source_id")}),
+        "all_responses_have_evidence": bool(responses) and all(int(response.get("evidence_count") or 0) > 0 for response in responses),
+        "all_responses_have_graph_context": bool(responses) and graph_ready_count == len(responses),
+    }
+
+
+def _connected_query_status(
+    status: dict[str, object],
+    responses: list[dict[str, object]],
+    blocked_entries: list[dict[str, object]],
+    failures: list[dict[str, object]],
+) -> str:
+    if status.get("status") in {"missing", "error"}:
+        return str(status.get("status"))
+    if responses and all(bool(response.get("answer_ready")) for response in responses) and not blocked_entries and not failures:
+        return "ok"
+    if responses:
+        return "partial"
+    if blocked_entries or failures:
+        return "blocked"
+    return "empty"
+
+
+def _connected_query_next_commands(
+    status: dict[str, object],
+    blocked_entries: list[dict[str, object]],
+    failures: list[dict[str, object]],
+) -> list[str]:
+    commands: list[str] = []
+    for item in status.get("next_steps", []):
+        if isinstance(item, str) and item.startswith("aoa-course "):
+            commands.append(item)
+    for entry in blocked_entries:
+        for command in entry.get("next_commands", []):
+            if isinstance(command, str):
+                commands.append(command)
+    for failure in failures:
+        for command in failure.get("next_commands", []):
+            if isinstance(command, str):
+                commands.append(command)
+    return _dedupe(commands)
+
+
+def _dedupe(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        if value in seen:
+            continue
+        seen.add(value)
+        result.append(value)
+    return result
 
 
 def _sync_query_plan_entries(payload: dict[str, object], action: dict[str, object]) -> list[dict[str, object]]:

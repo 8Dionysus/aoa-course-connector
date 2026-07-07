@@ -443,6 +443,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 8, "method": "tools/call", "params": {"name": "semantic_provider_preflight", "arguments": {"run": "starter-fixture"}}},
         {"jsonrpc": "2.0", "id": 9, "method": "tools/call", "params": {"name": "browser_snapshot_audit", "arguments": {"snapshot_path": "connector/fixtures/browser/getcourse_starter_snapshot.json", "platform": "getcourse"}}},
         {"jsonrpc": "2.0", "id": 10, "method": "tools/call", "params": {"name": "connected_run_status", "arguments": {"run": "missing-connected-run"}}},
+        {"jsonrpc": "2.0", "id": 101, "method": "tools/call", "params": {"name": "connected_run_query", "arguments": {"run": "connected-calibration", "kinds": ["smoke"], "entry_limit": 1}}},
         {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
@@ -458,7 +459,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 3, 31, 4, 5, 6, 7, 8, 9, 10, 11]
+    assert [response["id"] for response in responses] == [1, 2, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "answer" for tool in responses[1]["result"]["tools"])
@@ -475,9 +476,11 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[9]["result"]["structuredContent"]["audit"]["network_touched"] is False
     assert responses[9]["result"]["structuredContent"]["audit"]["privacy"]["raw_html_included"] is False
     assert responses[10]["result"]["structuredContent"]["connected_run"]["status"] == "missing"
-    assert responses[11]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[11]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[11]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[11]["result"]["structuredContent"]["query_packet"]["status"] == "ok"
+    assert responses[11]["result"]["structuredContent"]["query_packet"]["response_count"] == 1
+    assert responses[12]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[12]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[12]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -976,6 +979,15 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert status_entry["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
     assert "lesson_context" in status_entry["mcp_commands"]
     assert "evidence_report" in status_entry["mcp_commands"]
+    connected_query = run_cli(tmp_path, "calibration", "query", "--run", "connected-fixture-cli", "--kind", "smoke")
+    assert connected_query["schema"] == "aoa_course_connected_run_query_packet_v1"
+    assert connected_query["status"] == "ok"
+    assert connected_query["network_touched"] is False
+    assert connected_query["response_count"] == 3
+    assert connected_query["quality"]["ready"] is True
+    assert connected_query["responses"][0]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
+    assert connected_query["responses"][0]["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
+    assert connected_query["responses"][0]["evidence_report"]["result_refs"]
     mcp_connected_status = run_cli(tmp_path, "mcp", "call", "connected_run_status", '{"run":"connected-fixture-cli"}')
     assert mcp_connected_status["result"]["connected_run"]["status"] == "ok"
     assert mcp_connected_status["result"]["connected_run"]["network_touched"] is False
@@ -984,6 +996,17 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert mcp_entry["mcp_commands"]["lesson_context"].startswith("aoa-course mcp call lesson_context ")
     assert mcp_entry["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
     assert '"graph_limit":12' in mcp_entry["mcp_commands"]["lesson_context"]
+    mcp_connected_query = run_cli(
+        tmp_path,
+        "mcp",
+        "call",
+        "connected_run_query",
+        '{"run":"connected-fixture-cli","kinds":["smoke"],"entry_limit":2}',
+    )
+    assert mcp_connected_query["result"]["tool"] == "connected_run_query"
+    assert mcp_connected_query["result"]["query_packet"]["status"] == "ok"
+    assert mcp_connected_query["result"]["query_packet"]["response_count"] == 2
+    assert mcp_connected_query["result"]["query_packet"]["quality"]["ready"] is True
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

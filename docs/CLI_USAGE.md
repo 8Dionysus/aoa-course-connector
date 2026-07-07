@@ -51,6 +51,8 @@ aoa-course smoke browser-live --platform getcourse --catalog-url "https://school
 aoa-course eval live-calibration
 aoa-course calibration connected-run --mode fixture --run connected-fixture-proof
 aoa-course calibration status --run connected-fixture-proof
+aoa-course calibration query --run connected-fixture-proof --kind smoke
+aoa-course calibration query --run connected-fixture-proof --kind sync --query "course-specific question" --entry-limit 3
 aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope bounded --source-limit 1 --run connected-stepik-live-calibration
 aoa-course calibration build --run connected-live-calibration --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
 aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
@@ -174,6 +176,14 @@ commands plus MCP `mcp_commands` for `search`, `answer`, `lesson_context`, and
 `evidence_report`. Sync-backed entries also carry `stable_identity` with a
 fingerprint, counts, and samples for the canonical IDs that should survive
 repeat refreshes of the same registered source.
+
+Use `calibration query --run <run>` when the next agent needs proof that the
+connected run is actually queryable. It reads the same receipt, selects
+query-ready entries, and returns `aoa_course_connected_run_query_packet_v1`
+with source-backed `answer_packet`, `lesson_context`, `evidence_report`,
+freshness, authority, graph context, blockers, and `network_touched: false`.
+Entries from smoke runs can reuse their saved query; sync-only entries need an
+explicit `--query`.
 
 Use `eval retrieval-loop` for the offline agent retrieval contract. It prepares
 the starter, GetCourse, Skillspace, and Stepik fixture runs, builds
