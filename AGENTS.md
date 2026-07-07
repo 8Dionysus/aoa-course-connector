@@ -68,6 +68,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval clean-api
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
 PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
 PYTHONPATH=src python -m aoa_course_connector.cli sources list
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sources_answer '{"platforms":["stepik"],"query":"Stepik public API evidence"}'

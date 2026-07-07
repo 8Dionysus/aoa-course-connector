@@ -13,6 +13,8 @@ aoa-course readiness --platform getcourse --query "course-specific question" --l
 aoa-course init
 aoa-course adapters list
 aoa-course sources add demo-course --platform offline_export --title "Demo Course"
+aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+aoa-course sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 aoa-course materialize fixture --run starter-fixture
 aoa-course materialize stepik-fixture --run stepik-fixture
 aoa-course materialize stepik-live 67 --run stepik-live-smoke --max-sections 1 --max-units-per-section 1 --max-steps-per-lesson 2
@@ -110,6 +112,13 @@ answer and nearby course graph context. It returns
 `aoa_course_lesson_context_packet_v1`, including the answer packet and
 `aoa_course_lesson_graph_context_v1`; `--graph-limit` bounds the per-evidence
 lesson neighborhood.
+Use `sources answer` when the agent should ask one question across configured
+source-registry entries instead of naming a run id by hand. It reads local
+query-ready connected-run receipts, accepts `--platform`, repeated
+`--source-id`, `--kind`, retrieval limits, and `--include-source-refs`, then
+returns `aoa_course_sources_answer_packet_v1` with one source-backed
+answer/context/evidence packet per selected source. By default source refs stay
+out of the packet.
 `answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before
