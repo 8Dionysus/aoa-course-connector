@@ -176,6 +176,7 @@ REQUIRED_SCHEMAS = [
     "graph_node.schema.json",
     "graph_edge.schema.json",
     "answer_packet.schema.json",
+    "lesson_context_packet.schema.json",
     "refresh_cycle.schema.json",
     "source_registry.schema.json",
     "connection_profile.schema.json",

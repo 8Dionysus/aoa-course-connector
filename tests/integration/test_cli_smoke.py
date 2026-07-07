@@ -72,6 +72,11 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert answer["result_count"] >= 1
     assert answer["evidence_chain"]
     assert answer["evidence_chain"][0]["snippet"]
+    lesson_context = run_cli(tmp_path, "lesson-context", "bootloader rollback", "--run", "starter-fixture", "--graph-limit", "6")
+    assert lesson_context["schema"] == "aoa_course_lesson_context_packet_v1"
+    assert lesson_context["answer_packet"]["evidence_chain"]
+    assert lesson_context["graph_context"]["status"] == "ready"
+    assert lesson_context["graph_context"]["contexts"][0]["graph"]["neighbors"]
     evidence_inspect = run_cli(tmp_path, "evidence", "inspect", "rollback", "--run", "starter-fixture")
     assert evidence_inspect["evidence_chain"]
     assert evidence_inspect["evidence_chain"][0]["snippet"]

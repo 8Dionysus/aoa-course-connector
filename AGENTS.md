@@ -48,6 +48,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight semantic-provider --
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
 PYTHONPATH=src python -m aoa_course_connector.cli refresh query "bootloader rollback" --run starter-fixture --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live --help

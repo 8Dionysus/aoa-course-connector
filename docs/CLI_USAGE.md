@@ -62,6 +62,7 @@ aoa-course query "rollback" --run starter-fixture
 aoa-course query "rollback" --run starter-fixture --mode semantic
 aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course answer "bootloader unlock rollback" --run starter-fixture
+aoa-course lesson-context "bootloader rollback" --run starter-fixture --mode hybrid --graph-limit 12
 aoa-course refresh query "bootloader rollback" --run starter-fixture --mode hybrid
 aoa-course refresh query "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid --strategy fixture --execute --sync-run stepik-refresh-cycle
 aoa-course refresh query "course-specific question" --run "<checkpoint-run-id>" --strategy live --execute --allow-network --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json"
@@ -94,6 +95,12 @@ aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
+
+Use `lesson-context` when an agent needs one CLI packet with the source-backed
+answer and nearby course graph context. It returns
+`aoa_course_lesson_context_packet_v1`, including the answer packet and
+`aoa_course_lesson_graph_context_v1`; `--graph-limit` bounds the per-evidence
+lesson neighborhood.
 
 Use `--source-id` on `preflight live`, `preflight connected-plan`, `readiness`,
 and sync commands when an agent is preparing or refreshing one result from a
