@@ -95,3 +95,11 @@ CLI can resolve it from the local registry) when running live crawl, materialize
 or smoke commands directly. This preserves the registry-backed source id in
 normalized bundles, answer evidence, and refresh hints, so agents can refresh
 the original course source instead of registering individual lesson URLs.
+
+GetCourse may return a lesson-shaped page whose visible content is only an
+access-denied or prerequisite notice. The connector preserves that state as
+`access_denied`/`access_notice` evidence with
+`source_authority: browser_access_denied`, lowers graph confidence for the
+lesson edge, and avoids indexing prerequisite boilerplate as official lesson
+content. This lets agents answer whether the connected account can currently
+see a lesson without confusing a locked-page notice for the lesson itself.

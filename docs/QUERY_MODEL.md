@@ -12,7 +12,7 @@ A useful result must include:
 - freshness state;
 - authority tier;
 - base relevance `score`;
-- freshness/authority/provenance adjusted `rank_score`.
+- freshness/authority/provenance/intent adjusted `rank_score`.
 - refresh hint that tells an agent how to rebuild local artifacts and how to
   preflight/sync the source when a connected live route exists.
 
@@ -42,10 +42,18 @@ Browser crawl links whose lesson pages were not fetched are still searchable,
 but they carry `freshness_state: discovered_not_fetched` or `fetch_error` and
 `authority_tier: discovered_link`, which pushes them below fetched lesson,
 transcript, and comment evidence.
+Fetched browser lesson pages that expose only an access-denied, locked, gated,
+or prerequisite notice carry `freshness_state: access_denied`,
+`authority_tier: access_notice`, and
+`source_authority: browser_access_denied`. Content queries keep those notices
+below visible lesson evidence, but access-intent queries such as unavailable,
+locked, or no-access questions receive a visible `intent_boost` so the answer
+can report the access state first.
 
 Each result exposes `rank_features`, including `freshness_state`,
-`freshness_boost`, `authority_tier`, `authority_boost`, `provenance_boost`, and
-`provenance_complete`. Hybrid results also expose these factors in
+`freshness_boost`, `authority_tier`, `authority_boost`, `intent`,
+`intent_boost`, `provenance_boost`, and `provenance_complete`. Hybrid results
+also expose these factors in
 `score_components`.
 
 Each result also exposes `refresh_hint`. This is read-only plan metadata, not
@@ -90,7 +98,8 @@ and a source-id comparison. Live execution is gated behind
 Authority tiers are deterministic local signals derived from normalized item
 shape and safe metadata: `official_lesson`, `official_assignment`,
 `instructor_comment`, `mentor_comment`, `learner_comment`, `transcript`,
-`asset_metadata`, `progress_metadata`, `discussion_comment`, or `unknown`.
+`asset_metadata`, `access_notice`, `progress_metadata`,
+`discussion_comment`, or `unknown`.
 When adapters provide explicit `authority_tier`, `authority_label`, `role`, or
 `source_authority` metadata, the index preserves those adapter-derived signals
 before falling back to kind/label heuristics.

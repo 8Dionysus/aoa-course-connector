@@ -157,6 +157,13 @@ This proves:
   explicit discovery evidence in normalized bundles, indexes, answer packets,
   refresh hints, and graph nodes instead of being ranked as fetched official
   lesson text.
+- Browser course-tree pages that are fetched but reveal a platform access
+  denial, locked lesson, or unmet prerequisite notice now remain explicit
+  access-state evidence. They are normalized with
+  `freshness_state: access_denied`, `access_state: access_denied`,
+  `authority_tier: access_notice`, and
+  `source_authority: browser_access_denied`; graph confidence is reduced, and
+  prerequisite boilerplate is not indexed as ordinary official lesson text.
 - GetCourse and Skillspace visible progress/status and comments through browser
   fixtures, answer packets, index docs, graph edges, MCP context, and evals.
 - GetCourse and Skillspace visible transcript/caption extraction into
@@ -301,6 +308,13 @@ This proves:
   answer evidence and refresh hints preserved the registered source id with
   `registry_match: true` and no raw payloads or secret values in shareable
   packets.
+- A runtime-only operator GetCourse access-state proof has been exercised
+  locally: one bounded live run produced one visible/current lesson and six
+  `access_denied` lesson notices, kept raw/secret privacy guards clean, passed
+  CLI and MCP `calibration query-matrix` for three course questions from local
+  indexes/graphs, and ranked an access-intent query first to
+  `access_notice`/`browser_access_denied` without touching the network during
+  retrieval.
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,

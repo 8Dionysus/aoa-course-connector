@@ -36,6 +36,7 @@ FRESHNESS_RANK_WEIGHTS = {
     "outdated": -0.14,
     "deprecated": -0.18,
     "archived": -0.08,
+    "access_denied": -0.18,
     "discovered_not_fetched": -0.16,
     "fetch_error": -0.20,
 }
@@ -52,6 +53,31 @@ AUTHORITY_RANK_WEIGHTS = {
     "learner_comment": -0.03,
     "asset_metadata": -0.04,
     "discovered_link": -0.10,
+    "access_notice": -0.12,
+}
+ACCESS_INTENT_TERMS = {
+    "access",
+    "blocked",
+    "closed",
+    "denied",
+    "gated",
+    "locked",
+    "unlock",
+    "unavailable",
+    "доступ",
+    "доступа",
+    "доступен",
+    "доступна",
+    "доступны",
+    "закрыт",
+    "закрыта",
+    "закрытые",
+    "заблокирован",
+    "заблокирована",
+    "недоступен",
+    "недоступна",
+    "открыть",
+    "разблокировать",
 }
 
 
@@ -70,7 +96,7 @@ def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-
         doc = docs.get(doc_id)
         if not doc:
             continue
-        rank_features = _rank_features(doc)
+        rank_features = _rank_features(doc, query_terms)
         ranked.append(
             {
                 **doc,
@@ -112,7 +138,7 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
         if provider == LOCAL_HASHING_PROVIDER and not (query_features & semantic_doc_feature_keys(doc)):
             continue
         result = {key: value for key, value in doc.items() if key != "vector"}
-        rank_features = _rank_features(result)
+        rank_features = _rank_features(result, query_terms)
         ranked.append(
             {
                 **result,
@@ -157,9 +183,10 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
         keyword_score = float(components.get("keyword") or 0.0)
         semantic_score = float(components.get("semantic") or 0.0)
         score = (0.45 * keyword_score) + (0.55 * semantic_score)
-        rank_features = _rank_features(entry)
+        rank_features = _rank_features(entry, tokenize(query))
         components["freshness"] = round(float(rank_features.get("freshness_boost") or 0.0), 6)
         components["authority"] = round(float(rank_features.get("authority_boost") or 0.0), 6)
+        components["intent"] = round(float(rank_features.get("intent_boost") or 0.0), 6)
         components["provenance"] = round(float(rank_features.get("provenance_boost") or 0.0), 6)
         ranked.append(
             {
@@ -571,9 +598,11 @@ def _dedupe(items: list[str]) -> list[str]:
     return list(dict.fromkeys(item for item in items if item))
 
 
-def _rank_features(doc: dict[str, object]) -> dict[str, object]:
+def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None) -> dict[str, object]:
     state = str(doc.get("freshness_state") or "unknown").casefold()
     authority_tier = str(doc.get("authority_tier") or "unknown").casefold()
+    source_authority = str(doc.get("source_authority") or "").casefold()
+    intent_boost = _intent_boost(query_terms or [], state, authority_tier, source_authority)
     evidence_fields = ["source_id", "source_url", "fetched_at", "evidence_id"]
     provenance_complete = all(doc.get(field) for field in evidence_fields)
     return {
@@ -581,6 +610,8 @@ def _rank_features(doc: dict[str, object]) -> dict[str, object]:
         "freshness_boost": FRESHNESS_RANK_WEIGHTS.get(state, 0.0),
         "authority_tier": authority_tier,
         "authority_boost": AUTHORITY_RANK_WEIGHTS.get(authority_tier, 0.0),
+        "intent_boost": intent_boost,
+        "intent": "access_state" if intent_boost else "",
         "provenance_boost": 0.03 if provenance_complete else 0.0,
         "provenance_complete": provenance_complete,
     }
@@ -593,7 +624,16 @@ def _rank_score(score: float, features: dict[str, object]) -> float:
         + float(features.get("authority_boost") or 0.0)
         + float(features.get("provenance_boost") or 0.0)
     )
-    return round(max(0.0, score * multiplier), 6)
+    adjusted = (score * multiplier) + float(features.get("intent_boost") or 0.0)
+    return round(max(0.0, adjusted), 6)
+
+
+def _intent_boost(query_terms: list[str], freshness_state: str, authority_tier: str, source_authority: str) -> float:
+    if not (set(query_terms) & ACCESS_INTENT_TERMS):
+        return 0.0
+    if freshness_state == "access_denied" or authority_tier == "access_notice" or source_authority == "browser_access_denied":
+        return 0.65
+    return 0.0
 
 
 def _result_sort_key(item: dict[str, object]) -> tuple[float, float, str]:

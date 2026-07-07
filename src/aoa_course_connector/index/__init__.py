@@ -29,6 +29,7 @@ KNOWN_AUTHORITY_TIERS = {
     "transcript",
     "asset_metadata",
     "discovered_link",
+    "access_notice",
     "progress_metadata",
     "discussion_comment",
     "unknown",
