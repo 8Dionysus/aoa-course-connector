@@ -13,7 +13,7 @@ from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_stepik_fixture, materialize_stepik_live
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.storage import create_storage_roots, sync_data_dir
-from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, upsert_checkpoint
+from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, normalized_identity_summary, upsert_checkpoint
 
 
 STEPIK_ACCESS_MODES = {"public_api", "api_token", "oauth"}
@@ -185,6 +185,7 @@ def _checkpoint_from_materialized(
         index_path=index_path,
         semantic_index_path=semantic_index_path,
         graph_path=graph_path,
+        stable_identity=normalized_identity_summary(str(materialized.get("normalized_path") or "")),
     )
     upsert_checkpoint(roots, checkpoint)
     return checkpoint

@@ -1022,6 +1022,7 @@ def _sync_query_plan_entries(payload: dict[str, object], action: dict[str, objec
                 result_count=0,
                 evidence_count=0,
                 paths=paths,
+                stable_identity=checkpoint.get("stable_identity") if isinstance(checkpoint.get("stable_identity"), dict) else None,
             )
         )
     return entries
@@ -1070,6 +1071,7 @@ def _query_plan_entry(
     result_count: int,
     evidence_count: int,
     paths: dict[str, str],
+    stable_identity: dict[str, object] | None = None,
 ) -> dict[str, object]:
     query_text = query or "<course-specific question>"
     index_ready = bool(paths.get("index_path"))
@@ -1079,7 +1081,7 @@ def _query_plan_entry(
     semantic_query_ready = status_ready and semantic_ready
     query_mode = "hybrid" if semantic_query_ready else "keyword"
     answer_ready = status_ready and bool(paths.get("answer_path")) and result_count > 0 and evidence_count > 0
-    return {
+    entry = {
         "kind": kind,
         "platform": platform,
         "run_id": run_id,
@@ -1108,6 +1110,9 @@ def _query_plan_entry(
             "evidence_report": _mcp_call_command("evidence_report", {"query": query_text, "run": run_id, "mode": query_mode}),
         },
     }
+    if stable_identity is not None:
+        entry["stable_identity"] = stable_identity
+    return entry
 
 
 def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:

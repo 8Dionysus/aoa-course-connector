@@ -43,6 +43,12 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert checkpoint["index_path"]
     assert checkpoint["semantic_index_path"]
     assert checkpoint["graph_path"]
+    stable_identity = checkpoint["stable_identity"]
+    assert stable_identity["available"] is True
+    assert stable_identity["fingerprint"].startswith("sha256:")
+    assert stable_identity["counts"]["course_ids"] == 1
+    assert stable_identity["counts"]["lesson_ids"] >= 1
+    assert stable_identity["counts"]["step_ids"] >= 1
     assert Path(str(checkpoint["semantic_index_path"])).is_file()
     status = load_sync_status(storage, sync_run_id="browser-sync-fixture", platform="getcourse")
     assert status["ok_count"] == 1
@@ -68,6 +74,39 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert any("lesson-context" in command and "--mode keyword" in command for command in hint["local_query_commands"])
     assert any("lesson-context" in command for command in packet["refresh_report"]["local_query_commands"])
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
+
+
+def test_browser_fixture_sync_preserves_stable_identity_across_refreshes(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "getcourse", "https://school.example/course", "GetCourse Stable Identity")
+
+    first = sync_browser_fixture_sources(
+        storage,
+        sync_run_id="browser-stable-refresh-a",
+        platforms=["getcourse"],
+        source_ids=[str(source["source_id"])],
+        build_artifacts=True,
+    )
+    second = sync_browser_fixture_sources(
+        storage,
+        sync_run_id="browser-stable-refresh-b",
+        platforms=["getcourse"],
+        source_ids=[str(source["source_id"])],
+        build_artifacts=True,
+    )
+
+    first_checkpoint = first["synced_sources"][0]
+    second_checkpoint = second["synced_sources"][0]
+    assert first_checkpoint["run_id"] != second_checkpoint["run_id"]
+    assert first_checkpoint["stable_identity"]["fingerprint"] == second_checkpoint["stable_identity"]["fingerprint"]
+    assert first_checkpoint["stable_identity"]["samples"] == second_checkpoint["stable_identity"]["samples"]
+    assert first_checkpoint["stable_identity"]["counts"] == second_checkpoint["stable_identity"]["counts"]
+
+    first_packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=str(first_checkpoint["run_id"]), mode="hybrid")
+    second_packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=str(second_checkpoint["run_id"]), mode="hybrid")
+    assert first_packet["results"][0]["source_id"] == second_packet["results"][0]["source_id"] == source["source_id"]
+    assert first_packet["results"][0]["lesson_id"] == second_packet["results"][0]["lesson_id"]
+    assert first_packet["evidence_chain"][0]["evidence_id"] == second_packet["evidence_chain"][0]["evidence_id"]
 
 
 def test_browser_fixture_sync_rejects_invalid_sync_run_id_before_checkpoint_write(tmp_path: Path) -> None:

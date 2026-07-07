@@ -75,6 +75,8 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all(entry["query_mode"] == "hybrid" for entry in sync_entries)
     assert all(entry["semantic_query_ready"] is True for entry in sync_entries)
     assert all(entry["paths"]["semantic_index_path"] for entry in sync_entries)
+    assert all(entry["stable_identity"]["available"] is True for entry in sync_entries)
+    assert all(entry["stable_identity"]["fingerprint"].startswith("sha256:") for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["query"] for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["answer"] for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["lesson_context"] for entry in sync_entries)

@@ -17,7 +17,7 @@ from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.storage import create_storage_roots, run_data_dir, safe_runtime_id, sync_data_dir
-from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, upsert_checkpoint
+from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, normalized_identity_summary, upsert_checkpoint
 
 
 def sync_browser_fixture_sources(
@@ -197,6 +197,7 @@ def _checkpoint_from_materialized(
         index_path=index_path,
         semantic_index_path=semantic_index_path,
         graph_path=graph_path,
+        stable_identity=normalized_identity_summary(str(materialized.get("normalized_path") or "")),
     )
     upsert_checkpoint(roots, checkpoint)
     return checkpoint

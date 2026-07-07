@@ -20,6 +20,20 @@
     "index_path": {"type": "string"},
     "semantic_index_path": {"type": "string"},
     "graph_path": {"type": "string"},
+    "stable_identity": {
+      "type": "object",
+      "required": ["schema", "available", "fingerprint", "counts", "samples"],
+      "properties": {
+        "schema": {"const": "aoa_course_stable_identity_summary_v1"},
+        "available": {"type": "boolean"},
+        "fingerprint": {"type": "string"},
+        "counts": {"type": "object"},
+        "samples": {"type": "object"},
+        "reason": {"type": "string"},
+        "error": {"type": "string"}
+      },
+      "additionalProperties": true
+    },
     "error": {"type": "string"},
     "updated_at": {"type": "string"}
   }

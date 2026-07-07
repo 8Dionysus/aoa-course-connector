@@ -76,7 +76,10 @@ aoa-course eval stepik-sync
 ```
 
 Use `--source-id` for agent refresh of one selected course. Omit it only for an
-intentional batch sync across all matching registered Stepik sources.
+intentional batch sync across all matching registered Stepik sources. Successful
+checkpoints include `stable_identity.fingerprint`, which should stay stable
+across repeat sync runs for the same Stepik course while fresh artifacts receive
+their own child `run_id`.
 
 ## Account Discovery Route
 

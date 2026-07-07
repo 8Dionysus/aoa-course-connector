@@ -49,6 +49,12 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert checkpoint["index_path"]
     assert checkpoint["semantic_index_path"]
     assert checkpoint["graph_path"]
+    stable_identity = checkpoint["stable_identity"]
+    assert stable_identity["available"] is True
+    assert stable_identity["fingerprint"].startswith("sha256:")
+    assert stable_identity["counts"]["course_ids"] == 1
+    assert stable_identity["counts"]["lesson_ids"] >= 1
+    assert stable_identity["counts"]["step_ids"] >= 1
     assert Path(str(checkpoint["semantic_index_path"])).is_file()
     raw = json.loads(Path(str(checkpoint["cursor"])).read_text(encoding="utf-8"))
     assert raw["source"]["source_id"] == source["source_id"]
@@ -74,6 +80,37 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert any("lesson-context" in command and "--mode keyword" in command for command in hint["local_query_commands"])
     assert any("lesson-context" in command for command in packet["refresh_report"]["local_query_commands"])
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
+
+
+def test_stepik_fixture_sync_preserves_stable_identity_across_refreshes(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "stepik", "67", "Stepik Stable Identity", access_mode="public_api")
+
+    first = sync_stepik_fixture_sources(
+        storage,
+        sync_run_id="stepik-stable-refresh-a",
+        source_ids=[str(source["source_id"])],
+        build_artifacts=True,
+    )
+    second = sync_stepik_fixture_sources(
+        storage,
+        sync_run_id="stepik-stable-refresh-b",
+        source_ids=[str(source["source_id"])],
+        build_artifacts=True,
+    )
+
+    first_checkpoint = first["synced_sources"][0]
+    second_checkpoint = second["synced_sources"][0]
+    assert first_checkpoint["run_id"] != second_checkpoint["run_id"]
+    assert first_checkpoint["stable_identity"]["fingerprint"] == second_checkpoint["stable_identity"]["fingerprint"]
+    assert first_checkpoint["stable_identity"]["samples"] == second_checkpoint["stable_identity"]["samples"]
+    assert first_checkpoint["stable_identity"]["counts"] == second_checkpoint["stable_identity"]["counts"]
+
+    first_packet = render_answer_packet(storage, "Stepik public API evidence", run_id=str(first_checkpoint["run_id"]), mode="hybrid")
+    second_packet = render_answer_packet(storage, "Stepik public API evidence", run_id=str(second_checkpoint["run_id"]), mode="hybrid")
+    assert first_packet["results"][0]["source_id"] == second_packet["results"][0]["source_id"] == source["source_id"]
+    assert first_packet["results"][0]["lesson_id"] == second_packet["results"][0]["lesson_id"]
+    assert first_packet["evidence_chain"][0]["evidence_id"] == second_packet["evidence_chain"][0]["evidence_id"]
 
 
 def test_stepik_fixture_sync_records_bad_source_ref(tmp_path: Path) -> None:
