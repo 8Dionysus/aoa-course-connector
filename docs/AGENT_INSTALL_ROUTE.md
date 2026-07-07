@@ -121,6 +121,10 @@
     "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`
     to produce the redacted setup/sync/smoke/calibration plan with portable
     runtime artifact paths and a `connected_run_plan`.
+    If top-level status is `partial`, still inspect `connected_run_plan`: a
+    `ready` plan with `scope: ready_subset` is an executable route for the
+    already-authorized platform/source ids, while the same packet keeps the
+    unready platform blockers visible.
 1. In a large registry, add `--source-id "<registered-source-id>"` to
     `preflight live`, `preflight connected-plan`, or `readiness` when preparing
     one selected source. MCP uses `source_ids`; the scoped plan should show the

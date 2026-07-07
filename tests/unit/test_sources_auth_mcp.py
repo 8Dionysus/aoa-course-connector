@@ -515,6 +515,52 @@ def test_stepik_source_defaults_to_public_api(tmp_path: Path) -> None:
     assert source["access_mode"] == "public_api"
 
 
+def test_mcp_connected_source_plan_exposes_ready_subset_without_secret_values(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    source, _path, _state = upsert_source(storage.data, "getcourse", "https://school.operator.edu/teach/control/stream", "School")
+    state_file = storage.auth / "getcourse" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    result = call_tool("connected_source_plan", {"query": "course-specific question", "max_lessons": 7, "max_pages": 3})
+
+    plan = result["plan"]
+    connected_run = plan["connected_run_plan"]
+    assert result["tool"] == "connected_source_plan"
+    assert plan["status"] == "partial"
+    assert plan["ready"] is False
+    assert connected_run["ready"] is True
+    assert connected_run["scope"] == "ready_subset"
+    assert connected_run["covers_all_selected"] is False
+    assert connected_run["platforms"] == ["getcourse"]
+    assert connected_run["selected_platforms"] == ["getcourse", "skillspace", "stepik"]
+    assert connected_run["source_ids"] == [source["source_id"]]
+    assert connected_run["mcp_tool_call"]["arguments"]["platforms"] == ["getcourse"]
+    assert connected_run["mcp_tool_call"]["arguments"]["source_ids"] == [source["source_id"]]
+    assert "skillspace workflow is not ready" in connected_run["blocked_by"]
+    assert "stepik workflow is not ready" in connected_run["blocked_by"]
+    rendered = json.dumps(result)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
+
+
 def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",

@@ -74,6 +74,13 @@ explicit network gate. Prefer the plan's ready `connected_run_plan` command
 because it preserves the same platforms, source ids, query, live scope, and
 browser `--link-pattern` selected during preflight:
 
+When the plan covers several platforms, unrelated missing credentials should
+not freeze the ready sources. A `partial` connected plan may expose
+`connected_run_plan.ready: true` with `scope: ready_subset`; that command is
+limited to ready platform/source ids and keeps the remaining blockers in the
+same packet. Treat top-level `ready: false` as "not every selected platform is
+ready", not as "no safe live action exists".
+
 ```bash
 aoa-course calibration connected-run \
   --mode live \
