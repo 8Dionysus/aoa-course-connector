@@ -12,6 +12,7 @@ Initial tools:
 - `connected_source_plan`
 - `connection_profile_inspect`
 - `connection_profile_status`
+- `connection_profile_run_plan`
 - `semantic_provider_preflight`
 - `browser_snapshot_audit`
 - `connected_run_status`
@@ -45,6 +46,7 @@ aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connection_profile_inspect '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call connection_profile_status '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
+aoa-course mcp call connection_profile_run_plan '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json","platform":"getcourse"}'
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
@@ -229,9 +231,11 @@ the nested `aoa_course_connection_profile_readiness_v1`,
 blockers, next commands, and ready
 `calibration connected-run --mode live --allow-network` commands when all
 selected profile sources are registered and authorized.
-MCP remains read-only here; use CLI `connect run <profile> --platform
-<platform>` when the operator wants a no-network executable plan or an explicit
-`--allow-network` live execution from the selected profile route.
+`connection_profile_run_plan` returns the selected
+`aoa_course_connection_profile_run_plan_v1` for a profile, platform, and
+optional `source_ids` without touching the network. MCP remains read-only here;
+use CLI `connect run <profile> --platform <platform> --allow-network` only when
+the operator wants explicit live execution from the selected profile route.
 
 `connected_run_status` is the read-only MCP plan after a CLI
 `calibration connected-run`. It returns

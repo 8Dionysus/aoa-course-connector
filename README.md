@@ -63,10 +63,12 @@ with `Course Connection Profile Runbook`. `connect status` and MCP
 `connection_profile_status` return the compact
 `aoa_course_connection_profile_status_v1` go/no-go packet with
 `ready_for_connected_run`, blockers, counts, and any ready
-`calibration connected-run --mode live --allow-network` commands. `connect run`
-loads the same profile and selected platform/source, returns a no-network
-`aoa_course_connection_profile_run_receipt_v1` plan by default, and executes the
-ready live connected-run only when `--allow-network` is present.
+`calibration connected-run --mode live --allow-network` commands. MCP
+`connection_profile_run_plan` exposes the same selected
+`aoa_course_connection_profile_run_plan_v1` without touching the network.
+`connect run` loads the same profile and selected platform/source, returns a
+no-network `aoa_course_connection_profile_run_receipt_v1` plan by default, and
+executes the ready live connected-run only when `--allow-network` is present.
 
 `readiness` is the read-only agent plan for the whole connector surface. It
 returns `aoa_course_connector_readiness_v1` with storage roots, source registry

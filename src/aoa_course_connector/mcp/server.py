@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any, TextIO
 
 from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
-from aoa_course_connector.connection_profile import connection_profile_status, inspect_connection_profile, load_connection_profile
+from aoa_course_connector.connection_profile import connection_profile_run_plan, connection_profile_status, inspect_connection_profile, load_connection_profile
 from aoa_course_connector.calibration.connected_run import load_connected_calibration_status
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
@@ -146,6 +146,17 @@ def _connection_profile_status_schema() -> dict[str, object]:
     return _object_schema({"profile_path": _string_schema("Local runtime connection profile JSON path.")}, required=["profile_path"])
 
 
+def _connection_profile_run_plan_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "profile_path": _string_schema("Local runtime connection profile JSON path."),
+            "platform": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"], "description": "Optional platform to select one executable profile run plan."},
+            "source_ids": _source_ids_schema("Optional source ids to select one executable profile run plan."),
+        },
+        required=["profile_path"],
+    )
+
+
 def _semantic_provider_preflight_schema() -> dict[str, object]:
     return _object_schema(
         {
@@ -216,6 +227,7 @@ TOOLS = [
     {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, connected-run, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
     {"name": "connection_profile_inspect", "description": "Inspect a local redacted aoa_course_connection_profile_v1 file and return aoa_course_connection_profile_inspection_v1 source/auth/semantic next commands with network_touched false and without mutation.", "inputSchema": _connection_profile_inspect_schema()},
     {"name": "connection_profile_status", "description": "Return compact aoa_course_connection_profile_status_v1 go/no-go readiness, including ready_for_connected_run, blockers, and network_touched false, for a local connection profile.", "inputSchema": _connection_profile_status_schema()},
+    {"name": "connection_profile_run_plan", "description": "Return one selected aoa_course_connection_profile_run_plan_v1 executable connected-run plan from a local connection profile without touching the network.", "inputSchema": _connection_profile_run_plan_schema()},
     {"name": "semantic_provider_preflight", "description": "Inspect semantic provider build readiness without touching the network or printing token values.", "inputSchema": _semantic_provider_preflight_schema()},
     {"name": "browser_snapshot_audit", "description": "Inspect a local GetCourse/Skillspace browser snapshot for discovery, crawl, transcript, caption, comment, progress, pagination, and repair readiness without printing raw HTML.", "inputSchema": _browser_snapshot_audit_schema()},
     {"name": "connected_run_status", "description": "Inspect a connected calibration run receipt without touching the network.", "inputSchema": _run_schema()},
@@ -255,6 +267,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "inspection": _call_connection_profile_inspect(roots, args)}
     if name == "connection_profile_status":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "status": _call_connection_profile_status(roots, args)}
+    if name == "connection_profile_run_plan":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "run_plan": _call_connection_profile_run_plan(roots, args)}
     if name == "semantic_provider_preflight":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_semantic_provider_preflight(roots, args)}
     if name == "browser_snapshot_audit":
@@ -453,6 +467,24 @@ def _call_connection_profile_status(roots: StorageRoots, args: dict[str, object]
     path = Path(profile_path)
     profile = load_connection_profile(path)
     return connection_profile_status(inspect_connection_profile(roots, profile, profile_path=path))
+
+
+def _call_connection_profile_run_plan(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    profile_path = args.get("profile_path")
+    if not isinstance(profile_path, str) or not profile_path:
+        raise ValueError("connection_profile_run_plan profile_path must be a non-empty string")
+    platform = args.get("platform")
+    if platform is not None and not isinstance(platform, str):
+        raise ValueError("connection_profile_run_plan platform must be a string")
+    path = Path(profile_path)
+    profile = load_connection_profile(path)
+    inspection = inspect_connection_profile(roots, profile, profile_path=path)
+    return connection_profile_run_plan(
+        profile,
+        inspection,
+        platform=platform,
+        source_ids=_string_array_arg(args.get("source_ids"), tool_name="connection_profile_run_plan", field_name="source_ids"),
+    )
 
 
 def _call_semantic_provider_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:

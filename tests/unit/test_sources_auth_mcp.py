@@ -130,7 +130,7 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert mcp_status["status"]["network_touched"] is False
 
 
-def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path: Path) -> None:
+def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
         cache=tmp_path / "cache",
@@ -138,6 +138,10 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
         artifact=tmp_path / "artifacts",
         mode="test",
     )
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
     source_url = "https://school.operator.edu/teach/control/stream"
     profile = build_connection_profile(
         storage,
@@ -160,6 +164,7 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
     receipt = apply_connection_profile(storage, load_connection_profile(profile_path), profile_path=profile_path)
     readiness = receipt["inspection"]["live_readiness"]
     run_plan = connection_profile_run_plan(profile, receipt["inspection"], platform="getcourse")
+    mcp_plan = call_tool("connection_profile_run_plan", {"profile_path": str(profile_path), "platform": "getcourse"})
 
     assert readiness["ready_for_connected_run"] is True
     assert run_plan["schema"] == "aoa_course_connection_profile_run_plan_v1"
@@ -179,9 +184,18 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
     assert f"--source-id {source_id}" in browser_auth["preflight_command"]
     assert receipt["inspection"]["connected_plans"][0]["source_ids"] == [source_id]
     assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["connected_run_commands"])
+    assert mcp_plan["tool"] == "connection_profile_run_plan"
+    assert mcp_plan["run_plan"]["schema"] == "aoa_course_connection_profile_run_plan_v1"
+    assert mcp_plan["run_plan"]["ready"] is True
+    assert mcp_plan["run_plan"]["network_touched"] is False
+    assert mcp_plan["run_plan"]["platform"] == "getcourse"
+    assert mcp_plan["run_plan"]["source_ids"] == [source_id]
+    assert "calibration connected-run --mode live --allow-network" in mcp_plan["run_plan"]["command"]
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(mcp_plan)
+    assert "SUPER_SECRET_TOKEN" not in json.dumps(mcp_plan)
 
 
 def test_connect_run_executes_ready_profile_with_network_gate(tmp_path: Path, monkeypatch, capsys) -> None:
@@ -523,6 +537,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "semantic_provider_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "browser_snapshot_audit" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "connection_profile_run_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_run_status" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "refresh_plan" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "graph_neighbors" for tool in tools_manifest()["tools"])
@@ -947,6 +962,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     search_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "search")
     preflight_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "live_preflight")
     connected_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_source_plan")
+    profile_run_plan_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connection_profile_run_plan")
     semantic_provider_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "semantic_provider_preflight")
     browser_snapshot_audit_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "browser_snapshot_audit")
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
@@ -966,6 +982,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
     assert "link_pattern" in connected_plan_tool["inputSchema"]["properties"]
+    assert profile_run_plan_tool["inputSchema"]["required"] == ["profile_path"]
+    assert profile_run_plan_tool["inputSchema"]["properties"]["platform"]["enum"] == ["getcourse", "skillspace", "stepik"]
     assert "embedding_endpoint" in semantic_provider_tool["inputSchema"]["properties"]
     assert "embedding_token_env" in semantic_provider_tool["inputSchema"]["properties"]
     assert browser_snapshot_audit_tool["inputSchema"]["required"] == ["snapshot_path"]

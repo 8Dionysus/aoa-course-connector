@@ -278,6 +278,14 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     mcp_status = run_cli(tmp_path, "mcp", "call", "connection_profile_status", json.dumps({"profile_path": str(profile_path)}))
     assert mcp_status["result"]["status"]["schema"] == "aoa_course_connection_profile_status_v1"
     assert mcp_status["result"]["status"]["network_touched"] is False
+    mcp_run_plan = run_cli(tmp_path, "mcp", "call", "connection_profile_run_plan", json.dumps({"profile_path": str(profile_path), "platform": "getcourse"}))
+    assert mcp_run_plan["result"]["run_plan"]["schema"] == "aoa_course_connection_profile_run_plan_v1"
+    assert mcp_run_plan["result"]["run_plan"]["ready"] is True
+    assert mcp_run_plan["result"]["run_plan"]["network_touched"] is False
+    assert mcp_run_plan["result"]["run_plan"]["platform"] == "getcourse"
+    assert "--allow-network" in mcp_run_plan["result"]["run_plan"]["command"]
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(mcp_run_plan)
+    assert "SUPER_SECRET_TOKEN" not in json.dumps(mcp_run_plan)
 
 
 def test_cli_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path) -> None:

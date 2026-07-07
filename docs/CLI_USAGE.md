@@ -91,6 +91,7 @@ aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","m
 aoa-course mcp call semantic_provider_preflight '{"run":"starter-fixture","provider":"http_json_v1","embedding_endpoint":"http://127.0.0.1:8000/embeddings","embedding_model":"local-course-embedding","embedding_token_env":"AOA_COURSE_EMBEDDING_TOKEN"}'
 aoa-course mcp call connection_profile_inspect '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call connection_profile_status '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"}'
+aoa-course mcp call connection_profile_run_plan '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json","platform":"getcourse"}'
 aoa-course mcp call live_preflight '{}'
 aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
@@ -228,6 +229,9 @@ compact `aoa_course_connection_profile_status_v1` go/no-go packet: it reports
 `ready_for_connected_run`, `ready_for_semantic_build`, source/auth/plan counts,
 blockers, next commands, and any ready
 `calibration connected-run --mode live --allow-network` commands.
+Use MCP `connection_profile_run_plan` when an agent needs the selected
+`aoa_course_connection_profile_run_plan_v1` from the same profile without
+leaving the MCP surface.
 Use `connect run` as the executable profile bridge: by default it returns
 `aoa_course_connection_profile_run_receipt_v1` with `network_touched: false`
 and the selected platform/source run command; add `--allow-network` only after
