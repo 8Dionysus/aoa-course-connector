@@ -623,6 +623,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     eval_parser = sub.add_parser("eval")
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
+    eval_sub.add_parser("install-route").set_defaults(func=cmd_eval_install_route)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
     eval_sub.add_parser("retrieval-loop").set_defaults(func=cmd_eval_retrieval_loop)
@@ -1693,6 +1694,199 @@ def cmd_refresh_query(args: argparse.Namespace) -> int:
         return 2
     _emit(report)
     return 0 if report.get("status") in {"ok", "planned"} else 1
+
+
+def cmd_eval_install_route(_args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
+    connected_run = "connected-calibration"
+    bootstrap = bootstrap_fixture(
+        repo_root,
+        roots,
+        run_id=DEFAULT_RUN,
+        connected_run=connected_run,
+        mcp_tool_names=tools,
+    )
+    storage = storage_status(repo_root, roots)
+    readiness = connector_readiness(
+        repo_root,
+        roots,
+        runs=[DEFAULT_RUN],
+        connected_run=connected_run,
+        mcp_tool_names=tools,
+    )
+    answer_packet = render_answer_packet(roots, "bootloader rollback", DEFAULT_RUN, 5, "hybrid")
+    mcp_answer = call_tool("answer", {"query": "bootloader rollback", "run": DEFAULT_RUN, "mode": "hybrid"})
+    mcp_readiness = call_tool("connector_readiness", {"runs": [DEFAULT_RUN], "connected_run": connected_run})
+    connected_status = load_connected_calibration_status(roots, run_id=connected_run)
+    sources = call_tool("list_sources", {})
+    doc_paths = [
+        "README.md",
+        "docs/INSTALL.md",
+        "docs/AGENT_INSTALL_ROUTE.md",
+        "docs/CLI_USAGE.md",
+        "docs/MCP_USAGE.md",
+        "docs/STORAGE_CONTRACT.md",
+        "docs/AUTH_SESSION.md",
+        "docs/STATUS.md",
+    ]
+    failures = _install_route_failures(
+        repo_root=repo_root,
+        doc_paths=doc_paths,
+        storage=storage,
+        bootstrap=bootstrap,
+        readiness=readiness,
+        answer_packet=answer_packet,
+        mcp_answer=mcp_answer,
+        mcp_readiness=mcp_readiness,
+        connected_status=connected_status,
+        sources=sources,
+    )
+    query_plan_ready_count = _ready_query_entry_count(connected_status)
+    source_count = _source_registry_count(sources)
+    mcp_answer_packet = mcp_answer.get("answer_packet") if isinstance(mcp_answer.get("answer_packet"), dict) else {}
+    mcp_answer_quality = mcp_answer_packet.get("quality") if isinstance(mcp_answer_packet.get("quality"), dict) else {}
+    _emit(
+        {
+            "schema": "aoa_course_eval_install_route_v1",
+            "status": "ok" if not failures else "error",
+            "network_touched": False,
+            "run_id": DEFAULT_RUN,
+            "connected_run": connected_run,
+            "proof_commands": [
+                "aoa-course doctor",
+                f"aoa-course bootstrap fixture --run {DEFAULT_RUN} --connected-run {connected_run}",
+                f"aoa-course readiness --run {DEFAULT_RUN} --connected-run {connected_run}",
+                f'aoa-course answer "bootloader rollback" --run {DEFAULT_RUN} --mode hybrid',
+                f'aoa-course mcp call answer \'{{"query":"bootloader rollback","run":"{DEFAULT_RUN}","mode":"hybrid"}}\'',
+                f"aoa-course calibration status --run {connected_run}",
+            ],
+            "storage": {
+                "mode": storage.get("mode"),
+                "exists": storage.get("exists"),
+                "git_private": storage.get("git_private"),
+            },
+            "docs": {"checked": doc_paths, "missing": [path for path in doc_paths if not (repo_root / path).exists()]},
+            "bootstrap": {
+                "status": bootstrap.get("status"),
+                "network_touched": bootstrap.get("network_touched"),
+                "connected_status": (bootstrap.get("connected_receipt") if isinstance(bootstrap.get("connected_receipt"), dict) else {}).get("status"),
+            },
+            "readiness": {
+                "status": readiness.get("status"),
+                "operational_ready": readiness.get("operational_ready"),
+                "connected_live_ready": readiness.get("connected_live_ready"),
+                "mcp_ready": (readiness.get("mcp") if isinstance(readiness.get("mcp"), dict) else {}).get("ready"),
+            },
+            "answer": {
+                "schema": answer_packet.get("schema"),
+                "mode": answer_packet.get("mode"),
+                "result_count": answer_packet.get("result_count"),
+                "quality_ready": (answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}).get("ready"),
+                "evidence_count": len(answer_packet.get("evidence_chain", [])) if isinstance(answer_packet.get("evidence_chain"), list) else 0,
+            },
+            "mcp": {
+                "answer_tool": mcp_answer.get("tool"),
+                "answer_quality_ready": mcp_answer_quality.get("ready"),
+                "readiness_operational_ready": mcp_readiness.get("operational_ready"),
+            },
+            "connected_status": {
+                "status": connected_status.get("status"),
+                "network_touched": connected_status.get("network_touched"),
+                "query_plan_ready_count": query_plan_ready_count,
+            },
+            "source_registry": {"source_count": source_count},
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _install_route_failures(
+    *,
+    repo_root: Path,
+    doc_paths: list[str],
+    storage: dict[str, object],
+    bootstrap: dict[str, object],
+    readiness: dict[str, object],
+    answer_packet: dict[str, object],
+    mcp_answer: dict[str, object],
+    mcp_readiness: dict[str, object],
+    connected_status: dict[str, object],
+    sources: dict[str, object],
+) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    missing_docs = [path for path in doc_paths if not (repo_root / path).exists()]
+    if missing_docs:
+        failures.append({"surface": "docs", "missing": missing_docs})
+    exists = storage.get("exists") if isinstance(storage.get("exists"), dict) else {}
+    for key in ["data", "cache", "auth", "artifact"]:
+        if exists.get(key) is not True:
+            failures.append({"surface": "storage", "root": key, "expected": True, "actual": exists.get(key)})
+    if storage.get("git_private") is not True:
+        failures.append({"surface": "storage", "field": "git_private", "expected": True, "actual": storage.get("git_private")})
+    if bootstrap.get("status") != "ok":
+        failures.append({"surface": "bootstrap", "field": "status", "expected": "ok", "actual": bootstrap.get("status")})
+    if bootstrap.get("network_touched") is not False:
+        failures.append({"surface": "bootstrap", "field": "network_touched", "expected": False, "actual": bootstrap.get("network_touched")})
+    connected_receipt = bootstrap.get("connected_receipt") if isinstance(bootstrap.get("connected_receipt"), dict) else {}
+    if connected_receipt.get("status") != "ok":
+        failures.append({"surface": "bootstrap.connected_receipt", "field": "status", "expected": "ok", "actual": connected_receipt.get("status")})
+    if readiness.get("operational_ready") is not True:
+        failures.append({"surface": "readiness", "field": "operational_ready", "expected": True, "actual": readiness.get("operational_ready")})
+    mcp = readiness.get("mcp") if isinstance(readiness.get("mcp"), dict) else {}
+    if mcp.get("ready") is not True:
+        failures.append({"surface": "readiness.mcp", "field": "ready", "expected": True, "actual": mcp.get("ready"), "missing_tools": mcp.get("missing_tools")})
+    runs = readiness.get("runs") if isinstance(readiness.get("runs"), list) else []
+    run_ready = (runs[0].get("readiness") if runs and isinstance(runs[0], dict) and isinstance(runs[0].get("readiness"), dict) else {})
+    if run_ready.get("agent_query_ready") is not True:
+        failures.append({"surface": "readiness.runs[0]", "field": "agent_query_ready", "expected": True, "actual": run_ready.get("agent_query_ready")})
+    quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+    if answer_packet.get("schema") != "aoa_course_answer_packet_v1":
+        failures.append({"surface": "answer", "field": "schema", "expected": "aoa_course_answer_packet_v1", "actual": answer_packet.get("schema")})
+    if answer_packet.get("mode") != "hybrid":
+        failures.append({"surface": "answer", "field": "mode", "expected": "hybrid", "actual": answer_packet.get("mode")})
+    if int(answer_packet.get("result_count") or 0) < 1:
+        failures.append({"surface": "answer", "missing": "results"})
+    if quality.get("ready") is not True:
+        failures.append({"surface": "answer.quality", "field": "ready", "expected": True, "actual": quality.get("ready"), "blockers": quality.get("blockers")})
+    evidence = answer_packet.get("evidence_chain") if isinstance(answer_packet.get("evidence_chain"), list) else []
+    if not evidence:
+        failures.append({"surface": "answer", "missing": "evidence_chain"})
+    mcp_packet = mcp_answer.get("answer_packet") if isinstance(mcp_answer.get("answer_packet"), dict) else {}
+    mcp_quality = mcp_packet.get("quality") if isinstance(mcp_packet.get("quality"), dict) else {}
+    if mcp_answer.get("tool") != "answer":
+        failures.append({"surface": "mcp.answer", "field": "tool", "expected": "answer", "actual": mcp_answer.get("tool")})
+    if mcp_packet.get("schema") != "aoa_course_answer_packet_v1":
+        failures.append({"surface": "mcp.answer_packet", "field": "schema", "expected": "aoa_course_answer_packet_v1", "actual": mcp_packet.get("schema")})
+    if mcp_quality.get("ready") is not True:
+        failures.append({"surface": "mcp.answer_packet.quality", "field": "ready", "expected": True, "actual": mcp_quality.get("ready")})
+    if mcp_readiness.get("operational_ready") is not True:
+        failures.append({"surface": "mcp.connector_readiness", "field": "operational_ready", "expected": True, "actual": mcp_readiness.get("operational_ready")})
+    if connected_status.get("status") != "ok":
+        failures.append({"surface": "connected_status", "field": "status", "expected": "ok", "actual": connected_status.get("status")})
+    if connected_status.get("network_touched") is not False:
+        failures.append({"surface": "connected_status", "field": "network_touched", "expected": False, "actual": connected_status.get("network_touched")})
+    if _ready_query_entry_count(connected_status) < 1:
+        failures.append({"surface": "connected_status.query_plan", "missing": "ready query entries"})
+    if _source_registry_count(sources) < 1:
+        failures.append({"surface": "source_registry", "missing": "registered sources"})
+    return failures
+
+
+def _ready_query_entry_count(status: dict[str, object]) -> int:
+    query_plan = status.get("query_plan") if isinstance(status.get("query_plan"), dict) else {}
+    if "ready_entry_count" in query_plan:
+        return int(query_plan.get("ready_entry_count") or 0)
+    entries = query_plan.get("entries") if isinstance(query_plan.get("entries"), list) else []
+    return len([entry for entry in entries if isinstance(entry, dict) and entry.get("query_ready") is True])
+
+
+def _source_registry_count(sources: dict[str, object]) -> int:
+    registry = sources.get("registry") if isinstance(sources.get("registry"), dict) else {}
+    registry_sources = registry.get("sources") if isinstance(registry.get("sources"), list) else []
+    return len(registry_sources)
 
 
 def cmd_eval_answer_packets(_args: argparse.Namespace) -> int:

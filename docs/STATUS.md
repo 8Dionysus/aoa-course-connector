@@ -11,6 +11,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run star
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback" --run starter-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
@@ -69,6 +70,10 @@ This proves:
   normalized starter bundle, keyword index, semantic index, graph, default
   GetCourse/Skillspace/Stepik fixture connected-run receipt, and embedded
   readiness without touching the network;
+- CLI `eval install-route` returns `aoa_course_eval_install_route_v1` and proves
+  the fresh-agent install path without network access: route docs, storage
+  roots, bootstrap, readiness, CLI hybrid answer, MCP answer, connected-run
+  status, query-plan readiness, and source registry setup;
 - CLI `connect profile`, `connect inspect`, `connect apply`, and MCP
   `connection_profile_inspect` provide the next operator-connection plan:
   a local `aoa_course_connection_profile_v1` runtime artifact for source refs,
