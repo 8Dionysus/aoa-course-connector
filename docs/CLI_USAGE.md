@@ -190,11 +190,12 @@ connected-run plan.
 Use `calibration status --run <run>` to inspect the connected-run receipt
 without re-running sync or touching the network. The status packet includes
 `snapshot_audit`, `repair_lanes` for partial runs, and `query_plan` entries
-with a selected `query_mode`, CLI `query`, `answer`, and `lesson-context`
-commands plus MCP `mcp_commands` for `search`, `answer`, `lesson_context`, and
-`evidence_report`. Sync-backed entries also carry `stable_identity` with a
-fingerprint, counts, and samples for the canonical IDs that should survive
-repeat refreshes of the same registered source.
+with a selected `query_mode`, CLI `query`, `answer`, `sources answer`, and
+`lesson-context` commands plus MCP `mcp_commands` for `source_answer`, `search`,
+`answer`, `lesson_context`, and `evidence_report`. Sync-backed entries also
+carry `stable_identity` with a fingerprint, counts, and samples for the
+canonical IDs that should survive repeat refreshes of the same registered
+source.
 
 Use `calibration query --run <run>` when the next agent needs proof that the
 connected run is actually queryable. It reads the same receipt, selects

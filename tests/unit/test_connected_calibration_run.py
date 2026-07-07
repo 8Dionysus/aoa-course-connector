@@ -68,6 +68,10 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all("--mode hybrid" in entry["commands"]["query"] for entry in smoke_entries)
     assert all(entry["commands"]["answer"].startswith("aoa-course answer ") for entry in smoke_entries)
     assert all("--mode hybrid" in entry["commands"]["answer"] for entry in smoke_entries)
+    assert all(entry["commands"]["sources_answer"].startswith("aoa-course sources answer ") for entry in smoke_entries)
+    assert all(f"--source-id {entry['source_id']}" in entry["commands"]["sources_answer"] for entry in smoke_entries)
+    assert all("--kind smoke" in entry["commands"]["sources_answer"] for entry in smoke_entries)
+    assert all("--mode hybrid" in entry["commands"]["sources_answer"] for entry in smoke_entries)
     assert all(entry["commands"]["lesson_context"].startswith("aoa-course lesson-context ") for entry in smoke_entries)
     assert all("--mode hybrid" in entry["commands"]["lesson_context"] for entry in smoke_entries)
     assert all("--graph-limit 12" in entry["commands"]["lesson_context"] for entry in smoke_entries)
@@ -89,6 +93,9 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all(entry["stable_identity"]["fingerprint"].startswith("sha256:") for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["query"] for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["answer"] for entry in sync_entries)
+    assert all(entry["commands"]["sources_answer"].startswith("aoa-course sources answer ") for entry in sync_entries)
+    assert all("--kind sync" in entry["commands"]["sources_answer"] for entry in sync_entries)
+    assert all("--mode hybrid" in entry["commands"]["sources_answer"] for entry in sync_entries)
     assert all("--mode hybrid" in entry["commands"]["lesson_context"] for entry in sync_entries)
     assert all('"source_id":"' in entry["mcp_commands"]["source_answer"] for entry in sync_entries)
     assert all('"mode":"hybrid"' in entry["mcp_commands"]["search"] for entry in sync_entries)
@@ -111,6 +118,7 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert status["snapshot_audit"] == receipt["snapshot_audit"]
     assert status["query_plan"]["entry_count"] == receipt["query_plan"]["entry_count"]
     assert status["query_plan"]["entries"][0]["commands"]["query"].startswith("aoa-course query ")
+    assert status["query_plan"]["entries"][0]["commands"]["sources_answer"].startswith("aoa-course sources answer ")
     assert status["query_plan"]["entries"][0]["commands"]["lesson_context"].startswith("aoa-course lesson-context ")
     assert status["query_plan"]["entries"][0]["mcp_commands"]["search"].startswith("aoa-course mcp call search ")
     assert status["query_plan"]["entries"][0]["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
@@ -132,6 +140,7 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all(response["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1" for response in query_packet["responses"])
     assert all(response["evidence_report"]["result_refs"] for response in query_packet["responses"])
     assert all("mcp_commands" in response for response in query_packet["responses"])
+    assert all(response["commands"]["sources_answer"].startswith("aoa-course sources answer ") for response in query_packet["responses"])
 
     sync_query = query_connected_calibration(
         storage,
