@@ -92,7 +92,7 @@ def smoke_browser_live(
     catalog_url: str | None = None,
     course_url: str | None = None,
     state_file: Path | None = None,
-    wait_until: str = "networkidle",
+    wait_until: str = "domcontentloaded",
     max_sources: int = 50,
     max_pages: int = 5,
     max_lessons: int = 20,

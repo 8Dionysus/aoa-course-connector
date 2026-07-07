@@ -102,7 +102,7 @@ def discover_browser_live(
     *,
     run_id: str,
     state_file: Path | None = None,
-    wait_until: str = "networkidle",
+    wait_until: str = "domcontentloaded",
     max_sources: int = 50,
     max_pages: int = 5,
     link_pattern: str | None = None,
@@ -155,7 +155,7 @@ def discover_browser_live(
     )
 
 
-def collect_live_catalog_pages(page: Any, start_url: str, *, wait_until: str = "networkidle", max_pages: int = 5) -> list[dict[str, object]]:
+def collect_live_catalog_pages(page: Any, start_url: str, *, wait_until: str = "domcontentloaded", max_pages: int = 5) -> list[dict[str, object]]:
     pages: list[dict[str, object]] = []
     seen: set[str] = set()
     next_url = start_url

@@ -116,7 +116,7 @@ def crawl_browser_snapshot(
     )
 
 
-def capture_browser_live(roots: StorageRoots, url: str, platform: str, run_id: str, state_file: Path | None = None, wait_until: str = "networkidle") -> dict[str, object]:
+def capture_browser_live(roots: StorageRoots, url: str, platform: str, run_id: str, state_file: Path | None = None, wait_until: str = "domcontentloaded") -> dict[str, object]:
     try:
         from playwright.sync_api import sync_playwright
     except ImportError as exc:  # pragma: no cover - optional dependency guard
@@ -170,7 +170,7 @@ def crawl_browser_live(
     platform: str,
     run_id: str,
     state_file: Path | None = None,
-    wait_until: str = "networkidle",
+    wait_until: str = "domcontentloaded",
     max_lessons: int = 20,
     link_pattern: str | None = None,
 ) -> dict[str, object]:
@@ -199,7 +199,7 @@ def crawl_browser_live(
         _extend_caption_resources(caption_resources, index_caption_resources)
         caption_resource_errors.extend(index_caption_errors)
         pages.append({"page_id": "course-index", "kind": "course_index", "url": index_url, "title": index_title, "html": index_html})
-        links = discover_lesson_links(index_html, index_url, max_lessons=max_lessons, link_pattern=link_pattern)
+        links = discover_lesson_links(index_html, index_url, platform=platform, max_lessons=max_lessons, link_pattern=link_pattern)
         for order, link in enumerate(links, start=1):
             try:
                 page.goto(str(link["href"]), wait_until=wait_until)

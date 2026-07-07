@@ -68,7 +68,13 @@ def audit_browser_snapshot(
             max_sources=max_sources,
             link_pattern=link_pattern,
         )
-        lesson_links = discover_lesson_links(html, page_url, max_lessons=max_lessons, link_pattern=link_pattern)
+        lesson_links = discover_lesson_links(
+            html,
+            page_url,
+            platform=platform,
+            max_lessons=max_lessons,
+            link_pattern=link_pattern,
+        )
         caption_assets = [asset for asset in snapshot.assets if is_caption_asset(asset)]
         for asset in caption_assets:
             asset_url = str(asset.get("url") or "")
