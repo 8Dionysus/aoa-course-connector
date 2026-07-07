@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import shlex
@@ -152,6 +153,9 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
             command = str(action.get("command") or "")
             if command:
                 lines.extend(["  ```bash", f"  {command}", "  ```"])
+            mcp_command = str(action.get("mcp_command") or "")
+            if mcp_command:
+                lines.extend(["  - MCP:", "  ```bash", f"  {mcp_command}", "  ```"])
         lines.append("")
 
     next_commands = [str(item) for item in plan.get("next_commands", [])] if isinstance(plan.get("next_commands"), list) else []
@@ -1044,6 +1048,24 @@ def _connected_run_actions(
     if include_step_sources:
         parts.append("--include-step-sources")
     command = " ".join(parts)
+    mcp_arguments = _connected_run_mcp_arguments(
+        run_id=calibration_run,
+        mode="live",
+        platforms=platforms,
+        source_ids=ready_source_ids,
+        query=query,
+        live_scope=live_scope,
+        include_step_sources=include_step_sources,
+        allow_network=True,
+        stepik_token_env=stepik_token_env if "stepik" in platforms else None,
+        browser_state_file=browser_state_file,
+        expect_origin_contains=expect_origin_contains,
+        max_lessons=max_lessons,
+        max_pages=max_pages,
+        max_sources=max_sources,
+        link_pattern=link_pattern,
+        source_limit=None,
+    )
     return [
         {
             "kind": "connected_run",
@@ -1051,6 +1073,12 @@ def _connected_run_actions(
             "network_touched": True,
             "source_ids": ready_source_ids,
             "command": command,
+            "mcp_tool_call": {
+                "tool": "connected_run",
+                "arguments": mcp_arguments,
+                "network_touched": True,
+            },
+            "mcp_command": _mcp_call_command("connected_run", mcp_arguments),
             "artifact_path": f"{ARTIFACT_ROOT_EXPR}/runs/{calibration_run}/connected/connected_calibration_receipt.json",
         }
     ]
@@ -1076,6 +1104,58 @@ def _connected_run_blockers(
         for blocker in action.get("blocked_by", []):
             blockers.append(f"{platform}: {blocker}")
     return _dedupe(blockers)
+
+
+def _connected_run_mcp_arguments(
+    *,
+    run_id: str,
+    mode: str,
+    platforms: list[str],
+    source_ids: list[str],
+    query: str | None,
+    live_scope: str,
+    include_step_sources: bool,
+    allow_network: bool,
+    stepik_token_env: str | None,
+    browser_state_file: Path | None,
+    expect_origin_contains: str | None,
+    max_lessons: int,
+    max_pages: int,
+    max_sources: int,
+    link_pattern: str | None,
+    source_limit: int | None,
+) -> dict[str, object]:
+    arguments: dict[str, object] = {
+        "run": run_id,
+        "mode": mode,
+        "platforms": platforms,
+        "source_ids": source_ids,
+        "live_scope": live_scope,
+        "allow_network": allow_network,
+        "max_lessons": max_lessons,
+        "max_pages": max_pages,
+        "max_sources": max_sources,
+    }
+    if query:
+        arguments["query"] = query
+    if include_step_sources:
+        arguments["include_step_sources"] = True
+    if stepik_token_env:
+        arguments["stepik_token_env"] = stepik_token_env
+    if browser_state_file:
+        arguments["state_file"] = str(browser_state_file.expanduser())
+    if expect_origin_contains:
+        arguments["expect_origin"] = expect_origin_contains
+    if link_pattern:
+        arguments["link_pattern"] = link_pattern
+    if source_limit is not None:
+        arguments["source_limit"] = source_limit
+    return arguments
+
+
+def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:
+    encoded = json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
+    return f"aoa-course mcp call {tool} {shlex.quote(encoded)}"
 
 
 def _source_plan(source: dict[str, object], sync_actions: list[dict[str, object]], smoke_actions: list[dict[str, object]]) -> dict[str, object]:

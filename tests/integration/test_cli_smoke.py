@@ -621,6 +621,14 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     assert "--max-lessons 7" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
     assert "--max-pages 3" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
     assert "--max-sources 4" in readiness["connected_source_plan"]["connected_run_plan"]["command"]
+    mcp_plan = readiness["connected_source_plan"]["connected_run_plan"]["mcp_tool_call"]
+    assert mcp_plan["tool"] == "connected_run"
+    assert mcp_plan["arguments"]["allow_network"] is True
+    assert mcp_plan["arguments"]["max_lessons"] == 7
+    assert mcp_plan["arguments"]["max_pages"] == 3
+    assert mcp_plan["arguments"]["max_sources"] == 4
+    assert mcp_plan["arguments"]["link_pattern"] == "*/lessons/*"
+    assert "aoa-course mcp call connected_run" in readiness["connected_source_plan"]["connected_run_plan"]["mcp_command"]
     assert any("--link-pattern '*/lessons/*'" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
     assert any("--max-lessons 7" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
     assert any("--max-pages 3" in command for command in readiness["next_commands"] if "calibration connected-run" in command)
@@ -671,6 +679,8 @@ def test_cli_and_mcp_connected_plan_can_scope_to_selected_source(tmp_path: Path)
     assert readiness["sources"]["selected_source_count"] == 1
     assert mcp["result"]["plan"]["ready"] is True
     assert mcp["result"]["plan"]["source_ids"] == [source_a["source_id"]]
+    assert mcp["result"]["plan"]["connected_run_plan"]["mcp_tool_call"]["arguments"]["source_ids"] == [source_a["source_id"]]
+    assert str(source_b["source_id"]) not in mcp["result"]["plan"]["connected_run_plan"]["mcp_command"]
 
 
 def test_cli_stepik_fixture_flow(tmp_path: Path) -> None:

@@ -195,7 +195,10 @@ not included in `structuredContent`.
 `connected_source_plan` is also read-only and returns `network_touched: false`.
 It wraps the live preflight report into an operator plan plan with exact
 preflight-report, source sync, per-source smoke, `calibration build`, and
-`connected_run_plan` commands. Agents should use it before connected live
+`connected_run_plan` commands. Ready `connected_run_plan` entries include both
+the CLI command and `mcp_tool_call`/`mcp_command` for MCP `connected_run`, with
+the same source ids, traversal bounds, live scope, and explicit
+`allow_network`. Agents should use it before connected live
 work so blocked sources, missing auth state, missing Stepik token env, runtime
 report paths, and calibration packet inputs are explicit before
 network-touching commands run.

@@ -84,6 +84,15 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
         raise StdioVerificationError("connected_run_plan did not declare network-touching execution")
     if plan.get("ready") is True and "calibration connected-run --mode live --allow-network" not in str(plan.get("command") or ""):
         raise StdioVerificationError("connected_run_plan ready command did not expose executable live route")
+    if plan.get("ready") is True:
+        mcp_call = plan.get("mcp_tool_call")
+        if not isinstance(mcp_call, dict) or mcp_call.get("tool") != "connected_run":
+            raise StdioVerificationError("connected_run_plan ready route did not expose MCP connected_run tool call")
+        mcp_args = mcp_call.get("arguments")
+        if not isinstance(mcp_args, dict) or mcp_args.get("allow_network") is not True:
+            raise StdioVerificationError("connected_run_plan MCP tool call did not preserve allow_network=true")
+        if "mcp call connected_run" not in str(plan.get("mcp_command") or ""):
+            raise StdioVerificationError("connected_run_plan did not expose executable MCP connected_run command")
     if plan.get("ready") is False and not plan.get("blocked_by"):
         raise StdioVerificationError("blocked connected_run_plan did not explain blockers")
     semantic = _require_tool_success(responses, 6, "semantic_provider_preflight")
