@@ -142,8 +142,9 @@ aoa-course mcp call sync_status '{"sync_run":"stepik-live-sync","platform":"step
 
 ## Smoke Reports
 
-Stepik smoke reports combine source registration, sync, optional index/graph
-builds, answer evidence, and privacy-safe local path reporting.
+Stepik smoke reports combine source registration, sync, optional
+keyword/semantic/graph builds, answer evidence, and privacy-safe local path
+reporting.
 
 ```bash
 aoa-course smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"

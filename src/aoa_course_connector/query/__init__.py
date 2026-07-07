@@ -460,10 +460,12 @@ def _source_refresh_hint(
         payload["sync_command"] = _sync_command(platform, access_mode, source_id=source_id)
         payload["commands_touch_network"] = True
         payload["post_sync_rebuild_commands"] = [
+            "aoa-course build-index --run <checkpoint-run-id>",
             "aoa-course build-semantic-index --run <checkpoint-run-id>",
+            "aoa-course build-graph --run <checkpoint-run-id>",
         ]
         payload["post_sync_guidance"] = (
-            "read sync status, pick the synced checkpoint run_id, rebuild the semantic index for semantic/hybrid queries, "
+            "read sync status, pick the synced checkpoint run_id, confirm keyword/semantic/graph artifacts are present, "
             "then rerun answer/lesson-context/evidence_report against that run"
         )
     elif platform in BROWSER_REFRESH_PLATFORMS and source_ref:

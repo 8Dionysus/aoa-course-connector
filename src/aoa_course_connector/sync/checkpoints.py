@@ -59,6 +59,7 @@ def make_checkpoint(
     receipt_path: str = "",
     normalized_path: str = "",
     index_path: str = "",
+    semantic_index_path: str = "",
     graph_path: str = "",
     error: str = "",
 ) -> dict[str, object]:
@@ -78,6 +79,7 @@ def make_checkpoint(
         "receipt_path": receipt_path,
         "normalized_path": normalized_path,
         "index_path": index_path,
+        "semantic_index_path": semantic_index_path,
         "graph_path": graph_path,
         "error": error,
         "updated_at": _now(),

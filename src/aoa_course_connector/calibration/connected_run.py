@@ -1005,7 +1005,7 @@ def _sync_query_plan_entries(payload: dict[str, object], action: dict[str, objec
         paths = {
             "normalized_path": str(checkpoint.get("normalized_path") or ""),
             "index_path": str(checkpoint.get("index_path") or ""),
-            "semantic_index_path": "",
+            "semantic_index_path": str(checkpoint.get("semantic_index_path") or ""),
             "graph_path": str(checkpoint.get("graph_path") or ""),
             "answer_path": "",
         }
