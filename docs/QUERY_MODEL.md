@@ -65,6 +65,13 @@ Answer packets summarize these per-result hints in `refresh_report` with
 unique source counts, registry-match counts, local rebuild commands, local
 query commands, source commands, and `network_touched: false`.
 
+Answer packets also include `quality`, an
+`aoa_course_answer_quality_summary_v1` proof-field summary. It reports
+`ready`, blockers, result/evidence counts, platform counts, provenance-complete
+coverage, refresh-hint coverage, and a compact top-result reference. Agents can
+use it as the first go/no-go signal before trusting or citing a retrieval
+packet.
+
 The `evidence_chain` is also proof-bearing. Each evidence item keeps the
 source URL/id, matched snippet, fetched timestamp, platform, path, freshness
 state, authority tier, rank score, rank features, source authority when
@@ -102,8 +109,8 @@ vector space as the indexed course documents.
 
 `aoa-course eval answer-quality` checks this shape for fixture-safe starter,
 Stepik, and GetCourse runs: top-result source identity, path, snippet terms,
-freshness timestamps, authority/rank proof fields, and evidence fields must
-all survive retrieval.
+freshness timestamps, authority/rank proof fields, evidence fields, and answer
+`quality` readiness must all survive retrieval.
 `aoa-course eval freshness-ranking` checks the ranking-specific conflict case:
 with equal base relevance, current evidence must rank above stale evidence.
 `aoa-course eval authority-ranking` checks the ranking-specific authority cases:

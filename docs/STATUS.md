@@ -42,6 +42,10 @@ This proves:
 - evidence chains preserve freshness state, authority tier, source authority,
   rank score, rank features, and refresh hints alongside source URLs and
   fetched timestamps, so agents can cite and refresh the exact proof item;
+- answer packets and MCP `evidence_report` expose
+  `aoa_course_answer_quality_summary_v1`, giving agents a compact `ready` flag,
+  blockers, result/evidence counts, provenance coverage, refresh-hint coverage,
+  and top-result identity before citation;
 - JSON-RPC stdio MCP tool surface with structured `tools/list` and
   `tools/call` responses;
 - MCP `ingest_status` returns a read-only run readiness packet with normalized

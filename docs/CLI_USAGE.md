@@ -103,6 +103,10 @@ answer and nearby course graph context. It returns
 `aoa_course_lesson_context_packet_v1`, including the answer packet and
 `aoa_course_lesson_graph_context_v1`; `--graph-limit` bounds the per-evidence
 lesson neighborhood.
+`answer`, `lesson-context`, and MCP `evidence_report` expose
+`aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
+`blockers`, provenance counts, refresh-hint counts, and `top_result` before
+citing an answer.
 
 Use `refresh query` or MCP `refresh_plan` when an agent needs the next exact
 steps from a result. The packet includes local rebuild commands, local

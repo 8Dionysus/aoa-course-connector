@@ -71,10 +71,13 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     answer = run_cli(tmp_path, "answer", "bootloader unlock rollback", "--run", "starter-fixture")
     assert answer["result_count"] >= 1
     assert answer["evidence_chain"]
+    assert answer["quality"]["ready"] is True
+    assert answer["quality"]["top_result"]["doc_id"] == answer["results"][0]["doc_id"]
     assert answer["evidence_chain"][0]["snippet"]
     lesson_context = run_cli(tmp_path, "lesson-context", "bootloader rollback", "--run", "starter-fixture", "--graph-limit", "6")
     assert lesson_context["schema"] == "aoa_course_lesson_context_packet_v1"
     assert lesson_context["answer_packet"]["evidence_chain"]
+    assert lesson_context["answer_packet"]["quality"]["ready"] is True
     assert lesson_context["graph_context"]["status"] == "ready"
     assert lesson_context["graph_context"]["contexts"][0]["graph"]["neighbors"]
     evidence_inspect = run_cli(tmp_path, "evidence", "inspect", "rollback", "--run", "starter-fixture")
@@ -126,6 +129,8 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert freshness["result"]["freshness"]["states"]
     evidence = run_cli(tmp_path, "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}')
     assert evidence["result"]["evidence_chain"]
+    assert evidence["result"]["quality"]["ready"] is True
+    assert evidence["result"]["quality"]["top_result"]["doc_id"] == evidence["result"]["result_refs"][0]["doc_id"]
     assert evidence["result"]["result_refs"][0]["snippet"]
     refresh = run_cli(tmp_path, "mcp", "call", "refresh_plan", '{"query":"rollback","run":"starter-fixture","mode":"keyword"}')
     assert refresh["result"]["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
@@ -785,6 +790,7 @@ def test_cli_answer_quality_eval_proves_source_path_freshness_and_evidence(tmp_p
 
     assert result["status"] == "ok"
     assert result["suite_id"] == "answer-quality-packets"
+    assert all(case["quality_ready"] is True for case in result["case_results"])
     assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 

@@ -41,7 +41,7 @@ The starter path creates:
 retrieval path. It prepares starter, GetCourse, Skillspace, and Stepik runs,
 builds keyword/semantic indexes and graphs, then checks CLI answer, CLI
 lesson-context, MCP search, MCP lesson_context, and MCP evidence_report with
-source evidence and graph context.
+source evidence, graph context, and answer `quality` readiness.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,

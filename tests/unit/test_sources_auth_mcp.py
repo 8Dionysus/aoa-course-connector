@@ -568,6 +568,8 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     context = call_tool("lesson_context", {"query": "bootloader rollback", "run": "starter-fixture", "graph_limit": 6})
     assert context["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
     assert context["answer_packet"]["evidence_chain"]
+    assert context["answer_packet"]["quality"]["ready"] is True
+    assert context["answer_packet"]["quality"]["evidence_count"] == len(context["answer_packet"]["evidence_chain"])
     assert context["lesson_context"]["answer_packet"] == context["answer_packet"]
     assert context["lesson_context"]["graph_context"] == context["graph_context"]
     assert context["graph_context"]["schema"] == "aoa_course_lesson_graph_context_v1"
@@ -580,6 +582,11 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert freshness["freshness"]["states"]
     evidence = call_tool("evidence_report", {"query": "rollback", "run": "starter-fixture"})
     assert evidence["evidence_chain"]
+    assert evidence["quality"]["schema"] == "aoa_course_answer_quality_summary_v1"
+    assert evidence["quality"]["ready"] is True
+    assert evidence["quality"]["result_count"] == evidence["result_count"]
+    assert evidence["quality"]["evidence_count"] == len(evidence["evidence_chain"])
+    assert evidence["quality"]["top_result"]["doc_id"] == evidence["result_refs"][0]["doc_id"]
     assert evidence["freshness_report"]["has_source_timestamps"] is True
     assert evidence["refresh_report"]["local_rebuild_commands"]
     assert evidence["result_refs"][0]["evidence_id"]
@@ -1013,6 +1020,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     })
     assert evidence["result"]["structuredContent"]["tool"] == "evidence_report"
     assert evidence["result"]["structuredContent"]["evidence_chain"]
+    assert evidence["result"]["structuredContent"]["quality"]["ready"] is True
 
     refresh = handle_jsonrpc_message({
         "jsonrpc": "2.0",

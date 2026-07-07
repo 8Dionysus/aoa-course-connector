@@ -17,6 +17,7 @@ from aoa_course_connector.index import (
     vector_dot,
     vectorize_semantic_query,
 )
+from aoa_course_connector.quality import summarize_answer_packet
 from aoa_course_connector.sources import load_registry
 from aoa_course_connector.storage import run_artifact_dir
 
@@ -214,7 +215,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
         if evidence_id and str(evidence_id) not in seen:
             seen.add(str(evidence_id))
             evidence_chain.append(_evidence_chain_item(result, evidence_id))
-    return {
+    packet = {
         "schema": "aoa_course_answer_packet_v1",
         "run_id": run_id,
         "query": query,
@@ -232,6 +233,8 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
         },
         "refresh_report": _refresh_report(results),
     }
+    packet["quality"] = summarize_answer_packet(packet)
+    return packet
 
 
 def render_lesson_context_packet(

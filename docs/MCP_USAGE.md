@@ -158,7 +158,9 @@ neighbors. Use `graph_limit` to bound the per-lesson neighborhood.
 evidence chain, freshness report, authority report, refresh report, and result
 references with source URL, matched snippet, course path, fetched timestamp,
 freshness state, authority tier, source authority, rank score, rank features,
-and `refresh_hint`.
+and `refresh_hint`. It also returns the answer packet `quality` summary, so an
+MCP-side agent can check proof-field readiness and blockers without fetching
+the full answer packet.
 The hint always gives local
 `build-index`, `build-semantic-index`, and `build-graph` rebuild commands, plus
 local `answer`, `lesson-context`, and `evidence inspect` commands for rerunning

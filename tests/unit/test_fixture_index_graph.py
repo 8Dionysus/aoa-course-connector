@@ -34,6 +34,13 @@ def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
     packet = render_answer_packet(storage, "bootloader rollback", run_id="test-run")
     assert packet["result_count"] >= 1
     assert packet["evidence_chain"]
+    assert packet["quality"]["schema"] == "aoa_course_answer_quality_summary_v1"
+    assert packet["quality"]["ready"] is True
+    assert packet["quality"]["result_count"] == packet["result_count"]
+    assert packet["quality"]["evidence_count"] == len(packet["evidence_chain"])
+    assert packet["quality"]["provenance_complete_count"] == packet["result_count"]
+    assert packet["quality"]["refresh_hint_count"] == packet["result_count"]
+    assert packet["quality"]["top_result"]["doc_id"] == packet["results"][0]["doc_id"]
     evidence = packet["evidence_chain"][0]
     assert evidence["doc_id"]
     assert evidence["freshness_state"] == packet["results"][0]["freshness_state"]
@@ -113,6 +120,8 @@ def test_authority_ranking_prefers_official_and_mentor_sources_when_relevance_ti
     assert official[1]["rank_features"]["authority_tier"] == "learner_comment"
     assert official[0]["rank_score"] > official[1]["rank_score"]
     official_packet = render_answer_packet(storage, "driver signing rollback policy", run_id="authority-ranking-fixture")
+    assert official_packet["quality"]["ready"] is True
+    assert official_packet["quality"]["top_result"]["authority_tier"] == "official_lesson"
     assert official_packet["evidence_chain"][0]["authority_tier"] == "official_lesson"
     assert official_packet["evidence_chain"][0]["rank_score"] == official_packet["results"][0]["rank_score"]
 
