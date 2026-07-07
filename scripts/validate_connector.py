@@ -72,6 +72,8 @@ REQUIRED_FILES = [
     "evals/intake/README.md",
     "evals/reports/README.md",
     "evals/suites/README.md",
+    "evals/suites/retrieval-loop.suite.md",
+    "evals/suites/retrieval_loop.json",
     "evals/suites/answer-quality.suite.md",
     "evals/suites/answer_quality_packets.json",
     "evals/suites/freshness-ranking.suite.md",

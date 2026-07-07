@@ -759,6 +759,24 @@ def test_cli_answer_quality_eval_proves_source_path_freshness_and_evidence(tmp_p
     assert {case["failure_count"] for case in result["case_results"]} == {0}
 
 
+def test_cli_retrieval_loop_eval_proves_cli_and_mcp_context(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "eval", "retrieval-loop")
+
+    assert result["schema"] == "aoa_course_eval_retrieval_loop_v1"
+    assert result["status"] == "ok"
+    assert result["network_touched"] is False
+    assert set(result["prepared_runs"]) == {
+        "starter-fixture",
+        "getcourse-browser-fixture",
+        "skillspace-browser-fixture",
+        "stepik-fixture",
+    }
+    assert {case["failure_count"] for case in result["case_results"]} == {0}
+    assert all(case["answer_result_count"] >= 1 for case in result["case_results"])
+    assert all(case["mcp_search_result_count"] >= 1 for case in result["case_results"])
+    assert {case["lesson_graph_status"] for case in result["case_results"]} == {"ready"}
+
+
 def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Path) -> None:
     fixture = Path("connector/fixtures/course/freshness_conflict_course.json")
     run_cli(tmp_path, "materialize", "fixture", "--run", "freshness-ranking-fixture", "--fixture", str(fixture))

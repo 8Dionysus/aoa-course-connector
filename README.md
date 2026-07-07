@@ -24,6 +24,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixt
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
+PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
 The starter path creates:
@@ -35,6 +36,12 @@ The starter path creates:
   operator-configured embedding endpoints;
 - a course graph;
 - answer packets with source-backed evidence.
+
+`eval retrieval-loop` is the fixture-safe agent contract for the complete
+retrieval path. It prepares starter, GetCourse, Skillspace, and Stepik runs,
+builds keyword/semantic indexes and graphs, then checks CLI answer, CLI
+lesson-context, MCP search, MCP lesson_context, and MCP evidence_report with
+source evidence and graph context.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,

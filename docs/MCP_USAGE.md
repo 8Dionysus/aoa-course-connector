@@ -255,3 +255,8 @@ paths. It never executes network work; missing receipts return
 `status: "missing"` so agents can ask for the fixture or live connected-run
 command instead of guessing from the
 filesystem.
+
+`aoa-course eval retrieval-loop` is the fixture-safe MCP/CLI contract check: it
+prepares starter, GetCourse, Skillspace, and Stepik runs, then verifies MCP
+`search`, `lesson_context`, and `evidence_report` alongside CLI answer and
+lesson-context packets.

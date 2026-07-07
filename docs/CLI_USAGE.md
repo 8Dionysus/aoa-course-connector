@@ -164,6 +164,12 @@ commands plus MCP `mcp_commands` for `search`, `lesson_context`, and
 fingerprint, counts, and samples for the canonical IDs that should survive
 repeat refreshes of the same registered source.
 
+Use `eval retrieval-loop` for the offline agent retrieval contract. It prepares
+the starter, GetCourse, Skillspace, and Stepik fixture runs, builds
+keyword/semantic indexes and graphs, and verifies CLI answer, CLI
+lesson-context, MCP search, MCP lesson_context, and MCP evidence_report without
+touching the network.
+
 Use `inspect browser-snapshot` before materializing operator snapshots. The
 packet is `aoa_course_browser_snapshot_audit_v1`: it reports whether the file is
 ready for discovery, crawl, materialization, or smoke; counts the visible course

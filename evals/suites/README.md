@@ -10,6 +10,7 @@ Fixture-safe suites for local course connector behavior:
 - `browser_discovery_sources.json`
 - `browser_sync_checkpoints.json`
 - `browser_crawl_answer_packets.json`
+- `retrieval_loop.json`
 - `answer_quality_packets.json`
 - `freshness_ranking.json`
 - `authority_ranking.json`
@@ -19,6 +20,10 @@ Fixture-safe suites for local course connector behavior:
 `answer-quality.suite.md` records the local suite note for the answer-quality
 contract. It is connector-local support evidence only; central proof doctrine,
 verdicts, scoring, regression meaning, and adoption stay with `aoa-evals`.
+
+`retrieval-loop.suite.md` records the local suite note for the complete
+fixture-safe CLI/MCP retrieval loop across starter, GetCourse, Skillspace, and
+Stepik runs.
 
 `freshness-ranking.suite.md` records the local suite note for freshness-aware
 ordering when base relevance is tied.
