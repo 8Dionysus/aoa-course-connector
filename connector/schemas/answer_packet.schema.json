@@ -19,6 +19,7 @@
           "kind": {"type": "string"},
           "source_id": {"type": "string"},
           "source_url": {"type": "string"},
+          "snippet": {"type": "string"},
           "fetched_at": {"type": "string"},
           "platform": {"type": "string"},
           "path": {"type": "array", "items": {"type": "string"}},

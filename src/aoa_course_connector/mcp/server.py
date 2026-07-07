@@ -301,21 +301,35 @@ def _evidence_result_refs(packet: dict[str, object]) -> list[dict[str, object]]:
         if not isinstance(result, dict):
             continue
         refs.append(
-            {
-                "doc_id": result.get("doc_id"),
-                "source_id": result.get("source_id"),
-                "source_url": result.get("source_url"),
-                "evidence_id": result.get("evidence_id"),
-                "path": result.get("path"),
-                "fetched_at": result.get("fetched_at"),
-                "freshness_state": result.get("freshness_state"),
-                "authority_tier": result.get("authority_tier"),
-                "score": result.get("score"),
-                "rank_score": result.get("rank_score"),
-                "refresh_hint": result.get("refresh_hint"),
-            }
+            _compact_dict(
+                {
+                    "doc_id": result.get("doc_id"),
+                    "kind": result.get("kind"),
+                    "source_id": result.get("source_id"),
+                    "source_url": result.get("source_url"),
+                    "evidence_id": result.get("evidence_id"),
+                    "snippet": result.get("snippet"),
+                    "platform": result.get("platform"),
+                    "path": result.get("path"),
+                    "lesson_id": result.get("lesson_id"),
+                    "lesson_title": result.get("lesson_title"),
+                    "fetched_at": result.get("fetched_at"),
+                    "freshness_state": result.get("freshness_state"),
+                    "authority_tier": result.get("authority_tier"),
+                    "authority_label": result.get("authority_label"),
+                    "source_authority": result.get("source_authority"),
+                    "score": result.get("score"),
+                    "rank_score": result.get("rank_score"),
+                    "rank_features": result.get("rank_features"),
+                    "refresh_hint": result.get("refresh_hint"),
+                }
+            )
         )
     return refs
+
+
+def _compact_dict(value: dict[str, object]) -> dict[str, object]:
+    return {key: item for key, item in value.items() if item is not None}
 
 
 def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:

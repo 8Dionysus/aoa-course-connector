@@ -462,6 +462,8 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert evidence["evidence_chain"][0]["freshness_state"]
     assert evidence["evidence_chain"][0]["authority_tier"]
     assert evidence["evidence_chain"][0]["rank_score"] == evidence["result_refs"][0]["rank_score"]
+    assert evidence["evidence_chain"][0]["snippet"] == evidence["result_refs"][0]["snippet"]
+    assert evidence["result_refs"][0]["rank_features"]["provenance_complete"] is True
 
     assert evidence["result_refs"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
     snapshot_audit = call_tool(
