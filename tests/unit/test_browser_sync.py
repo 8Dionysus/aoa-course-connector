@@ -60,6 +60,9 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
         "aoa-course build-semantic-index --run <checkpoint-run-id>",
     ]
     assert "semantic index" in hint["source_refresh"]["post_sync_guidance"]
+    assert "lesson-context" in hint["source_refresh"]["post_sync_guidance"]
+    assert any("lesson-context" in command and "--mode keyword" in command for command in hint["local_query_commands"])
+    assert any("lesson-context" in command for command in packet["refresh_report"]["local_query_commands"])
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
 
 
@@ -128,6 +131,7 @@ def test_refresh_live_cycle_uses_selected_source_readiness_and_default_browser_s
 
     assert report["status"] == "ok"
     assert report["selected_result"]["source_id"] == selected["source_id"]
+    assert any("lesson-context" in command and "--mode hybrid" in command for command in report["planned_commands"]["local_query_commands"])
     assert captured["source_ids"] == [selected["source_id"]]
     assert captured["state_file"] == state_file.resolve()
     assert report["rebuilt_artifacts"]["semantic_index_path"]

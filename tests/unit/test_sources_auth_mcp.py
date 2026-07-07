@@ -536,6 +536,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert refresh["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
     assert refresh["refresh"]["status"] == "planned"
     assert refresh["refresh"]["network_touched"] is False
+    assert any("lesson-context" in command for command in refresh["refresh"]["planned_commands"]["local_query_commands"])
 
 
 def test_semantic_provider_preflight_redacts_token_values(tmp_path: Path, monkeypatch) -> None:
@@ -905,6 +906,10 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     })
     assert refresh["result"]["structuredContent"]["tool"] == "refresh_plan"
     assert refresh["result"]["structuredContent"]["refresh"]["network_touched"] is False
+    assert any(
+        "lesson-context" in command
+        for command in refresh["result"]["structuredContent"]["refresh"]["planned_commands"]["local_query_commands"]
+    )
 
     preflight = handle_jsonrpc_message({
         "jsonrpc": "2.0",

@@ -69,6 +69,8 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert "preflight connected-plan --platform stepik" in hint["source_refresh"]["preflight_command"]
     assert "sync stepik-live" in hint["source_refresh"]["sync_command"]
     assert f"--source-id {source['source_id']}" in hint["source_refresh"]["sync_command"]
+    assert any("lesson-context" in command and "--mode keyword" in command for command in hint["local_query_commands"])
+    assert any("lesson-context" in command for command in packet["refresh_report"]["local_query_commands"])
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
 
 
@@ -151,6 +153,7 @@ def test_refresh_fixture_cycle_executes_selected_stepik_source(tmp_path: Path) -
     assert report["status"] == "ok"
     assert report["network_touched"] is False
     assert report["selected_result"]["source_id"] == source["source_id"]
+    assert any("lesson-context" in command and "--mode hybrid" in command for command in report["planned_commands"]["local_query_commands"])
     assert report["checkpoint"]["source_id"] == source["source_id"]
     assert report["refreshed_run_id"]
     assert report["rebuilt_artifacts"]["semantic_index_path"]

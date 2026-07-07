@@ -130,6 +130,7 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     refresh = run_cli(tmp_path, "mcp", "call", "refresh_plan", '{"query":"rollback","run":"starter-fixture","mode":"keyword"}')
     assert refresh["result"]["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
     assert refresh["result"]["refresh"]["network_touched"] is False
+    assert any("lesson-context" in command for command in refresh["result"]["refresh"]["planned_commands"]["local_query_commands"])
     preflight = run_cli(tmp_path, "mcp", "call", "live_preflight", '{"platforms":["stepik"]}')
     assert preflight["result"]["preflight"]["network_touched"] is False
     plan = run_cli(tmp_path, "mcp", "call", "connected_source_plan", '{"platforms":["stepik"]}')

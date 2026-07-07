@@ -202,7 +202,7 @@ def query_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture"
         results = query_hybrid_index(roots, query=query, run_id=run_id, limit=limit)
     else:
         raise ValueError(f"unsupported query mode: {mode}")
-    return _attach_refresh_hints(roots, results, query=query, run_id=run_id)
+    return _attach_refresh_hints(roots, results, query=query, run_id=run_id, mode=mode)
 
 
 def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5, mode: str = "keyword") -> dict[str, object]:
@@ -355,12 +355,12 @@ def _snippet(text: str, terms: list[str]) -> str:
     return text[start:end]
 
 
-def _attach_refresh_hints(roots: StorageRoots, results: list[dict[str, object]], *, query: str, run_id: str) -> list[dict[str, object]]:
+def _attach_refresh_hints(roots: StorageRoots, results: list[dict[str, object]], *, query: str, run_id: str, mode: str) -> list[dict[str, object]]:
     sources_by_id = _registry_sources_by_id(roots)
     return [
         {
             **result,
-            "refresh_hint": _refresh_hint(result, sources_by_id=sources_by_id, query=query, run_id=run_id),
+            "refresh_hint": _refresh_hint(result, sources_by_id=sources_by_id, query=query, run_id=run_id, mode=mode),
         }
         for result in results
     ]
@@ -387,6 +387,7 @@ def _refresh_hint(
     sources_by_id: dict[str, dict[str, object]],
     query: str,
     run_id: str,
+    mode: str,
 ) -> dict[str, object]:
     source_id = str(result.get("source_id") or "")
     source = sources_by_id.get(source_id) if source_id else None
@@ -398,6 +399,11 @@ def _refresh_hint(
         f"aoa-course build-index --run {shlex.quote(run_id)}",
         f"aoa-course build-semantic-index --run {shlex.quote(run_id)}",
         f"aoa-course build-graph --run {shlex.quote(run_id)}",
+    ]
+    local_query_commands = [
+        f"aoa-course answer {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {shlex.quote(mode)}",
+        f"aoa-course lesson-context {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {shlex.quote(mode)} --graph-limit 12",
+        f"aoa-course evidence inspect {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {shlex.quote(mode)}",
     ]
     source_refresh = _source_refresh_hint(
         source_id=source_id,
@@ -417,6 +423,7 @@ def _refresh_hint(
         "local_run": run_id,
         "network_touched": False,
         "local_rebuild_commands": local_rebuild_commands,
+        "local_query_commands": local_query_commands,
         "source_refresh": source_refresh,
         "recommended_sequence": _refresh_sequence(source_refresh),
     }
@@ -457,7 +464,7 @@ def _source_refresh_hint(
         ]
         payload["post_sync_guidance"] = (
             "read sync status, pick the synced checkpoint run_id, rebuild the semantic index for semantic/hybrid queries, "
-            "then rerun answer/evidence_report against that run"
+            "then rerun answer/lesson-context/evidence_report against that run"
         )
     elif platform in BROWSER_REFRESH_PLATFORMS and source_ref:
         payload["register_command"] = f"aoa-course sources add {shlex.quote(source_ref)} --platform {platform}"
@@ -488,7 +495,7 @@ def _refresh_sequence(source_refresh: dict[str, object]) -> list[str]:
     sequence.insert(0, "run_connected_source_plan")
     if source_refresh.get("sync_command"):
         sequence.append("sync_live_source_when_preflight_is_ready")
-    sequence.append("rerun_answer_or_evidence_report")
+    sequence.append("rerun_answer_lesson_context_or_evidence_report")
     return sequence
 
 
@@ -510,9 +517,11 @@ def _refresh_report(results: list[dict[str, object]]) -> dict[str, object]:
     hints = [result.get("refresh_hint") for result in results if isinstance(result.get("refresh_hint"), dict)]
     unique_hints = _unique_refresh_hints(hints)
     local_rebuild_commands: list[str] = []
+    local_query_commands: list[str] = []
     source_commands: list[str] = []
     for hint in unique_hints:
         local_rebuild_commands.extend([str(command) for command in hint.get("local_rebuild_commands", []) if command])
+        local_query_commands.extend([str(command) for command in hint.get("local_query_commands", []) if command])
         source_refresh = hint.get("source_refresh") if isinstance(hint.get("source_refresh"), dict) else {}
         for key in ["preflight_command", "register_command", "sync_command", "status_command"]:
             command = source_refresh.get(key)
@@ -527,6 +536,7 @@ def _refresh_report(results: list[dict[str, object]]) -> dict[str, object]:
         "network_touched": False,
         "commands_touch_network": any(bool(_source_refresh(hint).get("commands_touch_network")) for hint in unique_hints),
         "local_rebuild_commands": _dedupe(local_rebuild_commands),
+        "local_query_commands": _dedupe(local_query_commands),
         "source_commands": _dedupe(source_commands),
     }
 

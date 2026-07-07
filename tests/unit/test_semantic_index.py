@@ -110,9 +110,12 @@ def test_semantic_and_hybrid_queries_return_evidence(tmp_path: Path) -> None:
     assert packet["evidence_chain"][0]["rank_score"] == packet["results"][0]["rank_score"]
     assert packet["refresh_report"]["schema"] == "aoa_course_refresh_report_v1"
     assert packet["refresh_report"]["local_rebuild_commands"]
+    assert any("lesson-context" in command and "--mode hybrid" in command for command in packet["refresh_report"]["local_query_commands"])
     assert packet["results"][0]["refresh_hint"]["schema"] == "aoa_course_refresh_hint_v1"
     assert "build-semantic-index" in " ".join(packet["results"][0]["refresh_hint"]["local_rebuild_commands"])
+    assert any("lesson-context" in command and "--graph-limit 12" in command for command in packet["results"][0]["refresh_hint"]["local_query_commands"])
     assert packet["evidence_chain"][0]["refresh_hint"]["local_rebuild_commands"]
+    assert packet["evidence_chain"][0]["refresh_hint"]["local_query_commands"]
 
 
 def test_semantic_query_rejects_hash_collision_only_matches(tmp_path: Path) -> None:

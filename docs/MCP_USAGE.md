@@ -158,17 +158,19 @@ references with source URL, matched snippet, course path, fetched timestamp,
 freshness state, authority tier, source authority, rank score, rank features,
 and `refresh_hint`.
 The hint always gives local
-`build-index`, `build-semantic-index`, and `build-graph` rebuild commands. For
-GetCourse, Skillspace, and Stepik it also points agents to
-`preflight connected-plan` first, and only exposes live sync commands when the
-result source matches the local source registry. Those sync commands are
+`build-index`, `build-semantic-index`, and `build-graph` rebuild commands, plus
+local `answer`, `lesson-context`, and `evidence inspect` commands for rerunning
+the same query after rebuild or source refresh. For GetCourse, Skillspace, and
+Stepik it also points agents to `preflight connected-plan` first, and only
+exposes live sync commands when the result source matches the local source
+registry. Those sync commands are
 `--source-id` scoped so refreshing one result does not accidentally refresh an
 entire platform registry.
 
 `refresh_plan` is the read-only MCP plan for the full refresh loop. It
 returns an `aoa_course_refresh_cycle_v1` packet with the current answer packet,
-selected source-backed result, planned local rebuild/source commands, refresh
-hint, optional connected-source plan, and `network_touched: false`. Network or
+selected source-backed result, planned local rebuild/query/source commands,
+refresh hint, optional connected-source plan, and `network_touched: false`. Network or
 filesystem-mutating refresh execution stays on the CLI side through
 `aoa-course refresh query --strategy fixture --execute` or the explicitly gated
 live form with `--strategy live --execute --allow-network`.
