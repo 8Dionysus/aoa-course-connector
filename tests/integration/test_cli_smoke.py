@@ -874,6 +874,8 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert connected_status["read_only"] is True
     assert connected_status["snapshot_audit"] == connected["snapshot_audit"]
     status_entry = connected_status["query_plan"]["entries"][0]
+    assert status_entry["query_mode"] in {"hybrid", "keyword"}
+    assert f"--mode {status_entry['query_mode']}" in status_entry["commands"]["query"]
     assert status_entry["commands"]["lesson_context"].startswith("aoa-course lesson-context ")
     assert "--graph-limit 12" in status_entry["commands"]["lesson_context"]
     assert status_entry["mcp_commands"]["search"].startswith("aoa-course mcp call search ")

@@ -1077,7 +1077,7 @@ def _query_plan_entry(
     graph_ready = bool(paths.get("graph_path"))
     status_ready = status in {"ok", "ready"}
     semantic_query_ready = status_ready and semantic_ready
-    answer_mode = "hybrid" if semantic_query_ready else "keyword"
+    query_mode = "hybrid" if semantic_query_ready else "keyword"
     answer_ready = status_ready and bool(paths.get("answer_path")) and result_count > 0 and evidence_count > 0
     return {
         "kind": kind,
@@ -1088,6 +1088,7 @@ def _query_plan_entry(
         "source_ref": source_ref,
         "title": title,
         "query": query,
+        "query_mode": query_mode,
         "query_ready": status_ready and index_ready,
         "semantic_query_ready": semantic_query_ready,
         "graph_ready": status_ready and graph_ready,
@@ -1096,15 +1097,15 @@ def _query_plan_entry(
         "answer_evidence_count": evidence_count,
         "paths": paths,
         "commands": {
-            "query": f"aoa-course query {shlex.quote(query_text)} --run {shlex.quote(run_id)}",
-            "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {answer_mode}",
-            "lesson_context": f"aoa-course lesson-context {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {answer_mode} --graph-limit 12",
+            "query": f"aoa-course query {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {query_mode}",
+            "answer": f"aoa-course answer {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {query_mode}",
+            "lesson_context": f"aoa-course lesson-context {shlex.quote(query_text)} --run {shlex.quote(run_id)} --mode {query_mode} --graph-limit 12",
             "graph": f"aoa-course build-graph --run {shlex.quote(run_id)}",
         },
         "mcp_commands": {
-            "search": _mcp_call_command("search", {"query": query_text, "run": run_id, "mode": answer_mode}),
-            "lesson_context": _mcp_call_command("lesson_context", {"query": query_text, "run": run_id, "mode": answer_mode, "graph_limit": 12}),
-            "evidence_report": _mcp_call_command("evidence_report", {"query": query_text, "run": run_id, "mode": answer_mode}),
+            "search": _mcp_call_command("search", {"query": query_text, "run": run_id, "mode": query_mode}),
+            "lesson_context": _mcp_call_command("lesson_context", {"query": query_text, "run": run_id, "mode": query_mode, "graph_limit": 12}),
+            "evidence_report": _mcp_call_command("evidence_report", {"query": query_text, "run": run_id, "mode": query_mode}),
         },
     }
 
