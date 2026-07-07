@@ -2261,9 +2261,12 @@ def cmd_eval_browser_sync(_args: argparse.Namespace) -> int:
             and item.get("index_path")
             and item.get("semantic_index_path")
             and item.get("graph_path")
+            and isinstance(item.get("stable_identity"), dict)
+            and item["stable_identity"].get("available") is True
+            and item["stable_identity"].get("fingerprint")
         ]
         if not matches:
-            failures.append({"platform": platform, "missing": "ok checkpoint with normalized/index/semantic-index/graph paths"})
+            failures.append({"platform": platform, "missing": "ok checkpoint with normalized/index/semantic-index/graph paths and stable identity fingerprint"})
     _emit({"schema": "aoa_course_eval_browser_sync_v1", "status": "ok" if not failures else "error", "failures": failures})
     return 0 if not failures else 1
 
@@ -2283,12 +2286,15 @@ def cmd_eval_stepik_sync(_args: argparse.Namespace) -> int:
         and item.get("index_path")
         and item.get("semantic_index_path")
         and item.get("graph_path")
+        and isinstance(item.get("stable_identity"), dict)
+        and item["stable_identity"].get("available") is True
+        and item["stable_identity"].get("fingerprint")
     ]
     if not matches:
         failures.append(
             {
                 "platform": "stepik",
-                "missing": "ok checkpoint with normalized/index/semantic-index/graph paths",
+                "missing": "ok checkpoint with normalized/index/semantic-index/graph paths and stable identity fingerprint",
             }
         )
     _emit({"schema": "aoa_course_eval_stepik_sync_v1", "status": "ok" if not failures else "error", "failures": failures})

@@ -2,12 +2,29 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from aoa_course_connector.config import StorageRoots
+
+IDENTITY_SCHEMA = "aoa_course_stable_identity_summary_v1"
+IDENTITY_SAMPLE_LIMIT = 8
+IDENTITY_BUCKETS = [
+    "source_ids",
+    "course_ids",
+    "module_ids",
+    "lesson_ids",
+    "step_ids",
+    "asset_ids",
+    "transcript_ids",
+    "assignment_ids",
+    "thread_ids",
+    "comment_ids",
+    "evidence_ids",
+]
 
 
 def checkpoint_store_path(roots: StorageRoots) -> Path:
@@ -62,9 +79,10 @@ def make_checkpoint(
     semantic_index_path: str = "",
     graph_path: str = "",
     error: str = "",
+    stable_identity: dict[str, object] | None = None,
 ) -> dict[str, object]:
     source_id = str(source.get("source_id") or "")
-    return {
+    checkpoint = {
         "schema": "aoa_course_sync_checkpoint_v1",
         "checkpoint_id": f"checkpoint:{sync_run_id}:{source_id}",
         "source_id": source_id,
@@ -83,6 +101,55 @@ def make_checkpoint(
         "graph_path": graph_path,
         "error": error,
         "updated_at": _now(),
+    }
+    if stable_identity is not None:
+        checkpoint["stable_identity"] = stable_identity
+    return checkpoint
+
+
+def normalized_identity_summary(normalized_path: str | Path) -> dict[str, object]:
+    path_text = str(normalized_path or "")
+    if not path_text:
+        return _identity_unavailable("missing_normalized_path")
+    path = Path(path_text)
+    if not path.is_file():
+        return _identity_unavailable("normalized_path_missing")
+    try:
+        bundle = json.loads(path.read_text(encoding="utf-8"))
+    except Exception as exc:  # pragma: no cover - defensive status packet
+        return _identity_unavailable("normalized_path_unreadable", error=str(exc))
+    buckets: dict[str, set[str]] = {name: set() for name in IDENTITY_BUCKETS}
+
+    source = bundle.get("source") if isinstance(bundle, dict) and isinstance(bundle.get("source"), dict) else {}
+    _add_id(buckets, "source_ids", source.get("source_id"))
+    courses = bundle.get("courses") if isinstance(bundle, dict) and isinstance(bundle.get("courses"), list) else []
+    for course in courses:
+        if not isinstance(course, dict):
+            continue
+        _add_id(buckets, "course_ids", course.get("course_id"))
+        modules = course.get("modules") if isinstance(course.get("modules"), list) else []
+        for module in modules:
+            if not isinstance(module, dict):
+                continue
+            _add_id(buckets, "module_ids", module.get("module_id"))
+            lessons = module.get("lessons") if isinstance(module.get("lessons"), list) else []
+            for lesson in lessons:
+                if not isinstance(lesson, dict):
+                    continue
+                _add_lesson_ids(buckets, lesson)
+    evidence = bundle.get("evidence") if isinstance(bundle, dict) and isinstance(bundle.get("evidence"), list) else []
+    for item in evidence:
+        if isinstance(item, dict):
+            _add_id(buckets, "evidence_ids", item.get("evidence_id"))
+
+    canonical = {bucket: sorted(values) for bucket, values in buckets.items()}
+    digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return {
+        "schema": IDENTITY_SCHEMA,
+        "available": True,
+        "fingerprint": f"sha256:{digest}",
+        "counts": {bucket: len(values) for bucket, values in canonical.items()},
+        "samples": {bucket: values[:IDENTITY_SAMPLE_LIMIT] for bucket, values in canonical.items() if values},
     }
 
 
@@ -103,6 +170,49 @@ def load_sync_status(roots: StorageRoots, *, sync_run_id: str | None = None, pla
         "error_count": sum(1 for item in checkpoints if item.get("status") == "error"),
         "checkpoints": checkpoints,
     }
+
+
+def _add_lesson_ids(buckets: dict[str, set[str]], lesson: dict[str, object]) -> None:
+    _add_id(buckets, "lesson_ids", lesson.get("lesson_id"))
+    for item in lesson.get("steps") if isinstance(lesson.get("steps"), list) else []:
+        if isinstance(item, dict):
+            _add_id(buckets, "step_ids", item.get("step_id"))
+    for item in lesson.get("assets") if isinstance(lesson.get("assets"), list) else []:
+        if isinstance(item, dict):
+            _add_id(buckets, "asset_ids", item.get("asset_id"))
+    for item in lesson.get("transcripts") if isinstance(lesson.get("transcripts"), list) else []:
+        if isinstance(item, dict):
+            _add_id(buckets, "transcript_ids", item.get("transcript_id"))
+    for item in lesson.get("assignments") if isinstance(lesson.get("assignments"), list) else []:
+        if isinstance(item, dict):
+            _add_id(buckets, "assignment_ids", item.get("assignment_id"))
+    for thread in lesson.get("comment_threads") if isinstance(lesson.get("comment_threads"), list) else []:
+        if not isinstance(thread, dict):
+            continue
+        _add_id(buckets, "thread_ids", thread.get("thread_id"))
+        for comment in thread.get("comments") if isinstance(thread.get("comments"), list) else []:
+            if isinstance(comment, dict):
+                _add_id(buckets, "comment_ids", comment.get("comment_id"))
+
+
+def _add_id(buckets: dict[str, set[str]], bucket: str, value: object) -> None:
+    text = str(value or "").strip()
+    if text:
+        buckets[bucket].add(text)
+
+
+def _identity_unavailable(reason: str, *, error: str = "") -> dict[str, object]:
+    packet: dict[str, object] = {
+        "schema": IDENTITY_SCHEMA,
+        "available": False,
+        "reason": reason,
+        "fingerprint": "",
+        "counts": {},
+        "samples": {},
+    }
+    if error:
+        packet["error"] = error
+    return packet
 
 
 def _now() -> str:

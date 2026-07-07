@@ -157,6 +157,11 @@ PYTHONPATH=src python -m aoa_course_connector.cli refresh query "Stepik public A
 PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
 ```
 
+Successful sync checkpoints include `stable_identity.fingerprint`, counts, and
+samples for canonical course/lesson/step/evidence IDs. Repeat sync runs for the
+same registered source should keep that fingerprint stable while producing a
+new child `run_id` for fresh artifacts.
+
 For live source-registry sync, register the course once and run:
 
 ```bash

@@ -355,7 +355,9 @@ aoa-course sync browser-live \
 Use `--source-id` when refreshing one selected source from an answer or
 `refresh_plan`. Use `--platform` more than once only for intentional batch
 refresh. Use `sync status` to inspect checkpoints before choosing which child
-run to query.
+run to query. The checkpoint `stable_identity.fingerprint` proves that repeat
+refreshes of the same browser-session source kept the canonical course,
+lesson, step, discussion, transcript, asset, and evidence IDs stable.
 
 `preflight live` is the safe plan check before these live routes. It reads
 the local source registry and redacted browser storage-state status, reports

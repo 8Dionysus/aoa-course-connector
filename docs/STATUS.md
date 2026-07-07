@@ -92,6 +92,10 @@ This proves:
 - source-registry sync routes and connected-source plan commands support
   `--source-id` scoped refreshes, so an agent can refresh one selected source
   without forcing a full platform sync;
+- sync checkpoints now carry a `stable_identity` fingerprint over canonical
+  source/course/module/lesson/step/asset/transcript/assignment/discussion/evidence
+  IDs, and evals require that fingerprint alongside keyword/semantic/graph
+  artifact paths;
 - fresh-copy agent install route.
 - Stepik clean API adapter through fixture, bounded live public API smoke,
   source-registry sync checkpoints, batched full-course materialization route,
