@@ -76,7 +76,10 @@ This proves:
   `--write-runbook`. CLI `connect status` and MCP
   `connection_profile_status` return `aoa_course_connection_profile_status_v1`
   with `ready_for_connected_run`, `ready_for_semantic_build`, blockers,
-  source/auth/plan counts, and ready live connected-run commands;
+  source/auth/plan counts, and ready live connected-run commands. CLI
+  `connect run` turns the same profile into a selected platform/source
+  `aoa_course_connection_profile_run_receipt_v1` plan without network by
+  default, and executes only behind explicit `--allow-network`;
 - MCP agent routes for lesson context, graph neighborhoods, freshness reports,
   and compact evidence reports. `lesson_context` now returns the source-backed
   answer packet plus per-evidence lesson graph neighborhoods, while

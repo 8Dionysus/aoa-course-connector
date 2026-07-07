@@ -22,7 +22,10 @@
     Markdown beside the profile JSON. Run `connect status` or MCP
     `connection_profile_status` to get the compact
     `aoa_course_connection_profile_status_v1` go/no-go packet before any
-    `calibration connected-run --mode live --allow-network` command.
+    `calibration connected-run --mode live --allow-network` command. Use
+    `connect run <profile> --platform <platform>` for the no-network executable
+    profile plan, then add `--allow-network` only after the selected
+    platform/source is ready.
 1. Run the offline starter proof.
 1. Run `preflight semantic-provider --run starter-fixture --require-ready`,
    then build the semantic index with `build-semantic-index` and run at least

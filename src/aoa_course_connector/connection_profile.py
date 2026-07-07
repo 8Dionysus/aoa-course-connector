@@ -372,6 +372,77 @@ def connection_profile_status(inspection: dict[str, object]) -> dict[str, object
     }
 
 
+def connection_profile_run_plan(
+    profile: dict[str, object],
+    inspection: dict[str, object],
+    *,
+    platform: str | None = None,
+    source_ids: list[str] | None = None,
+) -> dict[str, object]:
+    """Plan one executable live connected-run from a connection profile."""
+
+    runtime = profile.get("runtime") if isinstance(profile.get("runtime"), dict) else {}
+    source_plans = _dict_items(inspection.get("sources"))
+    selected_source_ids = {str(source_id) for source_id in source_ids or [] if str(source_id)}
+    selected_platform = str(platform or "")
+    connected_plans = _dict_items(inspection.get("connected_plans"))
+    candidates = [
+        plan
+        for plan in connected_plans
+        if (not selected_platform or plan.get("platform") == selected_platform)
+        and (not selected_source_ids or selected_source_ids.intersection({str(item) for item in plan.get("source_ids", []) if item}))
+    ]
+    ready_candidates = [plan for plan in candidates if plan.get("ready")]
+    blocked_by: list[str] = []
+    if not candidates:
+        blocked_by.append("no connected plan matched the selected profile platform/source")
+    if len(ready_candidates) > 1:
+        blocked_by.append("multiple ready connected plans matched; select exactly one --platform or --source-id")
+    selected = ready_candidates[0] if len(ready_candidates) == 1 and not blocked_by else None
+    if not selected and candidates and not blocked_by:
+        blocked_by.extend(_connected_plan_blockers(candidates))
+    if not selected:
+        return {
+            "schema": "aoa_course_connection_profile_run_plan_v1",
+            "status": "blocked",
+            "ready": False,
+            "network_touched": False,
+            "mode": "live",
+            "platform": selected_platform,
+            "source_ids": sorted(selected_source_ids),
+            "blocked_by": _dedupe(blocked_by),
+            "candidate_commands": _dedupe([_connected_run_command(plan) for plan in ready_candidates]),
+        }
+
+    selected_platform = str(selected.get("platform") or "")
+    connected_run = _nested_connected_run_plan(selected)
+    state_file = _profile_state_file_for_platform(source_plans, selected_platform)
+    expected_origin = _expected_origin_for_platform(source_plans, selected_platform)
+    return {
+        "schema": "aoa_course_connection_profile_run_plan_v1",
+        "status": "ready",
+        "ready": True,
+        "network_touched": False,
+        "mode": "live",
+        "run_id": str(runtime.get("run_id") or "connected-calibration"),
+        "platform": selected_platform,
+        "source_ids": [str(item) for item in connected_run.get("source_ids", selected.get("source_ids", [])) if item],
+        "query": str(runtime.get("query") or ""),
+        "live_scope": str(runtime.get("live_scope") or "bounded"),
+        "include_step_sources": bool(runtime.get("include_step_sources", False)),
+        "max_lessons": int(runtime.get("max_lessons") or 50),
+        "max_pages": int(runtime.get("max_pages") or 5),
+        "max_sources": int(runtime.get("max_sources") or 50),
+        "link_pattern": str(runtime.get("link_pattern") or ""),
+        "browser_state_file": state_file if selected_platform in BROWSER_PLATFORMS else "",
+        "expect_origin_contains": expected_origin if selected_platform in BROWSER_PLATFORMS else "",
+        "stepik_token_env": _profile_stepik_token_env(source_plans),
+        "command": str(connected_run.get("command") or _connected_run_command(selected)),
+        "artifact_path": str(connected_run.get("artifact_path") or ""),
+        "blocked_by": [],
+    }
+
+
 def apply_connection_profile(roots: StorageRoots, profile: dict[str, object], *, profile_path: Path | None = None) -> dict[str, object]:
     """Apply the local non-secret parts of a profile to the source registry."""
 
@@ -440,6 +511,8 @@ def _source_plan(roots: StorageRoots, registry: dict[str, object], source: dict[
         "title": title,
         "access_mode": source.get("access_mode") or _default_access(platform),
         "state_file": str(source.get("state_file") or ""),
+        "token_env": str(source.get("token_env") or ""),
+        "expected_origin_contains": str(source.get("expected_origin_contains") or _host_fragment(source_ref)),
         "registered": existing is not None,
         "source_id": existing.get("source_id") if existing else "",
         "register_command": "" if existing else command,
@@ -488,10 +561,12 @@ def _connected_plans(roots: StorageRoots, source_plans: list[dict[str, object]],
             continue
         source_ids = [str(plan.get("source_id"))] if plan.get("source_id") else None
         state_file = _profile_state_file_for_platform(source_plans, platform)
+        stepik_token_env = _profile_stepik_token_env(source_plans)
         plan = connected_source_plan(
             roots,
             platforms=[platform],
             source_ids=source_ids,
+            stepik_token_env=stepik_token_env,
             browser_state_file=Path(state_file) if state_file else None,
             query=str(runtime.get("query") or "") or None,
             max_lessons=int(runtime.get("max_lessons") or 50),
@@ -509,6 +584,8 @@ def _connected_plans(roots: StorageRoots, source_plans: list[dict[str, object]],
             command += f" --state-file {shlex.quote(state_file)}"
         if runtime.get("query"):
             command += f" --query {shlex.quote(str(runtime.get('query')))}"
+        if platform == "stepik" and stepik_token_env:
+            command += f" --stepik-token-env {shlex.quote(stepik_token_env)}"
         if runtime.get("link_pattern"):
             command += f" --link-pattern {shlex.quote(str(runtime.get('link_pattern')))}"
         command += f" --live-scope {shlex.quote(str(runtime.get('live_scope') or 'bounded'))}"
@@ -534,6 +611,21 @@ def _profile_state_file_for_platform(source_plans: list[dict[str, object]], plat
             continue
         return str(plan.get("state_file") or "")
     return ""
+
+
+def _expected_origin_for_platform(source_plans: list[dict[str, object]], platform: str) -> str:
+    for plan in source_plans:
+        if plan.get("platform") != platform:
+            continue
+        return str(plan.get("expected_origin_contains") or "")
+    return ""
+
+
+def _profile_stepik_token_env(source_plans: list[dict[str, object]]) -> str:
+    for plan in source_plans:
+        if plan.get("platform") == "stepik" and plan.get("token_env"):
+            return str(plan.get("token_env"))
+    return "STEPIK_API_TOKEN"
 
 
 def _live_readiness(
@@ -622,9 +714,23 @@ def _live_readiness_blockers(
 
 
 def _connected_run_command(plan: dict[str, object]) -> str:
+    return str(_nested_connected_run_plan(plan).get("command") or "")
+
+
+def _nested_connected_run_plan(plan: dict[str, object]) -> dict[str, object]:
     nested = plan.get("plan") if isinstance(plan.get("plan"), dict) else {}
-    plan = nested.get("connected_run_plan") if isinstance(nested.get("connected_run_plan"), dict) else {}
-    return str(plan.get("command") or "")
+    return nested.get("connected_run_plan") if isinstance(nested.get("connected_run_plan"), dict) else {}
+
+
+def _connected_plan_blockers(plans: list[dict[str, object]]) -> list[str]:
+    blockers: list[str] = []
+    for plan in plans:
+        nested = _nested_connected_run_plan(plan)
+        for blocker in nested.get("blocked_by", []) if isinstance(nested.get("blocked_by"), list) else []:
+            blockers.append(f"{plan.get('platform')}: {blocker}")
+        if not nested.get("blocked_by"):
+            blockers.append(f"{plan.get('platform')}: connected plan is not ready")
+    return _dedupe(blockers)
 
 
 def _semantic_blockers(semantic_preflight: dict[str, object]) -> list[str]:

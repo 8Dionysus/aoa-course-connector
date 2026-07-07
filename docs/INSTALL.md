@@ -62,6 +62,8 @@ aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifac
 aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" \
   --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
+aoa-course connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" \
+  --platform getcourse
 ```
 
 The profile is `aoa_course_connection_profile_v1`. It is a runtime artifact:
@@ -73,6 +75,9 @@ profile JSON. `connect status` returns
 `aoa_course_connection_profile_status_v1`, the compact go/no-go packet for
 registered sources, browser auth readiness, connected-plan readiness, blockers,
 and ready live connected-run commands.
+`connect run` reads the same profile and selected platform/source. Without
+`--allow-network` it is a no-network plan receipt; with `--allow-network` it
+executes the ready live connected-run for that selected profile route.
 
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser
