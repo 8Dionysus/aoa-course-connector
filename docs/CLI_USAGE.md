@@ -8,6 +8,7 @@ aoa-course connect profile --name operator-live --getcourse-url "https://school.
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
+aoa-course connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --platform getcourse
 aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
 aoa-course init
 aoa-course adapters list
@@ -227,6 +228,10 @@ compact `aoa_course_connection_profile_status_v1` go/no-go packet: it reports
 `ready_for_connected_run`, `ready_for_semantic_build`, source/auth/plan counts,
 blockers, next commands, and any ready
 `calibration connected-run --mode live --allow-network` commands.
+Use `connect run` as the executable profile bridge: by default it returns
+`aoa_course_connection_profile_run_receipt_v1` with `network_touched: false`
+and the selected platform/source run command; add `--allow-network` only after
+that plan is ready to execute the live connected-run.
 
 Use `preflight semantic-provider` before external vector calibration. The
 `local_hashing_v1` route is ready whenever the normalized bundle exists.

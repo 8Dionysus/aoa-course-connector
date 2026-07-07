@@ -199,7 +199,7 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
         "--name",
         "operator-live",
         "--getcourse-url",
-        "https://school.example/teach/control/stream",
+        "https://school.operator.edu/teach/control/stream",
         "--skillspace-url",
         "https://academy.example/course/demo",
         "--stepik-course-id",
@@ -251,6 +251,27 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
 
     sources = run_cli(tmp_path, "sources", "list")
     assert len(sources["registry"]["sources"]) == 3
+    profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    getcourse_source = next(source for source in profile["sources"] if source["platform"] == "getcourse")
+    state_file = Path(str(getcourse_source["state_file"]))
+    state_file.parent.mkdir(parents=True, exist_ok=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    run_plan = run_cli(tmp_path, "connect", "run", str(profile_path), "--platform", "getcourse")
+    assert run_plan["schema"] == "aoa_course_connection_profile_run_receipt_v1"
+    assert run_plan["status"] == "planned"
+    assert run_plan["network_touched"] is False
+    assert run_plan["executed"] is False
+    assert run_plan["run_plan"]["ready"] is True
+    assert run_plan["run_plan"]["platform"] == "getcourse"
+    assert "--allow-network" in run_plan["run_plan"]["command"]
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(run_plan)
+    assert "SUPER_SECRET_TOKEN" not in json.dumps(run_plan)
     mcp = run_cli(tmp_path, "mcp", "call", "connection_profile_inspect", json.dumps({"profile_path": str(profile_path)}))
     assert mcp["result"]["inspection"]["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert mcp["result"]["inspection"]["network_touched"] is False

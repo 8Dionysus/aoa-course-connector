@@ -6,12 +6,14 @@ import sys
 import types
 from pathlib import Path
 
+import aoa_course_connector.cli as cli_module
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
     build_connection_profile,
+    connection_profile_run_plan,
     connection_profile_status,
     inspect_connection_profile,
     load_connection_profile,
@@ -53,6 +55,7 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(tmp_path / "auth"))
     monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
     monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
+    monkeypatch.setenv("STEPIK_API_TOKEN", "SUPER_SECRET_STEPIK_TOKEN")
     storage = StorageRoots(
         data=tmp_path / "data",
         cache=tmp_path / "cache",
@@ -91,6 +94,7 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert inspection["live_readiness"]["blocked_by"]
     assert inspection["source_registry"]["registered_profile_source_count"] == 0
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in rendered
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered
     assert any("sources add" in command for command in inspection["next_commands"])
     assert any("auth capture-browser-state" in command for command in inspection["next_commands"])
     runbook_text = render_connection_profile_runbook(inspection)
@@ -112,6 +116,9 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     status = connection_profile_status(apply_receipt["inspection"])
     assert status["schema"] == "aoa_course_connection_profile_status_v1"
     assert status["live_readiness"]["ready_for_connected_run"] is False
+    stepik_plan = next(plan for plan in apply_receipt["inspection"]["connected_plans"] if plan["platform"] == "stepik")
+    assert "--stepik-token-env STEPIK_API_TOKEN" in stepik_plan["command"]
+    assert "--stepik-token-env STEPIK_API_TOKEN" in stepik_plan["plan"]["connected_run_plan"].get("command", "")
 
     mcp = call_tool("connection_profile_inspect", {"profile_path": str(profile_path)})
     assert mcp["tool"] == "connection_profile_inspect"
@@ -152,8 +159,16 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
     write_connection_profile(profile, profile_path)
     receipt = apply_connection_profile(storage, load_connection_profile(profile_path), profile_path=profile_path)
     readiness = receipt["inspection"]["live_readiness"]
+    run_plan = connection_profile_run_plan(profile, receipt["inspection"], platform="getcourse")
 
     assert readiness["ready_for_connected_run"] is True
+    assert run_plan["schema"] == "aoa_course_connection_profile_run_plan_v1"
+    assert run_plan["ready"] is True
+    assert run_plan["platform"] == "getcourse"
+    assert run_plan["source_ids"] == [receipt["applied"][0]["source"]["source_id"]]
+    assert run_plan["browser_state_file"] == str(state_file)
+    assert run_plan["expect_origin_contains"] == "school.operator.edu"
+    assert "calibration connected-run --mode live --allow-network" in run_plan["command"]
     assert readiness["registered_source_count"] == 1
     assert readiness["browser_auth_ready_count"] == 1
     assert readiness["ready_connected_plan_count"] == 1
@@ -165,6 +180,89 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
     assert receipt["inspection"]["connected_plans"][0]["source_ids"] == [source_id]
     assert any("calibration connected-run --mode live --allow-network" in command for command in readiness["connected_run_commands"])
     rendered = json.dumps(receipt)
+    assert "SUPER_SECRET_COOKIE" not in rendered
+    assert "SUPER_SECRET_TOKEN" not in rendered
+
+
+def test_connect_run_executes_ready_profile_with_network_gate(tmp_path: Path, monkeypatch, capsys) -> None:
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(tmp_path / "cache"))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(tmp_path / "auth"))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    source_url = "https://school.operator.edu/teach/control/stream"
+    profile = build_connection_profile(
+        storage,
+        name="ready-run",
+        getcourse_urls=[source_url],
+        run_id="connected-profile-run",
+        query="course-specific question",
+        link_pattern="*/lessons/*",
+        max_lessons=7,
+        max_pages=3,
+        max_sources=2,
+    )
+    state_file = default_browser_state_path(storage.auth, "getcourse", source_url)
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": [{"name": "token", "value": "SUPER_SECRET_TOKEN"}]}],
+        }),
+        encoding="utf-8",
+    )
+    profile_path = tmp_path / "artifacts" / "connections" / "ready-run.connection-profile.json"
+    write_connection_profile(profile, profile_path)
+    apply_connection_profile(storage, load_connection_profile(profile_path), profile_path=profile_path)
+    captured: dict[str, object] = {}
+
+    def fake_run_connected_calibration(roots_arg, **kwargs):
+        captured["roots"] = roots_arg
+        captured["kwargs"] = kwargs
+        return {
+            "schema": "aoa_course_connected_calibration_run_receipt_v1",
+            "status": "ok",
+            "network_touched": True,
+            "run_id": kwargs["run_id"],
+        }
+
+    monkeypatch.setattr(cli_module, "run_connected_calibration", fake_run_connected_calibration)
+
+    result = cli_module.cmd_connect_run(
+        types.SimpleNamespace(
+            profile=profile_path,
+            platform="getcourse",
+            source_id=None,
+            allow_network=True,
+            require_ready=False,
+        )
+    )
+
+    output = json.loads(capsys.readouterr().out)
+    kwargs = captured["kwargs"]
+    assert result == 0
+    assert output["schema"] == "aoa_course_connection_profile_run_receipt_v1"
+    assert output["status"] == "ok"
+    assert output["executed"] is True
+    assert output["network_touched"] is True
+    assert output["run_plan"]["ready"] is True
+    assert output["connected_run"]["run_id"] == "connected-profile-run"
+    assert kwargs["run_id"] == "connected-profile-run"
+    assert kwargs["platforms"] == ["getcourse"]
+    assert kwargs["allow_network"] is True
+    assert kwargs["browser_state_file"] == state_file
+    assert kwargs["expect_origin_contains"] == "school.operator.edu"
+    assert kwargs["link_pattern"] == "*/lessons/*"
+    assert kwargs["max_lessons"] == 7
+    assert kwargs["max_pages"] == 3
+    assert kwargs["max_sources"] == 2
+    rendered = json.dumps(output)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
 

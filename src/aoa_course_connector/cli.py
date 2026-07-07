@@ -22,6 +22,7 @@ from aoa_course_connector.calibration.connected_run import load_connected_calibr
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
     build_connection_profile,
+    connection_profile_run_plan,
     connection_profile_status,
     default_connection_profile_path,
     inspect_connection_profile,
@@ -178,6 +179,13 @@ def build_parser() -> argparse.ArgumentParser:
     connect_status = connect_sub.add_parser("status")
     connect_status.add_argument("profile", type=Path)
     connect_status.set_defaults(func=cmd_connect_status)
+    connect_run = connect_sub.add_parser("run")
+    connect_run.add_argument("profile", type=Path)
+    connect_run.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"])
+    connect_run.add_argument("--source-id", action="append")
+    connect_run.add_argument("--allow-network", action="store_true")
+    connect_run.add_argument("--require-ready", action="store_true")
+    connect_run.set_defaults(func=cmd_connect_run)
 
     preflight = sub.add_parser("preflight")
     preflight_sub = preflight.add_subparsers(dest="preflight_command", required=True)
@@ -820,6 +828,69 @@ def cmd_connect_status(args: argparse.Namespace) -> int:
     inspection = inspect_connection_profile(roots, profile, profile_path=args.profile)
     _emit(connection_profile_status(inspection))
     return 0
+
+
+def cmd_connect_run(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    profile = load_connection_profile(args.profile)
+    inspection = inspect_connection_profile(roots, profile, profile_path=args.profile)
+    run_plan = connection_profile_run_plan(profile, inspection, platform=args.platform, source_ids=args.source_id)
+    if not args.allow_network:
+        receipt = {
+            "schema": "aoa_course_connection_profile_run_receipt_v1",
+            "status": "planned" if run_plan.get("ready") else "blocked",
+            "network_touched": False,
+            "executed": False,
+            "profile": inspection.get("profile"),
+            "run_plan": run_plan,
+            "next_commands": [run_plan.get("command")] if run_plan.get("ready") and run_plan.get("command") else run_plan.get("candidate_commands", []),
+        }
+        _emit(receipt)
+        return 0 if run_plan.get("ready") or not args.require_ready else 1
+    if not run_plan.get("ready"):
+        _emit(
+            {
+                "schema": "aoa_course_connection_profile_run_receipt_v1",
+                "status": "blocked",
+                "network_touched": False,
+                "executed": False,
+                "profile": inspection.get("profile"),
+                "run_plan": run_plan,
+                "error": "connection profile is not ready for live connected-run",
+            }
+        )
+        return 2
+    browser_state_file = Path(str(run_plan.get("browser_state_file"))) if run_plan.get("browser_state_file") else None
+    receipt = run_connected_calibration(
+        roots,
+        run_id=str(run_plan.get("run_id") or "connected-calibration"),
+        mode="live",
+        platforms=[str(run_plan.get("platform") or "")],
+        source_ids=[str(source_id) for source_id in run_plan.get("source_ids", [])] if isinstance(run_plan.get("source_ids"), list) else None,
+        query=str(run_plan.get("query") or "") or None,
+        live_scope=str(run_plan.get("live_scope") or "bounded"),
+        include_step_sources=bool(run_plan.get("include_step_sources", False)),
+        allow_network=True,
+        stepik_token_env=str(run_plan.get("stepik_token_env") or "STEPIK_API_TOKEN"),
+        browser_state_file=browser_state_file,
+        expect_origin_contains=str(run_plan.get("expect_origin_contains") or "") or None,
+        max_lessons=int(run_plan.get("max_lessons") or 50),
+        max_pages=int(run_plan.get("max_pages") or 5),
+        max_sources=int(run_plan.get("max_sources") or 50),
+        link_pattern=str(run_plan.get("link_pattern") or "") or None,
+    )
+    _emit(
+        {
+            "schema": "aoa_course_connection_profile_run_receipt_v1",
+            "status": receipt.get("status") or "error",
+            "network_touched": True,
+            "executed": True,
+            "profile": inspection.get("profile"),
+            "run_plan": run_plan,
+            "connected_run": receipt,
+        }
+    )
+    return 0 if receipt.get("status") == "ok" else 1
 
 
 def cmd_preflight_live(args: argparse.Namespace) -> int:

@@ -229,6 +229,9 @@ the nested `aoa_course_connection_profile_readiness_v1`,
 blockers, next commands, and ready
 `calibration connected-run --mode live --allow-network` commands when all
 selected profile sources are registered and authorized.
+MCP remains read-only here; use CLI `connect run <profile> --platform
+<platform>` when the operator wants a no-network executable plan or an explicit
+`--allow-network` live execution from the selected profile route.
 
 `connected_run_status` is the read-only MCP plan after a CLI
 `calibration connected-run`. It returns
