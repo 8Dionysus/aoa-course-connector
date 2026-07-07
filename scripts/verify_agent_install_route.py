@@ -123,6 +123,19 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
     quality = query_packet.get("quality") if isinstance(query_packet.get("quality"), dict) else {}
     if quality.get("ready") is not True or int(query_packet.get("response_count") or 0) < 1:
         raise StdioVerificationError(f"connected_run_query stdio response did not prove retrieval readiness: {quality}")
+    sources_answer = _require_tool_success(responses, 11, "sources_answer")
+    sources_answer_packet = sources_answer.get("sources_answer")
+    if not isinstance(sources_answer_packet, dict) or sources_answer_packet.get("schema") != "aoa_course_sources_answer_packet_v1":
+        raise StdioVerificationError("sources_answer stdio response did not return sources answer packet")
+    if sources_answer_packet.get("status") != "ok":
+        raise StdioVerificationError(f"sources_answer stdio response was not ok: {sources_answer_packet.get('status')}")
+    if sources_answer_packet.get("network_touched") is not False:
+        raise StdioVerificationError("sources_answer stdio response touched network")
+    quality = sources_answer_packet.get("quality") if isinstance(sources_answer_packet.get("quality"), dict) else {}
+    if quality.get("ready") is not True or int(sources_answer_packet.get("response_count") or 0) < 1:
+        raise StdioVerificationError(f"sources_answer stdio response did not prove source-scoped retrieval readiness: {quality}")
+    if int(quality.get("evidence_count_total") or 0) < 1:
+        raise StdioVerificationError("sources_answer stdio response did not return evidence")
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
@@ -210,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "browser-fixture", "--platform", "getcourse", "--run", "getcourse-browser-discovery-fixture", "--register"],
             [sys.executable, "-m", "aoa_course_connector.cli", "discover", "browser-fixture", "--platform", "skillspace", "--run", "skillspace-browser-discovery-fixture", "--register"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sources", "list"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "sources", "answer", "Stepik public API evidence", "--platform", "stepik", "--mode", "hybrid"],
             [sys.executable, "-m", "aoa_course_connector.cli", "eval", "browser-discovery"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "browser-fixture", "--run", "browser-sync-fixture", "--build-artifacts"],
             [sys.executable, "-m", "aoa_course_connector.cli", "sync", "status", "--run", "browser-sync-fixture"],
@@ -294,6 +308,7 @@ def main(argv: list[str] | None = None) -> int:
             '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"answer","arguments":{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}}}',
             '{"jsonrpc":"2.0","id":9,"method":"tools/call","params":{"name":"connected_run","arguments":{"run":"stdio-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}}}',
             '{"jsonrpc":"2.0","id":10,"method":"tools/call","params":{"name":"connected_run_query","arguments":{"run":"stdio-connected-fixture","kinds":["smoke"]}}}',
+            '{"jsonrpc":"2.0","id":11,"method":"tools/call","params":{"name":"sources_answer","arguments":{"platforms":["stepik"],"query":"Stepik public API evidence","mode":"hybrid"}}}',
             "",
         ])
         result = subprocess.run(
