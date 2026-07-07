@@ -617,6 +617,7 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
+    eval_sub.add_parser("retrieval-loop").set_defaults(func=cmd_eval_retrieval_loop)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
     eval_sub.add_parser("adapter-authority").set_defaults(func=cmd_eval_adapter_authority)
@@ -1677,6 +1678,175 @@ def cmd_eval_answer_quality(_args: argparse.Namespace) -> int:
         }
     )
     return 0 if not failures else 1
+
+
+def cmd_eval_retrieval_loop(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    suite_path = find_repo_root() / "evals" / "suites" / "retrieval_loop.json"
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    prepared_runs: set[str] = set()
+    failures = []
+    case_results = []
+    for case in suite.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        run_id = str(case.get("run") or DEFAULT_RUN)
+        if run_id not in prepared_runs:
+            _prepare_retrieval_loop_run(roots, case)
+            prepared_runs.add(run_id)
+        packet = _retrieval_loop_packet(roots, case)
+        case_failures = _retrieval_loop_failures(packet, case)
+        case_results.append(
+            {
+                "case_id": case.get("case_id"),
+                "run": run_id,
+                "query": case.get("query"),
+                "mode": case.get("mode") or "keyword",
+                "answer_result_count": packet["answer_packet"].get("result_count"),
+                "mcp_search_result_count": len(packet["mcp_search"].get("results", [])) if isinstance(packet["mcp_search"].get("results"), list) else 0,
+                "lesson_graph_status": packet["lesson_context"].get("graph_context", {}).get("status") if isinstance(packet["lesson_context"].get("graph_context"), dict) else "",
+                "failure_count": len(case_failures),
+            }
+        )
+        failures.extend(case_failures)
+    _emit(
+        {
+            "schema": "aoa_course_eval_retrieval_loop_v1",
+            "suite_id": suite.get("suite_id"),
+            "status": "ok" if not failures else "error",
+            "network_touched": False,
+            "prepared_runs": sorted(prepared_runs),
+            "case_results": case_results,
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _prepare_retrieval_loop_run(roots: StorageRoots, case: dict[str, object]) -> None:
+    run_id = str(case.get("run") or DEFAULT_RUN)
+    prepare = case.get("prepare") if isinstance(case.get("prepare"), dict) else {}
+    kind = str(prepare.get("kind") or "starter_fixture")
+    if kind == "starter_fixture":
+        materialize_fixture(roots, run_id=run_id)
+    elif kind == "browser_fixture":
+        materialize_browser_fixture(roots, str(prepare.get("platform") or case.get("expected_top_platform") or ""), run_id=run_id)
+    elif kind == "stepik_fixture":
+        materialize_stepik_fixture(roots, run_id=run_id)
+    else:
+        raise ValueError(f"unknown retrieval-loop prepare kind: {kind}")
+    build_keyword_index(roots, run_id=run_id)
+    build_semantic_index(roots, run_id=run_id)
+    build_graph(roots, run_id=run_id)
+
+
+def _retrieval_loop_packet(roots: StorageRoots, case: dict[str, object]) -> dict[str, object]:
+    run_id = str(case.get("run") or DEFAULT_RUN)
+    query = str(case.get("query") or "")
+    mode = str(case.get("mode") or "keyword")
+    limit = int(case.get("limit") or 5)
+    graph_limit = int(case.get("graph_limit") or 12)
+    answer_packet = render_answer_packet(roots, query, run_id, limit, mode)
+    lesson_context = render_lesson_context_packet(roots, query, run_id, limit, mode, graph_limit)
+    mcp_search = call_tool("search", {"query": query, "run": run_id, "limit": limit, "mode": mode})
+    mcp_lesson_context = call_tool("lesson_context", {"query": query, "run": run_id, "limit": limit, "mode": mode, "graph_limit": graph_limit})
+    mcp_evidence = call_tool("evidence_report", {"query": query, "run": run_id, "limit": limit, "mode": mode})
+    return {
+        "answer_packet": answer_packet,
+        "lesson_context": lesson_context,
+        "mcp_search": mcp_search,
+        "mcp_lesson_context": mcp_lesson_context,
+        "mcp_evidence": mcp_evidence,
+    }
+
+
+def _retrieval_loop_failures(packet: dict[str, object], case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    context = {"case_id": case.get("case_id"), "run": case.get("run") or DEFAULT_RUN, "query": case.get("query"), "mode": case.get("mode") or "keyword"}
+    answer_packet = packet["answer_packet"] if isinstance(packet.get("answer_packet"), dict) else {}
+    results = answer_packet.get("results") if isinstance(answer_packet.get("results"), list) else []
+    evidence_chain = answer_packet.get("evidence_chain") if isinstance(answer_packet.get("evidence_chain"), list) else []
+    min_results = int(case.get("min_results") or 1)
+    if len(results) < min_results:
+        failures.append({**context, "surface": "answer_packet", "missing": "minimum results", "expected": min_results, "actual": len(results)})
+        return failures
+    top = results[0] if isinstance(results[0], dict) else {}
+    for key, field in [
+        ("expected_top_kind", "kind"),
+        ("expected_top_platform", "platform"),
+        ("expected_top_source_id", "source_id"),
+    ]:
+        expected = case.get(key)
+        if expected is not None and str(top.get(field) or "") != str(expected):
+            failures.append({**context, "surface": "answer_packet", "field": field, "expected": expected, "actual": top.get(field)})
+    for term in _list_of_strings(case.get("expected_top_snippet_terms")):
+        if term.casefold() not in str(top.get("snippet") or "").casefold():
+            failures.append({**context, "surface": "answer_packet", "missing_top_snippet_term": term, "top_doc_id": top.get("doc_id")})
+    failures.extend(_proof_field_failures(context, "answer_packet", evidence_chain, case))
+    refresh_report = answer_packet.get("refresh_report") if isinstance(answer_packet.get("refresh_report"), dict) else {}
+    local_query_commands = [str(command) for command in refresh_report.get("local_query_commands", [])] if isinstance(refresh_report.get("local_query_commands"), list) else []
+    if not any("lesson-context" in command for command in local_query_commands):
+        failures.append({**context, "surface": "answer_packet.refresh_report", "missing": "lesson-context local query command"})
+    if not any("evidence inspect" in command for command in local_query_commands):
+        failures.append({**context, "surface": "answer_packet.refresh_report", "missing": "evidence inspect local query command"})
+
+    lesson_context = packet["lesson_context"] if isinstance(packet.get("lesson_context"), dict) else {}
+    graph_context = lesson_context.get("graph_context") if isinstance(lesson_context.get("graph_context"), dict) else {}
+    failures.extend(_graph_context_failures(context, "lesson_context", graph_context, case))
+
+    mcp_search = packet["mcp_search"] if isinstance(packet.get("mcp_search"), dict) else {}
+    mcp_results = mcp_search.get("results") if isinstance(mcp_search.get("results"), list) else []
+    if len(mcp_results) < min_results:
+        failures.append({**context, "surface": "mcp.search", "missing": "minimum results", "expected": min_results, "actual": len(mcp_results)})
+
+    mcp_lesson = packet["mcp_lesson_context"] if isinstance(packet.get("mcp_lesson_context"), dict) else {}
+    mcp_answer = mcp_lesson.get("answer_packet") if isinstance(mcp_lesson.get("answer_packet"), dict) else {}
+    if int(mcp_answer.get("result_count") or 0) < min_results:
+        failures.append({**context, "surface": "mcp.lesson_context", "missing": "answer results", "expected": min_results, "actual": mcp_answer.get("result_count")})
+    mcp_graph = mcp_lesson.get("graph_context") if isinstance(mcp_lesson.get("graph_context"), dict) else {}
+    failures.extend(_graph_context_failures(context, "mcp.lesson_context", mcp_graph, case))
+
+    mcp_evidence = packet["mcp_evidence"] if isinstance(packet.get("mcp_evidence"), dict) else {}
+    mcp_evidence_chain = mcp_evidence.get("evidence_chain") if isinstance(mcp_evidence.get("evidence_chain"), list) else []
+    mcp_result_refs = mcp_evidence.get("result_refs") if isinstance(mcp_evidence.get("result_refs"), list) else []
+    failures.extend(_proof_field_failures(context, "mcp.evidence_report", mcp_evidence_chain, case))
+    if len(mcp_result_refs) < min_results:
+        failures.append({**context, "surface": "mcp.evidence_report", "missing": "result refs", "expected": min_results, "actual": len(mcp_result_refs)})
+    return failures
+
+
+def _proof_field_failures(context: dict[str, object], surface: str, evidence_chain: list[object], case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    if not evidence_chain:
+        return [{**context, "surface": surface, "missing": "evidence_chain"}]
+    required_fields = _list_of_strings(case.get("required_evidence_fields"))
+    for index, evidence in enumerate(evidence_chain):
+        if not isinstance(evidence, dict):
+            failures.append({**context, "surface": surface, "evidence_index": index, "missing": "object evidence"})
+            continue
+        for field in required_fields:
+            if not evidence.get(field):
+                failures.append({**context, "surface": surface, "evidence_index": index, "missing_evidence_field": field})
+    return failures
+
+
+def _graph_context_failures(context: dict[str, object], surface: str, graph_context: dict[str, object], case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    expected_status = str(case.get("expected_graph_status") or "ready")
+    if graph_context.get("status") != expected_status:
+        failures.append({**context, "surface": surface, "field": "graph_context.status", "expected": expected_status, "actual": graph_context.get("status")})
+    contexts = graph_context.get("contexts") if isinstance(graph_context.get("contexts"), list) else []
+    min_contexts = int(case.get("min_graph_contexts") or 1)
+    if len(contexts) < min_contexts:
+        failures.append({**context, "surface": surface, "missing": "graph contexts", "expected": min_contexts, "actual": len(contexts)})
+        return failures
+    min_neighbors = int(case.get("min_graph_neighbors") or 1)
+    for index, item in enumerate(contexts[:min_contexts]):
+        graph = item.get("graph") if isinstance(item, dict) and isinstance(item.get("graph"), dict) else {}
+        neighbors = graph.get("neighbors") if isinstance(graph.get("neighbors"), list) else []
+        if len(neighbors) < min_neighbors:
+            failures.append({**context, "surface": surface, "context_index": index, "missing": "graph neighbors", "expected": min_neighbors, "actual": len(neighbors)})
+    return failures
 
 
 def _answer_quality_failures(packet: dict[str, object], case: dict[str, object]) -> list[dict[str, object]]:

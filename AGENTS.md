@@ -75,6 +75,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval answer-quality
+PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli answer "sidecar caption safe mode recovery logs" --run getcourse-browser-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run freshness-ranking-fixture

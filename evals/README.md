@@ -22,6 +22,11 @@ The answer-quality suite raises the bar above term presence: it checks top
 result shape, source id, platform, path, snippets, freshness, and evidence
 fields for fixture-safe runs.
 
+The retrieval-loop suite prepares starter, GetCourse, Skillspace, and Stepik
+fixture runs, builds keyword/semantic indexes and graphs, then checks CLI
+answer, CLI lesson-context, MCP search, MCP lesson_context, and MCP
+evidence_report in one fixture-safe route.
+
 The freshness-ranking suite checks the ordering-specific conflict case: when
 current and stale course items have equal base relevance, the current item must
 rank higher while the packet still exposes the base `score`, adjusted

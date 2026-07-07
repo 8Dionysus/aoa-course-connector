@@ -11,6 +11,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run star
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback" --run starter-fixture
+PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
 
@@ -34,6 +35,10 @@ This proves:
 - CLI `lesson-context` returns one `aoa_course_lesson_context_packet_v1` with
   source-backed answer evidence plus nearby graph context for each distinct
   evidence lesson;
+- CLI `eval retrieval-loop` prepares starter, GetCourse, Skillspace, and
+  Stepik fixture runs, builds keyword/semantic indexes and graphs, and verifies
+  CLI answer, CLI lesson-context, MCP search, MCP lesson_context, and MCP
+  evidence_report in one network-free agent retrieval contract;
 - evidence chains preserve freshness state, authority tier, source authority,
   rank score, rank features, and refresh hints alongside source URLs and
   fetched timestamps, so agents can cite and refresh the exact proof item;
