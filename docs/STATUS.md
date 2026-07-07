@@ -320,6 +320,15 @@ This proves:
   summaries, graph-context status, rebuild/query blockers, and direct
   `network_touched: false` retrieval proof after fixture or gated live
   connected runs.
+- CLI `calibration query-matrix` and MCP `connected_run_query_matrix` execute
+  several course-specific questions against the same connected-run query plan
+  without touching the network, returning
+  `aoa_course_connected_run_query_matrix_v1` with one per-question
+  `aoa_course_connected_run_query_packet_v1`, compact top-result summaries,
+  aggregate evidence/result/graph-context quality, blockers, and replay
+  commands. This gives agents a breadth check for whether one connected run can
+  answer multiple real questions from local indexes and graphs instead of only
+  replaying a single smoke query.
 
 ## Remaining Connector Work
 
@@ -339,9 +348,10 @@ The next layer is broader live connected-source work:
   courses, account discovery output, and full-course source-registry runs after
   `preflight live --platform stepik` confirms token/source readiness;
 - collect connected-source live calibration packets from real GetCourse,
-  Skillspace, and Stepik accounts and run `calibration intake` against partial
-  packets to drive selector, sync, retrieval, privacy, and eval-intake follow-up
-  work;
+  Skillspace, and Stepik accounts; run `calibration query-matrix`/MCP
+  `connected_run_query_matrix` over multiple operator questions; and run
+  `calibration intake` against partial packets to drive selector, sync,
+  retrieval, privacy, and eval-intake follow-up work;
 - live calibration of operator-selected external embedding endpoints beyond the
   local CI `http_json_v1` contract proof, using `preflight semantic-provider`
   first and then `build-semantic-index --provider http_json_v1` against the

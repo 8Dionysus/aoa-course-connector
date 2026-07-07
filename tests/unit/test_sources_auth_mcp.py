@@ -654,6 +654,21 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert mcp_connected_query["query_packet"]["responses"][0]["answer_packet"]["schema"] == "aoa_course_answer_packet_v1"
     assert mcp_connected_query["query_packet"]["responses"][0]["lesson_context"]["schema"] == "aoa_course_lesson_context_packet_v1"
     assert mcp_connected_query["query_packet"]["responses"][0]["evidence_report"]["result_refs"]
+    mcp_connected_matrix = call_tool(
+        "connected_run_query_matrix",
+        {
+            "run": "mcp-connected-run-tool",
+            "kinds": ["smoke"],
+            "queries": ["Stepik public API evidence", "canonical course objects"],
+        },
+    )
+    assert mcp_connected_matrix["tool"] == "connected_run_query_matrix"
+    assert mcp_connected_matrix["query_matrix"]["schema"] == "aoa_course_connected_run_query_matrix_v1"
+    assert mcp_connected_matrix["query_matrix"]["status"] == "ok"
+    assert mcp_connected_matrix["query_matrix"]["network_touched"] is False
+    assert mcp_connected_matrix["query_matrix"]["query_count"] == 2
+    assert mcp_connected_matrix["query_matrix"]["quality"]["ready"] is True
+    assert mcp_connected_matrix["query_matrix"]["quality"]["all_queries_have_evidence"] is True
     missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
     assert missing_connected_run["tool"] == "connected_run_status"
     assert missing_connected_run["connected_run"]["status"] == "missing"
@@ -1043,6 +1058,7 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     connected_run_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run")
     connected_run_status_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_status")
     connected_run_query_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query")
+    connected_run_query_matrix_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "connected_run_query_matrix")
     answer_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "answer")
     evidence_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "evidence_report")
     lesson_context_tool = next(tool for tool in listed["result"]["tools"] if tool["name"] == "lesson_context")
@@ -1075,6 +1091,9 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_run_query_tool["inputSchema"]["required"] == []
     assert connected_run_query_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
     assert connected_run_query_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
+    assert connected_run_query_matrix_tool["inputSchema"]["required"] == ["queries"]
+    assert connected_run_query_matrix_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
+    assert connected_run_query_matrix_tool["inputSchema"]["properties"]["kinds"]["items"]["enum"] == ["smoke", "sync"]
     assert lesson_context_tool["inputSchema"]["required"] == ["query"]
     assert "graph_limit" in lesson_context_tool["inputSchema"]["properties"]
     assert evidence_tool["inputSchema"]["required"] == ["query"]
@@ -1197,6 +1216,23 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_query["result"]["structuredContent"]["query_packet"]["status"] == "ok"
     assert connected_query["result"]["structuredContent"]["query_packet"]["quality"]["ready"] is True
     assert connected_query["result"]["structuredContent"]["query_packet"]["response_count"] == 1
+    connected_matrix = handle_jsonrpc_message({
+        "jsonrpc": "2.0",
+        "id": 413,
+        "method": "tools/call",
+        "params": {
+            "name": "connected_run_query_matrix",
+            "arguments": {
+                "run": "jsonrpc-connected-fixture",
+                "kinds": ["smoke"],
+                "queries": ["Stepik public API evidence", "canonical course objects"],
+            },
+        },
+    })
+    assert connected_matrix["result"]["structuredContent"]["tool"] == "connected_run_query_matrix"
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["status"] == "ok"
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["quality"]["ready"] is True
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["query_count"] == 2
     connected_status = handle_jsonrpc_message({
         "jsonrpc": "2.0",
         "id": 42,

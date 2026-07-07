@@ -235,6 +235,95 @@ def query_connected_calibration(
     }
 
 
+def query_connected_calibration_matrix(
+    roots: StorageRoots,
+    *,
+    run_id: str,
+    queries: list[str],
+    platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
+    kinds: list[str] | None = None,
+    limit: int = 5,
+    mode: str | None = None,
+    graph_limit: int = 12,
+    entry_limit: int = 5,
+) -> dict[str, object]:
+    """Run several course questions through one connected-run query plan."""
+
+    normalized_queries = _normalized_query_matrix(queries)
+    if not normalized_queries:
+        return {
+            "schema": "aoa_course_connected_run_query_matrix_v1",
+            "status": "blocked",
+            "connected_run_id": run_id,
+            "query_count": 0,
+            "queries": [],
+            "query_packets": [],
+            "query_summaries": [],
+            "quality": {
+                "ready": False,
+                "query_count": 0,
+                "ready_query_count": 0,
+                "blocked_query_count": 0,
+                "failure_count_total": 0,
+                "response_count_total": 0,
+                "evidence_count_total": 0,
+                "result_count_total": 0,
+            },
+            "blocked_entries": [{"reason": "missing_queries", "detail": "pass at least one --query value"}],
+            "failures": [],
+            "next_commands": [f"aoa-course calibration query-matrix --run {shlex.quote(run_id)} --query '<course-specific question>'"],
+            "network_touched": False,
+            "read_only": True,
+        }
+
+    packets = [
+        query_connected_calibration(
+            roots,
+            run_id=run_id,
+            query=query,
+            platforms=platforms,
+            source_ids=source_ids,
+            kinds=kinds,
+            limit=limit,
+            mode=mode,
+            graph_limit=graph_limit,
+            entry_limit=entry_limit,
+        )
+        for query in normalized_queries
+    ]
+    quality = _connected_query_matrix_quality(packets)
+    status = _connected_query_matrix_status(packets, quality)
+    blocked_entries = _connected_query_matrix_nested_items(packets, "blocked_entries")
+    failures = _connected_query_matrix_nested_items(packets, "failures")
+    return {
+        "schema": "aoa_course_connected_run_query_matrix_v1",
+        "status": status,
+        "connected_run_id": run_id,
+        "connected_run_statuses": sorted({str(packet.get("connected_run_status") or "") for packet in packets if packet.get("connected_run_status")}),
+        "queries": normalized_queries,
+        "query_count": len(normalized_queries),
+        "limit": int(limit or 5),
+        "mode": mode or "",
+        "graph_limit": int(graph_limit or 12),
+        "entry_limit": int(entry_limit or 5),
+        "platforms": platforms or [],
+        "source_ids": source_ids or [],
+        "kinds": kinds or [],
+        "query_summaries": [_connected_query_matrix_summary(packet) for packet in packets],
+        "query_packets": packets,
+        "response_count_total": quality["response_count_total"],
+        "blocked_entry_count_total": quality["blocked_entry_count_total"],
+        "failure_count_total": quality["failure_count_total"],
+        "blocked_entries": blocked_entries,
+        "failures": failures,
+        "quality": quality,
+        "next_commands": _connected_query_matrix_next_commands(run_id, normalized_queries, packets),
+        "network_touched": False,
+        "read_only": True,
+    }
+
+
 def run_connected_calibration(
     roots: StorageRoots,
     *,
@@ -1281,6 +1370,141 @@ def _connected_query_next_commands(
             if isinstance(command, str):
                 commands.append(command)
     return _dedupe(commands)
+
+
+def _normalized_query_matrix(queries: list[str]) -> list[str]:
+    normalized: list[str] = []
+    seen: set[str] = set()
+    for query in queries:
+        value = str(query or "").strip()
+        if not value or value in seen:
+            continue
+        normalized.append(value)
+        seen.add(value)
+    return normalized
+
+
+def _connected_query_matrix_quality(packets: list[dict[str, object]]) -> dict[str, object]:
+    summaries = [_connected_query_matrix_summary(packet) for packet in packets]
+    ready_count = sum(1 for summary in summaries if bool(summary.get("ready")))
+    response_total = sum(int(summary.get("response_count") or 0) for summary in summaries)
+    result_total = sum(int(summary.get("result_count_total") or 0) for summary in summaries)
+    evidence_total = sum(int(summary.get("evidence_count_total") or 0) for summary in summaries)
+    blocked_total = sum(int(summary.get("blocked_entry_count") or 0) for summary in summaries)
+    failure_total = sum(int(summary.get("failure_count") or 0) for summary in summaries)
+    all_have_responses = bool(packets) and all(int(summary.get("response_count") or 0) > 0 for summary in summaries)
+    all_have_evidence = bool(packets) and all(bool(summary.get("all_responses_have_evidence")) for summary in summaries)
+    all_have_graph = bool(packets) and all(bool(summary.get("all_responses_have_graph_context")) for summary in summaries)
+    status_counts: dict[str, int] = {}
+    for summary in summaries:
+        status = str(summary.get("status") or "unknown")
+        status_counts[status] = status_counts.get(status, 0) + 1
+    return {
+        "ready": bool(packets) and ready_count == len(packets) and all_have_responses and all_have_evidence and all_have_graph and blocked_total == 0 and failure_total == 0,
+        "query_count": len(packets),
+        "ready_query_count": ready_count,
+        "blocked_query_count": len(packets) - ready_count,
+        "status_counts": status_counts,
+        "response_count_total": response_total,
+        "result_count_total": result_total,
+        "evidence_count_total": evidence_total,
+        "blocked_entry_count_total": blocked_total,
+        "failure_count_total": failure_total,
+        "all_queries_have_responses": all_have_responses,
+        "all_queries_have_evidence": all_have_evidence,
+        "all_queries_have_graph_context": all_have_graph,
+        "platforms": sorted({platform for summary in summaries for platform in _string_list(summary.get("platforms"))}),
+        "run_ids": sorted({run_id for summary in summaries for run_id in _string_list(summary.get("run_ids"))}),
+        "source_ids": sorted({source_id for summary in summaries for source_id in _string_list(summary.get("source_ids"))}),
+    }
+
+
+def _connected_query_matrix_summary(packet: dict[str, object]) -> dict[str, object]:
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    responses = packet.get("responses") if isinstance(packet.get("responses"), list) else []
+    top_refs: list[dict[str, object]] = []
+    for response in responses:
+        if not isinstance(response, dict):
+            continue
+        evidence_report = response.get("evidence_report") if isinstance(response.get("evidence_report"), dict) else {}
+        result_refs = evidence_report.get("result_refs") if isinstance(evidence_report.get("result_refs"), list) else []
+        if result_refs and isinstance(result_refs[0], dict):
+            top_refs.append(
+                {
+                    "query": response.get("query"),
+                    "platform": response.get("platform"),
+                    "run_id": response.get("run_id"),
+                    "source_id": response.get("source_id"),
+                    "top_result": result_refs[0],
+                }
+            )
+    return {
+        "query": packet.get("query"),
+        "status": packet.get("status"),
+        "ready": bool(quality.get("ready")),
+        "connected_run_status": packet.get("connected_run_status"),
+        "response_count": int(packet.get("response_count") or 0),
+        "blocked_entry_count": int(packet.get("blocked_entry_count") or 0),
+        "failure_count": int(packet.get("failure_count") or 0),
+        "answer_ready_count": int(quality.get("answer_ready_count") or 0),
+        "graph_ready_count": int(quality.get("graph_ready_count") or 0),
+        "result_count_total": int(quality.get("result_count_total") or 0),
+        "evidence_count_total": int(quality.get("evidence_count_total") or 0),
+        "all_responses_have_evidence": bool(quality.get("all_responses_have_evidence")),
+        "all_responses_have_graph_context": bool(quality.get("all_responses_have_graph_context")),
+        "platforms": quality.get("platforms", []),
+        "run_ids": quality.get("run_ids", []),
+        "source_ids": quality.get("source_ids", []),
+        "top_result_refs": top_refs,
+    }
+
+
+def _connected_query_matrix_status(packets: list[dict[str, object]], quality: dict[str, object]) -> str:
+    if not packets:
+        return "blocked"
+    statuses = {str(packet.get("status") or "") for packet in packets}
+    if statuses <= {"ok"} and bool(quality.get("ready")):
+        return "ok"
+    if any(int(packet.get("response_count") or 0) > 0 for packet in packets):
+        return "partial"
+    if "missing" in statuses:
+        return "missing"
+    if "error" in statuses:
+        return "error"
+    return "blocked"
+
+
+def _connected_query_matrix_next_commands(run_id: str, queries: list[str], packets: list[dict[str, object]]) -> list[str]:
+    commands = [
+        " ".join(
+            [
+                "aoa-course calibration query-matrix",
+                "--run",
+                shlex.quote(run_id),
+                *[part for query in queries for part in ("--query", shlex.quote(query))],
+            ]
+        )
+    ]
+    for packet in packets:
+        for command in packet.get("next_commands", []):
+            if isinstance(command, str):
+                commands.append(command)
+    return _dedupe(commands)
+
+
+def _connected_query_matrix_nested_items(packets: list[dict[str, object]], key: str) -> list[dict[str, object]]:
+    items: list[dict[str, object]] = []
+    for packet in packets:
+        for item in packet.get(key, []):
+            if isinstance(item, dict):
+                items.append({"query": packet.get("query"), **item})
+    return items
+
+
+def _string_list(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value if isinstance(item, str)]
 
 
 def _dedupe(values: list[str]) -> list[str]:

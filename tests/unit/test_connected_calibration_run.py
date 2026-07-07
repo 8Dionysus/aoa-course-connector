@@ -7,6 +7,7 @@ import aoa_course_connector.calibration.connected_run as connected_run_module
 from aoa_course_connector.calibration.connected_run import (
     load_connected_calibration_status,
     query_connected_calibration,
+    query_connected_calibration_matrix,
     run_connected_calibration,
 )
 from aoa_course_connector.config import StorageRoots
@@ -141,6 +142,30 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert sync_query["responses"][0]["kind"] == "sync"
     assert sync_query["responses"][0]["platform"] == "getcourse"
     assert sync_query["responses"][0]["query"] == "bootloader rollback"
+
+    query_matrix = query_connected_calibration_matrix(
+        storage,
+        run_id="connected-fixture-proof",
+        queries=["GetCourse bootloader rollback evidence", "sidecar caption safe mode recovery logs"],
+        kinds=["smoke"],
+        platforms=["getcourse"],
+        entry_limit=1,
+    )
+    assert query_matrix["schema"] == "aoa_course_connected_run_query_matrix_v1"
+    assert query_matrix["status"] == "ok"
+    assert query_matrix["network_touched"] is False
+    assert query_matrix["read_only"] is True
+    assert query_matrix["query_count"] == 2
+    assert query_matrix["response_count_total"] == 2
+    assert query_matrix["quality"]["ready"] is True
+    assert query_matrix["quality"]["ready_query_count"] == 2
+    assert query_matrix["quality"]["all_queries_have_evidence"] is True
+    assert query_matrix["quality"]["all_queries_have_graph_context"] is True
+    assert query_matrix["quality"]["platforms"] == ["getcourse"]
+    assert len(query_matrix["query_packets"]) == 2
+    assert all(packet["schema"] == "aoa_course_connected_run_query_packet_v1" for packet in query_matrix["query_packets"])
+    assert all(summary["top_result_refs"] for summary in query_matrix["query_summaries"])
+    assert "query-matrix" in query_matrix["next_commands"][0]
 
 
 def test_connected_calibration_status_reports_missing_receipt(tmp_path: Path) -> None:

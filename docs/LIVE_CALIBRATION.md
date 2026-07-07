@@ -111,6 +111,12 @@ that query plan against the local artifacts. The returned
 summaries, graph context status, and blockers without touching the network.
 Smoke entries can reuse their saved query; sync entries should pass an explicit
 `--query`/`query`.
+For broader retrieval proof, use `calibration query-matrix --run <run> --query
+... --query ...` or MCP `connected_run_query_matrix`. The matrix keeps one
+`aoa_course_connected_run_query_packet_v1` per question and adds an aggregate
+`aoa_course_connected_run_query_matrix_v1` quality block, so a live receipt can
+be checked against several course-specific questions without repeating browser
+or API sync.
 It also includes `snapshot_audit`, a compact
 `aoa_course_connected_snapshot_audit_status_v1` block with browser smoke audit
 coverage, failure counts, filtered `browser_snapshot_diagnostics` repair lanes,

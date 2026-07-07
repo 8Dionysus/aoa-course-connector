@@ -387,6 +387,13 @@ sync entries, and returns `aoa_course_connected_run_query_packet_v1` with
 source-backed answer, lesson context, evidence report, freshness, authority,
 graph context, blockers, and `network_touched: false`. Pass `--query` for
 sync-only entries that do not already have a smoke query.
+Use `calibration query-matrix --run <run> --query ... --query ...` or MCP
+`connected_run_query_matrix` when one saved connected run needs to prove several
+course questions at once. It reuses the same local query plan without repeating
+live crawling, returns one `aoa_course_connected_run_query_packet_v1` per
+question plus an `aoa_course_connected_run_query_matrix_v1` aggregate, and
+keeps per-question evidence, freshness, graph-context, blockers, and
+`network_touched: false`.
 Status packets also include `query_plan`, a compact list of queryable
 sync/smoke run ids with index, semantic index, graph, answer packet paths,
 selected `query_mode`, and ready-to-run CLI `query`, `answer`, and

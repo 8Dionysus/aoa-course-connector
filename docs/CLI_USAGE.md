@@ -53,6 +53,7 @@ aoa-course calibration connected-run --mode fixture --run connected-fixture-proo
 aoa-course calibration status --run connected-fixture-proof
 aoa-course calibration query --run connected-fixture-proof --kind smoke
 aoa-course calibration query --run connected-fixture-proof --kind sync --query "course-specific question" --entry-limit 3
+aoa-course calibration query-matrix --run connected-fixture-proof --kind smoke --query "GetCourse bootloader rollback evidence" --query "Skillspace logcat bugreport evidence" --query "Stepik public API evidence"
 aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope bounded --source-limit 1 --run connected-stepik-live-calibration
 aoa-course calibration build --run connected-live-calibration --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
 aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
@@ -193,6 +194,24 @@ with source-backed `answer_packet`, `lesson_context`, `evidence_report`,
 freshness, authority, graph context, blockers, and `network_touched: false`.
 Entries from smoke runs can reuse their saved query; sync-only entries need an
 explicit `--query`.
+
+Use `calibration query-matrix --run <run> --query ... --query ...` to check
+several real course questions against the same connected-run artifacts without
+touching the network again:
+
+```bash
+aoa-course calibration query-matrix \
+  --run connected-fixture-proof \
+  --kind smoke \
+  --query "GetCourse bootloader rollback evidence" \
+  --query "Skillspace logcat bugreport evidence" \
+  --query "Stepik public API evidence"
+```
+
+The packet is `aoa_course_connected_run_query_matrix_v1`. It keeps each
+per-question `aoa_course_connected_run_query_packet_v1`, compact
+`query_summaries`, aggregate result/evidence/graph-context quality, blockers,
+and `network_touched: false`.
 
 Use `eval retrieval-loop` for the offline agent retrieval contract. It prepares
 the starter, GetCourse, Skillspace, and Stepik fixture runs, builds

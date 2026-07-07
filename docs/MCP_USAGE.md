@@ -18,6 +18,7 @@ Initial tools:
 - `connected_run`
 - `connected_run_status`
 - `connected_run_query`
+- `connected_run_query_matrix`
 - `refresh_plan`
 - `search`
 - `semantic_search`
@@ -56,6 +57,7 @@ aoa-course mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures
 aoa-course mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connected_run_query '{"run":"connected-fixture-proof","kinds":["smoke"],"entry_limit":2}'
+aoa-course mcp call connected_run_query_matrix '{"run":"connected-fixture-proof","kinds":["smoke"],"queries":["GetCourse bootloader rollback evidence","Skillspace logcat bugreport evidence","Stepik public API evidence"],"entry_limit":3}'
 aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
@@ -295,6 +297,18 @@ read-only, returns `network_touched: false`, and accepts `platforms`,
 `source_ids`, `kinds`, `mode`, `limit`, `graph_limit`, and `entry_limit`.
 Smoke entries can reuse their saved query; sync entries should pass `query` so
 the agent asks the newly indexed course run a real question.
+
+`connected_run_query_matrix` is the MCP route for breadth checks after one
+fixture or gated live connected run. Pass `queries` as an array and optional
+`platforms`, `source_ids`, `kinds`, `mode`, `limit`, `graph_limit`, and
+`entry_limit`. It returns `aoa_course_connected_run_query_matrix_v1` with
+per-question `query_packets`, compact `query_summaries`, aggregate evidence and
+graph-context quality, blockers, and `network_touched: false`.
+
+```bash
+aoa-course mcp call connected_run_query_matrix \
+  '{"run":"connected-fixture-proof","kinds":["smoke"],"queries":["GetCourse bootloader rollback evidence","Skillspace logcat bugreport evidence","Stepik public API evidence"],"entry_limit":3}'
+```
 
 `aoa-course eval retrieval-loop` is the fixture-safe MCP/CLI contract check: it
 prepares starter, GetCourse, Skillspace, and Stepik runs, then verifies MCP
