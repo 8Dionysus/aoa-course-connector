@@ -256,6 +256,9 @@ def source_registry_catalog(
     platforms: list[str] | None = None,
     source_ids: list[str] | None = None,
     include_source_refs: bool = True,
+    include_connected_runs: bool = False,
+    connected_run_limit: int = 3,
+    connected_receipt_limit: int = 50,
 ) -> dict[str, object]:
     """Return a read-only, secret-free catalog view of configured sources."""
 
@@ -273,8 +276,28 @@ def source_registry_catalog(
     available_ids = {str(source.get("source_id") or "") for source in sources}
     platform_counts = Counter(str(source.get("platform") or "unknown") for source in selected_sources)
     access_mode_counts = Counter(str(source.get("access_mode") or "unknown") for source in selected_sources)
+    selected_catalog_ids = [str(source.get("source_id") or "") for source in selected_sources if source.get("source_id")]
+    if include_connected_runs and selected_catalog_ids:
+        connected_runs = connected_query_run_catalog(
+            roots,
+            source_ids=selected_catalog_ids,
+            platforms=selected_platforms,
+            include_source_refs=include_source_refs,
+            per_source_limit=connected_run_limit,
+            receipt_limit=connected_receipt_limit,
+        )
+    else:
+        connected_runs = _empty_connected_query_run_catalog(
+            roots,
+            included=include_connected_runs,
+            per_source_limit=connected_run_limit,
+            receipt_limit=connected_receipt_limit,
+        )
+    connected_by_source = connected_runs.get("by_source_id") if isinstance(connected_runs.get("by_source_id"), dict) else {}
     catalog_sources: list[dict[str, object]] = []
     for source in selected_sources:
+        source_id = str(source.get("source_id") or "")
+        latest_runs = connected_by_source.get(source_id, []) if source_id else []
         item = {
             "source_id": source.get("source_id"),
             "platform": source.get("platform"),
@@ -282,6 +305,8 @@ def source_registry_catalog(
             "access_mode": source.get("access_mode"),
             "enabled": source.get("enabled", True),
             "updated_at": source.get("updated_at"),
+            "query_ready_connected_run_count": len(latest_runs),
+            "latest_connected_runs": latest_runs,
         }
         if include_source_refs:
             item["source_ref"] = source.get("source_ref")
@@ -305,11 +330,13 @@ def source_registry_catalog(
         "selected_source_count": len(selected_sources),
         "platform_counts": dict(sorted(platform_counts.items())),
         "access_mode_counts": dict(sorted(access_mode_counts.items())),
+        "connected_runs": _connected_query_run_catalog_summary(connected_runs),
         "sources": catalog_sources,
         "privacy": {
             "contains_secret_values": False,
             "secret_values_logged": False,
             "source_refs_included": bool(include_source_refs),
+            "connected_run_refs_included": bool(include_connected_runs),
             "do_not_commit_runtime_registry": True,
         },
         "next_commands": [
@@ -326,6 +353,157 @@ def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *
         include_disabled=include_disabled,
         source_ids=source_ids,
         include_source_refs=False,
+        include_connected_runs=False,
+    )
+
+
+def connected_query_run_catalog(
+    roots: StorageRoots,
+    *,
+    source_ids: list[str] | None = None,
+    platforms: list[str] | None = None,
+    include_source_refs: bool = False,
+    per_source_limit: int = 3,
+    receipt_limit: int = 50,
+) -> dict[str, object]:
+    """Index query-ready entries from connected-run receipts by source id."""
+
+    selected_ids = _dedupe([str(source_id) for source_id in (source_ids or []) if str(source_id)])
+    selected_platforms = _dedupe([str(platform) for platform in (platforms or []) if str(platform)])
+    by_source: dict[str, list[dict[str, object]]] = {}
+    errors: list[dict[str, object]] = []
+    receipt_paths = _connected_receipt_paths(roots, limit=max(1, int(receipt_limit or 1)))
+    for path in receipt_paths:
+        try:
+            receipt = json.loads(path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError) as exc:
+            errors.append({"path": str(path), "error": str(exc), "reason": exc.__class__.__name__})
+            continue
+        query_plan = receipt.get("query_plan") if isinstance(receipt.get("query_plan"), dict) else {}
+        entries = query_plan.get("entries") if isinstance(query_plan.get("entries"), list) else []
+        for entry in entries:
+            if not isinstance(entry, dict) or not bool(entry.get("query_ready")):
+                continue
+            source_id = str(entry.get("source_id") or "")
+            platform = str(entry.get("platform") or "")
+            if not source_id:
+                continue
+            if selected_ids and source_id not in selected_ids:
+                continue
+            if selected_platforms and platform not in selected_platforms:
+                continue
+            by_source.setdefault(source_id, []).append(_connected_query_run_ref(receipt, path, entry, include_source_refs=include_source_refs))
+    per_source = max(1, int(per_source_limit or 1))
+    for source_id, entries in list(by_source.items()):
+        by_source[source_id] = sorted(entries, key=_connected_query_run_sort_key, reverse=True)[:per_source]
+    query_ready_count = sum(len(entries) for entries in by_source.values())
+    return {
+        "schema": "aoa_course_connected_query_run_catalog_v1",
+        "included": True,
+        "network_touched": False,
+        "read_only": True,
+        "path": str(roots.artifact / "runs"),
+        "receipt_limit": max(1, int(receipt_limit or 1)),
+        "per_source_limit": per_source,
+        "receipt_count": len(receipt_paths),
+        "selected_source_ids": selected_ids,
+        "selected_platforms": selected_platforms,
+        "source_ids_with_query_runs": sorted(by_source),
+        "query_ready_entry_count": query_ready_count,
+        "error_count": len(errors),
+        "errors": errors,
+        "by_source_id": by_source,
+    }
+
+
+def _empty_connected_query_run_catalog(roots: StorageRoots, *, included: bool, per_source_limit: int, receipt_limit: int) -> dict[str, object]:
+    return {
+        "schema": "aoa_course_connected_query_run_catalog_v1",
+        "included": included,
+        "network_touched": False,
+        "read_only": True,
+        "path": str(roots.artifact / "runs"),
+        "receipt_limit": max(1, int(receipt_limit or 1)),
+        "per_source_limit": max(1, int(per_source_limit or 1)),
+        "receipt_count": 0,
+        "selected_source_ids": [],
+        "selected_platforms": [],
+        "source_ids_with_query_runs": [],
+        "query_ready_entry_count": 0,
+        "error_count": 0,
+        "errors": [],
+        "by_source_id": {},
+    }
+
+
+def _connected_query_run_catalog_summary(catalog: dict[str, object]) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in catalog.items()
+        if key != "by_source_id"
+    }
+
+
+def _connected_receipt_paths(roots: StorageRoots, *, limit: int) -> list[Path]:
+    runs_dir = roots.artifact / "runs"
+    if not runs_dir.exists():
+        return []
+    paths = [path for path in runs_dir.glob("*/connected/connected_calibration_receipt.json") if path.is_file()]
+    return sorted(paths, key=lambda path: path.stat().st_mtime, reverse=True)[:limit]
+
+
+def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict[str, object], *, include_source_refs: bool) -> dict[str, object]:
+    payload = {
+        "connected_run_id": receipt.get("run_id") or path.parent.parent.name,
+        "connected_run_status": receipt.get("status") or "unknown",
+        "connected_completed_at": receipt.get("completed_at"),
+        "connected_started_at": receipt.get("started_at"),
+        "receipt_path": str(path),
+        "mode": receipt.get("mode"),
+        "network_touched": bool(receipt.get("network_touched")),
+        "kind": entry.get("kind"),
+        "platform": entry.get("platform"),
+        "run_id": entry.get("run_id"),
+        "source_id": entry.get("source_id"),
+        "title": entry.get("title"),
+        "query": entry.get("query"),
+        "query_mode": entry.get("query_mode"),
+        "query_ready": bool(entry.get("query_ready")),
+        "semantic_query_ready": bool(entry.get("semantic_query_ready")),
+        "graph_ready": bool(entry.get("graph_ready")),
+        "answer_ready": bool(entry.get("answer_ready")),
+        "answer_result_count": int(entry.get("answer_result_count") or 0),
+        "answer_evidence_count": int(entry.get("answer_evidence_count") or 0),
+        "paths": entry.get("paths") if isinstance(entry.get("paths"), dict) else {},
+        "commands": entry.get("commands") if isinstance(entry.get("commands"), dict) else {},
+        "mcp_commands": entry.get("mcp_commands") if isinstance(entry.get("mcp_commands"), dict) else {},
+    }
+    if include_source_refs:
+        payload["source_ref"] = entry.get("source_ref")
+    stable_identity = entry.get("stable_identity")
+    if isinstance(stable_identity, dict):
+        payload["stable_identity"] = _compact_stable_identity(stable_identity)
+    return {key: value for key, value in payload.items() if value not in (None, "")}
+
+
+def _compact_stable_identity(stable_identity: dict[str, object]) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in {
+            "schema": stable_identity.get("schema"),
+            "available": stable_identity.get("available"),
+            "fingerprint": stable_identity.get("fingerprint"),
+            "counts": stable_identity.get("counts"),
+        }.items()
+        if value is not None
+    }
+
+
+def _connected_query_run_sort_key(item: dict[str, object]) -> tuple[str, str, str]:
+    return (
+        str(item.get("connected_completed_at") or ""),
+        str(item.get("connected_started_at") or ""),
+        str(item.get("connected_run_id") or ""),
     )
 
 

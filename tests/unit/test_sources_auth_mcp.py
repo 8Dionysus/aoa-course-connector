@@ -798,6 +798,43 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert missing["catalog"]["missing_source_ids"] == ["source:stepik:missing"]
     assert missing["catalog"]["selected_source_count"] == 0
 
+    run_connected_calibration(
+        storage,
+        run_id="source-catalog-connected",
+        mode="fixture",
+        platforms=["stepik"],
+        query="Stepik public API evidence",
+    )
+
+    with_runs = call_tool(
+        "list_sources",
+        {
+            "source_ids": [stepik["source_id"]],
+            "include_source_refs": False,
+            "connected_run_limit": 2,
+            "connected_receipt_limit": 10,
+        },
+    )
+    run_catalog = with_runs["catalog"]["connected_runs"]
+    source = with_runs["catalog"]["sources"][0]
+    latest_runs = source["latest_connected_runs"]
+    rendered_runs = json.dumps(with_runs)
+    assert run_catalog["schema"] == "aoa_course_connected_query_run_catalog_v1"
+    assert run_catalog["included"] is True
+    assert run_catalog["network_touched"] is False
+    assert run_catalog["query_ready_entry_count"] >= 1
+    assert run_catalog["source_ids_with_query_runs"] == [stepik["source_id"]]
+    assert source["query_ready_connected_run_count"] >= 1
+    assert latest_runs[0]["connected_run_id"] == "source-catalog-connected"
+    assert latest_runs[0]["source_id"] == stepik["source_id"]
+    assert latest_runs[0]["query_ready"] is True
+    assert latest_runs[0]["mcp_commands"]["answer"].startswith("aoa-course mcp call answer ")
+    if "stable_identity" in latest_runs[0]:
+        assert "fingerprint" in latest_runs[0]["stable_identity"]
+        assert "samples" not in latest_runs[0]["stable_identity"]
+    assert "source_ref" not in latest_runs[0]
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_runs
+
 
 def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(

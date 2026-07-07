@@ -1010,7 +1010,7 @@ def cmd_sources_add(args: argparse.Namespace) -> int:
 def cmd_sources_list(_args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     registry = load_registry(roots.data)
-    catalog = source_registry_catalog(roots, registry, include_source_refs=True)
+    catalog = source_registry_catalog(roots, registry, include_source_refs=True, include_connected_runs=True)
     _emit({"schema": "aoa_course_source_registry_list_v1", "registry_path": str(registry_path(roots.data)), "catalog": catalog, "registry": registry})
     return 0
 
