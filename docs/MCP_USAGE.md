@@ -151,8 +151,9 @@ graph packets without reparsing prose.
 
 `evidence_report` is the compact agent plan for a query. It returns the
 evidence chain, freshness report, authority report, refresh report, and result
-references with source URL, course path, fetched timestamp, freshness state,
-authority tier, source authority, rank score, rank features, and `refresh_hint`.
+references with source URL, matched snippet, course path, fetched timestamp,
+freshness state, authority tier, source authority, rank score, rank features,
+and `refresh_hint`.
 The hint always gives local
 `build-index`, `build-semantic-index`, and `build-graph` rebuild commands. For
 GetCourse, Skillspace, and Stepik it also points agents to

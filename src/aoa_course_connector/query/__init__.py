@@ -241,6 +241,7 @@ def _evidence_chain_item(result: dict[str, object], evidence_id: object) -> dict
         "kind": result.get("kind"),
         "source_id": result.get("source_id"),
         "source_url": result.get("source_url"),
+        "snippet": result.get("snippet"),
         "fetched_at": result.get("fetched_at"),
         "platform": result.get("platform"),
         "path": result.get("path"),

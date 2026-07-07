@@ -71,8 +71,10 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     answer = run_cli(tmp_path, "answer", "bootloader unlock rollback", "--run", "starter-fixture")
     assert answer["result_count"] >= 1
     assert answer["evidence_chain"]
+    assert answer["evidence_chain"][0]["snippet"]
     evidence_inspect = run_cli(tmp_path, "evidence", "inspect", "rollback", "--run", "starter-fixture")
     assert evidence_inspect["evidence_chain"]
+    assert evidence_inspect["evidence_chain"][0]["snippet"]
     assert evidence_inspect["freshness_report"]["has_source_timestamps"] is True
     browser_snapshot_audit = run_cli(
         tmp_path,
@@ -119,6 +121,7 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert freshness["result"]["freshness"]["states"]
     evidence = run_cli(tmp_path, "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}')
     assert evidence["result"]["evidence_chain"]
+    assert evidence["result"]["result_refs"][0]["snippet"]
     refresh = run_cli(tmp_path, "mcp", "call", "refresh_plan", '{"query":"rollback","run":"starter-fixture","mode":"keyword"}')
     assert refresh["result"]["refresh"]["schema"] == "aoa_course_refresh_cycle_v1"
     assert refresh["result"]["refresh"]["network_touched"] is False

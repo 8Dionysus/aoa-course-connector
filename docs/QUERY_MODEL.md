@@ -64,10 +64,10 @@ unique source counts, registry-match counts, local rebuild commands, source
 commands, and `network_touched: false`.
 
 The `evidence_chain` is also proof-bearing. Each evidence item keeps the
-source URL/id, fetched timestamp, platform, path, freshness state, authority
-tier, rank score, rank features, source authority when available, and refresh
-hint, so agents can cite and refresh the exact result without reopening the
-full result list.
+source URL/id, matched snippet, fetched timestamp, platform, path, freshness
+state, authority tier, rank score, rank features, source authority when
+available, and refresh hint, so agents can cite and refresh the exact result
+without reopening the full result list.
 
 `aoa-course refresh query` wraps this into an `aoa_course_refresh_cycle_v1`
 packet. Without `--execute`, it is a read-only plan: current answer packet,

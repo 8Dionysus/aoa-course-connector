@@ -40,6 +40,8 @@ def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
     assert evidence["authority_tier"] == packet["results"][0]["authority_tier"]
     assert evidence["rank_score"] == packet["results"][0]["rank_score"]
     assert evidence["rank_features"]["provenance_complete"] is True
+    assert evidence["snippet"] == packet["results"][0]["snippet"]
+    assert "bootloader" in evidence["snippet"].casefold()
 
 
 def test_answer_packet_omits_missing_optional_evidence_fields(tmp_path: Path) -> None:
