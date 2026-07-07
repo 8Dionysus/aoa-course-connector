@@ -74,6 +74,9 @@ This proves:
   the fresh-agent install path without network access: route docs, storage
   roots, bootstrap, readiness, CLI hybrid answer, MCP answer, connected-run
   status, query-plan readiness, and source registry setup;
+- `scripts/verify_agent_install_route.py --skip-pytest` copies the repo into a
+  temporary install-like workspace and verifies the same offline route plus MCP
+  stdio direct `answer` packets;
 - CLI `connect profile`, `connect inspect`, `connect apply`, and MCP
   `connection_profile_inspect` provide the next operator-connection plan:
   a local `aoa_course_connection_profile_v1` runtime artifact for source refs,

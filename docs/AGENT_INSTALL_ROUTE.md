@@ -15,6 +15,10 @@
    end: docs, storage, bootstrap, readiness, CLI answer, MCP answer,
    connected-run status, query-plan entries, and source registry without
    touching the network.
+1. For the full public-repo verifier, run
+   `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
+   repository to a temporary install-like workspace, executes the offline route,
+   checks MCP stdio, and requires the direct MCP `answer` packet.
 1. When operator source refs are available, run `aoa-course connect profile`
     with real GetCourse/Skillspace URLs, Stepik course ids, state-file paths,
     and semantic-provider settings, then run `connect inspect` and `connect

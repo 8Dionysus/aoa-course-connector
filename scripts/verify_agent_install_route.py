@@ -58,6 +58,15 @@ def _verify_stdio_tool_responses(stdout: str) -> None:
     search = _require_tool_success(responses, 3, "search")
     if not search.get("results"):
         raise StdioVerificationError("search stdio response did not return results")
+    answer = _require_tool_success(responses, 8, "answer")
+    answer_packet = answer.get("answer_packet")
+    if not isinstance(answer_packet, dict) or answer_packet.get("schema") != "aoa_course_answer_packet_v1":
+        raise StdioVerificationError("answer stdio response did not return aoa_course_answer_packet_v1")
+    quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+    if quality.get("ready") is not True:
+        raise StdioVerificationError(f"answer stdio response quality is not ready: {quality}")
+    if not answer_packet.get("evidence_chain"):
+        raise StdioVerificationError("answer stdio response did not return evidence_chain")
     preflight = _require_tool_success(responses, 4, "live_preflight")
     preflight_payload = preflight.get("preflight")
     if not isinstance(preflight_payload, dict) or preflight_payload.get("network_touched") is not False:
@@ -108,6 +117,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "doctor"],
             [sys.executable, "-m", "aoa_course_connector.cli", "bootstrap", "fixture", "--run", "starter-fixture", "--connected-run", "connected-calibration"],
             [sys.executable, "-m", "aoa_course_connector.cli", "readiness", "--run", "starter-fixture", "--connected-run", "connected-calibration", "--require-ready"],
+            [sys.executable, "-m", "aoa_course_connector.cli", "eval", "install-route"],
             [
                 sys.executable,
                 "-m",
@@ -217,6 +227,7 @@ def main(argv: list[str] | None = None) -> int:
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "tools"],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "semantic_search", '{"query":"rollback","run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "hybrid_search", '{"query":"rollback","run":"starter-fixture"}'],
+            [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "answer", '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "graph_neighbors", '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "freshness_report", '{"run":"starter-fixture"}'],
             [sys.executable, "-m", "aoa_course_connector.cli", "mcp", "call", "evidence_report", '{"query":"rollback","run":"starter-fixture"}'],
@@ -248,6 +259,7 @@ def main(argv: list[str] | None = None) -> int:
             '{"jsonrpc":"2.0","id":5,"method":"tools/call","params":{"name":"connected_source_plan","arguments":{"live_scope":"bounded"}}}',
             '{"jsonrpc":"2.0","id":6,"method":"tools/call","params":{"name":"semantic_provider_preflight","arguments":{"run":"starter-fixture"}}}',
             '{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"connector_readiness","arguments":{"runs":["starter-fixture"]}}}',
+            '{"jsonrpc":"2.0","id":8,"method":"tools/call","params":{"name":"answer","arguments":{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}}}',
             "",
         ])
         result = subprocess.run(
