@@ -14,6 +14,11 @@ Required graph nodes:
 - entity;
 - topic.
 
+Lesson and step nodes may carry `freshness_state`, `authority_tier`, and
+`source_authority`. Browser course-tree placeholders use this to show
+`discovered_not_fetched` or `fetch_error` crawl evidence in graph traversals
+without presenting an unfetched lesson link as complete lesson content.
+
 Required edges:
 
 - source_contains_course;

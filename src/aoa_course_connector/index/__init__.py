@@ -28,6 +28,7 @@ KNOWN_AUTHORITY_TIERS = {
     "learner_comment",
     "transcript",
     "asset_metadata",
+    "discovered_link",
     "progress_metadata",
     "discussion_comment",
     "unknown",

@@ -38,6 +38,10 @@ ordering score used for results. It applies small transparent boosts/penalties
 for freshness state, authority tier, and complete source provenance, so current
 or authoritative source-backed items can beat stale or lower-authority items
 when the underlying relevance is otherwise tied or close.
+Browser crawl links whose lesson pages were not fetched are still searchable,
+but they carry `freshness_state: discovered_not_fetched` or `fetch_error` and
+`authority_tier: discovered_link`, which pushes them below fetched lesson,
+transcript, and comment evidence.
 
 Each result exposes `rank_features`, including `freshness_state`,
 `freshness_boost`, `authority_tier`, `authority_boost`, `provenance_boost`, and

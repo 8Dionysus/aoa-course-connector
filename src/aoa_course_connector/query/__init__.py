@@ -35,6 +35,8 @@ FRESHNESS_RANK_WEIGHTS = {
     "outdated": -0.14,
     "deprecated": -0.18,
     "archived": -0.08,
+    "discovered_not_fetched": -0.16,
+    "fetch_error": -0.20,
 }
 
 AUTHORITY_RANK_WEIGHTS = {
@@ -48,6 +50,7 @@ AUTHORITY_RANK_WEIGHTS = {
     "progress_metadata": -0.02,
     "learner_comment": -0.03,
     "asset_metadata": -0.04,
+    "discovered_link": -0.10,
 }
 
 

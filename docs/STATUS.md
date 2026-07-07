@@ -99,6 +99,10 @@ This proves:
   MCP status, and evals.
 - GetCourse and Skillspace bounded course-tree crawlers through fixtures,
   snapshot input, optional Playwright live traversal, and answer evals.
+- Browser course-tree placeholders for unfetched lesson links now remain
+  explicit discovery evidence in normalized bundles, indexes, answer packets,
+  refresh hints, and graph nodes instead of being ranked as fetched official
+  lesson text.
 - GetCourse and Skillspace visible progress/status and comments through browser
   fixtures, answer packets, index docs, graph edges, MCP context, and evals.
 - GetCourse and Skillspace visible transcript/caption extraction into

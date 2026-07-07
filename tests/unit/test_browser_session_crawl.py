@@ -7,8 +7,9 @@ from aoa_course_connector.adapters.browser.crawl import build_crawled_snapshot, 
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index
-from aoa_course_connector.ingest import crawl_browser_fixture
+from aoa_course_connector.ingest import crawl_browser_fixture, materialize_browser_snapshot
 from aoa_course_connector.query import query_keyword_index, render_answer_packet
+from aoa_course_connector.sources import upsert_source
 
 
 def roots(tmp_path: Path) -> StorageRoots:
@@ -74,3 +75,69 @@ def test_skillspace_browser_crawl_fixture_to_answer_packet(tmp_path: Path) -> No
     assert results[0]["platform"] == "skillspace"
     packet = render_answer_packet(storage, "Skillspace logcat bugreport evidence", run_id="skillspace-browser-crawl-fixture")
     assert packet["evidence_chain"]
+
+
+def test_crawl_placeholder_links_remain_discovery_evidence_in_query_and_graph(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source_ref = "https://school.operator.edu/teach/control/stream"
+    source, _path, _state = upsert_source(storage.data, "getcourse", source_ref, "Index Only School")
+    raw = {
+        "schema": "aoa_course_browser_snapshot_v1",
+        "platform": "getcourse",
+        "captured_at": "2026-07-06T00:00:00Z",
+        "source": {
+            "source_id": source["source_id"],
+            "platform": "getcourse",
+            "source_ref": source_ref,
+            "access_mode": "browser_session",
+            "title": "Index Only School",
+        },
+        "pages": [
+            {
+                "page_id": "index-only",
+                "kind": "course_index",
+                "url": "https://school.operator.edu/teach/control/stream",
+                "title": "Index Only School",
+                "html": """
+                <main>
+                  <a data-aoa-kind="lesson" data-aoa-module="Recovery" href="/teach/control/lesson/view/id/777">
+                    Unfetched modem rollback lesson
+                  </a>
+                </main>
+                """,
+            }
+        ],
+    }
+    crawled = build_crawled_snapshot(raw, platform="getcourse")
+    raw_path = tmp_path / "index-only-crawl.json"
+    raw_path.write_text(json.dumps(crawled), encoding="utf-8")
+
+    materialize_browser_snapshot(storage, raw_path, platform="getcourse", run_id="index-only-crawl")
+    bundle = json.loads((storage.data / "runs/index-only-crawl/normalized/course_bundle.json").read_text(encoding="utf-8"))
+    lesson = bundle["courses"][0]["modules"][0]["lessons"][0]
+    step = lesson["steps"][0]
+    assert lesson["freshness_state"] == "discovered_not_fetched"
+    assert step["kind"] == "browser_discovered_link"
+    assert step["authority_tier"] == "discovered_link"
+    assert step["source_authority"] == "browser_course_index_link"
+
+    build_keyword_index(storage, run_id="index-only-crawl")
+    graph_path = build_graph(storage, run_id="index-only-crawl")
+    results = query_keyword_index(storage, "unfetched modem rollback", run_id="index-only-crawl")
+    assert results
+    assert results[0]["freshness_state"] == "discovered_not_fetched"
+    assert results[0]["authority_tier"] == "discovered_link"
+    assert results[0]["rank_features"]["freshness_boost"] < 0
+    assert results[0]["rank_features"]["authority_boost"] < 0
+    packet = render_answer_packet(storage, "unfetched modem rollback", run_id="index-only-crawl")
+    assert packet["evidence_chain"][0]["freshness_state"] == "discovered_not_fetched"
+    assert packet["evidence_chain"][0]["authority_tier"] == "discovered_link"
+    assert packet["refresh_report"]["commands_touch_network"] is True
+
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    lesson_node = next(node for node in graph["nodes"] if node["node_id"] == lesson["lesson_id"])
+    step_node = next(node for node in graph["nodes"] if node["node_id"] == step["step_id"])
+    assert lesson_node["freshness_state"] == "discovered_not_fetched"
+    assert step_node["authority_tier"] == "discovered_link"
+    assert step_node["source_authority"] == "browser_course_index_link"
+    assert any(edge["kind"] == "module_contains_lesson" and edge["confidence"] == 0.45 for edge in graph["edges"])
