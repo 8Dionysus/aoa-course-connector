@@ -1,8 +1,8 @@
 {
   "schema_version": "aoa-local-kag-record-v1",
   "repo": "aoa-course-connector",
-  "local_id": "projection:mcp:course-source-return",
-  "record_class": "projection",
+  "local_id": "index:course:source-surfaces",
+  "record_class": "index",
   "source_refs": [
     {
       "repo": "aoa-course-connector",
@@ -20,13 +20,6 @@
     },
     {
       "repo": "aoa-course-connector",
-      "path": "docs/RUNTIME_CONTRACT.md",
-      "source_class": "connector_source",
-      "role": "consumer_route",
-      "authority": "authored_source"
-    },
-    {
-      "repo": "aoa-course-connector",
       "path": "kag/manifest.json",
       "source_class": "connector_source",
       "role": "supporting",
@@ -35,7 +28,7 @@
   ],
   "source_owner": "aoa-course-connector",
   "provenance_mode": "strict_source_linked",
-  "derived_method": "source-linked local KAG projection over course connector source-return route",
+  "derived_method": "source-linked local KAG index over course connector provider records",
   "generated_or_authored": "generated_from_source",
   "status": "active",
   "owner_return_route": {
@@ -57,17 +50,19 @@
     "lane": "owner-local"
   },
   "storage_posture": {
-    "git_surface": "compact_readmodel",
-    "payload_class": "projection",
+    "git_surface": "portable_records",
+    "payload_class": "index",
     "runtime_route": "source-repo"
   },
-  "consumer_route": "aoa-kag-mcp resource",
-  "projection_kind": "source_return_view",
+  "consumer_route": "aoa-kag registry",
+  "index_kind": "inventory",
+  "indexed_record_classes": [
+    "node",
+    "edge"
+  ],
   "source_record_ids": [
     "node:course:source-home",
     "node:course:storage-boundary",
-    "edge:course:source-routes-to-storage-boundary",
-    "index:course:source-surfaces"
-  ],
-  "consumer_shape": "resources expose course connector policy, storage boundary, runtime contract handle, and source-return route for KAG consumers"
+    "edge:course:source-routes-to-storage-boundary"
+  ]
 }

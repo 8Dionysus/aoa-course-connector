@@ -1,1 +1,54 @@
-{"schema":"aoa_kag_receipt_v1","repo":"aoa-course-connector","status":"seed"}
+{
+  "schema_version": "aoa-local-kag-record-v1",
+  "repo": "aoa-course-connector",
+  "local_id": "receipt:validation:course-provider",
+  "record_class": "receipt",
+  "source_refs": [
+    {
+      "repo": "aoa-course-connector",
+      "path": "connector/README.md",
+      "source_class": "connector_source",
+      "role": "primary",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "scripts/validate_connector.py",
+      "source_class": "connector_source",
+      "role": "supporting",
+      "authority": "authored_source"
+    }
+  ],
+  "source_owner": "aoa-course-connector",
+  "provenance_mode": "strict_source_linked",
+  "derived_method": "source-linked local KAG receipt over course connector provider route",
+  "generated_or_authored": "authored_control",
+  "status": "active",
+  "owner_return_route": {
+    "repo": "aoa-course-connector",
+    "surface": "BOUNDARIES.md",
+    "route_kind": "authored_meaning"
+  },
+  "freshness": {
+    "mode": "validator_receipt",
+    "state": "current",
+    "checked_ref": "kag/manifest.json"
+  },
+  "builder": {
+    "route": "local KAG provider authoring",
+    "surface": "kag/manifest.json"
+  },
+  "validator": {
+    "route": "aoa-kag:scripts/validate_kag.py",
+    "lane": "local-kag"
+  },
+  "storage_posture": {
+    "git_surface": "receipt",
+    "payload_class": "receipt",
+    "runtime_route": "source-repo"
+  },
+  "consumer_route": "aoa-kag registry",
+  "receipt_kind": "validation",
+  "result": "current",
+  "fallback_route": "scripts/validate_connector.py"
+}

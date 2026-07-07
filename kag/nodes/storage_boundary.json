@@ -1,1 +1,60 @@
-{"schema":"aoa_kag_node_v1","node_id":"aoa-course-connector:storage-boundary","kind":"storage_boundary","label":"Course data stays outside Git"}
+{
+  "schema_version": "aoa-local-kag-record-v1",
+  "repo": "aoa-course-connector",
+  "local_id": "node:course:storage-boundary",
+  "record_class": "node",
+  "source_refs": [
+    {
+      "repo": "aoa-course-connector",
+      "path": "BOUNDARIES.md",
+      "source_class": "connector_source",
+      "role": "owner_route",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "connector/STORAGE_POLICY.md",
+      "source_class": "connector_source",
+      "role": "supporting",
+      "authority": "authored_source"
+    },
+    {
+      "repo": "aoa-course-connector",
+      "path": "docs/RUNTIME_CONTRACT.md",
+      "source_class": "connector_source",
+      "role": "consumer_route",
+      "authority": "authored_source"
+    }
+  ],
+  "source_owner": "aoa-course-connector",
+  "provenance_mode": "strict_source_linked",
+  "derived_method": "source-linked local KAG node over course connector storage and runtime boundary",
+  "generated_or_authored": "authored_control",
+  "status": "active",
+  "owner_return_route": {
+    "repo": "aoa-course-connector",
+    "surface": "BOUNDARIES.md",
+    "route_kind": "authored_meaning"
+  },
+  "freshness": {
+    "mode": "source_snapshot",
+    "state": "current",
+    "checked_ref": "BOUNDARIES.md"
+  },
+  "builder": {
+    "route": "connector validation lane",
+    "surface": "scripts/validate_connector.py"
+  },
+  "validator": {
+    "route": "scripts/validate_connector.py",
+    "lane": "owner-local"
+  },
+  "storage_posture": {
+    "git_surface": "portable_records",
+    "payload_class": "node",
+    "runtime_route": "source-repo"
+  },
+  "consumer_route": "aoa-kag registry",
+  "node_kind": "route_surface",
+  "label": "course connector storage boundary"
+}
