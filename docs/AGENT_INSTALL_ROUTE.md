@@ -130,6 +130,9 @@
     one selected source. MCP uses `source_ids`; the scoped plan should show the
     same ids in `source_registry.selected_source_ids` and
     `connected_run_plan.source_ids`.
+    Use MCP `list_sources` first when the agent needs the configured-source
+    catalog before choosing those ids; pass `include_source_refs:false` when
+    counts and ids are enough.
 1. Run the plan's exact
     `calibration connected-run --mode live --allow-network` plan only after
     the connected plan shows the selected sources are ready.

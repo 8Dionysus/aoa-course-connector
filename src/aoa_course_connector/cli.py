@@ -68,7 +68,7 @@ from aoa_course_connector.smoke import (
     smoke_stepik_live as smoke_stepik_live_route,
 )
 from aoa_course_connector.sources import load_registry, registry_path, upsert_source
-from aoa_course_connector.status import connector_readiness
+from aoa_course_connector.status import connector_readiness, source_registry_catalog
 from aoa_course_connector.storage import create_storage_roots, run_data_dir, storage_status
 from aoa_course_connector.sync import (
     load_sync_status,
@@ -1009,7 +1009,9 @@ def cmd_sources_add(args: argparse.Namespace) -> int:
 
 def cmd_sources_list(_args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
-    _emit({"schema": "aoa_course_source_registry_list_v1", "registry_path": str(registry_path(roots.data)), "registry": load_registry(roots.data)})
+    registry = load_registry(roots.data)
+    catalog = source_registry_catalog(roots, registry, include_source_refs=True)
+    _emit({"schema": "aoa_course_source_registry_list_v1", "registry_path": str(registry_path(roots.data)), "catalog": catalog, "registry": registry})
     return 0
 
 
