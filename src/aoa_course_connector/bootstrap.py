@@ -109,7 +109,6 @@ def _compact_connected_receipt(receipt: dict[str, object]) -> dict[str, object]:
         "packet_path": artifacts.get("packet_path"),
         "intake_path": artifacts.get("intake_path"),
         "plan_path": artifacts.get("plan_path"),
-        "runbook_path": artifacts.get("runbook_path"),
     }
 
 

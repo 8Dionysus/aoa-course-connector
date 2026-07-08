@@ -25,9 +25,7 @@ from aoa_course_connector.connection_profile import (
     connection_profile_status,
     inspect_connection_profile,
     load_connection_profile,
-    render_connection_profile_runbook,
     write_connection_profile,
-    write_connection_profile_runbook,
 )
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
@@ -118,18 +116,6 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert "--expect-origin-contains school.example" in getcourse_auth["import_firefox_command"]
     assert "auth import-firefox-state skillspace" in skillspace_auth["import_firefox_command"]
     assert "--expect-origin-contains academy.example" in skillspace_auth["import_firefox_command"]
-    runbook_text = render_connection_profile_runbook(inspection)
-    assert "Course Connection Profile Runbook" in runbook_text
-    assert "Browser Auth" in runbook_text
-    assert "Import Firefox Command" in runbook_text
-    assert "auth import-firefox-state getcourse" in runbook_text
-    assert "auth import-firefox-state skillspace" in runbook_text
-    assert "Live Readiness" in runbook_text
-    assert "Semantic Provider" in runbook_text
-    assert "SUPER_SECRET_EMBEDDING_TOKEN" not in runbook_text
-    runbook = write_connection_profile_runbook(inspection, tmp_path / "artifacts" / "connections" / "live-courses.runbook.md")
-    assert runbook["written"] is True
-    assert Path(str(runbook["path"])).is_file()
 
     apply_receipt = apply_connection_profile(storage, loaded, profile_path=profile_path)
     registry = load_registry(storage.data)

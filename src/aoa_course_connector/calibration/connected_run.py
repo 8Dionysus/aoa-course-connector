@@ -22,7 +22,7 @@ from aoa_course_connector.calibration import (
 )
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.query import render_answer_packet, render_lesson_context_packet
-from aoa_course_connector.readiness import connected_source_plan, live_preflight, write_connected_source_runbook
+from aoa_course_connector.readiness import connected_source_plan, live_preflight
 from aoa_course_connector.smoke import smoke_browser_fixture, smoke_browser_live, smoke_stepik_fixture, smoke_stepik_from_sync, smoke_stepik_live
 from aoa_course_connector.sources import load_registry, registry_path
 from aoa_course_connector.storage import create_storage_roots, run_artifact_dir
@@ -114,7 +114,6 @@ def load_connected_calibration_status(roots: StorageRoots, *, run_id: str) -> di
         "query_plan": receipt.get("query_plan", {}),
         "artifacts": {
             "plan_path": artifacts.get("plan_path"),
-            "runbook_path": artifacts.get("runbook_path"),
             "preflight_report_paths": artifacts.get("preflight_report_paths", []),
             "smoke_report_paths": artifacts.get("smoke_report_paths", []),
             "packet_path": artifacts.get("packet_path"),
@@ -501,8 +500,6 @@ def _run_fixture(
 
     plan = connected_source_plan(roots, platforms=platforms, query=query, max_lessons=max_lessons)
     plan_path = _write_json(run_dir / "connected-source-plan.json", plan)
-    runbook_path = run_dir / "connected-source-runbook.md"
-    runbook = write_connected_source_runbook(plan, runbook_path)
     stages.append(
         {
             "name": "read_only_connected_plan",
@@ -513,7 +510,6 @@ def _run_fixture(
                     "ready": bool(plan.get("ready")),
                     "network_touched": False,
                     "artifact_path": str(plan_path),
-                    "runbook_path": runbook.get("path"),
                     "payload": _payload_summary(plan),
                 }
             ],
@@ -549,7 +545,6 @@ def _run_fixture(
         intake=intake,
         intake_path=intake_path,
         plan_path=plan_path,
-        runbook_path=Path(str(runbook.get("path"))),
         sync_receipts=sync_receipts,
         execution_options=_execution_options(
             query=query,
@@ -615,8 +610,6 @@ def _run_live(
         include_step_sources=include_step_sources,
     )
     plan_path = _write_json(run_dir / "connected-source-plan.json", plan)
-    runbook_path = run_dir / "connected-source-runbook.md"
-    runbook = write_connected_source_runbook(plan, runbook_path)
     preflight = plan.get("preflight") if isinstance(plan.get("preflight"), dict) else live_preflight(roots, platforms=platforms, source_ids=source_ids)
     preflight_path = _write_json(run_dir / "live-preflight.json", preflight)
     preflight_reports.append(preflight)
@@ -631,7 +624,6 @@ def _run_live(
                     "ready": bool(plan.get("ready")),
                     "network_touched": False,
                     "artifact_path": str(plan_path),
-                    "runbook_path": runbook.get("path"),
                     "payload": _payload_summary(plan),
                 },
                 {
@@ -677,7 +669,6 @@ def _run_live(
             intake=None,
             intake_path=None,
             plan_path=plan_path,
-            runbook_path=Path(str(runbook.get("path"))),
             sync_receipts=[],
             source_selection=source_selection,
             execution_options=_execution_options(
@@ -899,7 +890,6 @@ def _run_live(
         intake=intake,
         intake_path=intake_path,
         plan_path=plan_path,
-        runbook_path=Path(str(runbook.get("path"))),
         sync_receipts=sync_receipts,
         source_selection=source_selection,
         execution_options=_execution_options(
@@ -1023,7 +1013,6 @@ def _receipt(
     intake: dict[str, object] | None,
     intake_path: Path | None,
     plan_path: Path | None,
-    runbook_path: Path | None,
     sync_receipts: list[dict[str, object]],
     source_selection: dict[str, object] | None = None,
     execution_options: dict[str, object] | None = None,
@@ -1086,7 +1075,6 @@ def _receipt(
         "stages": [_stage_without_full_payload(stage) for stage in stages],
         "artifacts": {
             "plan_path": str(plan_path) if plan_path else None,
-            "runbook_path": str(runbook_path) if runbook_path else None,
             "preflight_report_paths": preflight_paths,
             "smoke_report_paths": smoke_paths,
             "packet_path": str(packet_path) if packet_path else None,

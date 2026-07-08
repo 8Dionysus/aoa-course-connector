@@ -30,8 +30,7 @@ For agents, start with the combined read-only plan:
 aoa-course preflight connected-plan \
   --live-scope bounded \
   --query "course-specific question" \
-  --link-pattern "*/lessons/*" \
-  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
+  --link-pattern "*/lessons/*"
 ```
 
 The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
@@ -51,9 +50,7 @@ For GetCourse and Skillspace, inspect `browser_auth_plans` before running
 any live browser command. The plan packet groups source readiness by host,
 shows the storage-state file, and gives the auth capture, redacted inspect, and
 recheck commands required before the plan will emit browser live sync/smoke
-commands. The optional runbook is a Markdown rendering of the same redacted
-packet plus execution stages; store it in `AOA_COURSE_ARTIFACT_ROOT` and keep it
-out of Git.
+commands.
 
 For a one-command executable proof of the same contract, run the fixture-safe
 connected calibration route:
@@ -65,8 +62,8 @@ aoa-course calibration status --run connected-fixture-proof
 
 It writes an `aoa_course_connected_calibration_run_receipt_v1` under
 `${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/connected/`,
-plus smoke reports, a connected-source plan, a runbook, a calibration packet,
-and a calibration intake report. Fixture mode does not touch the network.
+plus smoke reports, a connected-source plan, a calibration packet, and a
+calibration intake report. Fixture mode does not touch the network.
 
 After reviewing `preflight connected-plan` and confirming local auth/source
 readiness, the same route can execute selected live sources only with an

@@ -17,7 +17,6 @@ def cli_env(tmp_path: Path) -> dict[str, str]:
     env["AOA_COURSE_CACHE_ROOT"] = str(tmp_path / "cache")
     env["AOA_COURSE_AUTH_ROOT"] = str(tmp_path / "auth")
     env["AOA_COURSE_ARTIFACT_ROOT"] = str(tmp_path / "artifacts")
-    env.pop("AOA_COURSE_PREAUTH_EVAL_STEPIK_TOKEN", None)
     return env
 
 
@@ -299,51 +298,8 @@ def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> Non
     assert connected_status["status"] == "ok"
 
 
-def test_cli_eval_preauth_readiness_stops_at_authorization_boundary(tmp_path: Path) -> None:
-    packet = run_cli(tmp_path, "eval", "preauth-readiness")
-
-    assert packet["schema"] == "aoa_course_eval_preauth_readiness_v1"
-    assert packet["status"] == "ok"
-    assert packet["ready_until_authorization"] is True
-    assert packet["pause_boundary"] == "authorization_required"
-    assert packet["goal_pause_recommended"] is True
-    assert packet["network_touched"] is False
-    assert packet["secret_values_logged"] is False
-    assert packet["bootstrap"]["status"] == "ok"
-    assert packet["bootstrap"]["network_touched"] is False
-    assert packet["profile"]["applied_source_count"] == 3
-    assert packet["profile"]["registered_profile_source_count"] == 3
-    assert packet["profile"]["ready_for_connected_run"] is False
-    assert packet["profile"]["blocked_by"]
-    assert packet["live_preflight"]["ready"] is False
-    assert packet["live_preflight"]["network_touched"] is False
-    assert packet["connected_plan"]["ready"] is False
-    assert packet["connected_plan"]["connected_run_plan_ready"] is False
-    assert packet["connected_plan"]["connected_run_plan_blocked_by"]
-    assert packet["readiness"]["operational_ready"] is True
-    assert packet["readiness"]["connected_live_ready"] is False
-    assert packet["connected_fixture_query"]["quality_ready"] is True
-    assert packet["mcp"]["connection_profile_inspect_tool"] == "connection_profile_inspect"
-    assert packet["mcp"]["connection_profile_status_tool"] == "connection_profile_status"
-    assert packet["mcp"]["live_preflight_ready"] is False
-    assert packet["mcp"]["connected_plan_ready"] is False
-    assert packet["mcp"]["connected_run_query_tool"] == "connected_run_query"
-    assert packet["mcp"]["connected_run_query_quality_ready"] is True
-    commands = "\n".join(packet["authorization_handoff"]["next_commands"])
-    assert "auth capture-browser-state getcourse" in commands
-    assert "auth capture-browser-state skillspace" in commands
-    assert "export AOA_COURSE_PREAUTH_EVAL_STEPIK_TOKEN=<stepik-api-token>" in commands
-    assert "preflight connected-plan" in commands
-    for key in ["profile_path", "profile_runbook_path", "applied_profile_runbook_path", "connected_source_runbook_path"]:
-        assert Path(str(packet["artifacts"][key])).is_file()
-    rendered = json.dumps(packet)
-    assert "SUPER_SECRET" not in rendered
-    assert "SUPER_PRIVATE" not in rendered
-
-
 def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_TEST_EMBEDDING_TOKEN", "SUPER_SECRET_EMBEDDING_TOKEN")
-    runbook_path = tmp_path / "artifacts" / "connections" / "operator-live.runbook.md"
     receipt = run_cli(
         tmp_path,
         "connect",
@@ -375,19 +331,11 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
         "course-embedding",
         "--embedding-token-env",
         "AOA_COURSE_TEST_EMBEDDING_TOKEN",
-        "--write-runbook",
-        str(runbook_path),
     )
 
     profile_path = Path(str(receipt["profile_path"]))
     assert receipt["schema"] == "aoa_course_connection_profile_receipt_v1"
     assert profile_path.is_file()
-    assert receipt["inspection"]["runbook"]["written"] is True
-    assert runbook_path.is_file()
-    runbook_text = runbook_path.read_text(encoding="utf-8")
-    assert "Course Connection Profile Runbook" in runbook_text
-    assert "auth import-firefox-state getcourse" in runbook_text
-    assert "auth import-firefox-state skillspace" in runbook_text
     assert receipt["inspection"]["live_readiness"]["schema"] == "aoa_course_connection_profile_readiness_v1"
     assert receipt["inspection"]["live_readiness"]["ready_for_connected_run"] is False
     assert receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 0
@@ -403,13 +351,10 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     assert status["schema"] == "aoa_course_connection_profile_status_v1"
     assert status["live_readiness"]["ready_for_connected_run"] is False
 
-    apply_runbook = tmp_path / "artifacts" / "connections" / "operator-live-applied.runbook.md"
-    applied = run_cli(tmp_path, "connect", "apply", str(profile_path), "--write-runbook", str(apply_runbook))
+    applied = run_cli(tmp_path, "connect", "apply", str(profile_path))
     assert applied["schema"] == "aoa_course_connection_profile_apply_v1"
     assert len(applied["applied"]) == 3
     assert applied["inspection"]["source_registry"]["registered_profile_source_count"] == 3
-    assert applied["inspection"]["runbook"]["written"] is True
-    assert apply_runbook.is_file()
 
     sources = run_cli(tmp_path, "sources", "list")
     assert sources["schema"] == "aoa_course_source_registry_list_v1"
@@ -750,35 +695,6 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     rendered_plan = json.dumps(plan)
     assert "SUPER_PRIVATE_COOKIE" not in rendered_plan
     assert "SUPER_PRIVATE_TOKEN" not in rendered_plan
-
-    runbook_path = tmp_path / "artifacts" / "connected-source-runbook.md"
-    plan_with_runbook = run_cli(
-        tmp_path,
-        "preflight",
-        "connected-plan",
-        "--platform",
-        "getcourse",
-        "--expect-origin",
-        "school.operator.edu",
-        "--query",
-        "course-specific question",
-        "--link-pattern",
-        "*/lessons/*",
-        "--write-runbook",
-        str(runbook_path),
-    )
-
-    assert plan_with_runbook["runbook"]["written"] is True
-    assert Path(str(plan_with_runbook["runbook"]["path"])).is_file()
-    runbook = runbook_path.read_text(encoding="utf-8")
-    assert "# Connected Source Runbook" in runbook
-    assert "Browser Auth Plans" in runbook
-    assert "import-firefox-state getcourse account" in runbook
-    assert "capture-browser-state getcourse account" in runbook
-    assert "preflight connected-plan --platform getcourse" in runbook
-    assert "calibration connected-run --mode live --allow-network" in runbook
-    assert "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration" in runbook
-    assert "secret" not in runbook
 
     readiness = run_cli(
         tmp_path,

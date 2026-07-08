@@ -17,7 +17,6 @@ aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
 aoa-course eval install-route
-aoa-course eval preauth-readiness
 aoa-course preflight live
 ```
 
@@ -29,13 +28,6 @@ receipt without network or secrets.
 It checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer,
 MCP answer, CLI/MCP source-scoped `sources_answer`, connected-run status,
 query-plan readiness, and source registry setup with `network_touched: false`.
-`eval preauth-readiness` is the executable pre-authorization proof. It prepares
-the starter run, writes and applies an `operator-preauth` connection profile,
-creates redacted profile and connected-source runbooks, checks CLI/MCP profile
-status, live preflight, connected-source plan, and fixture `connected_run_query`,
-then returns `aoa_course_eval_preauth_readiness_v1` with
-`ready_until_authorization: true` and
-`pause_boundary: authorization_required`.
 
 `readiness` is the broad read-only route audit for the connector. It reports
 install files, storage roots, local run/index/graph readiness, source registry
@@ -73,12 +65,10 @@ aoa-course connect profile --name operator-live \
   --semantic-provider http_json_v1 \
   --embedding-endpoint "https://embed.example/v1" \
   --embedding-model "course-embedding" \
-  --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN \
-  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
+  --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" \
-  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
+aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" \
   --platform getcourse
 ```
@@ -87,11 +77,10 @@ The profile is `aoa_course_connection_profile_v1`. It is a runtime artifact:
 source refs may be operator-private, but token values are never written. Apply
 only registers non-secret source refs in the local source registry; live sync
 still requires the later explicit preflight/auth/network-gated commands.
-`--write-runbook` writes the redacted operator checklist as Markdown beside the
-profile JSON. For browser-session sources, that checklist includes a
-no-network `auth import-firefox-state` shortcut when the source URL has a host,
-then the fresh-login `auth capture-browser-state` fallback and redacted
-inspection command. `connect status` returns
+For browser-session sources, inspection includes a no-network
+`auth import-firefox-state` shortcut when the source URL has a host, then the
+fresh-login `auth capture-browser-state` fallback and redacted inspection
+command. `connect status` returns
 `aoa_course_connection_profile_status_v1`, the compact go/no-go packet for
 registered sources, browser auth readiness, connected-plan readiness, blockers,
 and ready live connected-run commands. MCP `connection_profile_run_plan`

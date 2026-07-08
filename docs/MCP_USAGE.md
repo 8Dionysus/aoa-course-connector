@@ -292,10 +292,6 @@ When one platform contains several schools or custom domains, use
 `browser_auth_plans[].state_file_candidates`: each entry gives a per-host
 state-file path plus Firefox import, capture, inspect, and source-scoped
 recheck commands.
-When a shell-side operator plan is needed, run the CLI equivalent with
-`--write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`; MCP
-keeps the structured plan in `structuredContent`, while the CLI writes the
-Markdown checklist as runtime-only artifact state.
 The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
 `include_step_sources: true` only when the operator intentionally wants the
 larger Stepik full-course/source-enrichment route. The enrichment budget is
@@ -326,8 +322,8 @@ the operator wants explicit live execution from the selected profile route.
 
 `connected_run` executes the same connected-source calibration backend as CLI
 `calibration connected-run`. Use `mode: "fixture"` for a no-network MCP proof
-that writes the connected receipt, plan, runbook, smoke reports, calibration
-packet, intake report, and query plan under runtime artifact storage. Use
+that writes the connected receipt, plan, smoke reports, calibration packet,
+intake report, and query plan under runtime artifact storage. Use
 `mode: "live"` only after inspecting `connected_source_plan`. A plan can be
 top-level `partial` while its `connected_run_plan` is `ready` with
 `scope: "ready_subset"`; that MCP command is intentionally narrowed to the

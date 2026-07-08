@@ -4,10 +4,10 @@
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
-aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5 --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
+aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5 --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
+aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --platform getcourse
 aoa-course readiness --platform stepik --query "course-specific question" --live-scope full-course --include-step-sources --max-step-sources all --step-source-timeout 0.5
 aoa-course init
@@ -39,7 +39,7 @@ aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
-aoa-course preflight connected-plan --live-scope full-course --platform stepik --source-id "source:stepik:..." --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5 --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
+aoa-course preflight connected-plan --live-scope full-course --platform stepik --source-id "source:stepik:..." --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5
@@ -83,7 +83,6 @@ aoa-course refresh query "course-specific question" --run "<checkpoint-run-id>" 
 aoa-course graph neighbors lesson:starter:unlock-risk --run starter-fixture
 aoa-course evidence inspect "rollback" --run starter-fixture --mode hybrid
 aoa-course eval install-route
-aoa-course eval preauth-readiness
 aoa-course eval answer-quality
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 aoa-course build-index --run freshness-ranking-fixture
@@ -175,14 +174,6 @@ returns `aoa_course_fixture_bootstrap_receipt_v1` with embedded readiness. By
 default it proves GetCourse, Skillspace, and Stepik fixture routes; pass
 `--platform` only to narrow a diagnostic run. It is fixture-only and reports
 `network_touched: false`.
-
-Use `eval preauth-readiness` as the full stop-line before operator login or
-API-token work. It emits `aoa_course_eval_preauth_readiness_v1` with
-`ready_until_authorization`, `pause_boundary: authorization_required`,
-`goal_pause_recommended`, profile/runbook artifact paths, and
-`authorization_handoff.next_commands` after proving CLI/MCP profile status,
-live preflight, connected-source planning, and fixture `connected_run_query`
-without touching the network.
 
 Use `auth plan-browser-state` before browser live work. Its import, capture,
 and inspect commands include `--expect-origin-contains` when the source ref has
@@ -320,12 +311,6 @@ provider preflight/build/query commands without mutating local state or
 touching the network. `connect apply` registers the profile sources in the local source
 registry only; browser login, Stepik API calls, semantic builds, and connected
 live calibration remain separate explicit commands.
-Pass `--write-runbook` to emit a redacted Markdown checklist from
-`aoa_course_connection_profile_inspection_v1`; this is useful when a human and
-an agent need the same source/auth/connected-plan/semantic sequence without
-reading the full JSON. The write receipt is
-`aoa_course_connection_profile_runbook_v1`, and the file starts with
-`Course Connection Profile Runbook`.
 MCP `connection_profile_inspect` exposes the same read-only inspection for
 agents that continue from the MCP surface.
 Use `connect status` or MCP `connection_profile_status` when an agent needs the
