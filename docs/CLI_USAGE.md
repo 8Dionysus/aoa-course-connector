@@ -138,6 +138,10 @@ repeated `--query` plus the same source, mode, kind, and limit controls as
 `sources answer`, then returns `aoa_course_sources_answer_matrix_v1` with one
 `aoa_course_sources_answer_packet_v1` per question, aggregate quality,
 per-query summaries, and `network_touched: false`.
+The default `--coverage-mode all-sources` is strict: every selected source must
+answer every query with evidence. Use `--coverage-mode portfolio` when the
+agent is checking whether the selected source portfolio can answer each query
+from at least one source-backed evidence chain.
 Use `eval source-registry-query` as the read-only source-registry quality gate
 after fixture or live connected runs. Pass repeated `--query` for an explicit
 operator question set, or omit queries to sample non-placeholder saved queries

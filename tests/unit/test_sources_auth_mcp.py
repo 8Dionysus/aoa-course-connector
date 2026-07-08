@@ -36,6 +36,7 @@ from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
 from aoa_course_connector.readiness import semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, upsert_source
+from aoa_course_connector.storage import run_data_dir
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
 
@@ -1038,12 +1039,19 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert sources_answer_matrix["tool"] == "sources_answer_matrix"
     assert matrix_packet["schema"] == "aoa_course_sources_answer_matrix_v1"
     assert matrix_packet["status"] == "ok"
+    assert matrix_packet["coverage_mode"] == "all-sources"
     assert matrix_packet["network_touched"] is False
     assert matrix_packet["read_only"] is True
     assert matrix_packet["source_refs_included"] is False
     assert matrix_packet["query_count"] == 2
     assert matrix_packet["quality"]["ready"] is True
+    assert matrix_packet["quality"]["coverage_mode"] == "all-sources"
+    assert matrix_packet["quality"]["source_scoped_ready"] is True
+    assert matrix_packet["quality"]["portfolio_ready"] is True
     assert matrix_packet["quality"]["ready_query_count"] == 2
+    assert matrix_packet["quality"]["source_scoped_ready_query_count"] == 2
+    assert matrix_packet["quality"]["portfolio_ready_query_count"] == 2
+    assert matrix_packet["quality"]["evidence_ready_query_count"] == 2
     assert matrix_packet["quality"]["all_queries_have_evidence"] is True
     assert matrix_packet["query_packets"][0]["schema"] == "aoa_course_sources_answer_packet_v1"
     assert matrix_packet["query_summaries"][0]["top_result_refs"]
@@ -1063,6 +1071,92 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert ambiguous["source_answer"]["reason"] == "ambiguous_source"
     assert ambiguous["source_answer"]["candidate_source_count"] == 2
     assert '"source_ref"' not in json.dumps(ambiguous)
+
+
+def test_sources_answer_matrix_portfolio_mode_allows_relevant_source_coverage(tmp_path: Path, monkeypatch) -> None:
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(tmp_path / "data"))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(tmp_path / "cache"))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(tmp_path / "auth"))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(tmp_path / "artifacts"))
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    run_connected_calibration(
+        storage,
+        run_id="portfolio-coverage-stepik",
+        mode="fixture",
+        platforms=["stepik"],
+        query="Stepik public API evidence",
+    )
+    empty_source, _, _ = upsert_source(storage.data, "stepik", "empty-query-ready-source", "Empty Query Ready", access_mode="public_api")
+    empty_run_id = "portfolio-empty-query-ready"
+    normalized_dir = run_data_dir(storage, empty_run_id) / "normalized"
+    normalized_dir.mkdir(parents=True, exist_ok=True)
+    normalized_path = normalized_dir / "course_bundle.json"
+    normalized_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_bundle_v1",
+                "source": empty_source,
+                "courses": [],
+                "evidence": [],
+            },
+            ensure_ascii=True,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+    index_path = build_keyword_index(storage, empty_run_id)
+    semantic_index_path = build_semantic_index(storage, empty_run_id)
+    graph_path = build_graph(storage, empty_run_id)
+    upsert_checkpoint(
+        storage,
+        make_checkpoint(
+            source=empty_source,
+            sync_run_id="portfolio-empty-sync",
+            run_id=empty_run_id,
+            status="ok",
+            normalized_path=str(normalized_path),
+            index_path=str(index_path),
+            semantic_index_path=str(semantic_index_path),
+            graph_path=str(graph_path),
+        ),
+    )
+    stepik_source = next(source for source in load_registry(storage.data)["sources"] if source["platform"] == "stepik" and source["source_ref"] == "67")
+    args = {
+        "source_ids": [stepik_source["source_id"], empty_source["source_id"]],
+        "queries": ["Stepik public API evidence", "canonical course objects"],
+        "mode": "hybrid",
+    }
+
+    strict_packet = call_tool("sources_answer_matrix", args)["sources_answer_matrix"]
+    portfolio_packet = call_tool("sources_answer_matrix", {**args, "coverage_mode": "portfolio"})["sources_answer_matrix"]
+
+    assert strict_packet["coverage_mode"] == "all-sources"
+    assert strict_packet["status"] == "partial"
+    assert strict_packet["quality"]["ready"] is False
+    assert strict_packet["quality"]["source_scoped_ready"] is False
+    assert strict_packet["quality"]["portfolio_ready"] is True
+    assert strict_packet["quality"]["all_queries_have_evidence"] is True
+    assert portfolio_packet["coverage_mode"] == "portfolio"
+    assert portfolio_packet["status"] == "ok"
+    assert portfolio_packet["quality"]["ready"] is True
+    assert portfolio_packet["quality"]["coverage_mode"] == "portfolio"
+    assert portfolio_packet["quality"]["source_scoped_ready"] is False
+    assert portfolio_packet["quality"]["portfolio_ready"] is True
+    assert portfolio_packet["quality"]["ready_query_count"] == 2
+    assert portfolio_packet["quality"]["blocked_query_count"] == 0
+    assert portfolio_packet["quality"]["source_scoped_ready_query_count"] == 0
+    assert portfolio_packet["quality"]["source_scoped_gap_query_count"] == 2
+    assert portfolio_packet["quality"]["portfolio_ready_query_count"] == 2
+    assert portfolio_packet["quality"]["evidence_ready_query_count"] == 2
+    assert "--coverage-mode portfolio" in portfolio_packet["next_commands"][0]
+    assert '"coverage_mode":"portfolio"' in portfolio_packet["next_commands"][1]
 
 
 def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path: Path, monkeypatch) -> None:

@@ -127,6 +127,11 @@ def _sources_answer_matrix_schema() -> dict[str, object]:
         "minItems": 1,
         "description": "Course questions to answer across the selected query-ready sources.",
     }
+    properties["coverage_mode"] = {
+        "type": "string",
+        "enum": ["all-sources", "portfolio"],
+        "description": "Use all-sources for strict source-scoped readiness, or portfolio when each query only needs source-backed evidence from at least one selected source.",
+    }
     return _object_schema(properties, required=["queries"])
 
 
@@ -757,6 +762,9 @@ def _call_sources_answer_matrix(roots: StorageRoots, args: dict[str, object]) ->
     mode_value = args.get("mode")
     if mode_value is not None and not isinstance(mode_value, str):
         raise ValueError("sources_answer_matrix mode must be a string")
+    coverage_mode = str(args.get("coverage_mode") or "all-sources")
+    if coverage_mode not in {"all-sources", "portfolio"}:
+        raise ValueError("sources_answer_matrix coverage_mode must be all-sources or portfolio")
     queries = _string_array_arg(args.get("queries"), tool_name="sources_answer_matrix", field_name="queries")
     if not queries:
         raise ValueError("sources_answer_matrix queries must include at least one string")
@@ -764,7 +772,7 @@ def _call_sources_answer_matrix(roots: StorageRoots, args: dict[str, object]) ->
         _call_sources_answer(roots, {key: value for key, value in args.items() if key != "queries"} | {"query": query})
         for query in queries
     ]
-    quality = _sources_answer_matrix_quality(query_packets)
+    quality = _sources_answer_matrix_quality(query_packets, coverage_mode=coverage_mode)
     source_ids = _string_array_arg(args.get("source_ids"), tool_name="sources_answer_matrix", field_name="source_ids")
     platforms = _platform_arg(args.get("platforms"), tool_name="sources_answer_matrix")
     return {
@@ -772,6 +780,7 @@ def _call_sources_answer_matrix(roots: StorageRoots, args: dict[str, object]) ->
         "status": _sources_answer_matrix_status(query_packets, quality),
         "network_touched": False,
         "read_only": True,
+        "coverage_mode": coverage_mode,
         "queries": queries,
         "query_count": len(queries),
         "source_refs_included": bool(query_packets[0].get("source_refs_included")) if query_packets else False,
@@ -783,7 +792,7 @@ def _call_sources_answer_matrix(roots: StorageRoots, args: dict[str, object]) ->
         "blocked_sources": _sources_answer_matrix_nested_items(query_packets, "blocked_sources"),
         "failures": _sources_answer_matrix_nested_items(query_packets, "failures"),
         "quality": quality,
-        "next_commands": _sources_answer_matrix_next_commands(queries, source_ids, platforms, mode_value),
+        "next_commands": _sources_answer_matrix_next_commands(queries, source_ids, platforms, mode_value, coverage_mode),
     }
 
 
@@ -958,24 +967,39 @@ def _sources_answer_status(responses: list[dict[str, object]], blocked_sources: 
     return "missing"
 
 
-def _sources_answer_matrix_quality(query_packets: list[dict[str, object]]) -> dict[str, object]:
+def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, coverage_mode: str = "all-sources") -> dict[str, object]:
     summaries = [_sources_answer_matrix_summary(packet) for packet in query_packets]
     ready_count = sum(1 for summary in summaries if bool(summary.get("ready")))
+    evidence_ready_count = sum(1 for summary in summaries if int(summary.get("evidence_count_total") or 0) > 0)
     response_count_total = sum(int(summary.get("response_count") or 0) for summary in summaries)
     evidence_count_total = sum(int(summary.get("evidence_count_total") or 0) for summary in summaries)
     result_count_total = sum(int(summary.get("result_count_total") or 0) for summary in summaries)
     blocked_source_count_total = sum(int(summary.get("blocked_source_count") or 0) for summary in summaries)
     failure_count_total = sum(int(summary.get("failure_count") or 0) for summary in summaries)
-    return {
-        "ready": bool(query_packets)
+    source_scoped_ready = (
+        bool(query_packets)
         and ready_count == len(query_packets)
         and response_count_total >= len(query_packets)
         and evidence_count_total >= len(query_packets)
         and blocked_source_count_total == 0
-        and failure_count_total == 0,
+        and failure_count_total == 0
+    )
+    portfolio_ready = bool(query_packets) and evidence_ready_count == len(query_packets) and blocked_source_count_total == 0 and failure_count_total == 0
+    ready = portfolio_ready if coverage_mode == "portfolio" else source_scoped_ready
+    selected_ready_count = evidence_ready_count if coverage_mode == "portfolio" else ready_count
+    return {
+        "ready": ready,
+        "coverage_mode": coverage_mode,
+        "source_scoped_ready": source_scoped_ready,
+        "portfolio_ready": portfolio_ready,
         "query_count": len(query_packets),
-        "ready_query_count": ready_count,
-        "blocked_query_count": len(query_packets) - ready_count,
+        "ready_query_count": selected_ready_count,
+        "source_scoped_ready_query_count": ready_count,
+        "portfolio_ready_query_count": evidence_ready_count,
+        "evidence_ready_query_count": evidence_ready_count,
+        "blocked_query_count": len(query_packets) - selected_ready_count,
+        "source_scoped_gap_query_count": len(query_packets) - ready_count,
+        "evidence_gap_query_count": len(query_packets) - evidence_ready_count,
         "response_count_total": response_count_total,
         "result_count_total": result_count_total,
         "evidence_count_total": evidence_count_total,
@@ -1043,8 +1067,7 @@ def _sources_answer_matrix_top_result_refs(packet: dict[str, object]) -> list[di
 def _sources_answer_matrix_status(query_packets: list[dict[str, object]], quality: dict[str, object]) -> str:
     if not query_packets:
         return "missing"
-    statuses = {str(packet.get("status") or "") for packet in query_packets}
-    if statuses <= {"ok"} and bool(quality.get("ready")):
+    if bool(quality.get("ready")):
         return "ok"
     if int(quality.get("response_count_total") or 0) > 0:
         return "partial"
@@ -1076,7 +1099,13 @@ def _sources_answer_next_commands(query: str, source_ids: list[str] | None, plat
     ]
 
 
-def _sources_answer_matrix_next_commands(queries: list[str], source_ids: list[str] | None, platforms: list[str] | None, mode: str | None) -> list[str]:
+def _sources_answer_matrix_next_commands(
+    queries: list[str],
+    source_ids: list[str] | None,
+    platforms: list[str] | None,
+    mode: str | None,
+    coverage_mode: str = "all-sources",
+) -> list[str]:
     payload: dict[str, object] = {"queries": queries}
     if source_ids:
         payload["source_ids"] = source_ids
@@ -1084,8 +1113,10 @@ def _sources_answer_matrix_next_commands(queries: list[str], source_ids: list[st
         payload["platforms"] = platforms
     if mode:
         payload["mode"] = mode
+    if coverage_mode != "all-sources":
+        payload["coverage_mode"] = coverage_mode
     return [
-        _sources_answer_matrix_cli_command(queries, source_ids=source_ids, platforms=platforms, mode=mode),
+        _sources_answer_matrix_cli_command(queries, source_ids=source_ids, platforms=platforms, mode=mode, coverage_mode=coverage_mode),
         f"aoa-course mcp call sources_answer_matrix {shlex.quote(json.dumps(payload, ensure_ascii=True, separators=(',', ':')))}",
         "aoa-course sources list --no-source-refs --connected-run-limit 5",
     ]
@@ -1212,6 +1243,7 @@ def _sources_answer_matrix_cli_command(
     source_ids: list[str] | None = None,
     platforms: list[str] | None = None,
     mode: str | None = None,
+    coverage_mode: str = "all-sources",
 ) -> str:
     parts = ["aoa-course", "sources", "answer-matrix"]
     for query in queries:
@@ -1225,6 +1257,8 @@ def _sources_answer_matrix_cli_command(
             parts.extend(["--platform", shlex.quote(platform)])
     if mode:
         parts.extend(["--mode", shlex.quote(mode)])
+    if coverage_mode != "all-sources":
+        parts.extend(["--coverage-mode", shlex.quote(coverage_mode)])
     return " ".join(parts)
 
 

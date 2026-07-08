@@ -285,6 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
     sources_answer_matrix.add_argument("--kind", choices=["smoke", "sync"], action="append")
     sources_answer_matrix.add_argument("--limit", type=int, default=5)
     sources_answer_matrix.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
+    sources_answer_matrix.add_argument("--coverage-mode", choices=["all-sources", "portfolio"], default="all-sources")
     sources_answer_matrix.add_argument("--graph-limit", type=int, default=12)
     sources_answer_matrix.add_argument("--source-limit", type=int, default=10)
     sources_answer_matrix.add_argument("--connected-run-limit", type=int, default=5)
@@ -1138,6 +1139,7 @@ def cmd_sources_answer_matrix(args: argparse.Namespace) -> int:
                 "kinds": args.kind,
                 "limit": args.limit,
                 "mode": args.mode,
+                "coverage_mode": args.coverage_mode,
                 "graph_limit": args.graph_limit,
                 "source_limit": args.source_limit,
                 "connected_run_limit": args.connected_run_limit,

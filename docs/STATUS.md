@@ -78,6 +78,12 @@ This proves:
   query-ready sources and returns one sources-answer packet per question plus
   aggregate breadth quality, per-query summaries, blockers, and
   `network_touched: false`;
+- CLI/MCP `sources_answer_matrix` supports explicit `coverage_mode`: the
+  default `all-sources` keeps strict per-source readiness, while `portfolio`
+  reports ready when each query has at least one source-backed evidence chain
+  across the selected source set. This prevents broad live-source matrices from
+  looking failed only because unrelated but query-ready sources had no matching
+  evidence for a specific question.
 - CLI `eval source-registry-query` returns
   `aoa_course_eval_source_registry_query_v1`, a read-only gate over the current
   source registry that uses explicit operator queries or non-placeholder saved
