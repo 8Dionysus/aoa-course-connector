@@ -114,8 +114,9 @@ This proves:
   `next_commands` points to `sources list`, `sources answer`, or
   `sources answer-matrix` before fixture bootstrap. The embedded connected plan
   preserves operator-selected `live_scope`, `include_step_sources`,
-  `link_pattern`, `max_lessons`, `max_pages`, and `max_sources` through the
-  ready connected-run plan. If the selected connected-run receipt is partial
+  `max_step_sources`, `step_source_timeout`, `link_pattern`, `max_lessons`,
+  `max_pages`, and `max_sources` through the ready connected-run plan. If the
+  selected connected-run receipt is partial
   and includes `repair_lanes`, the top-level readiness `next_commands` now
   surface those lane commands instead of replacing the receipt with fixture
   bootstrap;
@@ -279,13 +280,14 @@ This proves:
   exact preflight, sync, smoke, calibration, and
   `connected_run_plan` commands without touching the network or printing
   secrets. Ready plans preserve selected platforms, source ids, query, live
-  scope, and browser `link_pattern` in the one-command
-  `calibration connected-run --mode live --allow-network` route. Stepik launch
-  plans default to bounded live smoke/sync commands, with
+  scope, browser `link_pattern`, and Stepik `include_step_sources` budget in the
+  one-command `calibration connected-run --mode live --allow-network` route.
+  Stepik launch plans default to bounded live smoke/sync commands, with
   full-course/source-enrichment commands gated behind explicit options. Ready
   `connected_run_plan` entries now also expose `mcp_tool_call` and
   `mcp_command` for MCP `connected_run`, preserving source ids, traversal
-  bounds, live scope, and explicit `allow_network`. Partial plans with at least
+  bounds, live scope, `max_step_sources`, `step_source_timeout`, and explicit
+  `allow_network`. Partial plans with at least
   one smoke-ready source now expose a `scope: ready_subset`
   `connected_run_plan` for the ready platform/source ids while keeping blockers
   for missing Skillspace auth, Stepik tokens, or other unready sources visible;
@@ -404,7 +406,10 @@ This proves:
   total evidence items, graph context for every query, and
   `network_touched: false`. Step-source enrichment is now budgeted: this run
   attempted 10 step-source payloads, skipped 546 by `max_step_sources`, and
-  recorded the effective limits plus diagnostics in the raw Stepik payload.
+  recorded the effective limits plus diagnostics in the raw Stepik payload. The
+  same budget now flows through CLI/MCP `readiness`, `connected_source_plan`,
+  connection profiles, and MCP `connected_run` arguments instead of only the
+  direct CLI live command.
 - A runtime-only multi-source GetCourse plus Stepik connected run has been
   exercised locally: run `connected-ready-getcourse-stepik-20260708` completed
   `ok` at `2026-07-08T08:54:25Z` across 6 ready sources

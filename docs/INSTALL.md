@@ -44,8 +44,9 @@ semantic provider readiness, `connected_run_plan`, and next commands. For
 browser-session sources, `--link-pattern` keeps narrowed lesson/course globs
 in that plan. Use
 `--max-lessons`, `--max-pages`, `--max-sources`, `--live-scope`, and
-`--include-step-sources` when a readiness audit must preserve the exact
-operator-selected connected-run breadth.
+`--include-step-sources`, `--max-step-sources`, and `--step-source-timeout`
+when a readiness audit must preserve the exact operator-selected connected-run
+breadth.
 
 `preflight semantic-provider` is safe before an external embedding endpoint is
 called. For `http_json_v1`, pass `--embedding-endpoint`, `--embedding-model`,
@@ -66,6 +67,9 @@ aoa-course connect profile --name operator-live \
   --skillspace-url "https://academy.example/course/demo" \
   --stepik-course-id 67 \
   --run connected-live-calibration \
+  --include-step-sources \
+  --max-step-sources all \
+  --step-source-timeout 0.5 \
   --semantic-provider http_json_v1 \
   --embedding-endpoint "https://embed.example/v1" \
   --embedding-model "course-embedding" \

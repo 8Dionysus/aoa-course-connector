@@ -46,7 +46,9 @@
     `calibration connected-run --mode live --allow-network` command. Use
     `connect run <profile> --platform <platform>` for the no-network executable
     profile plan, then add `--allow-network` only after the selected
-    platform/source is ready.
+    platform/source is ready. For Stepik enrichment, carry the same
+    `include_step_sources`, `max_step_sources`, and `step_source_timeout`
+    values through the profile, readiness, MCP plan, and final connected run.
 1. Run the offline starter proof.
 1. Run `preflight semantic-provider --run starter-fixture --require-ready`,
    then build the semantic index with `build-semantic-index` and run at least

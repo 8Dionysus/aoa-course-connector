@@ -13,6 +13,13 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.readiness import connected_source_plan, semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, upsert_source
+from aoa_course_connector.stepik_options import (
+    DEFAULT_MAX_STEP_SOURCES,
+    DEFAULT_STEP_SOURCE_TIMEOUT,
+    max_step_sources_packet,
+    normalize_max_step_sources,
+    normalize_step_source_timeout,
+)
 
 
 BROWSER_PLATFORMS = {"getcourse", "skillspace"}
@@ -41,6 +48,8 @@ def build_connection_profile(
     query: str | None = None,
     live_scope: str = "bounded",
     include_step_sources: bool = False,
+    max_step_sources: int | str | None = DEFAULT_MAX_STEP_SOURCES,
+    step_source_timeout: float = DEFAULT_STEP_SOURCE_TIMEOUT,
     max_lessons: int = 50,
     max_pages: int = 5,
     max_sources: int = 50,
@@ -56,6 +65,8 @@ def build_connection_profile(
     """Build a redacted local connection profile without touching the network."""
 
     selected_provider = _selected_semantic_provider(semantic_provider)
+    selected_max_step_sources = normalize_max_step_sources(max_step_sources)
+    selected_step_source_timeout = normalize_step_source_timeout(step_source_timeout)
     browser_sources = [
         *_browser_sources("getcourse", getcourse_urls or [], roots.auth, getcourse_state_file),
         *_browser_sources("skillspace", skillspace_urls or [], roots.auth, skillspace_state_file),
@@ -96,6 +107,8 @@ def build_connection_profile(
             "query": query or "",
             "live_scope": live_scope,
             "include_step_sources": include_step_sources,
+            "max_step_sources": max_step_sources_packet(selected_max_step_sources),
+            "step_source_timeout": selected_step_source_timeout,
             "max_lessons": max(1, int(max_lessons or 1)),
             "max_pages": max(1, int(max_pages or 1)),
             "max_sources": max(1, int(max_sources or 1)),
@@ -418,6 +431,7 @@ def connection_profile_run_plan(
     connected_run = _nested_connected_run_plan(selected)
     state_file = _profile_state_file_for_platform(source_plans, selected_platform)
     expected_origin = _expected_origin_for_platform(source_plans, selected_platform)
+    include_step_sources = bool(runtime.get("include_step_sources", False)) and selected_platform == "stepik"
     return {
         "schema": "aoa_course_connection_profile_run_plan_v1",
         "status": "ready",
@@ -429,7 +443,9 @@ def connection_profile_run_plan(
         "source_ids": [str(item) for item in connected_run.get("source_ids", selected.get("source_ids", [])) if item],
         "query": str(runtime.get("query") or ""),
         "live_scope": str(runtime.get("live_scope") or "bounded"),
-        "include_step_sources": bool(runtime.get("include_step_sources", False)),
+        "include_step_sources": include_step_sources,
+        "max_step_sources": connected_run.get("max_step_sources", runtime.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES)) if include_step_sources else DEFAULT_MAX_STEP_SOURCES,
+        "step_source_timeout": float(connected_run.get("step_source_timeout") or runtime.get("step_source_timeout") or DEFAULT_STEP_SOURCE_TIMEOUT) if include_step_sources else DEFAULT_STEP_SOURCE_TIMEOUT,
         "max_lessons": int(runtime.get("max_lessons") or 50),
         "max_pages": int(runtime.get("max_pages") or 5),
         "max_sources": int(runtime.get("max_sources") or 50),
@@ -562,10 +578,13 @@ def _browser_plan(roots: StorageRoots, source: dict[str, object], *, source_id: 
 
 def _connected_plans(roots: StorageRoots, source_plans: list[dict[str, object]], runtime: dict[str, object]) -> list[dict[str, object]]:
     plans: list[dict[str, object]] = []
+    max_step_sources = normalize_max_step_sources(runtime.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES))
+    step_source_timeout = normalize_step_source_timeout(runtime.get("step_source_timeout", DEFAULT_STEP_SOURCE_TIMEOUT))
     for plan in source_plans:
         platform = str(plan.get("platform") or "")
         if platform not in CONNECTED_PLATFORMS:
             continue
+        include_step_sources = bool(runtime.get("include_step_sources", False)) and platform == "stepik"
         source_ids = [str(plan.get("source_id"))] if plan.get("source_id") else None
         state_file = _profile_state_file_for_platform(source_plans, platform)
         stepik_token_env = _profile_stepik_token_env(source_plans)
@@ -582,7 +601,9 @@ def _connected_plans(roots: StorageRoots, source_plans: list[dict[str, object]],
             link_pattern=str(runtime.get("link_pattern") or "") or None,
             calibration_run=str(runtime.get("run_id") or "connected-calibration"),
             live_scope=str(runtime.get("live_scope") or "bounded"),
-            include_step_sources=bool(runtime.get("include_step_sources", False)),
+            include_step_sources=include_step_sources,
+            max_step_sources=max_step_sources,
+            step_source_timeout=step_source_timeout,
         )
         command = f"aoa-course preflight connected-plan --platform {shlex.quote(platform)}"
         for source_id in source_ids or []:
@@ -596,8 +617,10 @@ def _connected_plans(roots: StorageRoots, source_plans: list[dict[str, object]],
         if runtime.get("link_pattern"):
             command += f" --link-pattern {shlex.quote(str(runtime.get('link_pattern')))}"
         command += f" --live-scope {shlex.quote(str(runtime.get('live_scope') or 'bounded'))}"
-        if bool(runtime.get("include_step_sources", False)):
+        if include_step_sources:
             command += " --include-step-sources"
+            command += f" --max-step-sources {shlex.quote(str(max_step_sources_packet(max_step_sources)))}"
+            command += f" --step-source-timeout {step_source_timeout}"
         plans.append(
             {
                 "platform": platform,

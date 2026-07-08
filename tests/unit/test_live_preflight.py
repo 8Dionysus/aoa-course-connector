@@ -619,11 +619,22 @@ def test_connected_source_plan_stepik_full_course_scope_is_explicit(tmp_path: Pa
         platforms=["stepik"],
         live_scope="full-course",
         include_step_sources=True,
+        max_step_sources=None,
+        step_source_timeout=0.5,
     )
 
     assert plan["status"] == "ok"
     assert plan["live_scope"] == "full-course"
     assert plan["include_step_sources"] is True
+    assert plan["max_step_sources"] == "all"
+    assert plan["step_source_timeout"] == 0.5
     assert any("--full-course" in command for command in plan["next_commands"])
     assert any("--include-step-sources" in command for command in plan["next_commands"])
+    assert any("--max-step-sources all" in command for command in plan["next_commands"])
+    assert any("--step-source-timeout 0.5" in command for command in plan["next_commands"])
     assert not any("--max-sections 1" in command for command in plan["next_commands"])
+    assert plan["connected_run_plan"]["max_step_sources"] == "all"
+    assert plan["connected_run_plan"]["step_source_timeout"] == 0.5
+    mcp_args = plan["connected_run_plan"]["mcp_tool_call"]["arguments"]
+    assert mcp_args["max_step_sources"] == "all"
+    assert mcp_args["step_source_timeout"] == 0.5
