@@ -244,6 +244,10 @@ This proves:
   storage-state inspection. `auth plan-browser-state` and connected-source
   plans carry `--expect-origin-contains` so wrong-login or cross-school
   storage-state mismatches are visible before live discovery or sync.
+- Stepik browser-session onboarding can now import matching `stepik.org`
+  cookies from an existing local Firefox profile into a Playwright-compatible
+  storage-state file, with a redacted no-network receipt and no cookie values
+  printed.
 - Read-only live preflight reports for Stepik tokens, browser storage-state
   usability, source-registry readiness, next commands, secret redaction, and
   MCP `live_preflight` structuredContent.

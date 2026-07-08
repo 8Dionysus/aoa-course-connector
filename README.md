@@ -205,6 +205,7 @@ discovery and sync route can use local browser-state cookies instead of a
 separate API token:
 
 ```bash
+PYTHONPATH=src python -m aoa_course_connector.cli auth import-firefox-state stepik account --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --expect-origin-contains stepik.org
 PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state stepik account --login-url "https://stepik.org/users/me" --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --expect-origin-contains stepik.org
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --register --max-pages 5
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
@@ -213,8 +214,11 @@ PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --state-file 
 `preflight live --platform stepik` treats registered `public_api` sources as
 sync-ready without `STEPIK_API_TOKEN`; token-gated `api_token` and `oauth`
 sources require the token, while `browser_session` sources require matching
-Stepik storage state. Account discovery ignores inactive or deleted enrollments
-before registering sources. Token and cookie values are never printed.
+Stepik storage state. `auth import-firefox-state` is the no-network shortcut
+when the operator is already logged in through Firefox; `auth
+capture-browser-state` remains the fresh-login fallback. Account discovery
+ignores inactive or deleted enrollments before registering sources. Token and
+cookie values are never printed.
 
 For a single Stepik operator smoke report:
 

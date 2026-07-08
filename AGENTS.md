@@ -56,6 +56,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --r
 PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live --help
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform stepik
+PYTHONPATH=src python -m aoa_course_connector.cli auth import-firefox-state stepik account --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --expect-origin-contains stepik.org
 PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state stepik account --login-url "https://stepik.org/users/me" --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --expect-origin-contains stepik.org
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --register --max-pages 5
 PYTHONPATH=src python -m aoa_course_connector.cli discover stepik 67 --register --title "Stepik course 67"

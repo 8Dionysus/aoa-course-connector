@@ -9,7 +9,13 @@ from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
-from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.auth import (
+    browser_state_plan,
+    capture_browser_state,
+    default_browser_state_path,
+    import_firefox_browser_state,
+    inspect_browser_state,
+)
 from aoa_course_connector.bootstrap import bootstrap_fixture
 from aoa_course_connector.calibration import (
     build_live_calibration_intake,
@@ -304,6 +310,15 @@ def build_parser() -> argparse.ArgumentParser:
     capture.add_argument("--timeout-ms", type=int, default=120_000)
     capture.add_argument("--expect-origin-contains")
     capture.set_defaults(func=cmd_auth_capture_browser_state)
+    firefox = auth_sub.add_parser("import-firefox-state")
+    firefox.add_argument("platform")
+    firefox.add_argument("source_ref")
+    firefox.add_argument("--state-file", type=Path)
+    firefox.add_argument("--profile-dir", type=Path)
+    firefox.add_argument("--profile-name")
+    firefox.add_argument("--profiles-ini", type=Path)
+    firefox.add_argument("--expect-origin-contains")
+    firefox.set_defaults(func=cmd_auth_import_firefox_state)
     inspect_state = auth_sub.add_parser("inspect-browser-state")
     inspect_state.add_argument("state_file", nargs="?", type=Path)
     inspect_state.add_argument("--platform")
@@ -1174,6 +1189,41 @@ def cmd_auth_capture_browser_state(args: argparse.Namespace) -> int:
             "state_file": str(state_file),
             "error": str(exc),
             "network_touched": network_touched,
+        })
+        return 2
+    _emit(receipt)
+    return 0 if receipt.get("status") in {"ok", "warning"} else 1
+
+
+def cmd_auth_import_firefox_state(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    create_storage_roots(roots)
+    try:
+        receipt = import_firefox_browser_state(
+            roots.auth,
+            args.platform,
+            args.source_ref,
+            state_file=args.state_file,
+            profile_dir=args.profile_dir,
+            profile_name=args.profile_name,
+            profiles_ini=args.profiles_ini,
+            expect_origin_contains=args.expect_origin_contains,
+        )
+    except Exception as exc:
+        state_file = args.state_file or default_browser_state_path(roots.auth, args.platform, args.source_ref)
+        _emit({
+            "schema": "aoa_course_firefox_state_import_receipt_v1",
+            "status": "error",
+            "platform": args.platform,
+            "source_ref": args.source_ref,
+            "state_file": str(state_file),
+            "error": str(exc),
+            "network_touched": False,
+            "privacy": {
+                "cookie_values_logged": False,
+                "local_storage_values_logged": False,
+                "token_values_logged": False,
+            },
         })
         return 2
     _emit(receipt)
