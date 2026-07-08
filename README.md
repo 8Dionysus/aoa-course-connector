@@ -28,7 +28,6 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
@@ -57,14 +56,6 @@ and returns the final readiness packet without touching the network.
 checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer, MCP
 answer, CLI/MCP source-scoped `sources_answer`, connected-run status,
 query-plan readiness, and source registry setup with `network_touched: false`.
-`eval preauth-readiness` is the executable stop-line before operator
-authorization. It builds the starter proof, writes an `operator-preauth`
-connection profile and redacted runbooks, applies only registry-safe source
-refs, checks CLI/MCP profile status, live preflight, connected-source plan, and
-fixture `connected_run_query`, then returns
-`aoa_course_eval_preauth_readiness_v1` with `ready_until_authorization: true`,
-`pause_boundary: authorization_required`, and the exact next auth commands.
-
 `connect profile` turns those operator inputs into a local runtime JSON
 contract, `aoa_course_connection_profile_v1`. It stores source refs, state-file
 paths, token env names, and semantic-provider settings under artifact storage,
@@ -72,11 +63,8 @@ but never stores token values. `connect inspect` is read-only and returns the
 source registration, browser auth, connected-plan, and semantic-provider next
 commands with `network_touched: false`. `connect apply` mutates only the local
 source registry, then returns the same inspection so the next `preflight connected-plan` or MCP
-`connection_profile_inspect` call can continue from registered sources. Pass
-`--write-runbook` to `connect profile`, `connect inspect`, or `connect apply`
-to write the same redacted plan as a runtime Markdown checklist. The write
-receipt is `aoa_course_connection_profile_runbook_v1`; the Markdown starts
-with `Course Connection Profile Runbook`. `connect status` and MCP
+`connection_profile_inspect` call can continue from registered sources.
+`connect status` and MCP
 `connection_profile_status` return the compact
 `aoa_course_connection_profile_status_v1` go/no-go packet with
 `ready_for_connected_run`, blockers, counts, and any ready
@@ -337,8 +325,7 @@ one redacted plan packet:
 PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan \
   --live-scope bounded \
   --query "course-specific question" \
-  --link-pattern "*/lessons/*" \
-  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
+  --link-pattern "*/lessons/*"
 ```
 
 `preflight connected-plan` is read-only. It inspects the source registry and
@@ -357,10 +344,7 @@ the same registry. MCP accepts the same scope as `source_ids`. Use
 `--live-scope full-course --include-step-sources` only for an explicit
 operator-selected full-course run. For browser-session sources,
 `--link-pattern` carries the same lesson/course URL glob into planned sync,
-smoke, and connected-run commands. `--write-runbook` writes the same redacted
-plan as Markdown under runtime artifact storage so an operator or agent can
-execute the setup, sync, smoke, and calibration steps without rereading raw
-JSON.
+smoke, and connected-run commands.
 
 For GetCourse and Skillspace, the plan also includes
 `browser_auth_plans`: one per browser-session platform. Each plan groups
@@ -375,8 +359,8 @@ spans multiple schools or custom domains.
 `calibration connected-run` is the executable route over the same contract; a
 ready connected plan exposes the exact command as `connected_run_plan`.
 `--mode fixture` runs safe GetCourse, Skillspace, and Stepik fixtures end to
-end, writes smoke reports, a connected-source plan, a runbook, a calibration
-packet, an intake report, and one
+end, writes smoke reports, a connected-source plan, a calibration packet, an
+intake report, and one
 `aoa_course_connected_calibration_run_receipt_v1` under runtime artifact
 storage. `--mode live` refuses to touch connected sources unless
 `--allow-network` is present; use it only after reviewing the connected plan and

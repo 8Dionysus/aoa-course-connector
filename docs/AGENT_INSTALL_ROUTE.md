@@ -16,14 +16,6 @@
    CLI/MCP source-scoped `sources_answer`, connected-run status, query-plan
    entries, `connected_run_query` retrieval, and source registry without
    touching the network.
-1. Run `aoa-course eval preauth-readiness` to prove the repository is ready up
-   to the operator authorization boundary. The packet is
-   `aoa_course_eval_preauth_readiness_v1`; it must return
-   `ready_until_authorization: true`, `pause_boundary:
-   authorization_required`, `network_touched: false`, concrete
-   `authorization_handoff.next_commands`, redacted profile/runbook artifacts,
-   and CLI/MCP checks for profile status, live preflight, connected-source
-   plan, and fixture `connected_run_query`.
 1. For the full public-repo verifier, run
    `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
    repository to a temporary install-like workspace, executes the offline route,
@@ -36,11 +28,9 @@
     apply`. The profile is `aoa_course_connection_profile_v1`; it is runtime
     artifact state under `AOA_COURSE_ARTIFACT_ROOT`, does not store token
     values, and `apply` mutates only the local source registry. MCP agents can
-    inspect it through `connection_profile_inspect`. Use `--write-runbook` to
-    write the same redacted source/auth/connected-plan/semantic checklist as
-    Markdown beside the profile JSON. Browser-auth sections include
-    `auth import-firefox-state` when the source host is known, then capture and
-    inspect fallback commands. Run `connect status` or MCP
+    inspect it through `connection_profile_inspect`. Browser-auth sections
+    include `auth import-firefox-state` when the source host is known, then
+    capture and inspect fallback commands. Run `connect status` or MCP
     `connection_profile_status` to get the compact
     `aoa_course_connection_profile_status_v1` go/no-go packet before any
     `calibration connected-run --mode live --allow-network` command. Use
@@ -102,9 +92,8 @@
     GetCourse, Skillspace, and Stepik smoke reports before collecting connected
     account reports.
 1. Run `calibration connected-run --mode fixture --run connected-fixture-proof`
-    to prove source-registry sync, smoke reports, connected plan/runbook,
-    calibration packet, intake, and one connected run receipt without touching
-    live sources.
+    to prove source-registry sync, smoke reports, connected plan, calibration
+    packet, intake, and one connected run receipt without touching live sources.
 1. Run `calibration query --run connected-fixture-proof --kind smoke` or MCP
     `connected_run_query` to prove the connected receipt produces source-backed
     answer, lesson context, evidence report, freshness, authority, and graph
@@ -123,10 +112,9 @@
     redacted browser-state readiness before live discovery or sync.
 1. Confirm browser preflight marks only sources whose host matches the saved
     storage state as sync-ready.
-1. Run `preflight connected-plan --write-runbook
-    "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"`
-    to produce the redacted setup/sync/smoke/calibration plan with portable
-    runtime artifact paths and a `connected_run_plan`.
+1. Run `preflight connected-plan --live-scope bounded` to produce the redacted
+    setup/sync/smoke/calibration plan with portable runtime artifact paths and
+    a `connected_run_plan`.
     If top-level status is `partial`, still inspect `connected_run_plan`: a
     `ready` plan with `scope: ready_subset` is an executable route for the
     already-authorized platform/source ids, while the same packet keeps the

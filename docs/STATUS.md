@@ -15,7 +15,6 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
@@ -130,14 +129,6 @@ This proves:
   roots, bootstrap, readiness, CLI hybrid answer, MCP answer, connected-run
   status, query-plan readiness, source registry setup, and CLI/MCP
   source-scoped `sources_answer` retrieval;
-- CLI `eval preauth-readiness` returns
-  `aoa_course_eval_preauth_readiness_v1` and proves the repository is ready up
-  to the operator authorization boundary: starter bootstrap, runtime
-  `operator-preauth` connection profile, registry-only source apply, redacted
-  profile and connected-source runbooks, CLI/MCP profile status, live preflight,
-  connected-source plan, fixture `connected_run_query`, `ready_until_authorization:
-  true`, `pause_boundary: authorization_required`, and concrete
-  `authorization_handoff.next_commands`, all with `network_touched: false`;
 - `scripts/verify_agent_install_route.py --skip-pytest` copies the repo into a
   temporary install-like workspace and verifies the same offline route plus MCP
   stdio direct `answer`, `connected_run_query`, and `sources_answer` packets
@@ -150,8 +141,7 @@ This proves:
   source registration/auth/connected-plan/semantic next commands, including
   browser-session Firefox import, capture, inspect, and preflight commands; and
   a registry-only apply step that does not touch the network or log token values.
-  The same inspection can be written as a redacted Markdown runbook through
-  `--write-runbook`. CLI `connect status` and MCP
+  CLI `connect status` and MCP
   `connection_profile_status` return `aoa_course_connection_profile_status_v1`
   with `ready_for_connected_run`, `ready_for_semantic_build`, blockers,
   source/auth/plan counts, and ready live connected-run commands. CLI
@@ -308,10 +298,9 @@ This proves:
   `fixture_or_example_source` with `operator_live_candidate: false`; live
   browser sync and connected-run commands are withheld until a real
   operator-owned course URL is registered and auth state matches that host.
-- Connected-source plans can write a redacted Markdown runbook under runtime
-  artifact storage, giving operators and agents a concrete setup, sync, smoke,
-  calibration, and connected-run checklist without committing private source
-  state. Generated preflight, smoke, connected-run, and calibration packet
+- Connected-source plans emit concrete setup, sync, smoke, calibration, and
+  connected-run commands without committing private source state. Generated
+  preflight, smoke, connected-run, and calibration packet
   commands use the portable
   `${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}` fallback and the
   real `runs/<run>/connected/...` and `runs/<run>/calibration/...` artifact
@@ -365,7 +354,7 @@ This proves:
   candidates while leaving central proof authority in `aoa-evals`.
 - Executable connected-source calibration receipts through `calibration
   connected-run`: fixture mode proves source-registry sync, smoke reports,
-  connected plan/runbook, calibration packet, and intake without network access;
+  connected plan, calibration packet, and intake without network access;
   live browser runs reuse the same default account storage-state path that
   preflight checked and record `source_selection` plus per-stage source ids in
   receipts/status packets; connected-run receipts/status packets also include

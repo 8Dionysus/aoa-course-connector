@@ -279,16 +279,12 @@ sources, narrow the read-only connected plan:
 aoa-course preflight connected-plan \
   --platform getcourse \
   --live-scope bounded \
-  --query "your course-specific question" \
-  --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-connected-runbook.md"
+  --query "your course-specific question"
 ```
 
 The plan reports which source hosts match the saved storage state and emits the
 exact `sync browser-live`, `smoke browser-live`, `calibration build`, and
-`connected_run_plan` commands only for ready sources. `--write-runbook`
-turns the redacted JSON plan into a Markdown checklist under runtime artifact
-storage; do not commit that file because ready-source smoke commands can
-contain operator course URLs.
+`connected_run_plan` commands only for ready sources.
 Use `--source-id "source:getcourse:..."` when the registry contains several
 browser-session courses and the current auth state is meant for one selected
 source. The same scoped selection is available to MCP as `source_ids`, and the

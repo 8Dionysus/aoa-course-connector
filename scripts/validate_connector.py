@@ -514,8 +514,6 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     ]:
         if portable_packet_path not in text:
             errors.append(f"{label} missing portable connected-live-calibration packet path")
-    if "preflight connected-plan --write-runbook" not in agent_install_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md" not in agent_install_raw:
-        errors.append("Agent install route missing portable connected-source runbook plan")
     if "calibration connected-run --mode fixture" not in agent_install_raw or "calibration connected-run --mode live --allow-network" not in agent_install_raw or "connected_run_query" not in agent_install_raw:
         errors.append("Agent install route missing executable connected-run plan")
     if "ARTIFACT_ROOT_EXPR" not in readiness_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}" not in readiness_raw:
@@ -534,21 +532,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing default all-priority MCP connected-source validation")
     if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
         errors.append("AGENTS route missing connector readiness validation")
-    if "eval preauth-readiness" not in agents:
-        errors.append("AGENTS route missing preauth-readiness validation")
-    for label, text in [
-        ("README preauth readiness route", readme_raw),
-        ("CLI usage preauth readiness route", cli_usage_raw),
-        ("Agent install route preauth readiness route", agent_install_raw),
-        ("Status doc preauth readiness route", status_doc_raw),
-    ]:
-        for token in ["eval preauth-readiness", "aoa_course_eval_preauth_readiness_v1", "ready_until_authorization", "pause_boundary"]:
-            if token not in text:
-                errors.append(f"{label} missing preauth token: {token}")
-    for token in ["cmd_eval_preauth_readiness", "aoa_course_eval_preauth_readiness_v1", "ready_until_authorization", "pause_boundary", "authorization_required", "goal_pause_recommended", "PREAUTH_CONNECTED_RUN"]:
-        if token not in cli_raw:
-            errors.append(f"CLI code missing preauth-readiness token: {token}")
-    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect status" not in agents or "connect apply" not in agents or "--write-runbook" not in agents:
+    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect status" not in agents or "connect apply" not in agents:
         errors.append("AGENTS route missing connection profile validation")
     if "mcp call connection_profile_inspect" not in agents:
         errors.append("AGENTS route missing MCP connection_profile_inspect validation")
@@ -556,7 +540,7 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("AGENTS route missing MCP connection_profile_status validation")
     if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
         errors.append("AGENTS route missing fixture bootstrap validation")
-    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "connection_profile_status" not in agent_install_raw or "aoa_course_connection_profile_status_v1" not in agent_install_raw or "--write-runbook" not in agent_install_raw:
+    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "connection_profile_status" not in agent_install_raw or "aoa_course_connection_profile_status_v1" not in agent_install_raw:
         errors.append("Agent install route missing connection profile plan")
     if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
         errors.append("Agent install route missing capture expected-origin plan")
@@ -614,14 +598,6 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         for token in ["aoa_course_connection_profile_v1", "connection_profile_inspect", "connection_profile_status", "aoa_course_connection_profile_status_v1", "ready_for_connected_run", "network_touched", "token"]:
             if token not in text:
                 errors.append(f"{label} missing connection profile token: {token}")
-    for label, text in [
-        ("README connection profile runbook", readme_raw),
-        ("CLI usage connection profile runbook", cli_usage_raw),
-        ("connection profile runbook code", connection_profile_raw),
-    ]:
-        for token in ["--write-runbook", "aoa_course_connection_profile_runbook_v1", "Course Connection Profile Runbook"]:
-            if token not in text:
-                errors.append(f"{label} missing connection profile runbook token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
     for token in [
         "build-semantic-index",
@@ -661,8 +637,6 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         errors.append("Agent install verifier missing connector readiness/plan route")
     if '"eval", "install-route"' not in verifier_raw:
         errors.append("Agent install verifier missing executable install-route eval")
-    if '"eval", "preauth-readiness"' not in verifier_raw:
-        errors.append("Agent install verifier missing executable preauth-readiness eval")
     if '"mcp", "call", "answer"' not in verifier_raw or '"name":"answer"' not in verifier_raw:
         errors.append("Agent install verifier missing direct MCP answer proof")
     if '"mcp", "call", "connected_run"' not in verifier_raw or '"name":"connected_run"' not in verifier_raw:

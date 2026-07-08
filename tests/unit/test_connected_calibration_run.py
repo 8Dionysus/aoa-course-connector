@@ -102,7 +102,6 @@ def test_connected_calibration_fixture_run_writes_receipt_packet_and_intake(tmp_
     assert all('"mode":"hybrid"' in entry["mcp_commands"]["answer"] for entry in sync_entries)
     assert Path(str(receipt["artifacts"]["packet_path"])).is_file()
     assert Path(str(receipt["artifacts"]["intake_path"])).is_file()
-    assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
     assert Path(str(receipt["receipt_path"])).is_file()
     rendered = json.dumps(receipt)
     assert "SUPER_SECRET" not in rendered
@@ -226,7 +225,6 @@ def test_connected_calibration_live_requires_explicit_network_gate(tmp_path: Pat
     assert all("--max-step-sources all" in command for command in repair_commands)
     assert all("--step-source-timeout 0.5" in command for command in repair_commands)
     assert Path(str(receipt["artifacts"]["plan_path"])).is_file()
-    assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
     status = load_connected_calibration_status(storage, run_id="connected-live-blocked")
     assert status["repair_lanes"][0]["lane"] == "network_gate"
 
