@@ -164,13 +164,19 @@ def fetch_stepik_account_courses(
     current_user = _current_stepik_user(client)
     user_id = _int_or_none(current_user.get("id"))
     enrollment_error = ""
+    course_grade_error = ""
     enrollments: list[dict[str, Any]] = []
+    course_grades: list[dict[str, Any]] = []
     if user_id is not None:
         try:
             enrollments = client.iter_pages("enrollments", {"user": user_id}, max_pages=max_pages)
         except Exception as exc:  # pragma: no cover - Stepik account scopes vary.
             enrollment_error = str(exc)
-    course_ids = _course_ids_from_enrollments(enrollments)
+        try:
+            course_grades = client.iter_pages("course-grades", {"user": user_id}, max_pages=max_pages)
+        except Exception as exc:  # pragma: no cover - Stepik account scopes vary.
+            course_grade_error = str(exc)
+    course_ids = _dedupe_ids(_course_ids_from_enrollments(enrollments) + _course_ids_from_course_grades(course_grades))
     courses_by_id: dict[int, dict[str, Any]] = {}
     if course_ids:
         courses_by_id.update({int(course["id"]): course for course in client.get_objects("courses", course_ids, batch_size=batch_size) if course.get("id") is not None})
@@ -186,7 +192,7 @@ def fetch_stepik_account_courses(
                 course_id = _int_or_none(course.get("id"))
                 if course_id is not None and course_id in wanted:
                     courses_by_id[course_id] = course
-    courses = [_course_discovery_record(courses_by_id[course_id], enrollments) for course_id in sorted(courses_by_id)]
+    courses = [_course_discovery_record(courses_by_id[course_id], enrollments, course_grades) for course_id in sorted(courses_by_id)]
     return {
         "schema": "aoa_course_stepik_account_discovery_v1",
         "fetched_at": _now(),
@@ -196,9 +202,11 @@ def fetch_stepik_account_courses(
         },
         "courses": courses,
         "enrollment_count": len(enrollments),
+        "course_grade_count": len(course_grades),
         "limits": {"max_pages": max_pages, "batch_size": batch_size},
         "diagnostics": {
             "enrollment_error": enrollment_error,
+            "course_grade_error": course_grade_error,
             "side_loaded_page_count": len(side_loaded_payloads),
             "side_loaded_pages": side_loaded_payloads,
         },
@@ -238,6 +246,15 @@ def _course_ids_from_enrollments(enrollments: list[dict[str, Any]]) -> list[int]
     return _dedupe_ids(ids)
 
 
+def _course_ids_from_course_grades(course_grades: list[dict[str, Any]]) -> list[int]:
+    ids = []
+    for grade in course_grades:
+        course_id = _int_or_none(grade.get("course") or grade.get("course_id"))
+        if course_id is not None:
+            ids.append(course_id)
+    return _dedupe_ids(ids)
+
+
 def _enrollment_is_active(enrollment: dict[str, Any]) -> bool:
     if enrollment.get("is_deleted") is True:
         return False
@@ -246,7 +263,11 @@ def _enrollment_is_active(enrollment: dict[str, Any]) -> bool:
     return True
 
 
-def _course_discovery_record(course: dict[str, Any], enrollments: list[dict[str, Any]]) -> dict[str, Any]:
+def _course_discovery_record(
+    course: dict[str, Any],
+    enrollments: list[dict[str, Any]],
+    course_grades: list[dict[str, Any]],
+) -> dict[str, Any]:
     course_id = int(course["id"])
     enrollment = next(
         (
@@ -254,6 +275,14 @@ def _course_discovery_record(course: dict[str, Any], enrollments: list[dict[str,
             for item in enrollments
             if _enrollment_is_active(item)
             and _int_or_none(item.get("course") or item.get("course_id")) == course_id
+        ),
+        {},
+    )
+    course_grade = next(
+        (
+            item
+            for item in course_grades
+            if _int_or_none(item.get("course") or item.get("course_id")) == course_id
         ),
         {},
     )
@@ -268,6 +297,22 @@ def _course_discovery_record(course: dict[str, Any], enrollments: list[dict[str,
             key: enrollment.get(key)
             for key in ["id", "user", "course", "is_active", "is_deleted", "create_date", "update_date"]
             if key in enrollment
+        },
+        "course_grade": {
+            key: course_grade.get(key)
+            for key in [
+                "id",
+                "user",
+                "course",
+                "score",
+                "last_viewed",
+                "date_joined",
+                "rank",
+                "rank_max",
+                "rank_position",
+                "is_teacher",
+            ]
+            if key in course_grade
         },
     }
 

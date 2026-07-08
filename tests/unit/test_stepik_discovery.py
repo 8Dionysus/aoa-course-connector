@@ -68,6 +68,8 @@ def test_stepik_account_browser_state_discovery_registers_sources_without_loggin
             return {"users": [{"id": 501, "full_name": "Fixture Learner"}]}
 
         def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
+            if resource == "course-grades":
+                return []
             assert resource == "enrollments"
             return [{"id": 7001, "user": 501, "course": 67, "is_active": True}]
 

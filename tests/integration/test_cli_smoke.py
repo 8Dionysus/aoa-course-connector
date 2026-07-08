@@ -886,6 +886,48 @@ def test_cli_refresh_query_fixture_cycle(tmp_path: Path) -> None:
     assert refreshed["comparison"]["source_id_preserved"] is True
 
 
+def test_cli_sources_answer_uses_stepik_sync_checkpoint(tmp_path: Path) -> None:
+    source = run_cli(tmp_path, "sources", "add", "67", "--platform", "stepik", "--title", "Stepik Sync Fixture")["source"]
+    sync = run_cli(
+        tmp_path,
+        "sync",
+        "stepik-fixture",
+        "--run",
+        "stepik-sync-checkpoint",
+        "--source-id",
+        str(source["source_id"]),
+        "--build-artifacts",
+    )
+    assert sync["status"] == "ok"
+    assert sync["synced_count"] == 1
+
+    catalog = run_cli(tmp_path, "sources", "list", "--source-id", str(source["source_id"]))
+    latest = catalog["sources"][0]["latest_connected_runs"][0]
+    assert catalog["connected_runs"]["query_ready_entry_count"] == 1
+    assert latest["entry_source"] == "sync_checkpoint"
+    assert latest["kind"] == "sync"
+
+    answer = run_cli(
+        tmp_path,
+        "sources",
+        "answer",
+        "Stepik public API evidence",
+        "--source-id",
+        str(source["source_id"]),
+        "--mode",
+        "hybrid",
+    )
+
+    assert answer["schema"] == "aoa_course_sources_answer_packet_v1"
+    assert answer["status"] == "ok"
+    assert answer["network_touched"] is False
+    assert answer["response_count"] == 1
+    assert answer["quality"]["ready"] is True
+    assert answer["responses"][0]["selected_entry"]["entry_source"] == "sync_checkpoint"
+    assert answer["responses"][0]["answer_packet"]["quality"]["ready"] is True
+    assert answer["responses"][0]["evidence_report"]["result_refs"]
+
+
 def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     receipt = run_cli(
         tmp_path,

@@ -174,6 +174,7 @@ def _course_records(raw: dict[str, Any], *, source_limit: int | None) -> list[di
                 "canonical_url": course.get("canonical_url") or f"https://stepik.org/course/{source_ref}",
                 "update_date": course.get("update_date") or "",
                 "enrollment": course.get("enrollment") if isinstance(course.get("enrollment"), dict) else {},
+                "course_grade": course.get("course_grade") if isinstance(course.get("course_grade"), dict) else {},
             }
         )
     records = sorted(records, key=_course_sort_key)

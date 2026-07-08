@@ -584,21 +584,17 @@ def _call_source_answer(roots: StorageRoots, args: dict[str, object]) -> dict[st
     if not entries:
         return _source_answer_blocked(catalog, str(query_value), "no_query_ready_connected_run", "selected source has no local query-ready connected run yet")
     selected_entry = entries[0]
-    connected_run_id = str(selected_entry.get("connected_run_id") or "")
+    connected_run_id = str(selected_entry.get("connected_run_id") or selected_entry.get("sync_run_id") or selected_entry.get("run_id") or "")
     if not connected_run_id:
-        return _source_answer_blocked(catalog, str(query_value), "missing_connected_run_id", "selected connected-run entry has no connected_run_id")
-    query_packet = _call_connected_run_query(
+        return _source_answer_blocked(catalog, str(query_value), "missing_query_run_id", "selected query-ready entry has no connected_run_id or run_id")
+    query_packet = _query_source_entry(
         roots,
-        {
-            "run": connected_run_id,
-            "query": query_value,
-            "source_ids": [str(source.get("source_id") or "")],
-            "kinds": [str(selected_entry.get("kind") or "")],
-            "limit": int(args.get("limit") or 5),
-            "mode": mode_value,
-            "graph_limit": int(args.get("graph_limit") or 12),
-            "entry_limit": 1,
-        },
+        source,
+        selected_entry,
+        query=str(query_value),
+        mode=mode_value,
+        limit=int(args.get("limit") or 5),
+        graph_limit=int(args.get("graph_limit") or 12),
     )
     if not include_source_refs:
         query_packet = _drop_source_refs(query_packet)
@@ -670,23 +666,19 @@ def _call_sources_answer(roots: StorageRoots, args: dict[str, object]) -> dict[s
             blocked_sources.append(_source_blocked(source, "no_query_ready_connected_run", "selected source has no local query-ready connected run yet"))
             continue
         selected_entry = entries[0]
-        connected_run_id = str(selected_entry.get("connected_run_id") or "")
+        connected_run_id = str(selected_entry.get("connected_run_id") or selected_entry.get("sync_run_id") or selected_entry.get("run_id") or "")
         if not connected_run_id:
-            blocked_sources.append(_source_blocked(source, "missing_connected_run_id", "selected connected-run entry has no connected_run_id"))
+            blocked_sources.append(_source_blocked(source, "missing_query_run_id", "selected query-ready entry has no connected_run_id or run_id"))
             continue
         try:
-            query_packet = _call_connected_run_query(
+            query_packet = _query_source_entry(
                 roots,
-                {
-                    "run": connected_run_id,
-                    "query": query_value,
-                    "source_ids": [str(source.get("source_id") or "")],
-                    "kinds": [str(selected_entry.get("kind") or "")],
-                    "limit": int(args.get("limit") or 5),
-                    "mode": mode_value,
-                    "graph_limit": int(args.get("graph_limit") or 12),
-                    "entry_limit": 1,
-                },
+                source,
+                selected_entry,
+                query=str(query_value),
+                mode=mode_value,
+                limit=int(args.get("limit") or 5),
+                graph_limit=int(args.get("graph_limit") or 12),
             )
         except (OSError, json.JSONDecodeError, ValueError) as exc:
             failures.append(
@@ -805,6 +797,112 @@ def _source_answer_entries(source: dict[str, object], kinds: list[str] | None) -
         if sync_entries:
             entries = sync_entries
     return [entry for entry in entries if isinstance(entry, dict) and bool(entry.get("query_ready"))]
+
+
+def _query_source_entry(
+    roots: StorageRoots,
+    source: dict[str, object],
+    selected_entry: dict[str, object],
+    *,
+    query: str,
+    mode: str | None,
+    limit: int,
+    graph_limit: int,
+) -> dict[str, object]:
+    if selected_entry.get("entry_source") != "sync_checkpoint":
+        return _call_connected_run_query(
+            roots,
+            {
+                "run": str(selected_entry.get("connected_run_id") or ""),
+                "query": query,
+                "source_ids": [str(source.get("source_id") or "")],
+                "kinds": [str(selected_entry.get("kind") or "")],
+                "limit": limit,
+                "mode": mode,
+                "graph_limit": graph_limit,
+                "entry_limit": 1,
+            },
+        )
+    run_id = str(selected_entry.get("run_id") or "")
+    if not run_id:
+        raise ValueError("sync checkpoint query-ready entry has no run_id")
+    entry_mode = str(mode or selected_entry.get("query_mode") or "keyword")
+    answer_packet = render_answer_packet(roots, query, run_id, limit, entry_mode)
+    lesson_context = render_lesson_context_packet(roots, query, run_id, limit, entry_mode, graph_limit)
+    graph_context = lesson_context.get("graph_context") if isinstance(lesson_context.get("graph_context"), dict) else {}
+    quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+    evidence_report = _evidence_report_from_answer_packet(answer_packet)
+    response = {
+        "kind": selected_entry.get("kind") or "sync",
+        "platform": selected_entry.get("platform") or source.get("platform"),
+        "run_id": run_id,
+        "source_id": source.get("source_id"),
+        "title": source.get("title"),
+        "query": query,
+        "mode": entry_mode,
+        "query_ready": True,
+        "answer_ready": bool(quality.get("ready")),
+        "result_count": answer_packet.get("result_count", 0),
+        "evidence_count": len(answer_packet.get("evidence_chain", [])) if isinstance(answer_packet.get("evidence_chain"), list) else 0,
+        "graph_status": graph_context.get("status"),
+        "graph_context_count": graph_context.get("context_count", 0),
+        "quality": quality,
+        "answer_packet": answer_packet,
+        "lesson_context": lesson_context,
+        "evidence_report": evidence_report,
+        "commands": selected_entry.get("commands", {}),
+        "mcp_commands": selected_entry.get("mcp_commands", {}),
+    }
+    packet_quality = {
+        "ready": bool(response["answer_ready"]),
+        "response_count": 1,
+        "answer_ready_count": 1 if response["answer_ready"] else 0,
+        "result_count_total": int(answer_packet.get("result_count") or 0),
+        "evidence_count_total": int(response["evidence_count"] or 0),
+        "blocked_entry_count": 0,
+        "failure_count": 0,
+        "all_responses_have_evidence": int(response["evidence_count"] or 0) > 0,
+    }
+    return {
+        "schema": "aoa_course_connected_run_query_packet_v1",
+        "status": "ok" if packet_quality["ready"] else "partial",
+        "connected_run_id": selected_entry.get("connected_run_id") or selected_entry.get("sync_run_id") or run_id,
+        "connected_run_status": selected_entry.get("connected_run_status") or "ok",
+        "receipt_path": selected_entry.get("receipt_path") or "",
+        "query": query,
+        "limit": limit,
+        "mode": entry_mode,
+        "graph_limit": graph_limit,
+        "entry_limit": 1,
+        "entry_count": 1,
+        "selected_entry_count": 1,
+        "response_count": 1,
+        "blocked_entry_count": 0,
+        "failure_count": 0,
+        "responses": [response],
+        "blocked_entries": [],
+        "failures": [],
+        "quality": packet_quality,
+        "next_commands": selected_entry.get("commands", {}),
+        "network_touched": False,
+        "read_only": True,
+    }
+
+
+def _evidence_report_from_answer_packet(answer_packet: dict[str, object]) -> dict[str, object]:
+    return {
+        "schema": "aoa_course_connected_run_evidence_report_v1",
+        "run_id": answer_packet.get("run_id"),
+        "query": answer_packet.get("query"),
+        "mode": answer_packet.get("mode"),
+        "result_count": answer_packet.get("result_count"),
+        "evidence_chain": answer_packet.get("evidence_chain", []),
+        "quality": answer_packet.get("quality", {}),
+        "freshness_report": answer_packet.get("freshness_report", {}),
+        "authority_report": answer_packet.get("authority_report", {}),
+        "refresh_report": answer_packet.get("refresh_report", {}),
+        "result_refs": _evidence_result_refs(answer_packet),
+    }
 
 
 def _source_blocked(
@@ -1061,6 +1159,16 @@ def _source_answer_next_commands(source: dict[str, object], selected_entry: dict
     source_answer_payload: dict[str, object] = {"query": query, "source_id": source_id}
     if mode:
         source_answer_payload["mode"] = mode
+    if selected_entry.get("entry_source") == "sync_checkpoint":
+        run_id = str(selected_entry.get("run_id") or "")
+        query_mode = mode or str(selected_entry.get("query_mode") or "keyword")
+        return [
+            _sources_answer_cli_command(query, source_ids=[source_id] if source_id else None, kinds=[kind] if kind else None, mode=mode),
+            f"aoa-course mcp call source_answer {shlex.quote(json.dumps(source_answer_payload, ensure_ascii=True, separators=(',', ':')))}",
+            f"aoa-course answer {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {query_mode}",
+            f"aoa-course lesson-context {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {query_mode} --graph-limit 12",
+            f"aoa-course mcp call evidence_report {shlex.quote(json.dumps({'query': query, 'run': run_id, 'mode': query_mode}, ensure_ascii=True, separators=(',', ':')))}",
+        ]
     connected_query_payload = {
         "run": connected_run_id,
         "query": query,
