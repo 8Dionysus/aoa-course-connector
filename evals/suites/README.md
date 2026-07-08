@@ -13,6 +13,7 @@ Fixture-safe suites for local course connector behavior:
 - `retrieval_loop.json`
 - `answer_quality_packets.json`
 - `freshness_ranking.json`
+- `place_ranking.json`
 - `authority_ranking.json`
 - `adapter_authority_metadata.json`
 - `live_calibration_packet.json`
@@ -27,6 +28,9 @@ Stepik runs.
 
 `freshness-ranking.suite.md` records the local suite note for freshness-aware
 ordering when base relevance is tied.
+
+`place-ranking.suite.md` records the local suite note for native
+hierarchy-aware ordering when text is shared across multiple course locations.
 
 `authority-ranking.suite.md` records the local suite note for authority-aware
 ordering when base relevance is tied.

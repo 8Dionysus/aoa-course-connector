@@ -756,6 +756,7 @@ def build_parser() -> argparse.ArgumentParser:
     source_registry_query.add_argument("--include-disabled", action="store_true")
     source_registry_query.set_defaults(func=cmd_eval_source_registry_query)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
+    eval_sub.add_parser("place-ranking").set_defaults(func=cmd_eval_place_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
     eval_sub.add_parser("adapter-authority").set_defaults(func=cmd_eval_adapter_authority)
     eval_sub.add_parser("live-calibration").set_defaults(func=cmd_eval_live_calibration)
@@ -3094,6 +3095,136 @@ def _dcg(grades: list[int]) -> float:
 
 def _ratio(count: int, total: int) -> float:
     return round(count / total, 6) if total else 0.0
+
+
+def cmd_eval_place_ranking(_args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    suite_path = find_repo_root() / "evals" / "suites" / "place_ranking.json"
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    failures = []
+    case_results = []
+    for case in suite.get("cases", []):
+        if not isinstance(case, dict):
+            continue
+        packet = render_answer_packet(
+            roots,
+            str(case.get("query") or ""),
+            str(case.get("run") or DEFAULT_RUN),
+            int(case.get("limit") or 5),
+            str(case.get("mode") or "keyword"),
+        )
+        case_failures = _place_ranking_failures(packet, case)
+        results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+        top = results[0] if results else {}
+        case_results.append(
+            {
+                "query": case.get("query"),
+                "run": case.get("run") or DEFAULT_RUN,
+                "mode": case.get("mode") or "keyword",
+                "result_count": packet.get("result_count"),
+                "top_doc_id": top.get("doc_id"),
+                "top_kind": top.get("kind"),
+                "top_path": top.get("path"),
+                "top_rank_score": top.get("rank_score"),
+                "metrics": _place_ranking_metrics(packet, case),
+                "failure_count": len(case_failures),
+            }
+        )
+        failures.extend(case_failures)
+    _emit(
+        {
+            "schema": "aoa_course_eval_place_ranking_v1",
+            "suite_id": suite.get("suite_id"),
+            "status": "ok" if not failures else "error",
+            "case_results": case_results,
+            "failures": failures,
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _place_ranking_failures(packet: dict[str, object], case: dict[str, object]) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    context = {"run": case.get("run") or DEFAULT_RUN, "query": case.get("query"), "mode": case.get("mode") or "keyword"}
+    results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+    min_results = int(case.get("min_results") or 1)
+    if len(results) < min_results:
+        return [{**context, "missing": "minimum results", "expected": min_results, "actual": len(results)}]
+    top = results[0]
+    expected_top_doc_id = case.get("expected_top_doc_id")
+    if expected_top_doc_id is not None and str(top.get("doc_id") or "") != str(expected_top_doc_id):
+        failures.append({**context, "field": "top_doc_id", "expected": expected_top_doc_id, "actual": top.get("doc_id")})
+    expected_top_kind = case.get("expected_top_kind")
+    if expected_top_kind is not None and str(top.get("kind") or "") != str(expected_top_kind):
+        failures.append({**context, "field": "top_kind", "expected": expected_top_kind, "actual": top.get("kind")})
+    expected_path = _list_of_strings(case.get("expected_path_contains"))
+    if expected_path and not _path_contains_all(top, expected_path):
+        failures.append({**context, "field": "top_path", "expected_contains": expected_path, "actual": top.get("path")})
+
+    query_intent_report = packet.get("query_intent_report") if isinstance(packet.get("query_intent_report"), dict) else {}
+    actual_intents = {str(item) for item in query_intent_report.get("intents", [])} if isinstance(query_intent_report.get("intents"), list) else set()
+    for intent in _list_of_strings(case.get("expected_query_intents")):
+        if intent not in actual_intents:
+            failures.append({**context, "missing_query_intent": intent, "actual_intents": sorted(actual_intents)})
+    rank_features = top.get("rank_features") if isinstance(top.get("rank_features"), dict) else {}
+    for field in _list_of_strings(case.get("required_rank_features")):
+        if field not in rank_features:
+            failures.append({**context, "doc_id": top.get("doc_id"), "missing_rank_feature": field})
+    if rank_features and int(rank_features.get("place_match_count") or 0) <= 0:
+        failures.append({**context, "field": "place_match_count", "expected_min": 1, "actual": rank_features.get("place_match_count")})
+
+    required_fields = _list_of_strings(case.get("required_evidence_fields"))
+    evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
+    if not evidence_chain:
+        failures.append({**context, "missing": "evidence_chain"})
+    for index, evidence in enumerate(evidence_chain):
+        for field in required_fields:
+            if not evidence.get(field):
+                failures.append({**context, "evidence_index": index, "missing_evidence_field": field})
+
+    metrics = _place_ranking_metrics(packet, case)
+    for threshold_field, metric_field in [
+        ("min_source_path_accuracy", "source_path_accuracy"),
+        ("min_place_path_accuracy", "place_path_accuracy"),
+        ("min_evidence_attribution", "evidence_attribution"),
+    ]:
+        if case.get(threshold_field) is not None and float(metrics.get(metric_field) or 0.0) < float(case.get(threshold_field) or 0.0):
+            failures.append(
+                {
+                    **context,
+                    "metric": metric_field,
+                    "expected_min": case.get(threshold_field),
+                    "actual": metrics.get(metric_field),
+                }
+            )
+    return failures
+
+
+def _place_ranking_metrics(packet: dict[str, object], case: dict[str, object]) -> dict[str, object]:
+    results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+    limit = max(1, int(case.get("limit") or len(results) or 1))
+    top_k = results[:limit]
+    evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
+    required_fields = _list_of_strings(case.get("required_evidence_fields")) or ["evidence_id", "source_url", "path", "fetched_at"]
+    evidence_slots = max(1, len(evidence_chain) * max(1, len(required_fields)))
+    evidence_hits = sum(1 for evidence in evidence_chain for field in required_fields if evidence.get(field))
+    expected_path = _list_of_strings(case.get("expected_path_contains"))
+    return {
+        "place_at_1": 1.0 if results and str(results[0].get("doc_id") or "") == str(case.get("expected_top_doc_id") or "") else 0.0,
+        "source_path_accuracy": _ratio(sum(1 for result in top_k if _has_source_path(result)), len(top_k)),
+        "place_path_accuracy": 1.0 if results and _path_contains_all(results[0], expected_path) else 0.0,
+        "evidence_attribution": round(evidence_hits / evidence_slots, 6),
+    }
+
+
+def _path_contains_all(result: dict[str, object], expected_parts: list[str]) -> bool:
+    if not expected_parts:
+        return True
+    path = result.get("path")
+    if not isinstance(path, list):
+        return False
+    path_text = " ".join(str(item) for item in path).casefold()
+    return all(part.casefold() in path_text for part in expected_parts)
 
 
 def cmd_eval_authority_ranking(_args: argparse.Namespace) -> int:

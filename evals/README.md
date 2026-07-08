@@ -32,6 +32,10 @@ current and stale course items have equal base relevance, the current item must
 rank higher while the packet still exposes the base `score`, adjusted
 `rank_score`, rank features, and evidence chain.
 
+The place-ranking suite checks the native hierarchy case: when the same evidence
+text appears across thread/comment/attachment surfaces, the requested course
+location must win and the answer must carry the source path.
+
 The authority-ranking suite checks another ordering-specific conflict case:
 official lesson text and mentor comments must rank above learner comments when
 base relevance is tied, while authority tier, rank score, rank features, and

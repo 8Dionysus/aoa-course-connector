@@ -362,20 +362,49 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
                         docs.append(_doc("step", step.get("step_id"), step.get("text"), course, module, lesson, lesson_path, step.get("evidence") or lesson_evidence, step))
                 for transcript in lesson.get("transcripts", []):
                     if isinstance(transcript, dict):
-                        docs.append(_doc("transcript", transcript.get("transcript_id"), transcript.get("text"), course, module, lesson, lesson_path, transcript.get("evidence") or lesson_evidence, transcript))
+                        transcript_label = str(transcript.get("title") or transcript.get("language") or transcript.get("transcript_id") or "transcript")
+                        docs.append(
+                            _doc(
+                                "transcript",
+                                transcript.get("transcript_id"),
+                                transcript.get("text"),
+                                course,
+                                module,
+                                lesson,
+                                [*lesson_path, transcript_label],
+                                transcript.get("evidence") or lesson_evidence,
+                                transcript,
+                            )
+                        )
                 for assignment in lesson.get("assignments", []):
                     if isinstance(assignment, dict):
-                        docs.append(_doc("assignment", assignment.get("assignment_id"), assignment.get("prompt"), course, module, lesson, lesson_path, assignment.get("evidence") or lesson_evidence, assignment))
+                        assignment_label = str(assignment.get("title") or assignment.get("assignment_id") or "assignment")
+                        docs.append(_doc("assignment", assignment.get("assignment_id"), assignment.get("prompt"), course, module, lesson, [*lesson_path, assignment_label], assignment.get("evidence") or lesson_evidence, assignment))
                 for thread in lesson.get("comment_threads", []):
                     if not isinstance(thread, dict):
                         continue
+                    thread_label = str(thread.get("title") or thread.get("thread_id") or "comment_thread")
                     for comment in thread.get("comments", []):
                         if isinstance(comment, dict):
-                            docs.append(_doc("comment", comment.get("comment_id"), comment.get("text"), course, module, lesson, lesson_path, comment.get("evidence") or lesson_evidence, comment))
+                            comment_label = str(comment.get("author_label") or comment.get("author_role") or comment.get("author") or comment.get("comment_id") or "comment")
+                            docs.append(
+                                _doc(
+                                    "comment",
+                                    comment.get("comment_id"),
+                                    comment.get("text"),
+                                    course,
+                                    module,
+                                    lesson,
+                                    [*lesson_path, thread_label, comment_label],
+                                    comment.get("evidence") or lesson_evidence,
+                                    comment,
+                                )
+                            )
                 for asset in lesson.get("assets", []):
                     if isinstance(asset, dict):
                         text = f"{asset.get('title', '')} {asset.get('kind', '')} {asset.get('download_state', '')}"
-                        docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, lesson_path, asset.get("evidence") or lesson_evidence, asset))
+                        asset_label = str(asset.get("title") or asset.get("asset_id") or "asset")
+                        docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, [*lesson_path, asset_label], asset.get("evidence") or lesson_evidence, asset))
     return docs
 
 

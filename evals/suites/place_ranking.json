@@ -1,0 +1,38 @@
+{
+  "schema": "aoa_course_place_ranking_eval_suite_v1",
+  "suite_id": "place-ranking",
+  "cases": [
+    {
+      "query": "where in thread Mentor Answers timestamp window reproduction step",
+      "run": "place-ranking-fixture",
+      "mode": "hybrid",
+      "limit": 4,
+      "min_results": 3,
+      "expected_query_intents": ["place"],
+      "expected_top_doc_id": "comment:comment:place:mentor-answer",
+      "expected_top_kind": "comment",
+      "expected_path_contains": ["Place Ranking Fixture", "Diagnostics", "Log Thread", "Mentor Answers", "mentor"],
+      "required_rank_features": ["place_complete", "place_matches", "place_match_count", "place_boost", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"],
+      "min_source_path_accuracy": 1.0,
+      "min_place_path_accuracy": 1.0,
+      "min_evidence_attribution": 1.0
+    },
+    {
+      "query": "where attachment Camera Evidence Pack",
+      "run": "place-ranking-fixture",
+      "mode": "hybrid",
+      "limit": 4,
+      "min_results": 2,
+      "expected_query_intents": ["place"],
+      "expected_top_doc_id": "asset:asset:place:camera-pack",
+      "expected_top_kind": "asset",
+      "expected_path_contains": ["Place Ranking Fixture", "Camera Pipeline", "Sensor Pack", "Camera Evidence Pack"],
+      "required_rank_features": ["place_complete", "place_matches", "place_match_count", "place_boost", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"],
+      "min_source_path_accuracy": 1.0,
+      "min_place_path_accuracy": 1.0,
+      "min_evidence_attribution": 1.0
+    }
+  ]
+}

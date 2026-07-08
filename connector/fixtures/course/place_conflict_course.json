@@ -1,0 +1,139 @@
+{
+  "schema": "aoa_course_raw_fixture_v1",
+  "captured_at": "2026-06-29T12:00:00Z",
+  "source": {
+    "source_id": "source:offline:place-conflict-course",
+    "platform": "offline_export",
+    "source_ref": "place-conflict-course",
+    "access_mode": "offline_export",
+    "title": "Place Conflict Fixture"
+  },
+  "courses": [
+    {
+      "course_id": "course:place:ranking",
+      "title": "Place Ranking Fixture",
+      "description": "Safe synthetic fixture for proving native hierarchy-aware ranking.",
+      "url": "https://example.invalid/courses/place-ranking",
+      "progress": {
+        "state": "in_progress",
+        "updated_at": "2026-06-29T12:00:00Z"
+      },
+      "modules": [
+        {
+          "module_id": "module:place:diagnostics",
+          "title": "Diagnostics",
+          "order": 1,
+          "lessons": [
+            {
+              "lesson_id": "lesson:place:log-thread",
+              "title": "Log Thread",
+              "url": "https://example.invalid/courses/place-ranking/lessons/log-thread",
+              "order": 1,
+              "freshness_state": "current",
+              "steps": [
+                {
+                  "step_id": "step:place:log-thread",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Timestamp window reproduction step evidence must be attached before reboot."
+                }
+              ],
+              "assets": [
+                {
+                  "asset_id": "asset:place:mentor-pack",
+                  "title": "Mentor Evidence Pack",
+                  "kind": "attachment",
+                  "url": "https://example.invalid/courses/place-ranking/lessons/log-thread/assets/mentor-evidence-pack.txt",
+                  "download_state": "metadata_only"
+                },
+                {
+                  "asset_id": "asset:place:learner-pack",
+                  "title": "Learner Evidence Pack",
+                  "kind": "attachment",
+                  "url": "https://example.invalid/courses/place-ranking/lessons/log-thread/assets/learner-evidence-pack.txt",
+                  "download_state": "metadata_only"
+                }
+              ],
+              "transcripts": [
+                {
+                  "transcript_id": "transcript:place:english-captions",
+                  "language": "English Captions",
+                  "text": "Timestamp window reproduction step evidence must be attached before reboot."
+                }
+              ],
+              "assignments": [],
+              "comment_threads": [
+                {
+                  "thread_id": "thread:place:mentor-answers",
+                  "title": "Mentor Answers",
+                  "comments": [
+                    {
+                      "comment_id": "comment:place:mentor-answer",
+                      "author_label": "mentor",
+                      "posted_at": "2026-06-29T12:15:00Z",
+                      "text": "Timestamp window reproduction step evidence must be attached before reboot."
+                    }
+                  ]
+                },
+                {
+                  "thread_id": "thread:place:learner-answers",
+                  "title": "Learner Answers",
+                  "comments": [
+                    {
+                      "comment_id": "comment:place:learner-answer",
+                      "author_label": "learner",
+                      "posted_at": "2026-06-29T12:16:00Z",
+                      "text": "Timestamp window reproduction step evidence must be attached before reboot."
+                    }
+                  ]
+                }
+              ],
+              "topics": ["place", "diagnostics", "thread"],
+              "entities": [
+                {"kind": "concept", "value": "place-aware retrieval"}
+              ]
+            }
+          ]
+        },
+        {
+          "module_id": "module:place:camera",
+          "title": "Camera Pipeline",
+          "order": 2,
+          "lessons": [
+            {
+              "lesson_id": "lesson:place:sensor-pack",
+              "title": "Sensor Pack",
+              "url": "https://example.invalid/courses/place-ranking/lessons/sensor-pack",
+              "order": 1,
+              "freshness_state": "current",
+              "steps": [
+                {
+                  "step_id": "step:place:sensor-pack",
+                  "kind": "lesson_text",
+                  "order": 1,
+                  "text": "Timestamp window reproduction step evidence must be attached before reboot."
+                }
+              ],
+              "assets": [
+                {
+                  "asset_id": "asset:place:camera-pack",
+                  "title": "Camera Evidence Pack",
+                  "kind": "attachment",
+                  "url": "https://example.invalid/courses/place-ranking/lessons/sensor-pack/assets/camera-evidence-pack.txt",
+                  "download_state": "metadata_only"
+                }
+              ],
+              "transcripts": [],
+              "assignments": [],
+              "comment_threads": [],
+              "topics": ["place", "camera", "asset"],
+              "entities": [
+                {"kind": "concept", "value": "place-aware retrieval"}
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
