@@ -16,6 +16,7 @@ aoa-course sources add demo-course --platform offline_export --title "Demo Cours
 aoa-course sources list --platform getcourse --no-source-refs --connected-run-limit 2
 aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 aoa-course sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
+aoa-course eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 aoa-course sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 aoa-course materialize fixture --run starter-fixture
 aoa-course materialize stepik-fixture --run stepik-fixture
@@ -133,6 +134,13 @@ repeated `--query` plus the same source, mode, kind, and limit controls as
 `sources answer`, then returns `aoa_course_sources_answer_matrix_v1` with one
 `aoa_course_sources_answer_packet_v1` per question, aggregate quality,
 per-query summaries, and `network_touched: false`.
+Use `eval source-registry-query` as the read-only source-registry quality gate
+after fixture or live connected runs. Pass repeated `--query` for an explicit
+operator question set, or omit queries to sample non-placeholder saved queries
+from recent query-ready connected-run receipts. It emits
+`aoa_course_eval_source_registry_query_v1`, requires source-registry
+`sources_answer_matrix` quality, evidence, ready-query breadth, and keeps
+`source_ref` values out of the packet.
 `answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before

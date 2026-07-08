@@ -34,6 +34,7 @@ jobs:
       - run: aoa-course sources list
       - run: aoa-course eval install-route
       - run: aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+      - run: aoa-course eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
       - run: aoa-course eval browser-discovery
       - run: aoa-course sync browser-fixture --run browser-sync-fixture --build-artifacts
       - run: aoa-course sync status --run browser-sync-fixture

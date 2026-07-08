@@ -700,6 +700,25 @@ def build_parser() -> argparse.ArgumentParser:
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
     eval_sub.add_parser("retrieval-loop").set_defaults(func=cmd_eval_retrieval_loop)
+    source_registry_query = eval_sub.add_parser("source-registry-query")
+    source_registry_query.add_argument("--query", action="append")
+    source_registry_query.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    source_registry_query.add_argument("--source-id", action="append")
+    source_registry_query.add_argument("--kind", choices=["smoke", "sync"], action="append")
+    source_registry_query.add_argument("--limit", type=int, default=5)
+    source_registry_query.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="hybrid")
+    source_registry_query.add_argument("--graph-limit", type=int, default=12)
+    source_registry_query.add_argument("--source-limit", type=int, default=10)
+    source_registry_query.add_argument("--connected-run-limit", type=int, default=5)
+    source_registry_query.add_argument("--connected-receipt-limit", type=int, default=50)
+    source_registry_query.add_argument("--query-sample-limit", type=int, default=3)
+    source_registry_query.add_argument("--min-query-count", type=int, default=2)
+    source_registry_query.add_argument("--min-ready-query-count", type=int)
+    source_registry_query.add_argument("--min-response-count", type=int, default=1)
+    source_registry_query.add_argument("--min-evidence-count", type=int, default=1)
+    source_registry_query.add_argument("--min-source-count", type=int, default=1)
+    source_registry_query.add_argument("--include-disabled", action="store_true")
+    source_registry_query.set_defaults(func=cmd_eval_source_registry_query)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
     eval_sub.add_parser("adapter-authority").set_defaults(func=cmd_eval_adapter_authority)
@@ -2254,6 +2273,246 @@ def cmd_eval_preauth_readiness(_args: argparse.Namespace) -> int:
     payload["goal_pause_recommended"] = not failures
     _emit(payload)
     return 0 if not failures else 1
+
+
+def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
+    roots = StorageRoots.from_env(find_repo_root())
+    catalog = source_registry_catalog(
+        roots,
+        load_registry(roots.data),
+        include_disabled=args.include_disabled,
+        platforms=args.platform,
+        source_ids=args.source_id,
+        include_source_refs=False,
+        include_connected_runs=True,
+        connected_run_limit=max(1, args.connected_run_limit),
+        connected_receipt_limit=max(1, args.connected_receipt_limit),
+    )
+    queries = _dedupe_cli_values(args.query or []) or _source_registry_query_samples(
+        catalog,
+        limit=max(1, args.query_sample_limit),
+    )
+    matrix_result: dict[str, object] = {}
+    matrix_packet: dict[str, object] = {}
+    if queries:
+        matrix_result = call_tool(
+            "sources_answer_matrix",
+            {
+                "queries": queries,
+                "platforms": args.platform,
+                "source_ids": args.source_id,
+                "kinds": args.kind,
+                "limit": args.limit,
+                "mode": args.mode,
+                "graph_limit": args.graph_limit,
+                "source_limit": args.source_limit,
+                "connected_run_limit": args.connected_run_limit,
+                "connected_receipt_limit": args.connected_receipt_limit,
+                "include_disabled": args.include_disabled,
+                "include_source_refs": False,
+            },
+        )
+        matrix_packet = matrix_result.get("sources_answer_matrix") if isinstance(matrix_result.get("sources_answer_matrix"), dict) else {}
+    failures = _source_registry_query_eval_failures(
+        catalog=catalog,
+        queries=queries,
+        matrix_packet=matrix_packet,
+        min_query_count=max(1, args.min_query_count),
+        min_ready_query_count=args.min_ready_query_count,
+        min_response_count=max(1, args.min_response_count),
+        min_evidence_count=max(1, args.min_evidence_count),
+        min_source_count=max(1, args.min_source_count),
+    )
+    connected_runs = catalog.get("connected_runs") if isinstance(catalog.get("connected_runs"), dict) else {}
+    summary = _sources_answer_matrix_summary(matrix_result)
+    next_commands = [
+        "aoa-course sources list --no-source-refs --connected-run-limit 5",
+    ]
+    next_commands.extend([str(command) for command in matrix_packet.get("next_commands", []) if str(command)] if isinstance(matrix_packet.get("next_commands"), list) else [])
+    if not queries:
+        next_commands.append("aoa-course preflight connected-plan --live-scope bounded")
+    _emit(
+        {
+            "schema": "aoa_course_eval_source_registry_query_v1",
+            "suite_id": "source-registry-query",
+            "status": "ok" if not failures else "error",
+            "network_touched": False,
+            "read_only": True,
+            "selection": {
+                "platforms": args.platform or [],
+                "source_ids": args.source_id or [],
+                "kinds": args.kind or [],
+                "source_limit": args.source_limit,
+                "connected_run_limit": args.connected_run_limit,
+                "connected_receipt_limit": args.connected_receipt_limit,
+            },
+            "thresholds": {
+                "min_query_count": max(1, args.min_query_count),
+                "min_ready_query_count": args.min_ready_query_count or max(1, args.min_query_count),
+                "min_response_count": max(1, args.min_response_count),
+                "min_evidence_count": max(1, args.min_evidence_count),
+                "min_source_count": max(1, args.min_source_count),
+            },
+            "source_registry": {
+                "path": catalog.get("path"),
+                "source_count": catalog.get("source_count"),
+                "enabled_source_count": catalog.get("enabled_source_count"),
+                "selected_source_count": catalog.get("selected_source_count"),
+                "platform_counts": catalog.get("platform_counts", {}),
+                "access_mode_counts": catalog.get("access_mode_counts", {}),
+                "missing_source_ids": catalog.get("missing_source_ids", []),
+            },
+            "connected_runs": {
+                "included": connected_runs.get("included"),
+                "receipt_count": connected_runs.get("receipt_count"),
+                "query_ready_entry_count": connected_runs.get("query_ready_entry_count"),
+                "source_ids_with_query_runs": connected_runs.get("source_ids_with_query_runs", []),
+                "error_count": connected_runs.get("error_count"),
+            },
+            "queries": queries,
+            "query_source": "explicit" if args.query else "connected_run_samples",
+            "sources_answer_matrix": summary,
+            "query_summaries": matrix_packet.get("query_summaries", []) if isinstance(matrix_packet.get("query_summaries"), list) else [],
+            "failures": failures,
+            "next_commands": _dedupe_cli_values(next_commands),
+        }
+    )
+    return 0 if not failures else 1
+
+
+def _dedupe_cli_values(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for value in values:
+        item = str(value or "").strip()
+        if not item or item in seen:
+            continue
+        seen.add(item)
+        result.append(item)
+    return result
+
+
+def _source_registry_query_samples(catalog: dict[str, object], *, limit: int) -> list[str]:
+    queries: list[str] = []
+    sources = catalog.get("sources") if isinstance(catalog.get("sources"), list) else []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        entries = source.get("latest_connected_runs") if isinstance(source.get("latest_connected_runs"), list) else []
+        for entry in entries:
+            if not isinstance(entry, dict) or not bool(entry.get("query_ready")):
+                continue
+            query = str(entry.get("query") or "").strip()
+            if not query or query.startswith("<") or query in queries:
+                continue
+            queries.append(query)
+            if len(queries) >= limit:
+                return queries
+    return queries
+
+
+def _source_registry_query_eval_failures(
+    *,
+    catalog: dict[str, object],
+    queries: list[str],
+    matrix_packet: dict[str, object],
+    min_query_count: int,
+    min_ready_query_count: int | None,
+    min_response_count: int,
+    min_evidence_count: int,
+    min_source_count: int,
+) -> list[dict[str, object]]:
+    failures: list[dict[str, object]] = []
+    selected_source_count = int(catalog.get("selected_source_count") or 0)
+    if selected_source_count < min_source_count:
+        failures.append(
+            {
+                "surface": "source_registry",
+                "field": "selected_source_count",
+                "expected_min": min_source_count,
+                "actual": selected_source_count,
+            }
+        )
+    connected_runs = catalog.get("connected_runs") if isinstance(catalog.get("connected_runs"), dict) else {}
+    if int(connected_runs.get("query_ready_entry_count") or 0) < min_source_count:
+        failures.append(
+            {
+                "surface": "connected_runs",
+                "field": "query_ready_entry_count",
+                "expected_min": min_source_count,
+                "actual": connected_runs.get("query_ready_entry_count"),
+            }
+        )
+    if len(queries) < min_query_count:
+        failures.append({"surface": "queries", "field": "query_count", "expected_min": min_query_count, "actual": len(queries)})
+    if not matrix_packet:
+        failures.append({"surface": "sources_answer_matrix", "missing": "packet"})
+        return failures
+    if matrix_packet.get("schema") != "aoa_course_sources_answer_matrix_v1":
+        failures.append(
+            {
+                "surface": "sources_answer_matrix",
+                "field": "schema",
+                "expected": "aoa_course_sources_answer_matrix_v1",
+                "actual": matrix_packet.get("schema"),
+            }
+        )
+    if matrix_packet.get("status") != "ok":
+        failures.append({"surface": "sources_answer_matrix", "field": "status", "expected": "ok", "actual": matrix_packet.get("status")})
+    if matrix_packet.get("network_touched") is not False:
+        failures.append(
+            {
+                "surface": "sources_answer_matrix",
+                "field": "network_touched",
+                "expected": False,
+                "actual": matrix_packet.get("network_touched"),
+            }
+        )
+    if matrix_packet.get("source_refs_included") is not False:
+        failures.append(
+            {
+                "surface": "sources_answer_matrix",
+                "field": "source_refs_included",
+                "expected": False,
+                "actual": matrix_packet.get("source_refs_included"),
+            }
+        )
+    quality = matrix_packet.get("quality") if isinstance(matrix_packet.get("quality"), dict) else {}
+    if quality.get("ready") is not True:
+        failures.append({"surface": "sources_answer_matrix.quality", "field": "ready", "expected": True, "actual": quality.get("ready")})
+    expected_ready_queries = min_ready_query_count or min_query_count
+    if int(quality.get("ready_query_count") or 0) < expected_ready_queries:
+        failures.append(
+            {
+                "surface": "sources_answer_matrix.quality",
+                "field": "ready_query_count",
+                "expected_min": expected_ready_queries,
+                "actual": quality.get("ready_query_count"),
+            }
+        )
+    if int(quality.get("response_count_total") or 0) < min_response_count:
+        failures.append(
+            {
+                "surface": "sources_answer_matrix.quality",
+                "field": "response_count_total",
+                "expected_min": min_response_count,
+                "actual": quality.get("response_count_total"),
+            }
+        )
+    if int(quality.get("evidence_count_total") or 0) < min_evidence_count:
+        failures.append(
+            {
+                "surface": "sources_answer_matrix.quality",
+                "field": "evidence_count_total",
+                "expected_min": min_evidence_count,
+                "actual": quality.get("evidence_count_total"),
+            }
+        )
+    if matrix_packet.get("blocked_source_count_total", 0):
+        failures.append({"surface": "sources_answer_matrix", "field": "blocked_source_count_total", "expected": 0, "actual": matrix_packet.get("blocked_source_count_total")})
+    if matrix_packet.get("failure_count_total", 0):
+        failures.append({"surface": "sources_answer_matrix", "field": "failure_count_total", "expected": 0, "actual": matrix_packet.get("failure_count_total")})
+    return failures
 
 
 def _preauth_readiness_failures(

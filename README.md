@@ -27,6 +27,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rol
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
@@ -410,6 +411,7 @@ handwriting MCP JSON:
 PYTHONPATH=src python -m aoa_course_connector.cli sources list --platform getcourse --no-source-refs --connected-run-limit 2
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 ```
 
@@ -418,6 +420,10 @@ source set needs a breadth check across several operator questions without
 naming run ids by hand. It returns `aoa_course_sources_answer_matrix_v1` with
 one source-scoped answer packet per question, aggregate quality, per-query
 summaries, and `network_touched: false`.
+Use `eval source-registry-query` after fixture or live connected runs when an
+agent needs one go/no-go packet proving the selected source registry can answer
+several questions through local `sources_answer_matrix` with evidence,
+freshness, graph context, and `source_ref` redaction.
 
 Use `calibration query-matrix --run <run> --query ... --query ...` or MCP
 `connected_run_query_matrix` when one saved connected run needs to prove several
