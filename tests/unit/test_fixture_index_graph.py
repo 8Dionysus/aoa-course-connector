@@ -105,6 +105,8 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     assert keyword[0]["score"] == keyword[1]["score"]
     assert keyword[0]["rank_score"] > keyword[1]["rank_score"]
     assert keyword[0]["rank_features"]["freshness_state"] == "current"
+    assert keyword[0]["rank_features"]["intent_class"] == "stable_knowledge"
+    assert keyword[0]["rank_features"]["recency_gate"] < 1.0
 
     hybrid = query_hybrid_index(storage, "firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
     assert hybrid[0]["doc_id"] == "step:step:freshness:zzz-current-policy"
@@ -113,6 +115,8 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     latest = query_keyword_index(storage, "latest firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
     assert latest[0]["doc_id"] == "step:step:freshness:zzz-current-policy"
     assert latest[0]["rank_features"]["intent"] == "fresh"
+    assert latest[0]["rank_features"]["intent_class"] == "fresh_fact"
+    assert latest[0]["rank_features"]["recency_gate"] == 1.0
     assert latest[0]["rank_features"]["temporal_boost"] > 0
     assert latest[0]["rank_score"] > latest[1]["rank_score"]
 
@@ -120,11 +124,25 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     assert historical[0]["doc_id"] == "step:step:freshness:aaa-stale-policy"
     assert historical[0]["score"] == historical[1]["score"]
     assert historical[0]["rank_features"]["intent"] == "historical"
+    assert historical[0]["rank_features"]["intent_class"] == "historical_fact"
+    assert historical[0]["rank_features"]["recency_gate"] < latest[0]["rank_features"]["recency_gate"]
     assert historical[0]["rank_features"]["temporal_boost"] > 0
     assert historical[0]["rank_score"] > historical[1]["rank_score"]
     historical_packet = render_answer_packet(storage, "old firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert historical_packet["query_intent_report"]["intent_class"] == "historical_fact"
     assert historical_packet["evidence_chain"][0]["version_group_id"] == "version-group:freshness:firmware-rollback-policy"
     assert historical_packet["evidence_chain"][0]["valid_until"] == "2026-01-01T00:00:00Z"
+
+    version_history = query_hybrid_index(storage, "version history firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert [result["doc_id"] for result in version_history] == [
+        "step:step:freshness:zzz-current-policy",
+        "step:step:freshness:aaa-stale-policy",
+    ]
+    assert version_history[0]["rank_features"]["intent"] == "version_comparison"
+    assert version_history[0]["rank_features"]["intent_class"] == "version_comparison"
+    version_packet = render_answer_packet(storage, "version history firmware rollback policy", run_id="freshness-ranking-fixture", limit=2, mode="hybrid")
+    assert version_packet["query_intent_report"]["intent_class"] == "version_comparison"
+    assert {item["version_group_id"] for item in version_packet["evidence_chain"]} == {"version-group:freshness:firmware-rollback-policy"}
 
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
     assert graph["temporal"]["version_group_count"] == 1

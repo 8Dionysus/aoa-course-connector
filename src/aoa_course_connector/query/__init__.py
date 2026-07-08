@@ -106,6 +106,31 @@ FRESH_INTENT_TERMS = {
     "текущая",
     "текущий",
 }
+VERSION_COMPARISON_INTENT_TERMS = {
+    "between",
+    "change",
+    "changed",
+    "changes",
+    "changelog",
+    "compare",
+    "comparison",
+    "diff",
+    "difference",
+    "evolution",
+    "timeline",
+    "versions",
+    "vs",
+    "версии",
+    "версий",
+    "изменение",
+    "изменения",
+    "история",
+    "отличие",
+    "отличия",
+    "сравнение",
+    "сравнить",
+    "хронология",
+}
 HISTORICAL_INTENT_TERMS = {
     "archive",
     "archived",
@@ -757,18 +782,25 @@ def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None)
     source_authority = str(doc.get("source_authority") or "").casefold()
     terms = query_terms or []
     query_intents = _query_intents(terms)
+    intent_class = _intent_class(query_intents)
+    recency_gate = _recency_gate(intent_class)
     access_boost = _access_intent_boost(terms, state, authority_tier, source_authority)
-    temporal_boost = _temporal_boost(query_intents, state)
+    base_freshness_boost = FRESHNESS_RANK_WEIGHTS.get(state, 0.0)
+    freshness_boost = round(base_freshness_boost * recency_gate, 6)
+    temporal_boost = _temporal_boost(query_intents, state, intent_class=intent_class)
     place_features = _place_features(doc, terms, query_intents)
     evidence_fields = ["source_id", "source_url", "fetched_at", "evidence_id"]
     provenance_complete = all(doc.get(field) for field in evidence_fields)
     return {
         "freshness_state": state,
-        "freshness_boost": FRESHNESS_RANK_WEIGHTS.get(state, 0.0),
+        "freshness_boost": freshness_boost,
+        "base_freshness_boost": base_freshness_boost,
+        "recency_gate": recency_gate,
         "authority_tier": authority_tier,
         "authority_boost": AUTHORITY_RANK_WEIGHTS.get(authority_tier, 0.0),
         "intent_boost": access_boost,
         "intent": _primary_intent(query_intents, access_boost=access_boost),
+        "intent_class": intent_class,
         "query_intents": sorted(query_intents),
         "temporal_boost": temporal_boost,
         "access_boost": access_boost,
@@ -793,12 +825,16 @@ def _rank_score(score: float, features: dict[str, object]) -> float:
 
 def _query_intent_report(query: str, results: list[dict[str, object]]) -> dict[str, object]:
     intents = _query_intents(tokenize(query))
+    intent_class = _intent_class(intents)
     return {
         "schema": "aoa_course_query_intent_report_v1",
         "intents": sorted(intents),
-        "temporal_intent": "historical" if "historical" in intents else "fresh" if "fresh" in intents else "stable",
+        "intent_class": intent_class,
+        "temporal_intent": _temporal_intent_label(intent_class, intents),
+        "recency_gate": _recency_gate(intent_class),
         "place_intent": "place" in intents,
         "top_result_intent": results[0].get("rank_features", {}).get("intent") if results and isinstance(results[0].get("rank_features"), dict) else "",
+        "top_result_intent_class": results[0].get("rank_features", {}).get("intent_class") if results and isinstance(results[0].get("rank_features"), dict) else "",
         "top_result_place_complete": bool(results[0].get("rank_features", {}).get("place_complete")) if results and isinstance(results[0].get("rank_features"), dict) else False,
     }
 
@@ -812,18 +848,20 @@ def _query_intents(query_terms: list[str]) -> set[str]:
         intents.add("fresh")
     if terms & HISTORICAL_INTENT_TERMS:
         intents.add("historical")
+    if terms & VERSION_COMPARISON_INTENT_TERMS:
+        intents.add("version_comparison")
     if terms & PLACE_INTENT_TERMS:
         intents.add("place")
     if "historical" in intents and "fresh" in intents:
-        intents.add("temporal_comparison")
+        intents.add("version_comparison")
     return intents
 
 
 def _primary_intent(query_intents: set[str], *, access_boost: float) -> str:
     if access_boost:
         return "access_state"
-    if "temporal_comparison" in query_intents:
-        return "temporal_comparison"
+    if "version_comparison" in query_intents:
+        return "version_comparison"
     if "historical" in query_intents:
         return "historical"
     if "fresh" in query_intents:
@@ -833,12 +871,53 @@ def _primary_intent(query_intents: set[str], *, access_boost: float) -> str:
     return ""
 
 
-def _temporal_boost(query_intents: set[str], freshness_state: str) -> float:
+def _intent_class(query_intents: set[str]) -> str:
+    if "access" in query_intents:
+        return "access_state"
+    if "version_comparison" in query_intents:
+        return "version_comparison"
+    if "historical" in query_intents:
+        return "historical_fact"
+    if "fresh" in query_intents:
+        return "fresh_fact"
+    if "place" in query_intents:
+        return "place_lookup"
+    return "stable_knowledge"
+
+
+def _recency_gate(intent_class: str) -> float:
+    return {
+        "fresh_fact": 1.0,
+        "access_state": 0.7,
+        "version_comparison": 0.6,
+        "place_lookup": 0.35,
+        "stable_knowledge": 0.25,
+        "historical_fact": 0.25,
+    }.get(intent_class, 0.25)
+
+
+def _temporal_intent_label(intent_class: str, query_intents: set[str]) -> str:
+    if intent_class == "version_comparison":
+        return "version_comparison"
+    if intent_class == "historical_fact":
+        return "historical"
+    if intent_class in {"fresh_fact", "access_state"}:
+        return "fresh"
+    if "place" in query_intents:
+        return "place"
+    return "stable"
+
+
+def _temporal_boost(query_intents: set[str], freshness_state: str, *, intent_class: str) -> float:
+    if intent_class == "version_comparison":
+        if freshness_state in {"current", "fresh", "verified", "active", "stale", "outdated", "deprecated", "archived"}:
+            return 0.08
+        return 0.0
     if "historical" in query_intents:
         if freshness_state in {"stale", "outdated", "deprecated", "archived"}:
-            return 0.28
+            return 0.32
         if freshness_state in {"current", "fresh", "verified", "active"}:
-            return -0.04
+            return -0.08
         return 0.0
     if "fresh" in query_intents:
         if freshness_state in {"current", "fresh", "verified", "active"}:
