@@ -200,10 +200,21 @@ PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --run 
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
 ```
 
+If the operator already captured a Stepik browser session, the same account
+discovery and sync route can use local browser-state cookies instead of a
+separate API token:
+
+```bash
+PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state stepik account --login-url "https://stepik.org/users/me" --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --expect-origin-contains stepik.org
+PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --register --max-pages 5
+PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
+```
+
 `preflight live --platform stepik` treats registered `public_api` sources as
 sync-ready without `STEPIK_API_TOKEN`; token-gated `api_token` and `oauth`
-sources still require the token. Account discovery ignores inactive or deleted
-enrollments before registering sources.
+sources require the token, while `browser_session` sources require matching
+Stepik storage state. Account discovery ignores inactive or deleted enrollments
+before registering sources. Token and cookie values are never printed.
 
 For a single Stepik operator smoke report:
 

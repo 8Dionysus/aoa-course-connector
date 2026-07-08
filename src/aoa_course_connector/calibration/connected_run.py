@@ -726,6 +726,11 @@ def _run_live(
         _collect_action_failure(failures, action)
     if any(source.get("platform") == "stepik" for source in ready_sources):
         stepik_ids = [str(source.get("source_id")) for source in ready_sources if source.get("platform") == "stepik"]
+        stepik_state_file = (
+            _resolved_browser_state_file(roots, platform="stepik", browser_state_file=browser_state_file)
+            if any(str(source.get("access_mode") or "") == "browser_session" for source in ready_sources if source.get("platform") == "stepik")
+            else None
+        )
         max_sections = None if live_scope == "full-course" else 1
         max_units = None if live_scope == "full-course" else 2
         max_steps = None if live_scope == "full-course" else 5
@@ -736,6 +741,7 @@ def _run_live(
                 roots,
                 sync_run_id=f"{run_id}-stepik-live-sync",
                 token_env=stepik_token_env,
+                state_file=stepik_state_file,
                 max_sections=max_sections,
                 max_units_per_section=max_units,
                 max_steps_per_lesson=max_steps,
@@ -747,6 +753,8 @@ def _run_live(
             network_touched=True,
         )
         action["source_ids"] = stepik_ids
+        if stepik_state_file:
+            action["state_file"] = str(stepik_state_file)
         sync_receipts.append(action["payload"] if isinstance(action.get("payload"), dict) else {})
         sync_actions.append(action)
         _collect_action_failure(failures, action)
@@ -784,6 +792,11 @@ def _run_live(
             except ValueError as exc:
                 action = _error_action("smoke", platform, str(exc), network_touched=False, source=source)
             else:
+                stepik_state_file = (
+                    _resolved_browser_state_file(roots, platform="stepik", browser_state_file=browser_state_file)
+                    if str(source.get("access_mode") or "") == "browser_session"
+                    else None
+                )
                 max_sections = None if live_scope == "full-course" else 1
                 max_units = None if live_scope == "full-course" else 2
                 max_steps = None if live_scope == "full-course" else 5
@@ -796,6 +809,7 @@ def _run_live(
                         run_id=f"{run_id}-stepik-live-smoke-{slug}",
                         access_mode=str(source.get("access_mode") or "public_api"),
                         token_env=stepik_token_env,
+                        state_file=stepik_state_file,
                         max_sections=max_sections,
                         max_units_per_section=max_units,
                         max_steps_per_lesson=max_steps,
@@ -805,6 +819,8 @@ def _run_live(
                     ),
                     network_touched=True,
                 )
+                if stepik_state_file:
+                    action["state_file"] = str(stepik_state_file)
         else:
             continue
         action["source_id"] = source.get("source_id")

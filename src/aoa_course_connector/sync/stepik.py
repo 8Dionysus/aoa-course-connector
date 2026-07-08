@@ -5,6 +5,7 @@ from __future__ import annotations
 import json
 import re
 from datetime import UTC, datetime
+from pathlib import Path
 from typing import Any
 
 from aoa_course_connector.config import StorageRoots
@@ -16,7 +17,7 @@ from aoa_course_connector.storage import create_storage_roots, sync_data_dir
 from aoa_course_connector.sync.checkpoints import load_sync_status, make_checkpoint, normalized_identity_summary, upsert_checkpoint
 
 
-STEPIK_ACCESS_MODES = {"public_api", "api_token", "oauth"}
+STEPIK_ACCESS_MODES = {"public_api", "api_token", "oauth", "browser_session"}
 STEPIK_FIXTURE_COURSE_ID = 67
 
 
@@ -69,6 +70,7 @@ def sync_stepik_live_sources(
     *,
     sync_run_id: str = "stepik-live-sync",
     token_env: str = "STEPIK_API_TOKEN",
+    state_file: Path | None = None,
     max_sections: int | None = 1,
     max_units_per_section: int | None = 2,
     max_steps_per_lesson: int | None = 5,
@@ -91,6 +93,7 @@ def sync_stepik_live_sources(
                 course_id=course_id,
                 run_id=child_run,
                 token_env=token_env,
+                state_file=state_file,
                 max_sections=max_sections,
                 max_units_per_section=max_units_per_section,
                 max_steps_per_lesson=max_steps_per_lesson,

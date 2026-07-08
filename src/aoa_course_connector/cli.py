@@ -40,6 +40,7 @@ from aoa_course_connector.discover import (
     discover_browser_fixture as discover_browser_fixture_route,
     discover_browser_live as discover_browser_live_route,
     discover_browser_snapshot as discover_browser_snapshot_route,
+    discover_stepik_account_browser_state as discover_stepik_account_browser_state_route,
     discover_stepik_account_fixture as discover_stepik_account_fixture_route,
     discover_stepik_account_live as discover_stepik_account_live_route,
 )
@@ -328,10 +329,11 @@ def build_parser() -> argparse.ArgumentParser:
     discover_stepik_account.add_argument("--register", action="store_true")
     discover_stepik_account.add_argument("--run", default="stepik-account-discovery")
     discover_stepik_account.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    discover_stepik_account.add_argument("--state-file", type=Path)
     discover_stepik_account.add_argument("--max-pages", type=int, default=5)
     discover_stepik_account.add_argument("--batch-size", type=int, default=20)
     discover_stepik_account.add_argument("--source-limit", type=int)
-    discover_stepik_account.add_argument("--access-mode", choices=["api_token", "oauth"], default="api_token")
+    discover_stepik_account.add_argument("--access-mode", choices=["api_token", "oauth", "browser_session"], default=None)
     discover_stepik_account.set_defaults(func=cmd_discover_stepik_account)
     discover_browser = discover_sub.add_parser("browser-fixture")
     discover_browser.add_argument("--platform", choices=["getcourse", "skillspace"], required=True)
@@ -375,6 +377,7 @@ def build_parser() -> argparse.ArgumentParser:
     stepik_live.add_argument("course_id", type=int)
     stepik_live.add_argument("--run")
     stepik_live.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    stepik_live.add_argument("--state-file", type=Path)
     stepik_live.add_argument("--max-sections", type=int, default=1)
     stepik_live.add_argument("--max-units-per-section", type=int, default=2)
     stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
@@ -476,6 +479,7 @@ def build_parser() -> argparse.ArgumentParser:
     sync_stepik_live.add_argument("--run", default="stepik-live-sync")
     sync_stepik_live.add_argument("--source-id", action="append")
     sync_stepik_live.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    sync_stepik_live.add_argument("--state-file", type=Path)
     sync_stepik_live.add_argument("--max-sections", type=int, default=1)
     sync_stepik_live.add_argument("--max-units-per-section", type=int, default=2)
     sync_stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
@@ -535,8 +539,9 @@ def build_parser() -> argparse.ArgumentParser:
     smoke_stepik_live.add_argument("course_id", type=int)
     smoke_stepik_live.add_argument("--run")
     smoke_stepik_live.add_argument("--title")
-    smoke_stepik_live.add_argument("--access-mode", choices=["public_api", "api_token", "oauth"], default="public_api")
+    smoke_stepik_live.add_argument("--access-mode", choices=["public_api", "api_token", "oauth", "browser_session"], default="public_api")
     smoke_stepik_live.add_argument("--token-env", default="STEPIK_API_TOKEN")
+    smoke_stepik_live.add_argument("--state-file", type=Path)
     smoke_stepik_live.add_argument("--max-sections", type=int, default=1)
     smoke_stepik_live.add_argument("--max-units-per-section", type=int, default=2)
     smoke_stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
@@ -1290,15 +1295,29 @@ def cmd_discover_stepik_account(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     try:
         if args.from_fixture:
+            access_mode = args.access_mode or "api_token"
             receipt = discover_stepik_account_fixture_route(
                 roots,
                 run_id=args.run,
                 fixture=args.fixture,
                 register=args.register,
-                access_mode=args.access_mode,
+                access_mode=access_mode,
+                source_limit=args.source_limit,
+            )
+        elif args.state_file:
+            access_mode = args.access_mode or "browser_session"
+            receipt = discover_stepik_account_browser_state_route(
+                roots,
+                run_id=args.run,
+                state_file=args.state_file,
+                max_pages=args.max_pages,
+                batch_size=args.batch_size,
+                register=args.register,
+                access_mode=access_mode,
                 source_limit=args.source_limit,
             )
         else:
+            access_mode = args.access_mode or "api_token"
             receipt = discover_stepik_account_live_route(
                 roots,
                 run_id=args.run,
@@ -1306,7 +1325,7 @@ def cmd_discover_stepik_account(args: argparse.Namespace) -> int:
                 max_pages=args.max_pages,
                 batch_size=args.batch_size,
                 register=args.register,
-                access_mode=args.access_mode,
+                access_mode=access_mode,
                 source_limit=args.source_limit,
             )
     except Exception as exc:
@@ -1314,9 +1333,9 @@ def cmd_discover_stepik_account(args: argparse.Namespace) -> int:
             "schema": "aoa_course_stepik_account_discovery_receipt_v1",
             "status": "error",
             "run_id": args.run,
-            "source_mode": "stepik_account_fixture" if args.from_fixture else "stepik_account_live",
+            "source_mode": "stepik_account_fixture" if args.from_fixture else "stepik_account_browser_state" if args.state_file else "stepik_account_live",
             "error": str(exc),
-            "network_touched": False if args.from_fixture or str(exc).startswith("Stepik account discovery requires token env") else True,
+            "network_touched": False if args.from_fixture or str(exc).startswith("Stepik account discovery requires token env") or "storage state" in str(exc) else True,
         })
         return 2
     _emit(receipt)
@@ -1537,6 +1556,7 @@ def cmd_sync_stepik_live(args: argparse.Namespace) -> int:
         roots,
         sync_run_id=args.run,
         token_env=args.token_env,
+        state_file=args.state_file,
         max_sections=max_sections,
         max_units_per_section=max_units,
         max_steps_per_lesson=max_steps,
@@ -1644,6 +1664,7 @@ def cmd_smoke_stepik_live(args: argparse.Namespace) -> int:
         title=args.title,
         access_mode=args.access_mode,
         token_env=args.token_env,
+        state_file=args.state_file,
         max_sections=max_sections,
         max_units_per_section=max_units,
         max_steps_per_lesson=max_steps,
@@ -1765,6 +1786,7 @@ def cmd_materialize_stepik_live(args: argparse.Namespace) -> int:
         course_id=args.course_id,
         run_id=run_id,
         token_env=args.token_env,
+        state_file=args.state_file,
         max_sections=max_sections,
         max_units_per_section=max_units,
         max_steps_per_lesson=max_steps,

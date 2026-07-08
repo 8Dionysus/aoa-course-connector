@@ -9,6 +9,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from aoa_course_connector.auth import browser_state_cookie_header
 from aoa_course_connector.adapters.stepik import fetch_stepik_course
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.normalize.stepik import normalize_stepik_raw
@@ -49,6 +50,7 @@ def materialize_stepik_live(
     course_id: int,
     run_id: str,
     token_env: str = "STEPIK_API_TOKEN",
+    state_file: Path | None = None,
     max_sections: int | None = 1,
     max_units_per_section: int | None = 2,
     max_steps_per_lesson: int | None = 5,
@@ -62,9 +64,11 @@ def materialize_stepik_live(
     normalized_dir = data_dir / "normalized"
     raw_dir.mkdir(parents=True, exist_ok=True)
     token = os.environ.get(token_env)
+    cookie_header = browser_state_cookie_header(state_file, "stepik.org") if state_file else None
     raw = fetch_stepik_course(
         course_id,
         token=token,
+        cookie_header=cookie_header,
         max_sections=max_sections,
         max_units_per_section=max_units_per_section,
         max_steps_per_lesson=max_steps_per_lesson,

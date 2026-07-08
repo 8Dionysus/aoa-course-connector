@@ -18,10 +18,17 @@ DEFAULT_STEPIK_API_BASE = "https://stepik.org/api/"
 
 
 class StepikClient:
-    def __init__(self, base_url: str = DEFAULT_STEPIK_API_BASE, token: str | None = None, timeout: float = 30.0) -> None:
+    def __init__(
+        self,
+        base_url: str = DEFAULT_STEPIK_API_BASE,
+        token: str | None = None,
+        timeout: float = 30.0,
+        cookie_header: str | None = None,
+    ) -> None:
         self.base_url = base_url if base_url.endswith("/") else f"{base_url}/"
         self.token = token
         self.timeout = timeout
+        self.cookie_header = cookie_header
 
     def get_resource(self, resource: str, resource_id: int) -> dict[str, Any]:
         url = urljoin(self.base_url, f"{resource}/{resource_id}")
@@ -82,6 +89,8 @@ class StepikClient:
         headers = {"Accept": "application/json", "User-Agent": "aoa-course-connector/0.1"}
         if self.token:
             headers["Authorization"] = f"Bearer {self.token}"
+        if self.cookie_header:
+            headers["Cookie"] = self.cookie_header
         return headers
 
 
@@ -89,6 +98,7 @@ def fetch_stepik_course(
     course_id: int,
     *,
     token: str | None = None,
+    cookie_header: str | None = None,
     base_url: str = DEFAULT_STEPIK_API_BASE,
     timeout: float = 30.0,
     max_sections: int | None = None,
@@ -97,8 +107,9 @@ def fetch_stepik_course(
     batch_size: int = 20,
     include_step_sources: bool = False,
 ) -> dict[str, Any]:
-    client = StepikClient(base_url=base_url, token=token, timeout=timeout)
+    client = StepikClient(base_url=base_url, token=token, timeout=timeout, cookie_header=cookie_header)
     course = client.first("courses", course_id)
+    access_mode = "api_token" if token else "browser_session" if cookie_header else "public_api"
     sections = []
     section_ids = _limited_ids(course.get("sections", []), max_sections)
     for section in client.get_objects("sections", section_ids, batch_size=batch_size):
@@ -123,7 +134,7 @@ def fetch_stepik_course(
             "source_id": f"source:stepik:{course_id}",
             "platform": "stepik",
             "source_ref": str(course_id),
-            "access_mode": "public_api" if token is None else "api_token",
+            "access_mode": access_mode,
             "title": course.get("title") or f"Stepik course {course_id}",
         },
         "course": course,
@@ -140,15 +151,16 @@ def fetch_stepik_course(
 
 def fetch_stepik_account_courses(
     *,
-    token: str | None,
+    token: str | None = None,
+    cookie_header: str | None = None,
     base_url: str = DEFAULT_STEPIK_API_BASE,
     timeout: float = 30.0,
     max_pages: int = 5,
     batch_size: int = 20,
 ) -> dict[str, Any]:
-    if not token:
-        raise ValueError("Stepik account discovery requires an OAuth/API bearer token")
-    client = StepikClient(base_url=base_url, token=token, timeout=timeout)
+    if not token and not cookie_header:
+        raise ValueError("Stepik account discovery requires an OAuth/API bearer token or browser-state cookies")
+    client = StepikClient(base_url=base_url, token=token, timeout=timeout, cookie_header=cookie_header)
     current_user = _current_stepik_user(client)
     user_id = _int_or_none(current_user.get("id"))
     enrollment_error = ""

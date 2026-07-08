@@ -97,6 +97,12 @@ executes the ready live connected-run for that selected profile route.
 When a Stepik source is registered as `public_api`, preflight can mark the
 source sync route ready without a token. Token-gated Stepik sources and browser
 sources still require matching local auth state before live sync is ready.
+Stepik account discovery also accepts a captured browser state:
+
+```bash
+aoa-course discover stepik-account --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --register --max-pages 5
+aoa-course sync stepik-live --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --source-id "source:stepik:..." --build-artifacts
+```
 
 For this Abyss machine, use the external storage example when the corpus grows:
 

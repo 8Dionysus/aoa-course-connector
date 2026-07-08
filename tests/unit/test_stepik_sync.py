@@ -9,7 +9,8 @@ from aoa_course_connector.mcp.server import call_tool
 from aoa_course_connector.query import render_answer_packet
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import upsert_source
-from aoa_course_connector.sync import load_sync_status, sync_stepik_fixture_sources
+from aoa_course_connector.sync import load_sync_status, sync_stepik_fixture_sources, sync_stepik_live_sources
+from aoa_course_connector.sync import stepik as stepik_sync
 from aoa_course_connector.sync.stepik import parse_stepik_course_id
 
 
@@ -80,6 +81,51 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert any("lesson-context" in command and "--mode keyword" in command for command in hint["local_query_commands"])
     assert any("lesson-context" in command for command in packet["refresh_report"]["local_query_commands"])
     assert packet["refresh_report"]["registry_matched_source_count"] == 1
+
+
+def test_stepik_live_sync_passes_browser_state_to_materializer(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    source, _path, _state = upsert_source(storage.data, "stepik", "67", "Stepik Browser", access_mode="browser_session")
+    state_file = storage.auth / "stepik" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        '{"cookies": [{"name": "sessionid", "value": "SUPER_SECRET_COOKIE", "domain": ".stepik.org", "path": "/"}], '
+        '"origins": [{"origin": "https://stepik.org", "localStorage": []}]}',
+        encoding="utf-8",
+    )
+    captured: dict[str, object] = {}
+
+    def fake_materialize(*_args: object, **kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        normalized = storage.data / "runs/stepik-browser-sync-source-stepik-67/normalized/course_bundle.json"
+        raw = storage.data / "runs/stepik-browser-sync-source-stepik-67/raw/stepik_course_67.json"
+        receipt = storage.data / "runs/stepik-browser-sync-source-stepik-67/stepik_materialize_receipt.json"
+        raw.parent.mkdir(parents=True, exist_ok=True)
+        normalized.parent.mkdir(parents=True, exist_ok=True)
+        raw.write_text('{"source": {"source_id": "source:stepik:67"}}', encoding="utf-8")
+        normalized.write_text(json.dumps({"courses": [], "evidence": []}), encoding="utf-8")
+        receipt.write_text("{}", encoding="utf-8")
+        return {
+            "status": "ok",
+            "run_id": "stepik-browser-sync-source-stepik-67",
+            "raw_path": str(raw),
+            "normalized_path": str(normalized),
+            "receipt_path": str(receipt),
+        }
+
+    monkeypatch.setattr(stepik_sync, "materialize_stepik_live", fake_materialize)
+
+    receipt = sync_stepik_live_sources(
+        storage,
+        sync_run_id="stepik-browser-sync",
+        source_ids=[str(source["source_id"])],
+        state_file=state_file,
+    )
+
+    assert receipt["status"] == "ok"
+    assert captured["state_file"] == state_file
+    assert receipt["synced_sources"][0]["source_id"] == source["source_id"]
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(receipt)
 
 
 def test_stepik_fixture_sync_preserves_stable_identity_across_refreshes(tmp_path: Path) -> None:

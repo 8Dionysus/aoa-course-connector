@@ -527,6 +527,51 @@ def test_connected_source_plan_stepik_public_source_without_token(tmp_path: Path
     assert not any(command.startswith("export STEPIK_API_TOKEN") for command in plan["next_commands"])
 
 
+def test_connected_source_plan_stepik_browser_session_uses_storage_state(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    state_file = storage.auth / "stepik" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        '{"cookies": [{"name": "sessionid", "value": "SUPER_SECRET_COOKIE", "domain": ".stepik.org", "path": "/"}], '
+        '"origins": [{"origin": "https://stepik.org", "localStorage": []}]}',
+        encoding="utf-8",
+    )
+    upsert_source(storage.data, "stepik", "67", "Stepik Browser", access_mode="browser_session")
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    plan = connected_source_plan(storage, platforms=["stepik"], query="Stepik public API evidence")
+
+    assert plan["status"] == "ok"
+    assert plan["ready"] is True
+    assert plan["platform_plans"][0]["ready_source_count"] == 1
+    assert not any(command.startswith("export STEPIK_API_TOKEN") for command in plan["next_commands"])
+    assert any("sync stepik-live" in command and "--state-file" in command for command in plan["next_commands"])
+    sync_command = plan["source_plans"][0]["sync_command"]
+    smoke_command = plan["source_plans"][0]["smoke_command"]
+    assert "--state-file" in sync_command
+    assert "--state-file" in smoke_command
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(plan)
+
+
+def test_live_preflight_stepik_browser_state_suggests_account_discovery(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    state_file = storage.auth / "stepik" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        '{"cookies": [{"name": "sessionid", "value": "SUPER_SECRET_COOKIE", "domain": ".stepik.org", "path": "/"}], '
+        '"origins": [{"origin": "https://stepik.org", "localStorage": []}]}',
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    report = live_preflight(storage, platforms=["stepik"])
+
+    assert report["status"] == "warning"
+    assert report["workflows"][0]["ready"] is True
+    assert any("discover stepik-account --state-file" in command for command in report["next_commands"])
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(report)
+
+
 def test_connected_source_plan_blocks_unparseable_ready_stepik_smoke(tmp_path: Path, monkeypatch) -> None:
     storage = roots(tmp_path)
     upsert_source(storage.data, "stepik", "https://stepik.org/learn/broken", "Broken Stepik", access_mode="public_api")

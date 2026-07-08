@@ -904,6 +904,39 @@ def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     assert {source["source_ref"] for source in catalog["sources"]} == {"67", "100"}
 
 
+def test_cli_stepik_browser_state_preflight_plans_sync(tmp_path: Path) -> None:
+    state_file = tmp_path / "auth/stepik/account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        '{"cookies": [{"name": "sessionid", "value": "SUPER_SECRET_COOKIE", "domain": ".stepik.org", "path": "/"}], '
+        '"origins": [{"origin": "https://stepik.org", "localStorage": []}]}',
+        encoding="utf-8",
+    )
+    source = run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "67",
+        "--platform",
+        "stepik",
+        "--title",
+        "Stepik Browser",
+        "--access-mode",
+        "browser_session",
+    )["source"]
+
+    preflight = run_cli(tmp_path, "preflight", "live", "--platform", "stepik", "--state-file", str(state_file))
+    plan = run_cli(tmp_path, "preflight", "connected-plan", "--platform", "stepik", "--state-file", str(state_file))
+
+    assert preflight["ready"] is True
+    assert plan["status"] == "ok"
+    assert plan["ready"] is True
+    assert plan["source_plans"][0]["source_id"] == source["source_id"]
+    assert "--state-file" in plan["source_plans"][0]["sync_command"]
+    assert "--state-file" in plan["source_plans"][0]["smoke_command"]
+    assert "SUPER_SECRET_COOKIE" not in json.dumps(preflight) + json.dumps(plan)
+
+
 def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
     for platform, query in [
         ("getcourse", "GetCourse bootloader rollback evidence"),

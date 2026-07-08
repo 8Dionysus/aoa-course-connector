@@ -50,6 +50,33 @@ def default_browser_state_path(auth_root: Path, platform: str, source_ref: str) 
     return auth_root / _slug(platform) / f"{_slug(source_ref)}.storage-state.json"
 
 
+def browser_state_cookie_header(state_file: Path, expect_origin_contains: str) -> str:
+    """Return a Cookie header for one expected host without exposing values."""
+
+    path = state_file.expanduser().resolve()
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    if not isinstance(raw, dict):
+        raise ValueError("storage state root must be a JSON object")
+    expected_host = _host_fragment(expect_origin_contains)
+    if not expected_host:
+        raise ValueError("expected browser-state origin host is empty")
+    pairs = []
+    cookies = raw.get("cookies") if isinstance(raw.get("cookies"), list) else []
+    for cookie in cookies:
+        if not isinstance(cookie, dict):
+            continue
+        domain = _host_fragment(str(cookie.get("domain") or ""))
+        name = str(cookie.get("name") or "")
+        value = cookie.get("value")
+        if not domain or not name or value is None:
+            continue
+        if _host_domain_matches(expected_host, domain):
+            pairs.append(f"{name}={value}")
+    if not pairs:
+        raise ValueError(f"browser storage state does not contain cookies for {expected_host}")
+    return "; ".join(pairs)
+
+
 def inspect_browser_state(state_file: Path, expect_origin_contains: str | None = None) -> dict[str, object]:
     path = state_file.expanduser().resolve()
     base: dict[str, object] = {
