@@ -460,7 +460,9 @@ This proves:
   context after a connected run. Partial connected-run receipts also include
   `repair_lanes` for network gate, source auth/readiness, source
   selection, source sync, live smoke/selector, and calibration-packet intake
-  failures with concrete next commands.
+  failures with concrete next commands; Stepik repair/rerun commands preserve
+  the selected `include_step_sources`, `max_step_sources`, and
+  `step_source_timeout` budget from `execution_options`.
 - CLI `calibration query` and MCP `connected_run_query` execute that
   connected-run query plan without touching the network, returning
   `aoa_course_connected_run_query_packet_v1` with per-entry source-backed

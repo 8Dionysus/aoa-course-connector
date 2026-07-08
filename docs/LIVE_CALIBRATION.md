@@ -132,8 +132,10 @@ and next commands.
 `repair_lanes` turn partial runs into concrete network gate, source readiness,
 source selection, sync, smoke/selector, or packet-intake follow-up commands.
 `execution_options` records the course-specific query, browser `link_pattern`,
-source limit, and live traversal limits used for the run, so later selector or
-retrieval work can tell how broad the calibration actually was.
+source limit, Stepik enrichment budget, and live traversal limits used for the
+run, so later selector or retrieval work can tell how broad the calibration
+actually was. Stepik preflight and rerun commands emitted by those repair lanes
+carry the same enrichment flags.
 
 ```bash
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"

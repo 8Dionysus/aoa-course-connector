@@ -2146,6 +2146,7 @@ def _connected_preflight_command(
         parts.append(f"--stepik-token-env {shlex.quote(str(execution_options.get('stepik_token_env')))}")
     if execution_options.get("browser_state_file") and any(platform in BROWSER_PLATFORMS for platform in platforms):
         parts.append(f"--state-file {shlex.quote(str(execution_options.get('browser_state_file')))}")
+    _append_stepik_enrichment_flags(parts, platforms=platforms, execution_options=execution_options)
     for option, flag in [
         ("max_lessons", "--max-lessons"),
         ("max_pages", "--max-pages"),
@@ -2186,6 +2187,7 @@ def _connected_rerun_command(
         value = execution_options.get(option)
         if value:
             parts.append(f"{flag} {shlex.quote(str(value))}")
+    _append_stepik_enrichment_flags(parts, platforms=platforms, execution_options=execution_options)
     for option, flag in [
         ("max_lessons", "--max-lessons"),
         ("max_pages", "--max-pages"),
@@ -2196,6 +2198,20 @@ def _connected_rerun_command(
         if value is not None:
             parts.append(f"{flag} {int(value)}")
     return " ".join(parts)
+
+
+def _append_stepik_enrichment_flags(
+    parts: list[str],
+    *,
+    platforms: list[str],
+    execution_options: dict[str, object],
+) -> None:
+    if "stepik" not in platforms or "max_step_sources" not in execution_options:
+        return
+    parts.append("--include-step-sources")
+    parts.append(f"--max-step-sources {shlex.quote(str(execution_options['max_step_sources']))}")
+    if "step_source_timeout" in execution_options:
+        parts.append(f"--step-source-timeout {execution_options['step_source_timeout']}")
 
 
 def _source_repair_commands(platform: str, *, preflight_command: str, execution_options: dict[str, object]) -> list[str]:
