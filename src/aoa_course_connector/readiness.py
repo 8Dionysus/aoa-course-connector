@@ -9,7 +9,7 @@ import shlex
 from pathlib import Path
 from urllib.parse import urlparse
 
-from aoa_course_connector.auth import inspect_browser_state
+from aoa_course_connector.auth import browser_state_cookie_header, inspect_browser_state
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.sources import load_registry, registry_path
@@ -1437,7 +1437,18 @@ def _append_stepik_preflight(
     token_present = bool(os.environ.get(token_env))
     state_file = (browser_state_file or roots.auth / "stepik" / "account.storage-state.json").expanduser().resolve()
     state = inspect_browser_state(state_file, expect_origin_contains="stepik.org", platform="stepik")
-    state_ready = bool(state.get("usable"))
+    state_cookie_ready = False
+    state_cookie_error = ""
+    if bool(state.get("usable")):
+        try:
+            browser_state_cookie_header(state_file, "stepik.org")
+            state_cookie_ready = True
+        except ValueError as exc:
+            state_cookie_error = str(exc)
+    state_ready = state_cookie_ready
+    state_status = str(state.get("status") or "")
+    if bool(state.get("usable")) and not state_cookie_ready:
+        state_status = "missing_cookie_header"
     checks.append(
         {
             "kind": "token",
@@ -1455,11 +1466,13 @@ def _append_stepik_preflight(
         {
             "kind": "browser_state",
             "platform": "stepik",
-            "status": state.get("status"),
+            "status": state_status,
             "ready": state_ready,
             "state_file": str(state_file),
             "exists": state.get("exists"),
             "usable": state.get("usable"),
+            "cookie_header_ready": state_cookie_ready,
+            "cookie_header_error": state_cookie_error,
             "expected_origin_contains": "stepik.org",
             "expected_origin_matched": state.get("expected_origin_matched"),
             "cookie_count": state.get("cookie_count", 0),
@@ -1493,7 +1506,7 @@ def _append_stepik_preflight(
         if needs_token and not token_present:
             blockers.append(f"missing token env {token_env}")
         if needs_browser_state and not state_ready:
-            blockers.append(f"browser storage state is {state.get('status')}")
+            blockers.append(f"browser storage state is {state_status}")
         checks.append(_source_check(source, ready=ready, blockers=blockers))
 
     account_discovery_required = not bool(sources)

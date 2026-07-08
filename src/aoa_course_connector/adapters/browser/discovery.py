@@ -161,10 +161,9 @@ def discover_embedded_catalog_links(
     seen: set[str] = set()
     for payload in _iter_payload_json(payloads):
         for block in _iter_dicts(payload):
-            training_id = _getcourse_training_id(block)
-            if not training_id:
+            href = _getcourse_training_href(block, base_url)
+            if not href:
                 continue
-            href = urljoin(base_url, f"/teach/control/stream/view/id/{training_id}")
             if link_pattern and not fnmatch(href, link_pattern):
                 continue
             if href in seen:
@@ -381,21 +380,31 @@ def _skillspace_course_title(block: object) -> str:
     return ""
 
 
-def _getcourse_training_id(block: dict[str, Any]) -> str:
-    candidates = [
-        block.get("id"),
-        block.get("route"),
-        block.get("shortRoute"),
-    ]
+def _getcourse_training_href(block: dict[str, Any], base_url: str) -> str:
+    candidates = []
     onclick = block.get("onClick")
     if isinstance(onclick, dict):
         candidates.extend([onclick.get("url"), onclick.get("route")])
+    candidates.extend(
+        [
+            block.get("url"),
+            block.get("href"),
+            block.get("route"),
+            block.get("shortRoute"),
+            block.get("id"),
+        ]
+    )
+    fallback_training_id = ""
     for value in candidates:
         text = str(value or "")
-        for pattern in (GETCOURSE_TRAINING_ID_RE, GETCOURSE_STREAM_VIEW_ID_RE):
-            match = pattern.search(text)
-            if match:
-                return match.group(1)
+        stream_match = GETCOURSE_STREAM_VIEW_ID_RE.search(text)
+        if stream_match:
+            return urljoin(base_url, text)
+        training_match = GETCOURSE_TRAINING_ID_RE.search(text)
+        if training_match and not fallback_training_id:
+            fallback_training_id = training_match.group(1)
+    if fallback_training_id:
+        return urljoin(base_url, f"/teach/control/stream/view/id/{fallback_training_id}")
     return ""
 
 

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import aoa_course_connector.ingest.stepik as stepik_ingest
 from aoa_course_connector.adapters.stepik import client as stepik_client
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
@@ -85,6 +86,78 @@ def test_stepik_live_fetches_step_block_sources(monkeypatch) -> None:
     step = raw["sections"][0]["units"][0]["steps"][0]
     assert step["block"]["text"] == "<p>Live Stepik text</p>"
     assert ("blocks", 50) in instances[0].calls
+
+
+def test_stepik_cookie_header_takes_precedence_over_exported_token(monkeypatch) -> None:
+    headers = stepik_client.StepikClient(token="TOKEN", cookie_header="sessionid=COOKIE")._headers()
+    assert "Authorization" not in headers
+    assert headers["Cookie"] == "sessionid=COOKIE"
+
+    class FakeStepikClient:
+        def __init__(self, **kwargs: object) -> None:
+            self.kwargs = kwargs
+
+        def first(self, resource: str, resource_id: int, **_kwargs: object) -> dict[str, object]:
+            assert resource == "courses"
+            return {"id": resource_id, "title": "Demo", "sections": []}
+
+        def get_objects(self, *_args: object, **_kwargs: object) -> list[dict[str, object]]:
+            return []
+
+    instances: list[FakeStepikClient] = []
+
+    def fake_client(**kwargs: object) -> FakeStepikClient:
+        instance = FakeStepikClient(**kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(stepik_client, "StepikClient", fake_client)
+
+    raw = stepik_client.fetch_stepik_course(1, token="TOKEN", cookie_header="sessionid=COOKIE")
+
+    assert raw["source"]["access_mode"] == "browser_session"
+    assert instances[0].kwargs["token"] == "TOKEN"
+    assert instances[0].kwargs["cookie_header"] == "sessionid=COOKIE"
+
+
+def test_stepik_materialize_state_file_avoids_exported_token(tmp_path: Path, monkeypatch) -> None:
+    storage = roots(tmp_path)
+    state_file = tmp_path / "account.storage-state.json"
+    state_file.write_text(
+        json.dumps(
+            {
+                "cookies": [{"name": "sessionid", "value": "COOKIE", "domain": ".stepik.org", "path": "/"}],
+                "origins": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("STEPIK_API_TOKEN", "TOKEN")
+    captured: dict[str, object] = {}
+
+    def fake_fetch_stepik_course(course_id: int, **kwargs: object) -> dict[str, object]:
+        captured.update(kwargs)
+        return {
+            "schema": "aoa_course_stepik_raw_v1",
+            "fetched_at": "2026-07-08T00:00:00Z",
+            "source": {
+                "source_id": f"source:stepik:{course_id}",
+                "platform": "stepik",
+                "source_ref": str(course_id),
+                "access_mode": "browser_session",
+                "title": "Demo",
+            },
+            "course": {"id": course_id, "title": "Demo", "sections": []},
+            "sections": [],
+        }
+
+    monkeypatch.setattr(stepik_ingest, "fetch_stepik_course", fake_fetch_stepik_course)
+
+    receipt = stepik_ingest.materialize_stepik_live(storage, course_id=1, run_id="stepik-live", state_file=state_file)
+
+    assert receipt["status"] == "ok"
+    assert captured["token"] is None
+    assert captured["cookie_header"] == "sessionid=COOKIE"
 
 
 def test_stepik_live_batches_full_course_and_fetches_step_sources(monkeypatch) -> None:

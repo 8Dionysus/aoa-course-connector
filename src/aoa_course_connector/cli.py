@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import shlex
 import sys
 from pathlib import Path
 
@@ -2161,7 +2162,8 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
     )
     matrix_result: dict[str, object] = {}
     matrix_packet: dict[str, object] = {}
-    if queries:
+    semantic_failures = _source_registry_external_semantic_provider_failures(catalog, args.mode)
+    if queries and not semantic_failures:
         matrix_result = call_tool(
             "sources_answer_matrix",
             {
@@ -2181,7 +2183,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
             },
         )
         matrix_packet = matrix_result.get("sources_answer_matrix") if isinstance(matrix_result.get("sources_answer_matrix"), dict) else {}
-    failures = _source_registry_query_eval_failures(
+    failures = semantic_failures or _source_registry_query_eval_failures(
         catalog=catalog,
         queries=queries,
         matrix_packet=matrix_packet,
@@ -2197,6 +2199,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
     next_commands = [
         "aoa-course sources list --no-source-refs --connected-run-limit 5",
     ]
+    next_commands.extend([str(failure.get("next_command")) for failure in semantic_failures if str(failure.get("next_command") or "")])
     next_commands.extend([str(command) for command in matrix_packet.get("next_commands", []) if str(command)] if isinstance(matrix_packet.get("next_commands"), list) else [])
     if not queries:
         next_commands.append("aoa-course preflight connected-plan --live-scope bounded")
@@ -2245,6 +2248,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
             },
             "queries": queries,
             "query_source": "explicit" if args.query else "connected_run_samples",
+            "network_blocked": bool(semantic_failures),
             "sources_answer_matrix": summary,
             "query_summaries": matrix_packet.get("query_summaries", []) if isinstance(matrix_packet.get("query_summaries"), list) else [],
             "failures": failures,
@@ -2283,6 +2287,63 @@ def _source_registry_query_samples(catalog: dict[str, object], *, limit: int) ->
             if len(queries) >= limit:
                 return queries
     return queries
+
+
+def _source_registry_external_semantic_provider_failures(catalog: dict[str, object], mode: str) -> list[dict[str, object]]:
+    if mode not in {"semantic", "hybrid"}:
+        return []
+    failures: list[dict[str, object]] = []
+    seen: set[tuple[str, str]] = set()
+    connected_runs = catalog.get("connected_runs") if isinstance(catalog.get("connected_runs"), dict) else {}
+    by_source = connected_runs.get("by_source_id") if isinstance(connected_runs.get("by_source_id"), dict) else {}
+    for source_id, entries in by_source.items():
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if not isinstance(entry, dict):
+                continue
+            paths = entry.get("paths") if isinstance(entry.get("paths"), dict) else {}
+            semantic_path = str(paths.get("semantic_index") or "")
+            provider = _semantic_index_provider(semantic_path)
+            if not semantic_path or not provider or provider == LOCAL_HASHING_PROVIDER:
+                continue
+            key = (str(source_id), semantic_path)
+            if key in seen:
+                continue
+            seen.add(key)
+            run_id = str(entry.get("run_id") or "")
+            next_command = "aoa-course build-semantic-index"
+            if run_id:
+                next_command += f" --run {shlex.quote(run_id)}"
+            next_command += f" --provider {LOCAL_HASHING_PROVIDER}"
+            failures.append(
+                {
+                    "surface": "connected_runs",
+                    "source_id": str(source_id),
+                    "run_id": run_id,
+                    "field": "semantic_index.provider",
+                    "expected": LOCAL_HASHING_PROVIDER,
+                    "actual": provider,
+                    "path": semantic_path,
+                    "reason": "external_semantic_provider_requires_network",
+                    "next_command": next_command,
+                }
+            )
+    return failures
+
+
+def _semantic_index_provider(path: str) -> str:
+    if not path:
+        return ""
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if not isinstance(payload, dict):
+        return ""
+    provider = str(payload.get("provider") or "")
+    provider_config = payload.get("provider_config") if isinstance(payload.get("provider_config"), dict) else {}
+    return provider or str(provider_config.get("provider") or "")
 
 
 def _source_registry_query_eval_failures(
