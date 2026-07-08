@@ -870,8 +870,16 @@ def test_cli_sources_answer_uses_stepik_sync_checkpoint(tmp_path: Path) -> None:
     catalog = run_cli(tmp_path, "sources", "list", "--source-id", str(source["source_id"]))
     latest = catalog["sources"][0]["latest_connected_runs"][0]
     assert catalog["connected_runs"]["query_ready_entry_count"] == 1
+    assert catalog["connected_runs"]["answer_ready_entry_count"] == 0
+    assert catalog["connected_runs"]["answer_probe_missing_entry_count"] == 1
+    assert catalog["connected_runs"]["invalid_answer_ready_entry_count"] == 0
     assert latest["entry_source"] == "sync_checkpoint"
     assert latest["kind"] == "sync"
+    assert latest["query_ready"] is True
+    assert latest["answer_ready"] is False
+    assert latest["answer_result_count"] == 0
+    assert latest["answer_evidence_count"] == 0
+    assert latest["answer_readiness_source"] == "not_cached"
 
     answer = run_cli(
         tmp_path,
@@ -1410,6 +1418,7 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert source_registry_eval["query_source"] == "explicit"
     assert source_registry_eval["source_registry"]["selected_source_count"] == 1
     assert source_registry_eval["connected_runs"]["query_ready_entry_count"] >= 1
+    assert source_registry_eval["connected_runs"]["invalid_answer_ready_entry_count"] == 0
     assert source_registry_eval["selection"]["coverage_mode"] == "portfolio"
     assert source_registry_eval["sources_answer_matrix"]["status"] == "ok"
     assert source_registry_eval["sources_answer_matrix"]["quality_ready"] is True
