@@ -14,6 +14,7 @@ from aoa_course_connector.index import LOCAL_HASHING_PROVIDER
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, registry_path
 from aoa_course_connector.storage import run_artifact_dir, run_data_dir, storage_status
+from aoa_course_connector.sync import load_sync_status
 
 
 DEFAULT_RUN = "starter-fixture"
@@ -421,6 +422,11 @@ def connected_query_run_catalog(
             if selected_platforms and platform not in selected_platforms:
                 continue
             by_source.setdefault(source_id, []).append(_connected_query_run_ref(receipt, path, entry, include_source_refs=include_source_refs))
+    sync_checkpoints = _sync_query_checkpoints(roots, source_ids=selected_ids, platforms=selected_platforms)
+    for checkpoint in sync_checkpoints:
+        source_id = str(checkpoint.get("source_id") or "")
+        if source_id:
+            by_source.setdefault(source_id, []).append(_sync_query_run_ref(checkpoint, include_source_refs=include_source_refs))
     per_source = max(1, int(per_source_limit or 1))
     for source_id, entries in list(by_source.items()):
         by_source[source_id] = sorted(entries, key=_connected_query_run_sort_key, reverse=True)[:per_source]
@@ -434,6 +440,7 @@ def connected_query_run_catalog(
         "receipt_limit": max(1, int(receipt_limit or 1)),
         "per_source_limit": per_source,
         "receipt_count": len(receipt_paths),
+        "sync_checkpoint_count": len(sync_checkpoints),
         "selected_source_ids": selected_ids,
         "selected_platforms": selected_platforms,
         "source_ids_with_query_runs": sorted(by_source),
@@ -454,6 +461,7 @@ def _empty_connected_query_run_catalog(roots: StorageRoots, *, included: bool, p
         "receipt_limit": max(1, int(receipt_limit or 1)),
         "per_source_limit": max(1, int(per_source_limit or 1)),
         "receipt_count": 0,
+        "sync_checkpoint_count": 0,
         "selected_source_ids": [],
         "selected_platforms": [],
         "source_ids_with_query_runs": [],
@@ -478,6 +486,29 @@ def _connected_receipt_paths(roots: StorageRoots, *, limit: int) -> list[Path]:
         return []
     paths = [path for path in runs_dir.glob("*/connected/connected_calibration_receipt.json") if path.is_file()]
     return sorted(paths, key=lambda path: path.stat().st_mtime, reverse=True)[:limit]
+
+
+def _sync_query_checkpoints(roots: StorageRoots, *, source_ids: list[str], platforms: list[str]) -> list[dict[str, object]]:
+    status = load_sync_status(roots)
+    checkpoints = status.get("checkpoints") if isinstance(status.get("checkpoints"), list) else []
+    selected_ids = set(source_ids)
+    selected_platforms = set(platforms)
+    ready = []
+    for item in checkpoints:
+        if not isinstance(item, dict):
+            continue
+        source_id = str(item.get("source_id") or "")
+        platform = str(item.get("platform") or "")
+        if selected_ids and source_id not in selected_ids:
+            continue
+        if selected_platforms and platform not in selected_platforms:
+            continue
+        if item.get("status") != "ok":
+            continue
+        if not _path_is_file(item.get("index_path")):
+            continue
+        ready.append(item)
+    return ready
 
 
 def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict[str, object], *, include_source_refs: bool) -> dict[str, object]:
@@ -536,6 +567,65 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
     return {key: value for key, value in payload.items() if value not in (None, "")}
 
 
+def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: bool) -> dict[str, object]:
+    source_id = str(checkpoint.get("source_id") or "")
+    platform = str(checkpoint.get("platform") or "")
+    run_id = str(checkpoint.get("run_id") or "")
+    query = "<course-specific question>"
+    graph_ready = _path_is_file(checkpoint.get("graph_path"))
+    semantic_ready = _path_is_file(checkpoint.get("semantic_index_path"))
+    mode = "hybrid" if semantic_ready else "keyword"
+    commands = {
+        "query": f"aoa-course answer {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {mode}",
+        "sources_answer": _sources_answer_command(query, source_id=source_id, platform=platform, kind="sync", mode=mode),
+        "lesson_context": f"aoa-course lesson-context {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {mode} --graph-limit 12",
+        "evidence_report": f"aoa-course evidence inspect {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {mode}",
+    }
+    mcp_commands = {
+        "answer": _mcp_call_command("answer", {"query": query, "run": run_id, "mode": mode}),
+        "source_answer": _mcp_call_command("source_answer", {"query": query, "source_id": source_id, "mode": mode}),
+        "lesson_context": _mcp_call_command("lesson_context", {"query": query, "run": run_id, "mode": mode, "graph_limit": 12}),
+        "evidence_report": _mcp_call_command("evidence_report", {"query": query, "run": run_id, "mode": mode}),
+    }
+    payload = {
+        "entry_source": "sync_checkpoint",
+        "connected_run_id": checkpoint.get("sync_run_id") or run_id,
+        "sync_run_id": checkpoint.get("sync_run_id"),
+        "connected_run_status": checkpoint.get("status") or "unknown",
+        "connected_completed_at": checkpoint.get("updated_at"),
+        "receipt_path": checkpoint.get("receipt_path"),
+        "mode": "sync",
+        "network_touched": False,
+        "kind": "sync",
+        "platform": platform,
+        "run_id": run_id,
+        "source_id": source_id,
+        "title": checkpoint.get("title"),
+        "query": query,
+        "query_mode": mode,
+        "query_ready": True,
+        "semantic_query_ready": semantic_ready,
+        "graph_ready": graph_ready,
+        "answer_ready": True,
+        "answer_result_count": 0,
+        "answer_evidence_count": 0,
+        "paths": {
+            "normalized": checkpoint.get("normalized_path"),
+            "index": checkpoint.get("index_path"),
+            "semantic_index": checkpoint.get("semantic_index_path"),
+            "graph": checkpoint.get("graph_path"),
+        },
+        "commands": commands,
+        "mcp_commands": mcp_commands,
+    }
+    if include_source_refs:
+        payload["source_ref"] = checkpoint.get("source_ref")
+    stable_identity = checkpoint.get("stable_identity")
+    if isinstance(stable_identity, dict):
+        payload["stable_identity"] = _compact_stable_identity(stable_identity)
+    return {key: value for key, value in payload.items() if value not in (None, "")}
+
+
 def _compact_stable_identity(stable_identity: dict[str, object]) -> dict[str, object]:
     return {
         key: value
@@ -555,6 +645,11 @@ def _connected_query_run_sort_key(item: dict[str, object]) -> tuple[str, str, st
         str(item.get("connected_started_at") or ""),
         str(item.get("connected_run_id") or ""),
     )
+
+
+def _path_is_file(value: object) -> bool:
+    text = str(value or "")
+    return bool(text) and Path(text).is_file()
 
 
 def _mcp_call_command(tool: str, payload: dict[str, object]) -> str:

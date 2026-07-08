@@ -169,6 +169,8 @@ def test_stepik_account_discovery_uses_current_user_enrollments(monkeypatch) -> 
 
         def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
             self.calls.append((resource, params or {}, max_pages))
+            if resource == "course-grades":
+                return []
             assert resource == "enrollments"
             return [
                 {"id": 7001, "user": 501, "course": 67, "is_active": True},
@@ -201,7 +203,58 @@ def test_stepik_account_discovery_uses_current_user_enrollments(monkeypatch) -> 
     assert raw["account"]["user_id"] == 501
     assert [course["source_ref"] for course in raw["courses"]] == ["67", "100"]
     assert raw["courses"][0]["enrollment"]["id"] == 7001
+    assert raw["course_grade_count"] == 0
     assert ("enrollments", {"user": 501}, 3) in instances[0].calls
+    assert ("course-grades", {"user": 501}, 3) in instances[0].calls
+    assert ("courses", (67, 100), 10) in instances[0].calls
+
+
+def test_stepik_account_discovery_uses_course_grades_when_enrollments_are_empty(monkeypatch) -> None:
+    class FakeStepikClient:
+        def __init__(self, **_kwargs: object) -> None:
+            self.calls: list[tuple[str, object]] = []
+
+        def get_resource(self, resource: str, resource_id: int) -> dict[str, object]:
+            self.calls.append((resource, resource_id))
+            assert (resource, resource_id) == ("stepics", 1)
+            return {"users": [{"id": 501, "full_name": "Fixture Learner"}]}
+
+        def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
+            self.calls.append((resource, params or {}, max_pages))
+            if resource == "enrollments":
+                return []
+            assert resource == "course-grades"
+            return [
+                {"id": 9001, "user": 501, "course": 67, "score": "0.0", "last_viewed": "2026-07-08T07:51:00Z"},
+                {"id": 9002, "user": 501, "course": 100, "score": "0.5"},
+            ]
+
+        def get_objects(self, resource: str, resource_ids: list[int], *, batch_size: int = 20) -> list[dict[str, object]]:
+            self.calls.append((resource, tuple(resource_ids), batch_size))
+            assert resource == "courses"
+            assert resource_ids == [67, 100]
+            return [
+                {"id": 67, "title": "Course From Grade", "canonical_url": "https://stepik.org/course/67"},
+                {"id": 100, "title": "Second Grade Course", "canonical_url": "https://stepik.org/course/100"},
+            ]
+
+    instances: list[FakeStepikClient] = []
+
+    def fake_client(**kwargs: object) -> FakeStepikClient:
+        instance = FakeStepikClient(**kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(stepik_client, "StepikClient", fake_client)
+
+    raw = stepik_client.fetch_stepik_account_courses(cookie_header="sessionid=secret", max_pages=4, batch_size=10)
+
+    assert [course["source_ref"] for course in raw["courses"]] == ["67", "100"]
+    assert raw["enrollment_count"] == 0
+    assert raw["course_grade_count"] == 2
+    assert raw["courses"][0]["course_grade"]["id"] == 9001
+    assert raw["courses"][0]["course_grade"]["last_viewed"] == "2026-07-08T07:51:00Z"
+    assert ("course-grades", {"user": 501}, 4) in instances[0].calls
     assert ("courses", (67, 100), 10) in instances[0].calls
 
 
@@ -212,7 +265,7 @@ def test_stepik_account_discovery_side_loaded_fallback_keeps_only_enrolled_cours
             return {"users": [{"id": 501, "full_name": "Fixture Learner"}]}
 
         def iter_pages(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:
-            assert resource == "enrollments"
+            assert resource in {"enrollments", "course-grades"}
             return []
 
         def iter_payloads(self, resource: str, params: dict[str, object] | None = None, *, max_pages: int | None = None) -> list[dict[str, object]]:

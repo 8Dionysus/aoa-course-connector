@@ -97,8 +97,8 @@ aoa-course discover stepik-account \
 ```
 
 The live route reads the current account through Stepik API auth, discovers
-course IDs from enrollment data, and writes only local source-registry entries.
-It does not store or print the token value.
+course IDs from enrollment and course-grade data, and writes only local
+source-registry entries. It does not store or print the token value.
 
 `preflight live --platform stepik` checks token presence, local Stepik browser
 state, and registered Stepik sources without touching the network. It reports
@@ -118,6 +118,16 @@ aoa-course auth import-firefox-state stepik account \
 
 Account discovery is treated as required only when no Stepik sources are
 already registered.
+
+After `sync stepik-live --build-artifacts`, source-registry queries can use the
+sync checkpoints directly:
+
+```bash
+aoa-course sources answer "course-specific question" --platform stepik --mode hybrid
+```
+
+This keeps the agent-facing query route local and read-only after sync; it does
+not require the caller to remember the child run id.
 
 For a Stepik-focused agent plan, narrow the read-only connected plan:
 

@@ -248,9 +248,15 @@ This proves:
   cookies from an existing local Firefox profile into a Playwright-compatible
   storage-state file, with a redacted no-network receipt and no cookie values
   printed.
+- Stepik account discovery uses both enrollment data and `course-grades`, so
+  accounts whose current `/enrollments` endpoint is empty can still expose
+  queryable course sources.
 - Read-only live preflight reports for Stepik tokens, browser storage-state
   usability, source-registry readiness, next commands, secret redaction, and
   MCP `live_preflight` structuredContent.
+- Source-registry answer routes can now use query-ready sync checkpoints in
+  addition to connected-run receipts, so `sources answer` works after a direct
+  source sync with indexes and graph artifacts.
 - Read-only connected-source launch plans through CLI `preflight
   connected-plan` and MCP `connected_source_plan`, turning source readiness into
   exact preflight, sync, smoke, calibration, and
