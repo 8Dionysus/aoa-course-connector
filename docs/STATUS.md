@@ -409,8 +409,8 @@ This proves:
 - A runtime-only multi-source GetCourse plus Stepik connected run has been
   exercised locally: run `connected-ready-getcourse-stepik-20260708` completed
   `ok` at `2026-07-08T08:54:25Z` across 6 ready sources
-  (`source:getcourse:15b891afce`, `source:getcourse:c991bf28c8`, and four
-  Stepik sources). It produced healthy live sync, live smoke, calibration
+  (two runtime-local GetCourse sources and four Stepik sources). It produced
+  healthy live sync, live smoke, calibration
   packet, and intake stages, 0 repair lanes, clean raw/secret privacy flags, 2
   healthy browser snapshot audits, 14 visible transcripts, and 21 source-backed
   smoke evidence items. CLI `calibration query-matrix` then answered 3/3

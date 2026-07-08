@@ -13,6 +13,7 @@ from pathlib import Path
 BOOTSTRAP_FIXTURE_INSTALL_COMMAND = "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration"
 PLATFORM_NARROWED_BOOTSTRAP_ERROR = "Agent install route must not narrow fixture bootstrap plan with --platform"
 COMMAND_SPAN_RE = re.compile(r"`([^`\n]+)`")
+PUBLIC_STATUS_GETCOURSE_SOURCE_ID_RE = re.compile(r"source:getcourse:[0-9a-f]{10,}")
 
 REQUIRED_FILES = [
     "AGENTS.md",
@@ -497,6 +498,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
     if "build-semantic-index --run stepik-fixture" not in agents:
         errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
+    if PUBLIC_STATUS_GETCOURSE_SOURCE_ID_RE.search(status_doc_raw):
+        errors.append("docs/STATUS.md must not expose deterministic runtime-only GetCourse source IDs")
     if "build-semantic-index --help" not in agents:
         errors.append("AGENTS route missing semantic provider option help check")
     if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents or "calibration connected-run" not in agents or "calibration status" not in agents or "calibration query" not in agents:
