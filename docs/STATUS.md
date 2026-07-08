@@ -387,6 +387,24 @@ This proves:
   total evidence items, and MCP `sources_answer_matrix` answered 3/3 with 15
   total evidence items; both retrieval checks used the local indexes/graphs
   with `network_touched: false` and top results from the same fresh sync run.
+- A runtime-only Stepik full-course connected run for course `6667`
+  (`source:stepik:9b777d98bf`) has been exercised locally through
+  `calibration connected-run --mode live --allow-network --live-scope
+  full-course --include-step-sources`: run
+  `stepik-full-course-live-nosmoke-refetch-20260708` completed `ok` at
+  `2026-07-08T09:39:28Z`, produced 1 course, 5 modules, 60 lessons, 556 steps,
+  401 assignments, 71 assets, 617 evidence items, keyword/semantic/graph
+  artifacts, and stable identity fingerprint
+  `sha256:6edf0c0d75042b94ed86632c55f5d2d342f4546dddf9432e19391980e7c29494`.
+  The Stepik smoke stage reused the completed sync receipt
+  (`source_mode: stepik_live_smoke_from_sync`) and stayed
+  `network_touched: false`, avoiding a second live Stepik traversal after sync.
+  CLI `calibration query-matrix` and MCP `connected_run_query_matrix` each
+  answered 2/2 philosophy-course questions from local indexes/graphs with 20
+  total evidence items, graph context for every query, and
+  `network_touched: false`. Step-source enrichment is now budgeted: this run
+  attempted 10 step-source payloads, skipped 546 by `max_step_sources`, and
+  recorded the effective limits plus diagnostics in the raw Stepik payload.
 - A runtime-only multi-source GetCourse plus Stepik connected run has been
   exercised locally: run `connected-ready-getcourse-stepik-20260708` completed
   `ok` at `2026-07-08T08:54:25Z` across 6 ready sources
@@ -471,8 +489,10 @@ The next layer is broader live connected-source work:
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress, comment, transcript, caption, and caption-sidecar resources use
   unusual markup or protected text-resource behavior;
-- gated live full-course Stepik runs against operator-selected authenticated
-  courses to calibrate real course size, permissions, and source enrichment;
+- additional gated live full-course Stepik runs against operator-selected
+  authenticated courses, including deliberately wider `--max-step-sources`
+  budgets where needed, to calibrate course size variance, permissions, and
+  source enrichment beyond the currently proven courses;
 - broader Stepik live smoke calibration against operator-selected authenticated
   courses, account discovery output, and full-course source-registry runs after
   `preflight live --platform stepik` confirms token/source readiness;

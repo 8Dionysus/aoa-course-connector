@@ -95,6 +95,18 @@ PREAUTH_QUERY = "course-specific question"
 PREAUTH_PLATFORMS = ["getcourse", "skillspace", "stepik"]
 
 
+def _step_source_limit(value: str) -> int | None:
+    if value.casefold() == "all":
+        return None
+    try:
+        parsed = int(value)
+    except ValueError as exc:
+        raise argparse.ArgumentTypeError("expected a non-negative integer or 'all'") from exc
+    if parsed < 0:
+        raise argparse.ArgumentTypeError("expected a non-negative integer or 'all'")
+    return parsed
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
@@ -399,6 +411,8 @@ def build_parser() -> argparse.ArgumentParser:
     stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
     stepik_live.add_argument("--batch-size", type=int, default=20)
     stepik_live.add_argument("--include-step-sources", action="store_true")
+    stepik_live.add_argument("--max-step-sources", type=_step_source_limit, default=10)
+    stepik_live.add_argument("--step-source-timeout", type=float, default=5.0)
     stepik_live.add_argument("--full-course", action="store_true")
     stepik_live.set_defaults(func=cmd_materialize_stepik_live)
     browser_fixture = materialize_sub.add_parser("browser-fixture")
@@ -501,6 +515,8 @@ def build_parser() -> argparse.ArgumentParser:
     sync_stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
     sync_stepik_live.add_argument("--batch-size", type=int, default=20)
     sync_stepik_live.add_argument("--include-step-sources", action="store_true")
+    sync_stepik_live.add_argument("--max-step-sources", type=_step_source_limit, default=10)
+    sync_stepik_live.add_argument("--step-source-timeout", type=float, default=5.0)
     sync_stepik_live.add_argument("--full-course", action="store_true")
     sync_stepik_live.add_argument("--source-limit", type=int)
     sync_stepik_live.add_argument("--build-artifacts", action="store_true")
@@ -563,6 +579,8 @@ def build_parser() -> argparse.ArgumentParser:
     smoke_stepik_live.add_argument("--max-steps-per-lesson", type=int, default=5)
     smoke_stepik_live.add_argument("--batch-size", type=int, default=20)
     smoke_stepik_live.add_argument("--include-step-sources", action="store_true")
+    smoke_stepik_live.add_argument("--max-step-sources", type=_step_source_limit, default=10)
+    smoke_stepik_live.add_argument("--step-source-timeout", type=float, default=5.0)
     smoke_stepik_live.add_argument("--full-course", action="store_true")
     smoke_stepik_live.add_argument("--query")
     smoke_stepik_live.add_argument("--skip-artifacts", action="store_true")
@@ -587,6 +605,8 @@ def build_parser() -> argparse.ArgumentParser:
     calibration_connected.add_argument("--query")
     calibration_connected.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
     calibration_connected.add_argument("--include-step-sources", action="store_true")
+    calibration_connected.add_argument("--max-step-sources", type=_step_source_limit, default=10)
+    calibration_connected.add_argument("--step-source-timeout", type=float, default=5.0)
     calibration_connected.add_argument("--allow-network", action="store_true")
     calibration_connected.add_argument("--stepik-token-env", default="STEPIK_API_TOKEN")
     calibration_connected.add_argument("--state-file", type=Path)
@@ -1614,6 +1634,8 @@ def cmd_sync_stepik_live(args: argparse.Namespace) -> int:
         max_steps_per_lesson=max_steps,
         batch_size=args.batch_size,
         include_step_sources=args.include_step_sources,
+        max_step_sources=args.max_step_sources,
+        step_source_timeout=args.step_source_timeout,
         source_ids=args.source_id,
         source_limit=args.source_limit,
         build_artifacts=args.build_artifacts,
@@ -1722,6 +1744,8 @@ def cmd_smoke_stepik_live(args: argparse.Namespace) -> int:
         max_steps_per_lesson=max_steps,
         batch_size=args.batch_size,
         include_step_sources=args.include_step_sources,
+        max_step_sources=args.max_step_sources,
+        step_source_timeout=args.step_source_timeout,
         query=args.query,
         build_artifacts=not args.skip_artifacts,
     )
@@ -1760,6 +1784,8 @@ def cmd_calibration_connected_run(args: argparse.Namespace) -> int:
             query=args.query,
             live_scope=args.live_scope,
             include_step_sources=args.include_step_sources,
+            max_step_sources=args.max_step_sources,
+            step_source_timeout=args.step_source_timeout,
             allow_network=args.allow_network,
             stepik_token_env=args.stepik_token_env,
             browser_state_file=args.state_file,
@@ -1844,6 +1870,8 @@ def cmd_materialize_stepik_live(args: argparse.Namespace) -> int:
         max_steps_per_lesson=max_steps,
         batch_size=args.batch_size,
         include_step_sources=args.include_step_sources,
+        max_step_sources=args.max_step_sources,
+        step_source_timeout=args.step_source_timeout,
     )
     _emit(receipt)
     return 0

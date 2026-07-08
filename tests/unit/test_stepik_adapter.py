@@ -51,7 +51,7 @@ def test_stepik_live_fetches_step_block_sources(monkeypatch) -> None:
         def __init__(self, **_kwargs: object) -> None:
             self.calls: list[tuple[str, object]] = []
 
-        def first(self, resource: str, resource_id: int) -> dict[str, object]:
+        def first(self, resource: str, resource_id: int, **_kwargs: object) -> dict[str, object]:
             self.calls.append((resource, resource_id))
             if resource == "courses":
                 return {"id": resource_id, "title": "Demo", "sections": [10]}
@@ -92,7 +92,7 @@ def test_stepik_live_batches_full_course_and_fetches_step_sources(monkeypatch) -
         def __init__(self, **_kwargs: object) -> None:
             self.calls: list[tuple[str, object]] = []
 
-        def first(self, resource: str, resource_id: int) -> dict[str, object]:
+        def first(self, resource: str, resource_id: int, **_kwargs: object) -> dict[str, object]:
             self.calls.append((resource, resource_id))
             if resource == "courses":
                 return {"id": resource_id, "title": "Demo", "sections": [10, 11]}
@@ -135,6 +135,60 @@ def test_stepik_live_batches_full_course_and_fetches_step_sources(monkeypatch) -
     assert first_step["step_source"]["block"]["text"] == "<p>Source text 40</p>"
     assert ("sections", (10, 11), 2) in instances[0].calls
     assert ("step-sources", 40) in instances[0].calls
+
+
+def test_stepik_step_source_enrichment_is_bounded(monkeypatch) -> None:
+    class FakeStepikClient:
+        def __init__(self, **_kwargs: object) -> None:
+            self.calls: list[tuple[str, object]] = []
+
+        def first(self, resource: str, resource_id: int, **_kwargs: object) -> dict[str, object]:
+            self.calls.append((resource, resource_id))
+            if resource == "courses":
+                return {"id": resource_id, "title": "Demo", "sections": [10]}
+            if resource == "blocks":
+                return {"id": resource_id, "name": "text", "text": f"<p>Block {resource_id}</p>"}
+            if resource == "step-sources":
+                return {"id": resource_id, "block": {"name": "text", "text": f"<p>Source text {resource_id}</p>"}}
+            raise AssertionError(resource)
+
+        def get_objects(self, resource: str, resource_ids: list[int], *, batch_size: int = 20) -> list[dict[str, object]]:
+            self.calls.append((resource, tuple(resource_ids), batch_size))
+            if resource == "sections":
+                return [{"id": 10, "title": "First", "units": [20]}]
+            if resource == "units":
+                return [{"id": 20, "lesson": 30, "position": 1}]
+            if resource == "lessons":
+                return [{"id": 30, "title": "Lesson", "steps": [40, 41, 42]}]
+            if resource == "steps":
+                return [{"id": item, "lesson": 30, "position": 1, "block": item + 10} for item in resource_ids]
+            raise AssertionError(resource)
+
+    instances: list[FakeStepikClient] = []
+
+    def fake_client(**kwargs: object) -> FakeStepikClient:
+        instance = FakeStepikClient(**kwargs)
+        instances.append(instance)
+        return instance
+
+    monkeypatch.setattr(stepik_client, "StepikClient", fake_client)
+
+    raw = stepik_client.fetch_stepik_course(
+        1,
+        include_step_sources=True,
+        max_step_sources=1,
+        step_source_timeout=0.5,
+    )
+
+    steps = raw["sections"][0]["units"][0]["steps"]
+    assert steps[0]["step_source"]["block"]["text"] == "<p>Source text 40</p>"
+    assert steps[1]["step_source_skipped"] == "max_step_sources reached"
+    assert steps[2]["step_source_skipped"] == "max_step_sources reached"
+    assert raw["limits"]["max_step_sources"] == 1
+    assert raw["limits"]["step_source_timeout"] == 0.5
+    assert raw["diagnostics"]["step_source_attempt_count"] == 1
+    assert raw["diagnostics"]["step_source_skipped_count"] == 2
+    assert [call for call in instances[0].calls if call[0] == "step-sources"] == [("step-sources", 40)]
 
 
 def test_stepik_client_iter_pages_uses_meta_has_next(monkeypatch) -> None:

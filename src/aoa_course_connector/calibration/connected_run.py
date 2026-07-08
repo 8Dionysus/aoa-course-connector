@@ -23,7 +23,7 @@ from aoa_course_connector.calibration import (
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.query import render_answer_packet, render_lesson_context_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, write_connected_source_runbook
-from aoa_course_connector.smoke import smoke_browser_fixture, smoke_browser_live, smoke_stepik_fixture, smoke_stepik_live
+from aoa_course_connector.smoke import smoke_browser_fixture, smoke_browser_live, smoke_stepik_fixture, smoke_stepik_from_sync, smoke_stepik_live
 from aoa_course_connector.sources import load_registry, registry_path
 from aoa_course_connector.storage import create_storage_roots, run_artifact_dir
 from aoa_course_connector.sync import (
@@ -334,6 +334,8 @@ def run_connected_calibration(
     query: str | None = None,
     live_scope: str = "bounded",
     include_step_sources: bool = False,
+    max_step_sources: int | None = 10,
+    step_source_timeout: float = 5.0,
     allow_network: bool = False,
     stepik_token_env: str = "STEPIK_API_TOKEN",
     browser_state_file: Path | None = None,
@@ -370,6 +372,8 @@ def run_connected_calibration(
             query=query,
             live_scope=selected_live_scope,
             include_step_sources=include_step_sources,
+            max_step_sources=max_step_sources,
+            step_source_timeout=step_source_timeout,
             allow_network=allow_network,
             stepik_token_env=stepik_token_env,
             browser_state_file=browser_state_file,
@@ -556,6 +560,9 @@ def _run_fixture(
             source_limit=source_limit,
             stepik_token_env=None,
             browser_state_file=None,
+            include_step_sources=False,
+            max_step_sources=10,
+            step_source_timeout=5.0,
         ),
     )
 
@@ -569,6 +576,8 @@ def _run_live(
     query: str | None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
     allow_network: bool,
     stepik_token_env: str,
     browser_state_file: Path | None,
@@ -680,6 +689,9 @@ def _run_live(
                 source_limit=source_limit,
                 stepik_token_env=stepik_token_env,
                 browser_state_file=browser_state_file,
+                include_step_sources=include_step_sources,
+                max_step_sources=max_step_sources,
+                step_source_timeout=step_source_timeout,
             ),
         )
 
@@ -746,6 +758,8 @@ def _run_live(
                 max_units_per_section=max_units,
                 max_steps_per_lesson=max_steps,
                 include_step_sources=include_step_sources,
+                max_step_sources=max_step_sources,
+                step_source_timeout=step_source_timeout,
                 source_ids=stepik_ids,
                 source_limit=source_limit,
                 build_artifacts=True,
@@ -787,40 +801,58 @@ def _run_live(
             )
             action["state_file"] = str(state_file)
         elif platform == "stepik":
-            try:
-                course_id = parse_stepik_course_id(str(source.get("source_ref") or ""))
-            except ValueError as exc:
-                action = _error_action("smoke", platform, str(exc), network_touched=False, source=source)
-            else:
-                stepik_state_file = (
-                    _resolved_browser_state_file(roots, platform="stepik", browser_state_file=browser_state_file)
-                    if str(source.get("access_mode") or "") == "browser_session"
-                    else None
-                )
-                max_sections = None if live_scope == "full-course" else 1
-                max_units = None if live_scope == "full-course" else 2
-                max_steps = None if live_scope == "full-course" else 5
+            sync_receipt = _stepik_sync_receipt_for_source(sync_receipts, source)
+            if sync_receipt:
                 action = _capture_action(
                     "smoke",
                     "stepik",
-                    lambda source=source, course_id=course_id, slug=slug: smoke_stepik_live(
+                    lambda source=source, slug=slug, sync_receipt=sync_receipt: smoke_stepik_from_sync(
                         roots,
-                        course_id=course_id,
                         run_id=f"{run_id}-stepik-live-smoke-{slug}",
-                        access_mode=str(source.get("access_mode") or "public_api"),
-                        token_env=stepik_token_env,
-                        state_file=stepik_state_file,
-                        max_sections=max_sections,
-                        max_units_per_section=max_units,
-                        max_steps_per_lesson=max_steps,
-                        include_step_sources=include_step_sources,
+                        source=source,
+                        sync=sync_receipt,
                         query=query,
                         build_artifacts=True,
                     ),
-                    network_touched=True,
+                    network_touched=False,
                 )
-                if stepik_state_file:
-                    action["state_file"] = str(stepik_state_file)
+            else:
+                try:
+                    course_id = parse_stepik_course_id(str(source.get("source_ref") or ""))
+                except ValueError as exc:
+                    action = _error_action("smoke", platform, str(exc), network_touched=False, source=source)
+                else:
+                    stepik_state_file = (
+                        _resolved_browser_state_file(roots, platform="stepik", browser_state_file=browser_state_file)
+                        if str(source.get("access_mode") or "") == "browser_session"
+                        else None
+                    )
+                    max_sections = None if live_scope == "full-course" else 1
+                    max_units = None if live_scope == "full-course" else 2
+                    max_steps = None if live_scope == "full-course" else 5
+                    action = _capture_action(
+                        "smoke",
+                        "stepik",
+                        lambda source=source, course_id=course_id, slug=slug: smoke_stepik_live(
+                            roots,
+                            course_id=course_id,
+                            run_id=f"{run_id}-stepik-live-smoke-{slug}",
+                            access_mode=str(source.get("access_mode") or "public_api"),
+                            token_env=stepik_token_env,
+                            state_file=stepik_state_file,
+                            max_sections=max_sections,
+                            max_units_per_section=max_units,
+                            max_steps_per_lesson=max_steps,
+                            include_step_sources=include_step_sources,
+                            max_step_sources=max_step_sources,
+                            step_source_timeout=step_source_timeout,
+                            query=query,
+                            build_artifacts=True,
+                        ),
+                        network_touched=True,
+                    )
+                    if stepik_state_file:
+                        action["state_file"] = str(stepik_state_file)
         else:
             continue
         action["source_id"] = source.get("source_id")
@@ -879,6 +911,9 @@ def _run_live(
             source_limit=source_limit,
             stepik_token_env=stepik_token_env,
             browser_state_file=browser_state_file,
+            include_step_sources=include_step_sources,
+            max_step_sources=max_step_sources,
+            step_source_timeout=step_source_timeout,
         ),
     )
 
@@ -921,6 +956,23 @@ def _packet_stage(packet: dict[str, object], packet_path: Path, intake: dict[str
     }
 
 
+def _stepik_sync_receipt_for_source(sync_receipts: list[dict[str, object]], source: dict[str, object]) -> dict[str, object] | None:
+    source_id = str(source.get("source_id") or "")
+    source_ref = str(source.get("source_ref") or "")
+    for receipt in sync_receipts:
+        if receipt.get("source_mode") != "stepik_live_sync":
+            continue
+        checkpoints = receipt.get("synced_sources") if isinstance(receipt.get("synced_sources"), list) else []
+        for checkpoint in checkpoints:
+            if not isinstance(checkpoint, dict):
+                continue
+            if source_id and str(checkpoint.get("source_id") or "") == source_id:
+                return receipt
+            if source_ref and str(checkpoint.get("source_ref") or "") == source_ref:
+                return receipt
+    return None
+
+
 def _execution_options(
     *,
     query: str | None,
@@ -931,8 +983,11 @@ def _execution_options(
     source_limit: int | None,
     stepik_token_env: str | None,
     browser_state_file: Path | None,
+    include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
 ) -> dict[str, object]:
-    return {
+    options: dict[str, object] = {
         "query": query or "",
         "max_lessons": max_lessons,
         "max_pages": max_pages,
@@ -942,6 +997,10 @@ def _execution_options(
         "stepik_token_env": stepik_token_env or "",
         "browser_state_file": str(browser_state_file.expanduser()) if browser_state_file else "",
     }
+    if include_step_sources:
+        options["max_step_sources"] = "all" if max_step_sources is None else max_step_sources
+        options["step_source_timeout"] = step_source_timeout
+    return options
 
 
 def _receipt(

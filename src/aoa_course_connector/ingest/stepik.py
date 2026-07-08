@@ -57,6 +57,8 @@ def materialize_stepik_live(
     max_steps_per_lesson: int | None = 5,
     batch_size: int = 20,
     include_step_sources: bool = False,
+    max_step_sources: int | None = 10,
+    step_source_timeout: float = 5.0,
     source: dict[str, Any] | None = None,
 ) -> dict[str, object]:
     create_storage_roots(roots)
@@ -75,6 +77,8 @@ def materialize_stepik_live(
         max_steps_per_lesson=max_steps_per_lesson,
         batch_size=batch_size,
         include_step_sources=include_step_sources,
+        max_step_sources=max_step_sources,
+        step_source_timeout=step_source_timeout,
     )
     if source:
         raw["source"] = _source_payload(source)

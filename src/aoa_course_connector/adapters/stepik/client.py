@@ -30,9 +30,9 @@ class StepikClient:
         self.timeout = timeout
         self.cookie_header = cookie_header
 
-    def get_resource(self, resource: str, resource_id: int) -> dict[str, Any]:
+    def get_resource(self, resource: str, resource_id: int, *, timeout: float | None = None) -> dict[str, Any]:
         url = urljoin(self.base_url, f"{resource}/{resource_id}")
-        return self._get_json(url)
+        return self._get_json(url, timeout=timeout)
 
     def get_collection(self, resource: str, params: dict[str, object] | None = None) -> dict[str, Any]:
         query = urlencode(params or {}, doseq=True)
@@ -73,13 +73,13 @@ class StepikClient:
                 break
         return payloads
 
-    def _get_json(self, url: str) -> dict[str, Any]:
+    def _get_json(self, url: str, *, timeout: float | None = None) -> dict[str, Any]:
         request = Request(url, headers=self._headers())
-        with urlopen(request, timeout=self.timeout) as response:
+        with urlopen(request, timeout=self.timeout if timeout is None else timeout) as response:
             return json.loads(response.read().decode("utf-8"))
 
-    def first(self, resource: str, resource_id: int) -> dict[str, Any]:
-        payload = self.get_resource(resource, resource_id)
+    def first(self, resource: str, resource_id: int, *, timeout: float | None = None) -> dict[str, Any]:
+        payload = self.get_resource(resource, resource_id, timeout=timeout)
         items = payload.get(resource)
         if not isinstance(items, list) or not items:
             raise ValueError(f"Stepik response did not contain {resource}/{resource_id}")
@@ -106,11 +106,15 @@ def fetch_stepik_course(
     max_steps_per_lesson: int | None = None,
     batch_size: int = 20,
     include_step_sources: bool = False,
+    max_step_sources: int | None = 10,
+    step_source_timeout: float = 5.0,
 ) -> dict[str, Any]:
     client = StepikClient(base_url=base_url, token=token, timeout=timeout, cookie_header=cookie_header)
     course = client.first("courses", course_id)
     access_mode = "api_token" if token else "browser_session" if cookie_header else "public_api"
     sections = []
+    step_source_attempt_count = 0
+    step_source_skipped_count = 0
     section_ids = _limited_ids(course.get("sections", []), max_sections)
     for section in client.get_objects("sections", section_ids, batch_size=batch_size):
         units = []
@@ -124,7 +128,24 @@ def fetch_stepik_course(
             steps = []
             step_ids = _limited_ids(lesson.get("steps", []), max_steps_per_lesson)
             for step in client.get_objects("steps", step_ids, batch_size=batch_size):
-                steps.append(_step_with_block(client, step, include_step_sources=include_step_sources))
+                fetch_step_source = False
+                skipped_reason = ""
+                if include_step_sources and step.get("id") is not None:
+                    if max_step_sources is None or step_source_attempt_count < max_step_sources:
+                        fetch_step_source = True
+                        step_source_attempt_count += 1
+                    else:
+                        skipped_reason = "max_step_sources reached"
+                        step_source_skipped_count += 1
+                steps.append(
+                    _step_with_block(
+                        client,
+                        step,
+                        include_step_sources=fetch_step_source,
+                        step_source_timeout=step_source_timeout,
+                        step_source_skipped=skipped_reason,
+                    )
+                )
             units.append({"unit": unit, "lesson": lesson, "steps": steps})
         sections.append({"section": section, "units": units})
     return {
@@ -145,6 +166,12 @@ def fetch_stepik_course(
             "max_steps_per_lesson": max_steps_per_lesson,
             "batch_size": batch_size,
             "include_step_sources": include_step_sources,
+            "max_step_sources": max_step_sources,
+            "step_source_timeout": step_source_timeout,
+        },
+        "diagnostics": {
+            "step_source_attempt_count": step_source_attempt_count,
+            "step_source_skipped_count": step_source_skipped_count,
         },
     }
 
@@ -348,7 +375,14 @@ def _chunks(values: list[int], size: int) -> list[list[int]]:
     return [values[index : index + size] for index in range(0, len(values), size)]
 
 
-def _step_with_block(client: StepikClient, step: dict[str, Any], *, include_step_sources: bool = False) -> dict[str, Any]:
+def _step_with_block(
+    client: StepikClient,
+    step: dict[str, Any],
+    *,
+    include_step_sources: bool = False,
+    step_source_timeout: float = 5.0,
+    step_source_skipped: str = "",
+) -> dict[str, Any]:
     step = dict(step)
     block_ref = step.get("block")
     if not isinstance(block_ref, dict) and block_ref is not None:
@@ -360,9 +394,11 @@ def _step_with_block(client: StepikClient, step: dict[str, Any], *, include_step
             step["block"] = client.first("blocks", block_id)
     if include_step_sources and step.get("id") is not None:
         try:
-            step["step_source"] = client.first("step-sources", int(step["id"]))
+            step["step_source"] = client.first("step-sources", int(step["id"]), timeout=step_source_timeout)
         except Exception as exc:  # pragma: no cover - Stepik permissions vary by account
             step["step_source_error"] = str(exc)
+    elif step_source_skipped:
+        step["step_source_skipped"] = step_source_skipped
     return step
 
 
