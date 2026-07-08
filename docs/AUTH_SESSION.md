@@ -27,12 +27,20 @@ file from the operator's own logged-in session:
 ```bash
 python -m pip install -e ".[browser]"
 
+aoa-course auth import-firefox-state getcourse "https://school.example" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
+
 aoa-course auth capture-browser-state getcourse "https://school.example" \
   --login-url "https://school.example/cms/system/login" \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --expect-origin-contains "school.example"
 ```
 
+The Firefox import is a no-network shortcut when the operator is already
+logged in through Firefox for the same course host. It copies only matching
+cookies into a Playwright-compatible storage-state file and redacts values in
+the receipt. If there is no matching Firefox session, use the capture command.
 The command opens a local browser window. Log in normally, then press Enter in
 the terminal so the connector can save storage state under `AOA_COURSE_AUTH_ROOT`.
 For automation or already-authenticated browser contexts, use `--no-prompt`.

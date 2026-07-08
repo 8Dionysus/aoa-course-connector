@@ -1489,6 +1489,8 @@ def test_mcp_live_preflight_reports_readiness_without_secret_values(tmp_path: Pa
     assert plan["state_file_candidates"][0]["host"] == "school.operator.edu"
     assert plan["state_file_candidates"][0]["state_file"].endswith("/getcourse/school-operator-edu.storage-state.json")
     assert plan["state_file_candidates"][0]["selected_by_default"] is False
+    assert "--expect-origin-contains school.operator.edu" in plan["commands"]["import_firefox"]
+    assert "auth import-firefox-state getcourse school.operator.edu" in plan["state_file_candidates"][0]["commands"]["import_firefox"]
     assert "--expect-origin-contains school.operator.edu" in plan["state_file_candidates"][0]["commands"]["capture"]
     rendered_plan = json.dumps(plan)
     assert "SUPER_SECRET_COOKIE" not in rendered_plan

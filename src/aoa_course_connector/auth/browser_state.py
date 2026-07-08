@@ -27,9 +27,14 @@ def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[
         f"aoa-course auth capture-browser-state {platform} {source_ref!r} "
         f"--login-url <login-or-account-url> --state-file {str(state_file)!r}"
     )
+    import_firefox_command = None
     if expected_origin:
         inspect_command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
         capture_command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
+        import_firefox_command = (
+            f"aoa-course auth import-firefox-state {platform} {source_ref!r} "
+            f"--state-file {str(state_file)!r} --expect-origin-contains {shlex.quote(expected_origin)}"
+        )
     return {
         "schema": "aoa_course_browser_state_plan_v1",
         "platform": platform,
@@ -39,9 +44,11 @@ def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[
         "state_file": str(state_file),
         "created_at": _now(),
         "capture_command": capture_command,
+        "import_firefox_command": import_firefox_command,
         "inspect_command": inspect_command,
         "steps": [
             "install the browser extra when live capture is needed: python -m pip install -e '.[browser]'",
+            "if already logged in through Firefox and import_firefox_command is present, import matching cookies without touching the network",
             "run capture-browser-state and log in through the local browser window",
             "confirm the capture or inspect receipt matches the expected source origin without printing cookies or tokens",
             "run discovery, sync, or smoke against the authorized state file",

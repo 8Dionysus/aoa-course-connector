@@ -49,6 +49,10 @@ For live operator-owned pages, use `discover browser-live` or
 crawl the selected course entrypoint:
 
 ```bash
+aoa-course auth import-firefox-state getcourse "https://school.example" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
+
 aoa-course auth capture-browser-state getcourse "https://school.example" \
   --login-url "https://school.example/cms/system/login" \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \

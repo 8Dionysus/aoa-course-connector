@@ -248,6 +248,7 @@ For live operator-owned browser sessions, create and inspect auth state first:
 
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcourse "https://school.example"
+PYTHONPATH=src python -m aoa_course_connector.cli auth import-firefox-state getcourse "https://school.example" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 PYTHONPATH=src python -m aoa_course_connector.cli auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
@@ -256,9 +257,11 @@ PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getc
 Browser preflight checks saved storage state against each registered source
 host before marking live sync ready. A state file captured for one school host
 does not make another registered host ready.
-`auth capture-browser-state` also runs the same redacted origin check in its
-receipt and reports `expected_origin_matched`, so a wrong-login or redirect
-host mismatch is visible before discovery or sync.
+`auth import-firefox-state` is the no-network shortcut when Firefox already has
+a logged-in session for that host; `auth capture-browser-state` is the
+fresh-login fallback and also runs the same redacted origin check in its receipt
+with `expected_origin_matched`, so a wrong-login or redirect host mismatch is
+visible before discovery or sync.
 Fixture-discovered GetCourse and Skillspace entries use reserved example hosts
 to prove the install route. Live preflight marks those entries as
 `fixture_or_example_source` with `operator_live_candidate: false` and will not
@@ -363,8 +366,11 @@ For GetCourse and Skillspace, the plan also includes
 `browser_auth_plans`: one per browser-session platform. Each plan groups
 registered sources by host, reports whether the saved storage-state matches
 those hosts, and gives the exact `auth plan-browser-state`,
-`auth capture-browser-state`, `auth inspect-browser-state`, and recheck
-commands needed before live sync can start.
+`auth import-firefox-state`, `auth capture-browser-state`,
+`auth inspect-browser-state`, and recheck commands needed before live sync can
+start. Per-host `state_file_candidates` include the same Firefox import,
+capture, inspect, and source-scoped recheck commands when a platform registry
+spans multiple schools or custom domains.
 
 `calibration connected-run` is the executable route over the same contract; a
 ready connected plan exposes the exact command as `connected_run_plan`.
