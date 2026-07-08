@@ -67,7 +67,7 @@ from aoa_course_connector.smoke import (
     smoke_stepik_fixture as smoke_stepik_fixture_route,
     smoke_stepik_live as smoke_stepik_live_route,
 )
-from aoa_course_connector.sources import load_registry, registry_path, upsert_source
+from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.status import connector_readiness, source_registry_catalog
 from aoa_course_connector.storage import create_storage_roots, run_data_dir, storage_status
 from aoa_course_connector.sync import (
@@ -248,7 +248,15 @@ def build_parser() -> argparse.ArgumentParser:
     sources_add.add_argument("--access-mode")
     sources_add.add_argument("--disabled", action="store_true")
     sources_add.set_defaults(func=cmd_sources_add)
-    sources_sub.add_parser("list").set_defaults(func=cmd_sources_list)
+    sources_list = sources_sub.add_parser("list")
+    sources_list.add_argument("--platform", action="append")
+    sources_list.add_argument("--source-id", action="append")
+    sources_list.add_argument("--include-disabled", action="store_true")
+    sources_list.add_argument("--no-source-refs", action="store_false", dest="include_source_refs")
+    sources_list.add_argument("--no-connected-runs", action="store_false", dest="include_connected_runs")
+    sources_list.add_argument("--connected-run-limit", type=int, default=3)
+    sources_list.add_argument("--connected-receipt-limit", type=int, default=50)
+    sources_list.set_defaults(func=cmd_sources_list, include_source_refs=True, include_connected_runs=True)
     sources_answer = sources_sub.add_parser("answer")
     sources_answer.add_argument("query")
     sources_answer.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
@@ -1021,11 +1029,21 @@ def cmd_sources_add(args: argparse.Namespace) -> int:
     return 0
 
 
-def cmd_sources_list(_args: argparse.Namespace) -> int:
+def cmd_sources_list(args: argparse.Namespace) -> int:
     roots = StorageRoots.from_env(find_repo_root())
     registry = load_registry(roots.data)
-    catalog = source_registry_catalog(roots, registry, include_source_refs=True, include_connected_runs=True)
-    _emit({"schema": "aoa_course_source_registry_list_v1", "registry_path": str(registry_path(roots.data)), "catalog": catalog, "registry": registry})
+    catalog = source_registry_catalog(
+        roots,
+        registry,
+        include_disabled=args.include_disabled,
+        platforms=args.platform,
+        source_ids=args.source_id,
+        include_source_refs=args.include_source_refs,
+        include_connected_runs=args.include_connected_runs,
+        connected_run_limit=max(1, args.connected_run_limit),
+        connected_receipt_limit=max(1, args.connected_receipt_limit),
+    )
+    _emit(catalog)
     return 0
 
 

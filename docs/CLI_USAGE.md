@@ -13,6 +13,7 @@ aoa-course readiness --platform getcourse --query "course-specific question" --l
 aoa-course init
 aoa-course adapters list
 aoa-course sources add demo-course --platform offline_export --title "Demo Course"
+aoa-course sources list --platform getcourse --no-source-refs --connected-run-limit 2
 aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 aoa-course sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 aoa-course materialize fixture --run starter-fixture
@@ -112,6 +113,12 @@ answer and nearby course graph context. It returns
 `aoa_course_lesson_context_packet_v1`, including the answer packet and
 `aoa_course_lesson_graph_context_v1`; `--graph-limit` bounds the per-evidence
 lesson neighborhood.
+Use `sources list` when the agent needs the configured-source catalog from
+shell without writing MCP JSON. It returns the canonical
+`aoa_course_source_registry_list_v1` packet directly, accepts `--platform`,
+repeated `--source-id`, `--include-disabled`, `--no-source-refs`,
+`--no-connected-runs`, and connected-run scan limits, then reports source counts
+and query-ready connected-run hints without touching the network.
 Use `sources answer` when the agent should ask one question across configured
 source-registry entries instead of naming a run id by hand. It reads local
 query-ready connected-run receipts, accepts `--platform`, repeated
