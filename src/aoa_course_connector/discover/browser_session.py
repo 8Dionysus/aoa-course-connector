@@ -170,6 +170,8 @@ def collect_live_catalog_pages(
     api_payloads: list[dict[str, object]] = []
     if platform == "getcourse":
         _attach_getcourse_catalog_response_recorder(page, api_payloads)
+    if platform == "skillspace":
+        _attach_skillspace_catalog_response_recorder(page, api_payloads)
     for index in range(1, page_limit + 1):
         payload_start = len(api_payloads)
         page.goto(next_url, wait_until=wait_until)
@@ -225,6 +227,47 @@ def _attach_getcourse_catalog_response_recorder(page: Any, payloads: list[dict[s
         payloads.append({"url": url, "content_type": content_type, "json": payload})
 
     page.on("response", on_response)
+
+
+def _attach_skillspace_catalog_response_recorder(page: Any, payloads: list[dict[str, object]]) -> None:
+    if not hasattr(page, "on"):
+        return
+
+    def on_response(response: Any) -> None:
+        url = str(getattr(response, "url", "") or "")
+        lowered = url.casefold()
+        if not (
+            "/api/rest/student/course/list" in lowered
+            or "/api/rest/school/course/list" in lowered
+            or "/api/graphql" in lowered
+        ):
+            return
+        headers = getattr(response, "headers", {}) or {}
+        content_type = str(headers.get("content-type") or "")
+        if "json" not in content_type.casefold():
+            return
+        try:
+            payload = response.json()
+        except Exception:
+            return
+        if "/api/graphql" in lowered and not _payload_has_course_catalog_signal(payload):
+            return
+        payloads.append({"url": url, "content_type": content_type, "json": payload})
+
+    page.on("response", on_response)
+
+
+def _payload_has_course_catalog_signal(value: object) -> bool:
+    if isinstance(value, dict):
+        for key, child in value.items():
+            key_text = str(key).casefold()
+            if "course" in key_text or "lesson" in key_text:
+                return True
+            if _payload_has_course_catalog_signal(child):
+                return True
+    elif isinstance(value, list):
+        return any(_payload_has_course_catalog_signal(item) for item in value[:50])
+    return False
 
 
 def _wait_for_catalog_api_payloads(page: Any) -> None:
