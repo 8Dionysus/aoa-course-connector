@@ -13,6 +13,14 @@ from aoa_course_connector.auth import inspect_browser_state
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
 from aoa_course_connector.sources import load_registry, registry_path
+from aoa_course_connector.stepik_options import (
+    DEFAULT_MAX_STEP_SOURCES,
+    DEFAULT_STEP_SOURCE_TIMEOUT,
+    max_step_sources_packet,
+    max_step_sources_token,
+    normalize_max_step_sources,
+    normalize_step_source_timeout,
+)
 from aoa_course_connector.storage import run_artifact_dir, run_data_dir
 
 
@@ -41,6 +49,8 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
         f"- network_touched: `{bool(plan.get('network_touched'))}`",
         f"- live_scope: `{plan.get('live_scope')}`",
         f"- include_step_sources: `{bool(plan.get('include_step_sources'))}`",
+        f"- max_step_sources: `{plan.get('max_step_sources')}`",
+        f"- step_source_timeout: `{plan.get('step_source_timeout')}`",
     ]
     source_registry = plan.get("source_registry") if isinstance(plan.get("source_registry"), dict) else {}
     if source_registry:
@@ -435,6 +445,8 @@ def connected_source_plan(
     calibration_run: str = "connected-live-calibration",
     live_scope: str = "bounded",
     include_step_sources: bool = False,
+    max_step_sources: int | str | None = DEFAULT_MAX_STEP_SOURCES,
+    step_source_timeout: float = DEFAULT_STEP_SOURCE_TIMEOUT,
 ) -> dict[str, object]:
     """Build a read-only launch plan for connected-source calibration."""
 
@@ -446,6 +458,8 @@ def connected_source_plan(
         source_ids=selected_source_ids,
     )
     selected_live_scope = _selected_live_scope(live_scope)
+    selected_max_step_sources = normalize_max_step_sources(max_step_sources)
+    selected_step_source_timeout = normalize_step_source_timeout(step_source_timeout)
     preflight = live_preflight(
         roots,
         platforms=selected_platforms,
@@ -485,6 +499,8 @@ def connected_source_plan(
         link_pattern=link_pattern,
         live_scope=selected_live_scope,
         include_step_sources=include_step_sources,
+        max_step_sources=selected_max_step_sources,
+        step_source_timeout=selected_step_source_timeout,
     )
     smoke_actions = _smoke_actions(
         source_checks,
@@ -498,6 +514,8 @@ def connected_source_plan(
         link_pattern=link_pattern,
         live_scope=selected_live_scope,
         include_step_sources=include_step_sources,
+        max_step_sources=selected_max_step_sources,
+        step_source_timeout=selected_step_source_timeout,
     )
     calibration_actions = _calibration_actions(
         preflight_actions,
@@ -534,6 +552,8 @@ def connected_source_plan(
         link_pattern=link_pattern,
         live_scope=selected_live_scope,
         include_step_sources=include_step_sources,
+        max_step_sources=selected_max_step_sources,
+        step_source_timeout=selected_step_source_timeout,
     )
     stages = [
         {"name": "preflight_reports", "ready": True, "actions": preflight_actions},
@@ -557,6 +577,8 @@ def connected_source_plan(
         "source_ids": selected_source_ids,
         "live_scope": selected_live_scope,
         "include_step_sources": include_step_sources,
+        "max_step_sources": max_step_sources_packet(selected_max_step_sources),
+        "step_source_timeout": selected_step_source_timeout,
         "max_lessons": max_lessons,
         "max_pages": max_pages,
         "max_sources": max_sources,
@@ -846,6 +868,8 @@ def _sync_actions(
     link_pattern: str | None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
 ) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for platform in [item for item in platforms if item in BROWSER_PLATFORMS]:
@@ -878,6 +902,8 @@ def _sync_actions(
                 state_file=stepik_browser_state_file if str(source.get("access_mode") or "") == "browser_session" else None,
                 live_scope=live_scope,
                 include_step_sources=include_step_sources,
+                max_step_sources=max_step_sources,
+                step_source_timeout=step_source_timeout,
                 source_id=source_id,
                 run_suffix=_source_slug(source),
             )
@@ -908,6 +934,8 @@ def _smoke_actions(
     link_pattern: str | None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
 ) -> list[dict[str, object]]:
     actions: list[dict[str, object]] = []
     for source in source_checks:
@@ -950,6 +978,8 @@ def _smoke_actions(
                 state_file=stepik_browser_state_file if str(source.get("access_mode") or "") == "browser_session" else None,
                 live_scope=live_scope,
                 include_step_sources=include_step_sources,
+                max_step_sources=max_step_sources,
+                step_source_timeout=step_source_timeout,
             )
         else:
             continue
@@ -1015,6 +1045,8 @@ def _connected_run_actions(
     link_pattern: str | None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
 ) -> list[dict[str, object]]:
     ready_smoke_source_ids = {
         str(action.get("source_id"))
@@ -1079,8 +1111,10 @@ def _connected_run_actions(
     )
     if link_pattern:
         parts.append(f"--link-pattern {shlex.quote(link_pattern)}")
-    if include_step_sources:
+    include_step_source_options = include_step_sources and "stepik" in ready_platforms
+    if include_step_source_options:
         parts.append("--include-step-sources")
+        parts.extend(_step_source_option_parts(max_step_sources=max_step_sources, step_source_timeout=step_source_timeout))
     command = " ".join(parts)
     mcp_arguments = _connected_run_mcp_arguments(
         run_id=calibration_run,
@@ -1089,7 +1123,9 @@ def _connected_run_actions(
         source_ids=ready_source_ids,
         query=query,
         live_scope=live_scope,
-        include_step_sources=include_step_sources,
+        include_step_sources=include_step_source_options,
+        max_step_sources=max_step_sources,
+        step_source_timeout=step_source_timeout,
         allow_network=True,
         stepik_token_env=stepik_token_env if "stepik" in ready_platforms else None,
         browser_state_file=browser_state_file,
@@ -1111,6 +1147,14 @@ def _connected_run_actions(
             "platforms": ready_platforms,
             "source_ids": ready_source_ids,
             "command": command,
+            **(
+                {
+                    "max_step_sources": max_step_sources_packet(max_step_sources),
+                    "step_source_timeout": step_source_timeout,
+                }
+                if include_step_source_options
+                else {}
+            ),
             "mcp_tool_call": {
                 "tool": "connected_run",
                 "arguments": mcp_arguments,
@@ -1154,6 +1198,8 @@ def _connected_run_mcp_arguments(
     query: str | None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
     allow_network: bool,
     stepik_token_env: str | None,
     browser_state_file: Path | None,
@@ -1179,6 +1225,8 @@ def _connected_run_mcp_arguments(
         arguments["query"] = query
     if include_step_sources:
         arguments["include_step_sources"] = True
+        arguments["max_step_sources"] = max_step_sources_packet(max_step_sources)
+        arguments["step_source_timeout"] = step_source_timeout
     if stepik_token_env:
         arguments["stepik_token_env"] = stepik_token_env
     if browser_state_file:
@@ -1472,6 +1520,8 @@ def _stepik_sync_command(
     state_file: Path | None = None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
     source_id: str | None = None,
     run_suffix: str | None = None,
 ) -> str:
@@ -1490,6 +1540,8 @@ def _stepik_sync_command(
         command += "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
     if include_step_sources:
         command += "--include-step-sources "
+        command += " ".join(_step_source_option_parts(max_step_sources=max_step_sources, step_source_timeout=step_source_timeout))
+        command += " "
     return command + "--build-artifacts"
 
 
@@ -1502,6 +1554,8 @@ def _stepik_smoke_command(
     state_file: Path | None = None,
     live_scope: str,
     include_step_sources: bool,
+    max_step_sources: int | None,
+    step_source_timeout: float,
 ) -> str:
     command = (
         f"aoa-course smoke stepik-live {course_id} --run stepik-live-smoke-{slug} "
@@ -1515,7 +1569,16 @@ def _stepik_smoke_command(
         command += "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
     if include_step_sources:
         command += "--include-step-sources "
+        command += " ".join(_step_source_option_parts(max_step_sources=max_step_sources, step_source_timeout=step_source_timeout))
+        command += " "
     return command.rstrip()
+
+
+def _step_source_option_parts(*, max_step_sources: int | None, step_source_timeout: float) -> list[str]:
+    return [
+        f"--max-step-sources {shlex.quote(max_step_sources_token(max_step_sources))}",
+        f"--step-source-timeout {step_source_timeout}",
+    ]
 
 
 def _append_stepik_preflight(

@@ -363,6 +363,10 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
         "--live-scope",
         "full-course",
         "--include-step-sources",
+        "--max-step-sources",
+        "all",
+        "--step-source-timeout",
+        "0.5",
         "--semantic-provider",
         "http_json_v1",
         "--embedding-endpoint",
@@ -413,6 +417,8 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     assert sources["selected_source_count"] == 3
     assert len(sources["sources"]) == 3
     profile = json.loads(profile_path.read_text(encoding="utf-8"))
+    assert profile["runtime"]["max_step_sources"] == "all"
+    assert profile["runtime"]["step_source_timeout"] == 0.5
     getcourse_source = next(source for source in profile["sources"] if source["platform"] == "getcourse")
     state_file = Path(str(getcourse_source["state_file"]))
     state_file.parent.mkdir(parents=True, exist_ok=True)

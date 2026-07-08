@@ -4,12 +4,12 @@
 aoa-course doctor
 aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
 aoa-course readiness --run starter-fixture
-aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
+aoa-course connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5 --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.runbook.md"
 aoa-course connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
 aoa-course connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live-applied.runbook.md"
 aoa-course connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --platform getcourse
-aoa-course readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 50 --max-pages 5 --max-sources 50 --live-scope bounded
+aoa-course readiness --platform stepik --query "course-specific question" --live-scope full-course --include-step-sources --max-step-sources all --step-source-timeout 0.5
 aoa-course init
 aoa-course adapters list
 aoa-course sources add demo-course --platform offline_export --title "Demo Course"
@@ -39,7 +39,7 @@ aoa-course auth plan-browser-state getcourse "https://school.example"
 aoa-course auth capture-browser-state getcourse "https://school.example" --login-url "https://school.example/cms/system/login" --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin-contains "school.example"
 aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --expect-origin school.example
-aoa-course preflight connected-plan --live-scope bounded --source-id "source:getcourse:..." --query "course-specific question" --link-pattern "*/lessons/*" --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
+aoa-course preflight connected-plan --live-scope full-course --platform stepik --source-id "source:stepik:..." --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5 --write-runbook "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connected-source-runbook.md"
 aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
 aoa-course discover browser-snapshot /path/to/catalog-snapshot.json --platform getcourse --run getcourse-discovery --register --max-sources 50
 aoa-course discover browser-live "https://school.example/teach/control/stream" --platform getcourse --run getcourse-live-discovery --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" --register --max-sources 50 --max-pages 5
@@ -64,7 +64,7 @@ aoa-course calibration query --run connected-fixture-proof --kind smoke
 aoa-course calibration query --run connected-fixture-proof --kind sync --query "course-specific question" --entry-limit 3
 aoa-course calibration query-matrix --run connected-fixture-proof --kind smoke --query "GetCourse bootloader rollback evidence" --query "Skillspace logcat bugreport evidence" --query "Stepik public API evidence"
 aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope bounded --source-limit 1 --run connected-stepik-live-calibration
-aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope full-course --include-step-sources --max-step-sources 10 --source-id "source:stepik:..." --query "course-specific question" --run connected-stepik-full-course-calibration
+aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope full-course --include-step-sources --max-step-sources all --step-source-timeout 0.5 --source-id "source:stepik:..." --query "course-specific question" --run connected-stepik-full-course-calibration
 aoa-course calibration build --run connected-live-calibration --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
 aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
@@ -109,10 +109,10 @@ aoa-course mcp call connection_profile_inspect '{"profile_path":"${AOA_COURSE_AR
 aoa-course mcp call connection_profile_status '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call connection_profile_run_plan '{"profile_path":"${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json","platform":"getcourse"}'
 aoa-course mcp call live_preflight '{}'
-aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call connected_source_plan '{"live_scope":"full-course","platforms":["stepik"],"source_ids":["source:stepik:..."],"query":"course-specific question","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5}'
 aoa-course mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
-aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
+aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
 Use `lesson-context` when an agent needs one CLI packet with the source-backed
@@ -215,8 +215,11 @@ to narrow a diagnostic run and `--source-id`/`source_ids` to plan only one
 registered source so another not-yet-authorized source does not block the
 ready source's connected-run plan.
 For Stepik, `--include-step-sources` is bounded by `--max-step-sources 10` and
-`--step-source-timeout 5.0` unless you pass a different limit. Use
-`--max-step-sources all` only for a deliberate long enrichment run.
+`--step-source-timeout 5.0` unless you pass a different limit. The same fields
+flow through `readiness`, `preflight connected-plan`, MCP `connector_readiness`,
+MCP `connected_source_plan`, `connect profile`, `connect run`, and MCP
+`connected_run`, so `--max-step-sources all` should be a deliberate long
+enrichment run rather than an accidental default.
 Fixture-discovered browser sources and reserved example hosts such as
 `*.example` are install proof only. Live preflight marks them as
 `fixture_or_example_source` with `operator_live_candidate: false`, does not
@@ -287,9 +290,10 @@ true through `lanes.source_registry_query_ready` and `next_commands` points to
 bootstrap. For
 browser-session sources, `--link-pattern` flows into the embedded connected
 plan and its ready connected-run plan. `--max-lessons`, `--max-pages`,
-`--max-sources`, `--live-scope`, and `--include-step-sources` also flow into
-the embedded connected plan, so a readiness packet can preserve either a bounded
-browser crawl or an explicit Stepik full-course/source-enrichment plan.
+`--max-sources`, `--live-scope`, `--include-step-sources`,
+`--max-step-sources`, and `--step-source-timeout` also flow into the embedded
+connected plan, so a readiness packet can preserve either a bounded browser
+crawl or an explicit Stepik full-course/source-enrichment plan.
 Pass `--semantic-provider http_json_v1`, `--embedding-endpoint`,
 `--embedding-model`, and `--embedding-token-env` when the readiness packet
 should verify an operator-selected external embedding endpoint route. The

@@ -75,6 +75,12 @@ from aoa_course_connector.smoke import (
     smoke_stepik_live as smoke_stepik_live_route,
 )
 from aoa_course_connector.sources import load_registry, upsert_source
+from aoa_course_connector.stepik_options import (
+    DEFAULT_MAX_STEP_SOURCES,
+    DEFAULT_STEP_SOURCE_TIMEOUT,
+    normalize_max_step_sources,
+    normalize_step_source_timeout,
+)
 from aoa_course_connector.status import connector_readiness, source_registry_catalog
 from aoa_course_connector.storage import create_storage_roots, run_data_dir, storage_status
 from aoa_course_connector.sync import (
@@ -96,15 +102,10 @@ PREAUTH_PLATFORMS = ["getcourse", "skillspace", "stepik"]
 
 
 def _step_source_limit(value: str) -> int | None:
-    if value.casefold() == "all":
-        return None
     try:
-        parsed = int(value)
+        return normalize_max_step_sources(value)
     except ValueError as exc:
-        raise argparse.ArgumentTypeError("expected a non-negative integer or 'all'") from exc
-    if parsed < 0:
-        raise argparse.ArgumentTypeError("expected a non-negative integer or 'all'")
-    return parsed
+        raise argparse.ArgumentTypeError(str(exc)) from exc
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -136,6 +137,8 @@ def build_parser() -> argparse.ArgumentParser:
     readiness.add_argument("--link-pattern")
     readiness.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
     readiness.add_argument("--include-step-sources", action="store_true")
+    readiness.add_argument("--max-step-sources", type=_step_source_limit, default=DEFAULT_MAX_STEP_SOURCES)
+    readiness.add_argument("--step-source-timeout", type=float, default=DEFAULT_STEP_SOURCE_TIMEOUT)
     readiness.add_argument("--semantic-provider", choices=[LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], default=LOCAL_HASHING_PROVIDER)
     readiness.add_argument("--dimensions", type=int, default=256)
     readiness.add_argument("--embedding-endpoint")
@@ -184,6 +187,8 @@ def build_parser() -> argparse.ArgumentParser:
     connect_profile.add_argument("--query")
     connect_profile.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
     connect_profile.add_argument("--include-step-sources", action="store_true")
+    connect_profile.add_argument("--max-step-sources", type=_step_source_limit, default=DEFAULT_MAX_STEP_SOURCES)
+    connect_profile.add_argument("--step-source-timeout", type=float, default=DEFAULT_STEP_SOURCE_TIMEOUT)
     connect_profile.add_argument("--max-lessons", type=int, default=50)
     connect_profile.add_argument("--max-pages", type=int, default=5)
     connect_profile.add_argument("--max-sources", type=int, default=50)
@@ -243,6 +248,8 @@ def build_parser() -> argparse.ArgumentParser:
     preflight_plan.add_argument("--calibration-run", default="connected-live-calibration")
     preflight_plan.add_argument("--live-scope", choices=["bounded", "full-course"], default="bounded")
     preflight_plan.add_argument("--include-step-sources", action="store_true")
+    preflight_plan.add_argument("--max-step-sources", type=_step_source_limit, default=DEFAULT_MAX_STEP_SOURCES)
+    preflight_plan.add_argument("--step-source-timeout", type=float, default=DEFAULT_STEP_SOURCE_TIMEOUT)
     preflight_plan.add_argument("--write-runbook", type=Path)
     preflight_plan.add_argument("--require-ready", action="store_true")
     preflight_plan.set_defaults(func=cmd_preflight_connected_plan)
@@ -836,6 +843,8 @@ def cmd_readiness(args: argparse.Namespace) -> int:
         link_pattern=args.link_pattern,
         live_scope=args.live_scope,
         include_step_sources=args.include_step_sources,
+        max_step_sources=args.max_step_sources,
+        step_source_timeout=args.step_source_timeout,
         semantic_provider=args.semantic_provider,
         dimensions=args.dimensions,
         embedding_endpoint=args.embedding_endpoint,
@@ -903,6 +912,8 @@ def cmd_connect_profile(args: argparse.Namespace) -> int:
         query=args.query,
         live_scope=args.live_scope,
         include_step_sources=args.include_step_sources,
+        max_step_sources=args.max_step_sources,
+        step_source_timeout=args.step_source_timeout,
         max_lessons=args.max_lessons,
         max_pages=args.max_pages,
         max_sources=args.max_sources,
@@ -1004,6 +1015,8 @@ def cmd_connect_run(args: argparse.Namespace) -> int:
         query=str(run_plan.get("query") or "") or None,
         live_scope=str(run_plan.get("live_scope") or "bounded"),
         include_step_sources=bool(run_plan.get("include_step_sources", False)),
+        max_step_sources=normalize_max_step_sources(run_plan.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES)),
+        step_source_timeout=normalize_step_source_timeout(run_plan.get("step_source_timeout", DEFAULT_STEP_SOURCE_TIMEOUT)),
         allow_network=True,
         stepik_token_env=str(run_plan.get("stepik_token_env") or "STEPIK_API_TOKEN"),
         browser_state_file=browser_state_file,
@@ -1060,6 +1073,8 @@ def cmd_preflight_connected_plan(args: argparse.Namespace) -> int:
         calibration_run=args.calibration_run,
         live_scope=args.live_scope,
         include_step_sources=args.include_step_sources,
+        max_step_sources=args.max_step_sources,
+        step_source_timeout=args.step_source_timeout,
     )
     if args.write_runbook:
         plan["runbook"] = write_connected_source_runbook(plan, args.write_runbook)

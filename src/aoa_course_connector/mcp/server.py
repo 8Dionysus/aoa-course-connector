@@ -28,6 +28,12 @@ from aoa_course_connector.query import freshness_report, graph_neighbors, query_
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import load_registry
+from aoa_course_connector.stepik_options import (
+    DEFAULT_MAX_STEP_SOURCES,
+    DEFAULT_STEP_SOURCE_TIMEOUT,
+    normalize_max_step_sources,
+    normalize_step_source_timeout,
+)
 from aoa_course_connector.status import connector_readiness, ingest_status, source_registry_catalog
 from aoa_course_connector.sync import load_sync_status
 
@@ -161,6 +167,8 @@ def _connector_readiness_schema() -> dict[str, object]:
             "link_pattern": _string_schema("Optional browser lesson/course link glob for connected browser live commands."),
             "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
             "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to planned commands."},
+            "max_step_sources": _max_step_sources_schema("Maximum Stepik step-source requests when include_step_sources is true. Use 'all' for the full selected course."),
+            "step_source_timeout": _number_schema("Per-step Stepik step-source request timeout seconds.", 0.1),
             "semantic_provider": {"type": "string", "enum": [LOCAL_HASHING_PROVIDER, HTTP_JSON_PROVIDER], "description": "Semantic index provider to preflight."},
             "dimensions": _integer_schema("Local hashing vector dimensions.", 8),
             "embedding_endpoint": _string_schema("Operator-configured http_json_v1 embedding endpoint."),
@@ -210,6 +218,8 @@ def _connected_source_plan_schema() -> dict[str, object]:
             "calibration_run": _string_schema("Calibration run id for the plan packet."),
             "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
             "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to planned commands."},
+            "max_step_sources": _max_step_sources_schema("Maximum Stepik step-source requests when include_step_sources is true. Use 'all' for the full selected course."),
+            "step_source_timeout": _number_schema("Per-step Stepik step-source request timeout seconds.", 0.1),
         }
     )
 
@@ -228,6 +238,8 @@ def _connected_run_schema() -> dict[str, object]:
             "query": _string_schema("Optional course-specific smoke query."),
             "live_scope": {"type": "string", "enum": ["bounded", "full-course"], "description": "Use bounded smoke/sync commands by default, or explicit full-course commands."},
             "include_step_sources": {"type": "boolean", "description": "Add Stepik step-source enrichment flags to live Stepik runs."},
+            "max_step_sources": _max_step_sources_schema("Maximum Stepik step-source requests when include_step_sources is true. Use 'all' for the full selected course."),
+            "step_source_timeout": _number_schema("Per-step Stepik step-source request timeout seconds.", 0.1),
             "allow_network": {"type": "boolean", "description": "Required before live mode can touch connected sources."},
             "stepik_token_env": _string_schema("Environment variable that holds the Stepik token."),
             "state_file": _string_schema("Optional browser storage-state file."),
@@ -350,6 +362,16 @@ def _integer_schema(description: str, minimum: int) -> dict[str, Any]:
 
 def _number_schema(description: str, minimum: float) -> dict[str, Any]:
     return {"type": "number", "minimum": minimum, "description": description}
+
+
+def _max_step_sources_schema(description: str) -> dict[str, Any]:
+    return {
+        "oneOf": [
+            {"type": "integer", "minimum": 0},
+            {"type": "string", "enum": ["all"]},
+        ],
+        "description": description,
+    }
 
 
 def _source_ids_schema(description: str) -> dict[str, object]:
@@ -1321,7 +1343,9 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
         max_sources=int(args.get("max_sources") or 50),
         link_pattern=str(args.get("link_pattern") or "") or None,
         live_scope=str(args.get("live_scope") or "bounded"),
-        include_step_sources=bool(args.get("include_step_sources", False)),
+        include_step_sources=_bool_arg(args.get("include_step_sources"), default=False, tool_name="connector_readiness", field_name="include_step_sources"),
+        max_step_sources=_max_step_sources_arg(args.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES), tool_name="connector_readiness"),
+        step_source_timeout=_step_source_timeout_arg(args.get("step_source_timeout"), tool_name="connector_readiness"),
         semantic_provider=str(args.get("semantic_provider") or LOCAL_HASHING_PROVIDER),
         dimensions=int(args.get("dimensions") or 256),
         embedding_endpoint=str(args.get("embedding_endpoint") or "") or None,
@@ -1353,7 +1377,9 @@ def _call_connected_source_plan(roots: StorageRoots, args: dict[str, object]) ->
         link_pattern=str(args.get("link_pattern") or "") or None,
         calibration_run=str(args.get("calibration_run") or "connected-live-calibration"),
         live_scope=str(args.get("live_scope") or "bounded"),
-        include_step_sources=bool(args.get("include_step_sources", False)),
+        include_step_sources=_bool_arg(args.get("include_step_sources"), default=False, tool_name="connected_source_plan", field_name="include_step_sources"),
+        max_step_sources=_max_step_sources_arg(args.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES), tool_name="connected_source_plan"),
+        step_source_timeout=_step_source_timeout_arg(args.get("step_source_timeout"), tool_name="connected_source_plan"),
     )
 
 
@@ -1440,7 +1466,9 @@ def _call_connected_run(roots: StorageRoots, args: dict[str, object]) -> dict[st
         source_ids=_string_array_arg(args.get("source_ids"), tool_name="connected_run", field_name="source_ids"),
         query=str(args.get("query") or "") or None,
         live_scope=str(args.get("live_scope") or "bounded"),
-        include_step_sources=bool(args.get("include_step_sources", False)),
+        include_step_sources=_bool_arg(args.get("include_step_sources"), default=False, tool_name="connected_run", field_name="include_step_sources"),
+        max_step_sources=_max_step_sources_arg(args.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES), tool_name="connected_run"),
+        step_source_timeout=_step_source_timeout_arg(args.get("step_source_timeout"), tool_name="connected_run"),
         allow_network=bool(args.get("allow_network", False)),
         stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
         browser_state_file=Path(state_file) if state_file else None,
@@ -1540,6 +1568,20 @@ def _positive_int_arg(value: object, *, default: int, tool_name: str, field_name
     if isinstance(value, int) and value >= 1:
         return value
     raise ValueError(f"{tool_name} {field_name} must be an integer >= 1")
+
+
+def _max_step_sources_arg(value: object, *, tool_name: str) -> int | None:
+    try:
+        return normalize_max_step_sources(value, default=DEFAULT_MAX_STEP_SOURCES)
+    except ValueError as exc:
+        raise ValueError(f"{tool_name} max_step_sources must be a non-negative integer or 'all'") from exc
+
+
+def _step_source_timeout_arg(value: object, *, tool_name: str) -> float:
+    try:
+        return normalize_step_source_timeout(value, default=DEFAULT_STEP_SOURCE_TIMEOUT)
+    except ValueError as exc:
+        raise ValueError(f"{tool_name} step_source_timeout must be a positive number") from exc
 
 
 def handle_jsonrpc_message(message: object) -> dict[str, object] | list[dict[str, object]] | None:

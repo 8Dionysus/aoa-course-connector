@@ -13,6 +13,7 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import LOCAL_HASHING_PROVIDER
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, registry_path
+from aoa_course_connector.stepik_options import DEFAULT_MAX_STEP_SOURCES, DEFAULT_STEP_SOURCE_TIMEOUT
 from aoa_course_connector.storage import run_artifact_dir, run_data_dir, storage_status
 from aoa_course_connector.sync import load_sync_status
 
@@ -76,6 +77,8 @@ def connector_readiness(
     link_pattern: str | None = None,
     live_scope: str = "bounded",
     include_step_sources: bool = False,
+    max_step_sources: int | str | None = DEFAULT_MAX_STEP_SOURCES,
+    step_source_timeout: float = DEFAULT_STEP_SOURCE_TIMEOUT,
     semantic_provider: str = LOCAL_HASHING_PROVIDER,
     dimensions: int = 256,
     embedding_endpoint: str | None = None,
@@ -124,6 +127,8 @@ def connector_readiness(
         link_pattern=link_pattern,
         live_scope=live_scope,
         include_step_sources=include_step_sources,
+        max_step_sources=max_step_sources,
+        step_source_timeout=step_source_timeout,
     )
     semantic_preflights = [
         semantic_provider_preflight(
@@ -721,6 +726,8 @@ def _compact_connected_plan(plan: dict[str, object]) -> dict[str, object]:
         "network_touched": bool(plan.get("network_touched")),
         "live_scope": plan.get("live_scope"),
         "include_step_sources": bool(plan.get("include_step_sources")),
+        "max_step_sources": plan.get("max_step_sources"),
+        "step_source_timeout": plan.get("step_source_timeout"),
         "max_lessons": plan.get("max_lessons"),
         "max_pages": plan.get("max_pages"),
         "max_sources": plan.get("max_sources"),

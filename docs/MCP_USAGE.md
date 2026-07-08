@@ -55,7 +55,7 @@ aoa-course mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","m
 aoa-course mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
 aoa-course mcp call sync_status '{"sync_run":"stepik-sync-fixture","platform":"stepik"}'
 aoa-course mcp call live_preflight '{}'
-aoa-course mcp call connected_source_plan '{"live_scope":"bounded","source_ids":["source:getcourse:..."],"query":"course-specific question","link_pattern":"*/lessons/*"}'
+aoa-course mcp call connected_source_plan '{"live_scope":"full-course","platforms":["stepik"],"source_ids":["source:stepik:..."],"query":"course-specific question","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5}'
 aoa-course mcp call connection_profile_inspect '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call connection_profile_status '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json"}'
 aoa-course mcp call connection_profile_run_plan '{"profile_path":".connector-state/artifacts/connections/operator-live.connection-profile.json","platform":"getcourse"}'
@@ -65,7 +65,7 @@ aoa-course mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixtur
 aoa-course mcp call connected_run_status '{"run":"connected-fixture-proof"}'
 aoa-course mcp call connected_run_query '{"run":"connected-fixture-proof","kinds":["smoke"],"entry_limit":2}'
 aoa-course mcp call connected_run_query_matrix '{"run":"connected-fixture-proof","kinds":["smoke"],"queries":["GetCourse bootloader rollback evidence","Skillspace logcat bugreport evidence","Stepik public API evidence"],"entry_limit":3}'
-aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_lessons":50,"max_pages":5,"max_sources":50}'
+aoa-course mcp call connector_readiness '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5,"max_lessons":50,"max_pages":5,"max_sources":50}'
 ```
 
 `semantic_search` follows the semantic index artifact for the requested run. If
@@ -160,9 +160,10 @@ fixture bootstrap first.
 For browser-session sources, pass `link_pattern` when the whole-connector audit
 should preserve a narrowed course/lesson glob in the connected-source plan and
 ready connected-run plan. Pass `max_lessons`, `max_pages`, `max_sources`,
-`live_scope`, and `include_step_sources` when that audit must preserve the same
-bounded or full-course traversal breadth an operator expects the later
-connected run to use. It is the first MCP packet an agent should inspect when
+`live_scope`, `include_step_sources`, `max_step_sources`, and
+`step_source_timeout` when that audit must preserve the same bounded or
+full-course traversal breadth an operator expects the later connected run to
+use. It is the first MCP packet an agent should inspect when
 deciding whether to install, build starter artifacts, connect sources, run
 fixture calibration, or move into gated live work.
 On a fresh state, its `next_commands` can point to CLI `bootstrap fixture`,
@@ -297,7 +298,10 @@ keeps the structured plan in `structuredContent`, while the CLI writes the
 Markdown checklist as runtime-only artifact state.
 The default `live_scope` is `bounded`; set `live_scope: "full-course"` and
 `include_step_sources: true` only when the operator intentionally wants the
-larger Stepik full-course/source-enrichment route.
+larger Stepik full-course/source-enrichment route. The enrichment budget is
+`max_step_sources: 10` and `step_source_timeout: 5.0` by default; use
+`max_step_sources: "all"` only when the operator wants the full selected course
+enrichment.
 
 `connection_profile_inspect` is the MCP-side reader for a local
 `aoa_course_connection_profile_v1` file created by `aoa-course connect
@@ -330,6 +334,8 @@ top-level `partial` while its `connected_run_plan` is `ready` with
 ready platform/source ids and keeps unrelated auth/token blockers visible.
 Live mode still returns a partial network-gate receipt unless
 `allow_network: true` is present.
+For Stepik live mode, `include_step_sources`, `max_step_sources`, and
+`step_source_timeout` match the same fields from `connected_source_plan`.
 The result schema is `aoa_course_connected_calibration_run_receipt_v1`.
 
 `connected_run_status` is the read-only MCP plan after CLI

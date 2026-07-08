@@ -83,6 +83,8 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
         query="course-specific question",
         live_scope="full-course",
         include_step_sources=True,
+        max_step_sources=None,
+        step_source_timeout=0.5,
         semantic_provider="http_json_v1",
         embedding_endpoint="https://embed.example/v1",
         embedding_model="course-embedding",
@@ -96,6 +98,8 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     rendered = json.dumps({"profile": loaded, "inspection": inspection})
     assert write_receipt["written"] is True
     assert loaded["schema"] == "aoa_course_connection_profile_v1"
+    assert loaded["runtime"]["max_step_sources"] == "all"
+    assert loaded["runtime"]["step_source_timeout"] == 0.5
     assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert inspection["network_touched"] is False
     assert inspection["live_readiness"]["schema"] == "aoa_course_connection_profile_readiness_v1"
@@ -138,7 +142,11 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert status["live_readiness"]["ready_for_connected_run"] is False
     stepik_plan = next(plan for plan in apply_receipt["inspection"]["connected_plans"] if plan["platform"] == "stepik")
     assert "--stepik-token-env STEPIK_API_TOKEN" in stepik_plan["command"]
+    assert "--max-step-sources all" in stepik_plan["command"]
+    assert "--step-source-timeout 0.5" in stepik_plan["command"]
     assert "--stepik-token-env STEPIK_API_TOKEN" in stepik_plan["plan"]["connected_run_plan"].get("command", "")
+    assert "--max-step-sources all" in stepik_plan["plan"]["connected_run_plan"].get("command", "")
+    assert stepik_plan["plan"]["connected_run_plan"]["mcp_tool_call"]["arguments"]["max_step_sources"] == "all"
 
     mcp = call_tool("connection_profile_inspect", {"profile_path": str(profile_path)})
     assert mcp["tool"] == "connection_profile_inspect"
@@ -1598,6 +1606,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "link_pattern" in readiness_tool["inputSchema"]["properties"]
     assert readiness_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in readiness_tool["inputSchema"]["properties"]
+    assert "max_step_sources" in readiness_tool["inputSchema"]["properties"]
+    assert "step_source_timeout" in readiness_tool["inputSchema"]["properties"]
     assert "max_lessons" in readiness_tool["inputSchema"]["properties"]
     assert "max_pages" in readiness_tool["inputSchema"]["properties"]
     assert "max_sources" in readiness_tool["inputSchema"]["properties"]
@@ -1608,6 +1618,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert "calibration_run" in connected_plan_tool["inputSchema"]["properties"]
     assert connected_plan_tool["inputSchema"]["properties"]["live_scope"]["enum"] == ["bounded", "full-course"]
     assert "include_step_sources" in connected_plan_tool["inputSchema"]["properties"]
+    assert "max_step_sources" in connected_plan_tool["inputSchema"]["properties"]
+    assert "step_source_timeout" in connected_plan_tool["inputSchema"]["properties"]
     assert "link_pattern" in connected_plan_tool["inputSchema"]["properties"]
     assert profile_run_plan_tool["inputSchema"]["required"] == ["profile_path"]
     assert profile_run_plan_tool["inputSchema"]["properties"]["platform"]["enum"] == ["getcourse", "skillspace", "stepik"]
@@ -1618,6 +1630,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     assert connected_run_tool["inputSchema"]["required"] == []
     assert connected_run_tool["inputSchema"]["properties"]["mode"]["enum"] == ["fixture", "live"]
     assert "allow_network" in connected_run_tool["inputSchema"]["properties"]
+    assert "max_step_sources" in connected_run_tool["inputSchema"]["properties"]
+    assert "step_source_timeout" in connected_run_tool["inputSchema"]["properties"]
     assert connected_run_status_tool["inputSchema"]["required"] == []
     assert connected_run_query_tool["inputSchema"]["required"] == []
     assert connected_run_query_tool["inputSchema"]["properties"]["mode"]["enum"] == ["keyword", "semantic", "hybrid"]
@@ -1725,12 +1739,23 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
         "jsonrpc": "2.0",
         "id": 41,
         "method": "tools/call",
-        "params": {"name": "connected_source_plan", "arguments": {"platforms": ["stepik"], "live_scope": "full-course", "include_step_sources": True}},
+        "params": {
+            "name": "connected_source_plan",
+            "arguments": {
+                "platforms": ["stepik"],
+                "live_scope": "full-course",
+                "include_step_sources": True,
+                "max_step_sources": "all",
+                "step_source_timeout": 0.5,
+            },
+        },
     })
     assert connected_plan["result"]["structuredContent"]["tool"] == "connected_source_plan"
     assert connected_plan["result"]["structuredContent"]["plan"]["network_touched"] is False
     assert connected_plan["result"]["structuredContent"]["plan"]["live_scope"] == "full-course"
     assert connected_plan["result"]["structuredContent"]["plan"]["include_step_sources"] is True
+    assert connected_plan["result"]["structuredContent"]["plan"]["max_step_sources"] == "all"
+    assert connected_plan["result"]["structuredContent"]["plan"]["step_source_timeout"] == 0.5
     connected_run = handle_jsonrpc_message({
         "jsonrpc": "2.0",
         "id": 411,
@@ -1792,6 +1817,8 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
                 "platforms": ["stepik"],
                 "live_scope": "full-course",
                 "include_step_sources": True,
+                "max_step_sources": "all",
+                "step_source_timeout": 0.5,
                 "max_lessons": 9,
                 "max_pages": 4,
                 "max_sources": 2,
@@ -1806,15 +1833,21 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
     compact_plan = readiness_content["connected_source_plan"]
     assert compact_plan["live_scope"] == "full-course"
     assert compact_plan["include_step_sources"] is True
+    assert compact_plan["max_step_sources"] == "all"
+    assert compact_plan["step_source_timeout"] == 0.5
     assert compact_plan["max_lessons"] == 9
     assert compact_plan["max_pages"] == 4
     assert compact_plan["max_sources"] == 2
     assert compact_plan["connected_run_plan"]["ready"] is True
     assert "--live-scope full-course" in compact_plan["connected_run_plan"]["command"]
     assert "--include-step-sources" in compact_plan["connected_run_plan"]["command"]
+    assert "--max-step-sources all" in compact_plan["connected_run_plan"]["command"]
+    assert "--step-source-timeout 0.5" in compact_plan["connected_run_plan"]["command"]
     assert "--max-lessons 9" in compact_plan["connected_run_plan"]["command"]
     assert "--max-pages 4" in compact_plan["connected_run_plan"]["command"]
     assert "--max-sources 2" in compact_plan["connected_run_plan"]["command"]
     assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["live_scope"] == "full-course"
     assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["include_step_sources"] is True
+    assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["max_step_sources"] == "all"
+    assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["step_source_timeout"] == 0.5
     assert compact_plan["connected_run_plan"]["mcp_tool_call"]["arguments"]["max_lessons"] == 9

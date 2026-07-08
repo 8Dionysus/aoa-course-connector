@@ -51,7 +51,10 @@ Step source enrichment is bounded by default: `--max-step-sources 10` with
 budget, or `--max-step-sources all` only for an explicit operator-selected run
 where a long Stepik traversal is acceptable. Raw Stepik payloads record the
 effective limits and `diagnostics.step_source_attempt_count` /
-`diagnostics.step_source_skipped_count`.
+`diagnostics.step_source_skipped_count`. The same enrichment budget can be set
+from `readiness`, `preflight connected-plan`, MCP `connector_readiness`, MCP
+`connected_source_plan`, `connect profile`, and MCP `connected_run`; these
+routes preserve it in the generated `connected_run_plan`.
 
 Stepik normalized steps, assignments, and asset metadata carry
 `authority_tier`, `authority_label`, and `source_authority` so official API or
