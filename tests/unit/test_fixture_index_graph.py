@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
@@ -50,6 +51,15 @@ def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
     assert evidence["snippet"] == packet["results"][0]["snippet"]
     assert "bootloader" in evidence["snippet"].casefold()
 
+    place_results = query_keyword_index(storage, "where Course Knowledge Indexing Evidence-Backed Search", run_id="test-run")
+    assert place_results[0]["doc_id"] == "step:step:starter:evidence-search:packet"
+    assert place_results[0]["rank_features"]["intent"] == "place"
+    assert place_results[0]["rank_features"]["place_complete"] is True
+    assert {"knowledge", "indexing", "evidence-backed", "search"} <= set(place_results[0]["rank_features"]["place_matches"])
+    place_packet = render_answer_packet(storage, "where Course Knowledge Indexing Evidence-Backed Search", run_id="test-run")
+    assert place_packet["query_intent_report"]["place_intent"] is True
+    assert place_packet["query_intent_report"]["top_result_place_complete"] is True
+
 
 def test_answer_packet_omits_missing_optional_evidence_fields(tmp_path: Path) -> None:
     storage = roots(tmp_path)
@@ -85,6 +95,7 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     )
     build_keyword_index(storage, run_id="freshness-ranking-fixture")
     build_semantic_index(storage, run_id="freshness-ranking-fixture")
+    graph_path = build_graph(storage, run_id="freshness-ranking-fixture")
 
     keyword = query_keyword_index(storage, "firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
     assert [result["doc_id"] for result in keyword] == [
@@ -98,6 +109,46 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     hybrid = query_hybrid_index(storage, "firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
     assert hybrid[0]["doc_id"] == "step:step:freshness:zzz-current-policy"
     assert hybrid[0]["rank_score"] > hybrid[1]["rank_score"]
+
+    latest = query_keyword_index(storage, "latest firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert latest[0]["doc_id"] == "step:step:freshness:zzz-current-policy"
+    assert latest[0]["rank_features"]["intent"] == "fresh"
+    assert latest[0]["rank_features"]["temporal_boost"] > 0
+    assert latest[0]["rank_score"] > latest[1]["rank_score"]
+
+    historical = query_keyword_index(storage, "old firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert historical[0]["doc_id"] == "step:step:freshness:aaa-stale-policy"
+    assert historical[0]["score"] == historical[1]["score"]
+    assert historical[0]["rank_features"]["intent"] == "historical"
+    assert historical[0]["rank_features"]["temporal_boost"] > 0
+    assert historical[0]["rank_score"] > historical[1]["rank_score"]
+    historical_packet = render_answer_packet(storage, "old firmware rollback policy", run_id="freshness-ranking-fixture", limit=2)
+    assert historical_packet["evidence_chain"][0]["version_group_id"] == "version-group:freshness:firmware-rollback-policy"
+    assert historical_packet["evidence_chain"][0]["valid_until"] == "2026-01-01T00:00:00Z"
+
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    assert graph["temporal"]["version_group_count"] == 1
+    assert graph["temporal"]["snapshot_node_count"] >= 4
+    assert graph["temporal"]["timestamped_edge_count"] >= 6
+    current_node = next(node for node in graph["nodes"] if node["node_id"] == "lesson:freshness:zzz-current-policy")
+    stale_node = next(node for node in graph["nodes"] if node["node_id"] == "lesson:freshness:aaa-stale-policy")
+    assert current_node["version_group_id"] == stale_node["version_group_id"] == "version-group:freshness:firmware-rollback-policy"
+    assert current_node["valid_from"] == "2026-01-01T00:00:00Z"
+    assert stale_node["valid_until"] == "2026-01-01T00:00:00Z"
+    assert any(
+        edge["kind"] == "version_group_has_snapshot"
+        and edge["from_node"] == "version-group:freshness:firmware-rollback-policy"
+        and edge["to_node"] == "lesson:freshness:zzz-current-policy"
+        for edge in graph["edges"]
+    )
+    temporal_neighbors = graph_neighbors(storage, "lesson:freshness:zzz-current-policy", run_id="freshness-ranking-fixture")
+    temporal_context = temporal_neighbors["temporal_context"]
+    assert temporal_context["status"] == "ready"
+    assert temporal_context["version_count"] == 2
+    assert [item["node_id"] for item in temporal_context["versions"]] == [
+        "lesson:freshness:aaa-stale-policy",
+        "lesson:freshness:zzz-current-policy",
+    ]
 
 
 def test_authority_ranking_prefers_official_and_mentor_sources_when_relevance_ties(tmp_path: Path) -> None:

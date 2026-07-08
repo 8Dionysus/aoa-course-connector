@@ -30,6 +30,10 @@
               "url": "https://example.invalid/courses/freshness-ranking/lessons/stale-policy",
               "order": 1,
               "freshness_state": "stale",
+              "version_group_id": "version-group:freshness:firmware-rollback-policy",
+              "valid_from": "2025-01-01T00:00:00Z",
+              "valid_until": "2026-01-01T00:00:00Z",
+              "observed_at": "2025-12-31T12:00:00Z",
               "steps": [
                 {
                   "step_id": "step:freshness:aaa-stale-policy",
@@ -53,6 +57,9 @@
               "url": "https://example.invalid/courses/freshness-ranking/lessons/current-policy",
               "order": 2,
               "freshness_state": "current",
+              "version_group_id": "version-group:freshness:firmware-rollback-policy",
+              "valid_from": "2026-01-01T00:00:00Z",
+              "observed_at": "2026-06-29T12:00:00Z",
               "steps": [
                 {
                   "step_id": "step:freshness:zzz-current-policy",

@@ -12,6 +12,8 @@ suite_ref: evals/suites/freshness_ranking.json
 # Freshness Ranking Suite
 
 This local suite checks that, when two source-backed course knowledge items have
-the same base relevance, the current item ranks above the stale item and the
-answer packet exposes both the base `score` and freshness-adjusted
-`rank_score`.
+the same base relevance, stable/current queries rank current evidence first,
+fresh/latest queries expose fresh intent, and historical/old queries can rank
+stale evidence first instead of being overwritten by recency. The answer packet
+must expose base `score`, adjusted `rank_score`, temporal intent features, path
+evidence, and freshness provenance.

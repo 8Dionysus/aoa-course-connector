@@ -2892,6 +2892,7 @@ def cmd_eval_freshness_ranking(_args: argparse.Namespace) -> int:
         )
         case_failures = _freshness_ranking_failures(packet, case)
         results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+        metrics = _freshness_ranking_metrics(packet, case)
         case_results.append(
             {
                 "query": case.get("query"),
@@ -2900,6 +2901,7 @@ def cmd_eval_freshness_ranking(_args: argparse.Namespace) -> int:
                 "result_count": packet.get("result_count"),
                 "top_doc_id": results[0].get("doc_id") if results else "",
                 "top_rank_score": results[0].get("rank_score") if results else None,
+                "metrics": metrics,
                 "failure_count": len(case_failures),
             }
         )
@@ -2938,6 +2940,15 @@ def _freshness_ranking_failures(packet: dict[str, object], case: dict[str, objec
                 "actual": top.get("freshness_state"),
             }
         )
+    query_intent_report = packet.get("query_intent_report") if isinstance(packet.get("query_intent_report"), dict) else {}
+    actual_intents = {str(item) for item in query_intent_report.get("intents", [])} if isinstance(query_intent_report.get("intents"), list) else set()
+    for intent in _list_of_strings(case.get("expected_query_intents")):
+        if intent not in actual_intents:
+            failures.append({**context, "missing_query_intent": intent, "actual_intents": sorted(actual_intents)})
+    top_rank_features = top.get("rank_features") if isinstance(top.get("rank_features"), dict) else {}
+    expected_top_rank_intent = case.get("expected_top_rank_intent")
+    if expected_top_rank_intent is not None and str(top_rank_features.get("intent") or "") != str(expected_top_rank_intent):
+        failures.append({**context, "field": "top_rank_intent", "expected": expected_top_rank_intent, "actual": top_rank_features.get("intent")})
     current = by_doc.get(str(case.get("current_doc_id") or ""))
     stale = by_doc.get(str(case.get("stale_doc_id") or ""))
     if case.get("expect_current_ranked_above_stale"):
@@ -2957,8 +2968,31 @@ def _freshness_ranking_failures(packet: dict[str, object], case: dict[str, objec
                         "stale_rank_score": stale.get("rank_score"),
                     }
                 )
+    if case.get("expect_stale_ranked_above_current"):
+        if not current or not stale:
+            failures.append({**context, "missing": "current/stale comparison docs", "available_doc_ids": list(by_doc)})
+        else:
+            current_index = results.index(current)
+            stale_index = results.index(stale)
+            if stale_index >= current_index:
+                failures.append({**context, "expected_order": "stale before current", "actual_order": [item.get("doc_id") for item in results]})
+            if float(stale.get("rank_score") or 0.0) <= float(current.get("rank_score") or 0.0):
+                failures.append(
+                    {
+                        **context,
+                        "expected": "stale rank_score above current for historical query",
+                        "current_rank_score": current.get("rank_score"),
+                        "stale_rank_score": stale.get("rank_score"),
+                    }
+                )
     if case.get("expect_equal_relevance_score") and current and stale and float(current.get("score") or 0.0) != float(stale.get("score") or 0.0):
         failures.append({**context, "expected": "equal base relevance score", "current_score": current.get("score"), "stale_score": stale.get("score")})
+    required_rank_features = _list_of_strings(case.get("required_rank_features"))
+    for result in results:
+        rank_features = result.get("rank_features") if isinstance(result.get("rank_features"), dict) else {}
+        for field in required_rank_features:
+            if field not in rank_features:
+                failures.append({**context, "doc_id": result.get("doc_id"), "missing_rank_feature": field})
     required_fields = _list_of_strings(case.get("required_evidence_fields"))
     evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
     if not evidence_chain:
@@ -2967,7 +3001,99 @@ def _freshness_ranking_failures(packet: dict[str, object], case: dict[str, objec
         for field in required_fields:
             if not evidence.get(field):
                 failures.append({**context, "evidence_index": index, "missing_evidence_field": field})
+    metrics = _freshness_ranking_metrics(packet, case)
+    for threshold_field, metric_field in [
+        ("min_temporal_ndcg", "temporal_ndcg"),
+        ("min_source_path_accuracy", "source_path_accuracy"),
+        ("min_evidence_attribution", "evidence_attribution"),
+        ("min_freshness_coverage", "freshness_coverage"),
+    ]:
+        if case.get(threshold_field) is not None and float(metrics.get(metric_field) or 0.0) < float(case.get(threshold_field) or 0.0):
+            failures.append(
+                {
+                    **context,
+                    "metric": metric_field,
+                    "expected_min": case.get(threshold_field),
+                    "actual": metrics.get(metric_field),
+                }
+            )
+    if case.get("require_conflict_detection") and not metrics.get("conflict_detected"):
+        failures.append({**context, "metric": "conflict_detected", "expected": True, "actual": metrics.get("conflict_detected")})
     return failures
+
+
+def _freshness_ranking_metrics(packet: dict[str, object], case: dict[str, object]) -> dict[str, object]:
+    results = [item for item in packet.get("results", []) if isinstance(item, dict)] if isinstance(packet.get("results"), list) else []
+    limit = max(1, int(case.get("limit") or len(results) or 1))
+    top_k = results[:limit]
+    doc_ids = [str(result.get("doc_id") or "") for result in top_k]
+    current_doc_id = str(case.get("current_doc_id") or "")
+    stale_doc_id = str(case.get("stale_doc_id") or "")
+    current = next((result for result in top_k if str(result.get("doc_id") or "") == current_doc_id), None)
+    stale = next((result for result in top_k if str(result.get("doc_id") or "") == stale_doc_id), None)
+    evidence_chain = [item for item in packet.get("evidence_chain", []) if isinstance(item, dict)] if isinstance(packet.get("evidence_chain"), list) else []
+    required_fields = _list_of_strings(case.get("required_evidence_fields")) or ["evidence_id", "source_url", "path", "fetched_at"]
+    evidence_slots = max(1, len(evidence_chain) * max(1, len(required_fields)))
+    evidence_hits = sum(1 for evidence in evidence_chain for field in required_fields if evidence.get(field))
+    source_path_accuracy = _ratio(sum(1 for result in top_k if _has_source_path(result)), len(top_k))
+    freshness_coverage = _ratio(sum(1 for result in top_k if _has_temporal_freshness(result)), len(top_k))
+    conflict_detected = False
+    if current and stale:
+        current_group = str(current.get("version_group_id") or "")
+        stale_group = str(stale.get("version_group_id") or "")
+        conflict_detected = bool(current_group and current_group == stale_group)
+    return {
+        "latest_at_k": 1.0 if current_doc_id and current_doc_id in doc_ids else 0.0,
+        "staleness_at_k": 1.0 if stale_doc_id and stale_doc_id in doc_ids else 0.0,
+        "temporal_ndcg": _temporal_ndcg(top_k, case),
+        "source_path_accuracy": source_path_accuracy,
+        "evidence_attribution": round(evidence_hits / evidence_slots, 6),
+        "freshness_coverage": freshness_coverage,
+        "conflict_detected": conflict_detected,
+    }
+
+
+def _has_source_path(result: dict[str, object]) -> bool:
+    path = result.get("path")
+    return bool(result.get("source_url") and isinstance(path, list) and path)
+
+
+def _has_temporal_freshness(result: dict[str, object]) -> bool:
+    return bool(result.get("freshness_state") and (result.get("observed_at") or result.get("valid_from") or result.get("fetched_at")))
+
+
+def _temporal_ndcg(results: list[dict[str, object]], case: dict[str, object]) -> float:
+    grades = [_temporal_grade(result, case) for result in results]
+    dcg = _dcg(grades)
+    ideal = _dcg(sorted(grades, reverse=True))
+    return round(dcg / ideal, 6) if ideal else 0.0
+
+
+def _temporal_grade(result: dict[str, object], case: dict[str, object]) -> int:
+    doc_id = str(result.get("doc_id") or "")
+    current_doc_id = str(case.get("current_doc_id") or "")
+    stale_doc_id = str(case.get("stale_doc_id") or "")
+    if case.get("expect_stale_ranked_above_current"):
+        if doc_id == stale_doc_id:
+            return 2
+        if doc_id == current_doc_id:
+            return 1
+        return 0
+    if doc_id == current_doc_id:
+        return 2
+    if doc_id == stale_doc_id:
+        return 0
+    return 0
+
+
+def _dcg(grades: list[int]) -> float:
+    import math
+
+    return sum(((2**grade) - 1) / math.log2(index + 2) for index, grade in enumerate(grades))
+
+
+def _ratio(count: int, total: int) -> float:
+    return round(count / total, 6) if total else 0.0
 
 
 def cmd_eval_authority_ranking(_args: argparse.Namespace) -> int:
