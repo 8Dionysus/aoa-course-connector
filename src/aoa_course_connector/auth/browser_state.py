@@ -358,13 +358,25 @@ def _firefox_cookies_for_host(profile_dir: Path, expected_origin: str, *, includ
             "value": str(row["value"] if include_values else ""),
             "domain": host,
             "path": str(row["path"] or "/"),
-            "expires": int(row["expiry"]) if "expiry" in row.keys() and row["expiry"] is not None else -1,
+            "expires": _playwright_cookie_expires(row["expiry"] if "expiry" in row.keys() else None),
             "httpOnly": bool(row["isHttpOnly"]) if "isHttpOnly" in row.keys() else False,
             "secure": bool(row["isSecure"]) if "isSecure" in row.keys() else False,
         }
         if cookie["name"]:
             cookies.append(cookie)
     return sorted(cookies, key=lambda item: (str(item.get("domain") or ""), str(item.get("path") or ""), str(item.get("name") or "")))
+
+
+def _playwright_cookie_expires(value: object) -> int:
+    if value is None:
+        return -1
+    try:
+        expires = int(value)
+    except (TypeError, ValueError):
+        return -1
+    if expires > 9_999_999_999:
+        expires = expires // 1000
+    return expires if expires > 0 else -1
 
 
 def _slug(value: str) -> str:
