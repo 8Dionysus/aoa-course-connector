@@ -504,6 +504,8 @@ def _host_fragment(value: str) -> str:
 
 def _source_ref_origin_hint(source_ref: str) -> str:
     host = _host_fragment(source_ref)
+    if "." not in host and host != "localhost":
+        return ""
     if host in {"account", "default", "browser", "session"}:
         return ""
     return host

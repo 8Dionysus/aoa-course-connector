@@ -502,6 +502,48 @@ def test_import_firefox_state_normalizes_session_cookie_expiry_for_playwright(tm
     assert expires_by_name["far_future"] == 253_402_300_799
 
 
+def test_import_firefox_state_uses_stepik_host_for_numeric_source_ref(tmp_path: Path) -> None:
+    profile = tmp_path / "firefox/example.default-release"
+    profile.mkdir(parents=True)
+    db_path = profile / "cookies.sqlite"
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute(
+            """
+            CREATE TABLE moz_cookies (
+              id INTEGER PRIMARY KEY,
+              name TEXT,
+              value TEXT,
+              host TEXT,
+              path TEXT,
+              expiry INTEGER,
+              isSecure INTEGER,
+              isHttpOnly INTEGER
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("sessionid", "SUPER_SECRET_STEPIK_COOKIE", ".stepik.org", "/", 0, 1, 1),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    state_file = tmp_path / "auth/stepik/67.storage-state.json"
+
+    receipt = import_firefox_browser_state(
+        tmp_path / "auth",
+        "stepik",
+        "67",
+        state_file=state_file,
+        profile_dir=profile,
+    )
+
+    assert receipt["status"] == "ok"
+    assert receipt["expected_origin_contains"] == "stepik.org"
+    assert browser_state_cookie_header(state_file, "stepik.org") == "sessionid=SUPER_SECRET_STEPIK_COOKIE"
+
+
 def test_connected_query_run_catalog_counts_invalid_cached_answer_ready(tmp_path: Path) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
@@ -547,6 +589,52 @@ def test_connected_query_run_catalog_counts_invalid_cached_answer_ready(tmp_path
     assert entry["answer_evidence_count"] == 0
     assert catalog["answer_ready_entry_count"] == 0
     assert catalog["invalid_answer_ready_entry_count"] == 1
+
+
+def test_connected_query_run_catalog_reports_unreadable_sync_checkpoint_store(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    receipt_dir = storage.artifact / "runs" / "receipt-ready" / "connected"
+    receipt_dir.mkdir(parents=True)
+    (receipt_dir / "connected_calibration_receipt.json").write_text(
+        json.dumps(
+            {
+                "run_id": "receipt-ready",
+                "status": "ok",
+                "completed_at": "2026-07-08T12:00:00Z",
+                "query_plan": {
+                    "entries": [
+                        {
+                            "source_id": "source:stepik:67",
+                            "platform": "stepik",
+                            "kind": "smoke",
+                            "query": "course-specific evidence",
+                            "query_mode": "keyword",
+                            "query_ready": True,
+                            "answer_ready": False,
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    checkpoint_path = storage.data / "sync" / "sync_checkpoints.json"
+    checkpoint_path.parent.mkdir(parents=True)
+    checkpoint_path.write_text("{not-json", encoding="utf-8")
+
+    catalog = connected_query_run_catalog(storage, receipt_limit=3)
+
+    assert catalog["query_ready_entry_count"] == 1
+    assert catalog["sync_checkpoint_count"] == 0
+    assert catalog["error_count"] == 1
+    assert catalog["errors"][0]["entry_source"] == "sync_checkpoint"
+    assert catalog["errors"][0]["path"] == str(checkpoint_path)
 
 
 def test_import_firefox_state_selects_profile_with_matching_cookies(tmp_path: Path) -> None:

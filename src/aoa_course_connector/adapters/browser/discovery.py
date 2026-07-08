@@ -32,6 +32,7 @@ NON_COURSE_URL_HINTS = (
 )
 NON_COURSE_PATH_SEGMENTS = set(NON_COURSE_URL_HINTS)
 GETCOURSE_TRAINING_ID_RE = re.compile(r"(?:^|/)training/(\d+)/?(?:$|[?#])")
+GETCOURSE_STREAM_VIEW_ID_RE = re.compile(r"(?:^|/)teach/control/stream/view/id/(\d+)/?(?:$|[?#])")
 
 
 def build_browser_catalog_discovery(
@@ -390,9 +391,11 @@ def _getcourse_training_id(block: dict[str, Any]) -> str:
     if isinstance(onclick, dict):
         candidates.extend([onclick.get("url"), onclick.get("route")])
     for value in candidates:
-        match = GETCOURSE_TRAINING_ID_RE.search(str(value or ""))
-        if match:
-            return match.group(1)
+        text = str(value or "")
+        for pattern in (GETCOURSE_TRAINING_ID_RE, GETCOURSE_STREAM_VIEW_ID_RE):
+            match = pattern.search(text)
+            if match:
+                return match.group(1)
     return ""
 
 

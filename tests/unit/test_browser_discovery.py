@@ -150,6 +150,47 @@ def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> No
     assert discovery["courses"][0]["source_kind"] == "training"
 
 
+def test_getcourse_catalog_discovery_reads_canonical_onclick_stream_view_url() -> None:
+    raw = {
+        "platform": "getcourse",
+        "captured_at": "2026-07-08T08:10:00Z",
+        "pages": [
+            {
+                "url": "https://getcourse.ru/c/s/index",
+                "title": "GetCourse",
+                "html": "<main><div class='ScreenBlock__item-title-left'>Марафон</div></main>",
+                "api_payloads": [
+                    {
+                        "url": "https://app.gcext.su/api/2.0/proxy/https://getcourse.ru/c/s/index",
+                        "content_type": "application/json; charset=utf-8",
+                        "json": {
+                            "data": {
+                                "blocks": [
+                                    {
+                                        "type": "screen",
+                                        "id": "opaque-card",
+                                        "title": "Курс из onClick",
+                                        "onClick": {
+                                            "type": "navigate",
+                                            "url": "https://getcourse.ru/teach/control/stream/view/id/911642804",
+                                        },
+                                    }
+                                ]
+                            }
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    discovery = build_browser_catalog_discovery(raw, platform="getcourse")
+
+    assert discovery["course_count"] == 1
+    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/911642804"
+    assert discovery["courses"][0]["title"] == "Курс из onClick"
+
+
 def test_skillspace_catalog_discovery_reads_student_course_list_payload() -> None:
     raw = {
         "platform": "skillspace",

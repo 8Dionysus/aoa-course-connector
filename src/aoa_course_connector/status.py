@@ -16,6 +16,7 @@ from aoa_course_connector.sources import load_registry, registry_path
 from aoa_course_connector.stepik_options import DEFAULT_MAX_STEP_SOURCES, DEFAULT_STEP_SOURCE_TIMEOUT
 from aoa_course_connector.storage import run_artifact_dir, run_data_dir, storage_status
 from aoa_course_connector.sync import load_sync_status
+from aoa_course_connector.sync.checkpoints import checkpoint_store_path
 
 
 DEFAULT_RUN = "starter-fixture"
@@ -433,7 +434,18 @@ def connected_query_run_catalog(
             if selected_platforms and platform not in selected_platforms:
                 continue
             by_source.setdefault(source_id, []).append(_connected_query_run_ref(receipt, path, entry, include_source_refs=include_source_refs))
-    sync_checkpoints = _sync_query_checkpoints(roots, source_ids=selected_ids, platforms=selected_platforms)
+    try:
+        sync_checkpoints = _sync_query_checkpoints(roots, source_ids=selected_ids, platforms=selected_platforms)
+    except (OSError, json.JSONDecodeError) as exc:
+        sync_checkpoints = []
+        errors.append(
+            {
+                "path": str(checkpoint_store_path(roots)),
+                "error": str(exc),
+                "reason": exc.__class__.__name__,
+                "entry_source": "sync_checkpoint",
+            }
+        )
     for checkpoint in sync_checkpoints:
         source_id = str(checkpoint.get("source_id") or "")
         if source_id:
