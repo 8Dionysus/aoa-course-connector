@@ -60,6 +60,10 @@ This proves:
   `latest_connected_runs[]` from recent connected-run receipts, giving agents
   local query-ready run ids, query modes, artifact paths, CLI commands, and MCP
   commands without touching the network;
+- CLI `sources list` returns the same
+  `aoa_course_source_registry_list_v1` catalog directly, with platform/source-id
+  filters, disabled-source inclusion, source-ref hiding, connected-run scan
+  bounds, and no network access;
 - MCP `source_answer` selects one configured source, finds its latest
   query-ready connected run, and returns answer, lesson-context, evidence, and
   quality packets without touching the network or exposing `source_ref` unless

@@ -147,6 +147,72 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert plan["result"]["plan"]["network_touched"] is False
 
 
+def test_cli_sources_list_returns_canonical_catalog_with_filters(tmp_path: Path) -> None:
+    getcourse = run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "https://school.example/teach/control/stream",
+        "--platform",
+        "getcourse",
+        "--title",
+        "School",
+    )
+    disabled = run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "https://academy.example/course/demo",
+        "--platform",
+        "skillspace",
+        "--title",
+        "Disabled Skillspace",
+        "--disabled",
+    )
+
+    hidden_disabled = run_cli(tmp_path, "sources", "list", "--platform", "skillspace")
+    assert hidden_disabled["schema"] == "aoa_course_source_registry_list_v1"
+    assert "catalog" not in hidden_disabled
+    assert "registry" not in hidden_disabled
+    assert hidden_disabled["source_count"] == 2
+    assert hidden_disabled["enabled_source_count"] == 1
+    assert hidden_disabled["selected_source_count"] == 0
+    assert hidden_disabled["platform_counts"] == {}
+    assert hidden_disabled["network_touched"] is False
+    assert hidden_disabled["read_only"] is True
+
+    catalog = run_cli(
+        tmp_path,
+        "sources",
+        "list",
+        "--platform",
+        "skillspace",
+        "--include-disabled",
+        "--no-source-refs",
+        "--no-connected-runs",
+        "--connected-run-limit",
+        "1",
+        "--connected-receipt-limit",
+        "1",
+    )
+
+    assert catalog["schema"] == "aoa_course_source_registry_list_v1"
+    assert catalog["include_disabled"] is True
+    assert catalog["source_refs_included"] is False
+    assert catalog["selected_platforms"] == ["skillspace"]
+    assert catalog["selected_source_count"] == 1
+    assert catalog["sources"][0]["source_id"] == disabled["source"]["source_id"]
+    assert catalog["sources"][0]["enabled"] is False
+    assert "source_ref" not in catalog["sources"][0]
+    assert catalog["connected_runs"]["included"] is False
+    assert catalog["privacy"]["contains_secret_values"] is False
+
+    selected = run_cli(tmp_path, "sources", "list", "--source-id", getcourse["source"]["source_id"])
+    assert selected["selected_source_ids"] == [getcourse["source"]["source_id"]]
+    assert selected["selected_source_count"] == 1
+    assert selected["sources"][0]["source_ref"] == "https://school.example/teach/control/stream"
+
+
 def test_cli_fixture_bootstrap_prepares_fresh_agent_route(tmp_path: Path) -> None:
     initial = run_cli(tmp_path, "readiness", "--run", "starter-fixture", "--platform", "stepik")
     assert initial["operational_ready"] is False
@@ -302,7 +368,10 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     assert apply_runbook.is_file()
 
     sources = run_cli(tmp_path, "sources", "list")
-    assert len(sources["registry"]["sources"]) == 3
+    assert sources["schema"] == "aoa_course_source_registry_list_v1"
+    assert sources["source_count"] == 3
+    assert sources["selected_source_count"] == 3
+    assert len(sources["sources"]) == 3
     profile = json.loads(profile_path.read_text(encoding="utf-8"))
     getcourse_source = next(source for source in profile["sources"] if source["platform"] == "getcourse")
     state_file = Path(str(getcourse_source["state_file"]))
@@ -823,8 +892,9 @@ def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     assert receipt["status"] == "ok"
     assert receipt["course_count"] == 2
     assert len(receipt["registered_sources"]) == 2
-    registry = run_cli(tmp_path, "sources", "list")["registry"]
-    assert {source["source_ref"] for source in registry["sources"]} == {"67", "100"}
+    catalog = run_cli(tmp_path, "sources", "list")
+    assert catalog["schema"] == "aoa_course_source_registry_list_v1"
+    assert {source["source_ref"] for source in catalog["sources"]} == {"67", "100"}
 
 
 def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:
@@ -1138,8 +1208,12 @@ def test_cli_browser_account_discovery_registers_sources(tmp_path: Path) -> None
         assert receipt["page_count"] == 2
         assert receipt["pagination"]["next_link_count"] == 1
         assert len(receipt["registered_sources"]) == 3
-    registry = run_cli(tmp_path, "sources", "list")["registry"]
-    assert len(registry["sources"]) == 6
+    catalog = run_cli(tmp_path, "sources", "list")
+    assert catalog["schema"] == "aoa_course_source_registry_list_v1"
+    assert "catalog" not in catalog
+    assert catalog["source_count"] == 6
+    assert catalog["selected_source_count"] == 6
+    assert len(catalog["sources"]) == 6
     eval_result = run_cli(tmp_path, "eval", "browser-discovery")
     assert eval_result["status"] == "ok"
 

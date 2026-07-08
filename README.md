@@ -406,6 +406,7 @@ Use the CLI equivalent when a shell-side agent should do the same without
 handwriting MCP JSON:
 
 ```bash
+PYTHONPATH=src python -m aoa_course_connector.cli sources list --platform getcourse --no-source-refs --connected-run-limit 2
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 ```
