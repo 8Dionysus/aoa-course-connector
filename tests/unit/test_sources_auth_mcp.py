@@ -1390,8 +1390,14 @@ def test_sources_answer_matrix_portfolio_mode_allows_relevant_source_coverage(tm
     assert portfolio_packet["quality"]["evidence_ready_query_count"] == 2
     assert portfolio_packet["quality"]["grounded_ready_query_count"] == 2
     assert portfolio_packet["query_summaries"][0]["grounded_response_count"] >= 1
+    assert portfolio_packet["query_summaries"][0]["status"] == "ok"
+    assert portfolio_packet["query_summaries"][0]["ready"] is True
+    assert portfolio_packet["query_summaries"][0]["source_scoped_ready"] is False
+    assert portfolio_packet["query_summaries"][0]["portfolio_ready"] is True
     assert portfolio_packet["query_summaries"][0]["top_result_refs"][0]["path"]
     assert portfolio_packet["query_summaries"][0]["top_result_refs"][0]["freshness_state"]
+    assert all(ref.get("doc_id") for summary in portfolio_packet["query_summaries"] for ref in summary["top_result_refs"])
+    assert any(not ref.get("doc_id") for summary in strict_packet["query_summaries"] for ref in summary["top_result_refs"])
     assert "--coverage-mode portfolio" in portfolio_packet["next_commands"][0]
     assert '"coverage_mode":"portfolio"' in portfolio_packet["next_commands"][1]
 

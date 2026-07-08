@@ -810,7 +810,7 @@ def _call_sources_answer_matrix(roots: StorageRoots, args: dict[str, object]) ->
         "blocked_source_count_total": quality["blocked_source_count_total"],
         "failure_count_total": quality["failure_count_total"],
         "query_packets": query_packets,
-        "query_summaries": [_sources_answer_matrix_summary(packet) for packet in query_packets],
+        "query_summaries": [_sources_answer_matrix_summary(packet, coverage_mode=coverage_mode) for packet in query_packets],
         "blocked_sources": _sources_answer_matrix_nested_items(query_packets, "blocked_sources"),
         "failures": _sources_answer_matrix_nested_items(query_packets, "failures"),
         "quality": quality,
@@ -1076,29 +1076,38 @@ def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, co
     }
 
 
-def _sources_answer_matrix_summary(packet: dict[str, object]) -> dict[str, object]:
+def _sources_answer_matrix_summary(packet: dict[str, object], *, coverage_mode: str = "all-sources") -> dict[str, object]:
     quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    response_count = int(packet.get("response_count") or 0)
+    blocked_source_count = int(packet.get("blocked_source_count") or 0)
+    failure_count = int(packet.get("failure_count") or 0)
+    grounded_response_count = int(quality.get("grounded_response_count") or 0)
+    source_scoped_ready = bool(quality.get("ready"))
+    portfolio_ready = grounded_response_count > 0 and blocked_source_count == 0 and failure_count == 0
+    selected_ready = portfolio_ready if coverage_mode == "portfolio" else source_scoped_ready
     return {
         "query": packet.get("query"),
-        "status": packet.get("status"),
-        "ready": bool(quality.get("ready")),
-        "response_count": int(packet.get("response_count") or 0),
-        "blocked_source_count": int(packet.get("blocked_source_count") or 0),
-        "failure_count": int(packet.get("failure_count") or 0),
+        "status": "ok" if selected_ready else packet.get("status"),
+        "ready": selected_ready,
+        "source_scoped_ready": source_scoped_ready,
+        "portfolio_ready": portfolio_ready,
+        "response_count": response_count,
+        "blocked_source_count": blocked_source_count,
+        "failure_count": failure_count,
         "result_count_total": int(quality.get("result_count_total") or 0),
         "evidence_count_total": int(quality.get("evidence_count_total") or 0),
-        "grounded_response_count": int(quality.get("grounded_response_count") or 0),
+        "grounded_response_count": grounded_response_count,
         "all_responses_have_evidence": bool(quality.get("all_responses_have_evidence")),
         "all_grounded_responses_have_path": bool(quality.get("all_grounded_responses_have_path")),
         "all_grounded_responses_have_fetched_at": bool(quality.get("all_grounded_responses_have_fetched_at")),
         "all_grounded_responses_have_freshness": bool(quality.get("all_grounded_responses_have_freshness")),
         "platforms": quality.get("platforms", []),
         "source_ids": quality.get("source_ids", []),
-        "top_result_refs": _sources_answer_matrix_top_result_refs(packet),
+        "top_result_refs": _sources_answer_matrix_top_result_refs(packet, grounded_only=coverage_mode == "portfolio"),
     }
 
 
-def _sources_answer_matrix_top_result_refs(packet: dict[str, object]) -> list[dict[str, object]]:
+def _sources_answer_matrix_top_result_refs(packet: dict[str, object], *, grounded_only: bool = False) -> list[dict[str, object]]:
     responses = packet.get("responses") if isinstance(packet.get("responses"), list) else []
     refs: list[dict[str, object]] = []
     for response in responses:
@@ -1107,19 +1116,20 @@ def _sources_answer_matrix_top_result_refs(packet: dict[str, object]) -> list[di
         answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
         quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
         top_result = quality.get("top_result") if isinstance(quality.get("top_result"), dict) else {}
-        refs.append(
-            _compact_dict(
-                {
-                    "source_id": response.get("source_id"),
-                    "platform": response.get("platform"),
-                    "connected_run_id": response.get("connected_run_id"),
-                    "doc_id": top_result.get("doc_id"),
-                    "path": top_result.get("path"),
-                    "fetched_at": top_result.get("fetched_at"),
-                    "freshness_state": top_result.get("freshness_state"),
-                }
-            )
+        ref = _compact_dict(
+            {
+                "source_id": response.get("source_id"),
+                "platform": response.get("platform"),
+                "connected_run_id": response.get("connected_run_id"),
+                "doc_id": top_result.get("doc_id"),
+                "path": top_result.get("path"),
+                "fetched_at": top_result.get("fetched_at"),
+                "freshness_state": top_result.get("freshness_state"),
+            }
         )
+        if grounded_only and not ref.get("doc_id"):
+            continue
+        refs.append(ref)
     return refs
 
 
