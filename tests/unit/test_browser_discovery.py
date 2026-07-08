@@ -150,6 +150,59 @@ def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> No
     assert discovery["courses"][0]["source_kind"] == "training"
 
 
+def test_skillspace_catalog_discovery_reads_student_course_list_payload() -> None:
+    raw = {
+        "platform": "skillspace",
+        "captured_at": "2026-07-08T12:00:00Z",
+        "pages": [
+            {
+                "url": "https://academy.example/school/courses",
+                "title": "Skillspace",
+                "html": "<main id='app'></main>",
+                "api_payloads": [
+                    {
+                        "url": "https://academy.example/api/rest/student/course/list",
+                        "content_type": "application/json; charset=utf-8",
+                        "json": [
+                            {
+                                "uuid": "course-a",
+                                "name": "Mobile Debugging",
+                                "cover": "https://academy.example/media/cover-a.jpg",
+                            },
+                            {
+                                "course": {
+                                    "id": "course-b",
+                                    "title": "Radio Diagnostics",
+                                },
+                                "flow": {"name": "Radio Diagnostics Flow"},
+                            },
+                            {
+                                "url": "/course/course-c",
+                                "name": "Firmware Audit",
+                            },
+                        ],
+                    }
+                ],
+            }
+        ],
+    }
+
+    discovery = build_browser_catalog_discovery(raw, platform="skillspace")
+
+    assert discovery["course_count"] == 3
+    assert [course["title"] for course in discovery["courses"]] == [
+        "Mobile Debugging",
+        "Radio Diagnostics",
+        "Firmware Audit",
+    ]
+    assert [course["source_ref"] for course in discovery["courses"]] == [
+        "https://academy.example/course/course-a",
+        "https://academy.example/course/course-b",
+        "https://academy.example/course/course-c",
+    ]
+    assert all(course["source_kind"] == "course" for course in discovery["courses"])
+
+
 def test_live_catalog_page_collector_follows_bounded_next_links() -> None:
     page = FakePage(
         {
@@ -218,6 +271,39 @@ def test_live_catalog_page_collector_captures_getcourse_chatium_proxy_json() -> 
     discovery = build_browser_catalog_discovery({"platform": "getcourse", "pages": pages}, platform="getcourse")
     assert discovery["course_count"] == 1
     assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/300"
+
+
+def test_live_catalog_page_collector_captures_skillspace_student_course_list() -> None:
+    payload = [
+        {
+            "uuid": "course-a",
+            "name": "Mobile Debugging",
+        }
+    ]
+    page = FakePageWithResponses(
+        {
+            "https://academy.example/school/courses": (
+                "Skillspace",
+                "<main id='app'></main>",
+            )
+        },
+        {
+            "https://academy.example/school/courses": [
+                FakeResponse(
+                    "https://academy.example/api/rest/student/course/list",
+                    {"content-type": "application/json; charset=utf-8"},
+                    payload,
+                )
+            ]
+        },
+    )
+
+    pages = collect_live_catalog_pages(page, "https://academy.example/school/courses", platform="skillspace")
+
+    assert pages[0]["api_payloads"][0]["json"] == payload
+    discovery = build_browser_catalog_discovery({"platform": "skillspace", "pages": pages}, platform="skillspace")
+    assert discovery["course_count"] == 1
+    assert discovery["courses"][0]["source_ref"] == "https://academy.example/course/course-a"
 
 
 class FakePage:

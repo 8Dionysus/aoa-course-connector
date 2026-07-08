@@ -150,7 +150,11 @@ def discover_embedded_catalog_links(
     max_sources: int = 50,
     link_pattern: str | None = None,
 ) -> list[dict[str, str]]:
-    if max_sources <= 0 or platform != "getcourse":
+    if max_sources <= 0:
+        return []
+    if platform == "skillspace":
+        return _discover_skillspace_embedded_catalog_links(payloads, base_url, max_sources=max_sources, link_pattern=link_pattern)
+    if platform != "getcourse":
         return []
     links: list[dict[str, str]] = []
     seen: set[str] = set()
@@ -177,6 +181,35 @@ def discover_embedded_catalog_links(
                     "title": title,
                 }
             )
+            if len(links) >= max_sources:
+                return links
+    return links
+
+
+def _discover_skillspace_embedded_catalog_links(
+    payloads: object,
+    base_url: str,
+    *,
+    max_sources: int,
+    link_pattern: str | None,
+) -> list[dict[str, str]]:
+    links: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for record in _iter_payload_records(payloads):
+        payload = record.get("json")
+        source_url = str(record.get("url") or "")
+        catalog_endpoint = _skillspace_catalog_endpoint(source_url)
+        for block in _iter_skillspace_course_blocks(payload, catalog_endpoint=catalog_endpoint):
+            item = _skillspace_course_link(block, base_url)
+            if not item:
+                continue
+            href = item["href"]
+            if link_pattern and not fnmatch(href, link_pattern):
+                continue
+            if href in seen:
+                continue
+            seen.add(href)
+            links.append(item)
             if len(links) >= max_sources:
                 return links
     return links
@@ -220,6 +253,12 @@ def _iter_payload_json(payloads: object) -> list[object]:
     return items
 
 
+def _iter_payload_records(payloads: object) -> list[dict[str, Any]]:
+    if not isinstance(payloads, list):
+        return []
+    return [payload for payload in payloads if isinstance(payload, dict) and "json" in payload]
+
+
 def _iter_dicts(value: object) -> list[dict[str, Any]]:
     found: list[dict[str, Any]] = []
     if isinstance(value, dict):
@@ -230,6 +269,115 @@ def _iter_dicts(value: object) -> list[dict[str, Any]]:
         for child in value:
             found.extend(_iter_dicts(child))
     return found
+
+
+def _skillspace_catalog_endpoint(url: str) -> bool:
+    lowered = url.casefold()
+    return "/api/rest/student/course/list" in lowered or "/api/rest/school/course/list" in lowered
+
+
+def _iter_skillspace_course_blocks(value: object, *, catalog_endpoint: bool) -> list[dict[str, Any]]:
+    if catalog_endpoint:
+        return _iter_catalog_items(value)
+    return [block for block in _iter_dicts(value) if _skillspace_courseish_block(block)]
+
+
+def _iter_catalog_items(value: object) -> list[dict[str, Any]]:
+    if isinstance(value, list):
+        return [item for item in value if isinstance(item, dict)]
+    if not isinstance(value, dict):
+        return []
+    for key in ["courses", "items", "rows", "list", "content", "data", "result"]:
+        child = value.get(key)
+        if isinstance(child, list):
+            return [item for item in child if isinstance(item, dict)]
+        if isinstance(child, dict):
+            nested = _iter_catalog_items(child)
+            if nested:
+                return nested
+    return [value] if _skillspace_courseish_block(value) else []
+
+
+def _skillspace_courseish_block(block: dict[str, Any]) -> bool:
+    typename = str(block.get("__typename") or block.get("type") or "").casefold()
+    if "course" in typename:
+        return True
+    if _first_course_url(block):
+        return True
+    keys = {str(key).casefold() for key in block}
+    if keys & {"courseid", "course_id", "courseuuid", "course_uuid"}:
+        return True
+    course = block.get("course")
+    return isinstance(course, dict) and bool(_skillspace_course_id(course) or _skillspace_course_title(course))
+
+
+def _skillspace_course_link(block: dict[str, Any], base_url: str) -> dict[str, str] | None:
+    href = _first_course_url(block)
+    course_block = block.get("course") if isinstance(block.get("course"), dict) else block
+    course_id = _skillspace_course_id(block) or _skillspace_course_id(course_block)
+    if not href and course_id:
+        href = urljoin(base_url, f"/course/{course_id}")
+    elif href:
+        href = urljoin(base_url, href)
+    if not href:
+        return None
+    title = _skillspace_course_title(block) or _skillspace_course_title(course_block) or href
+    return {
+        "href": href,
+        "text": title,
+        "kind": "course",
+        "module": "",
+        "title": title,
+    }
+
+
+def _first_course_url(value: object) -> str:
+    if isinstance(value, dict):
+        for key in ["url", "href", "link", "path", "route", "to"]:
+            candidate = str(value.get(key) or "")
+            if _looks_like_skillspace_course_url(candidate):
+                return candidate
+        for key in ["course", "flow"]:
+            nested = value.get(key)
+            candidate = _first_course_url(nested)
+            if candidate:
+                return candidate
+    return ""
+
+
+def _looks_like_skillspace_course_url(value: str) -> bool:
+    lowered = value.casefold()
+    if "/course/" not in lowered:
+        return False
+    return not any(segment in lowered for segment in ["/constructor/", "/completion", "/certificate"])
+
+
+def _skillspace_course_id(block: object) -> str:
+    if not isinstance(block, dict):
+        return ""
+    for key in ["courseId", "course_id", "courseUuid", "course_uuid", "uuid", "id", "slug"]:
+        value = str(block.get(key) or "").strip()
+        if value and value.lower() not in {"none", "null"}:
+            return value
+    for key in ["course", "flow"]:
+        value = _skillspace_course_id(block.get(key))
+        if value:
+            return value
+    return ""
+
+
+def _skillspace_course_title(block: object) -> str:
+    if not isinstance(block, dict):
+        return ""
+    for key in ["title", "name", "label"]:
+        value = str(block.get(key) or "").strip()
+        if value:
+            return value
+    for key in ["course", "flow"]:
+        value = _skillspace_course_title(block.get(key))
+        if value:
+            return value
+    return ""
 
 
 def _getcourse_training_id(block: dict[str, Any]) -> str:
