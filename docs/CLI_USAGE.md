@@ -15,6 +15,7 @@ aoa-course adapters list
 aoa-course sources add demo-course --platform offline_export --title "Demo Course"
 aoa-course sources list --platform getcourse --no-source-refs --connected-run-limit 2
 aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+aoa-course sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 aoa-course sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 aoa-course materialize fixture --run starter-fixture
 aoa-course materialize stepik-fixture --run stepik-fixture
@@ -126,6 +127,12 @@ query-ready connected-run receipts, accepts `--platform`, repeated
 returns `aoa_course_sources_answer_packet_v1` with one source-backed
 answer/context/evidence packet per selected source. By default source refs stay
 out of the packet.
+Use `sources answer-matrix` when the agent should ask several questions across
+the same configured source set without naming run ids by hand. It accepts
+repeated `--query` plus the same source, mode, kind, and limit controls as
+`sources answer`, then returns `aoa_course_sources_answer_matrix_v1` with one
+`aoa_course_sources_answer_packet_v1` per question, aggregate quality,
+per-query summaries, and `network_touched: false`.
 `answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before

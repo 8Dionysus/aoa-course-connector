@@ -899,6 +899,33 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert '"source_ref"' not in rendered_sources_answer
     assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_sources_answer
 
+    sources_answer_matrix = call_tool(
+        "sources_answer_matrix",
+        {
+            "source_ids": [stepik["source_id"]],
+            "queries": ["Stepik public API evidence", "canonical course objects"],
+            "mode": "hybrid",
+        },
+    )
+    matrix_packet = sources_answer_matrix["sources_answer_matrix"]
+    rendered_matrix = json.dumps(sources_answer_matrix)
+    assert sources_answer_matrix["tool"] == "sources_answer_matrix"
+    assert matrix_packet["schema"] == "aoa_course_sources_answer_matrix_v1"
+    assert matrix_packet["status"] == "ok"
+    assert matrix_packet["network_touched"] is False
+    assert matrix_packet["read_only"] is True
+    assert matrix_packet["source_refs_included"] is False
+    assert matrix_packet["query_count"] == 2
+    assert matrix_packet["quality"]["ready"] is True
+    assert matrix_packet["quality"]["ready_query_count"] == 2
+    assert matrix_packet["quality"]["all_queries_have_evidence"] is True
+    assert matrix_packet["query_packets"][0]["schema"] == "aoa_course_sources_answer_packet_v1"
+    assert matrix_packet["query_summaries"][0]["top_result_refs"]
+    assert matrix_packet["next_commands"][0].startswith("aoa-course sources answer-matrix ")
+    assert any("sources_answer_matrix" in command for command in matrix_packet["next_commands"])
+    assert '"source_ref"' not in rendered_matrix
+    assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered_matrix
+
     partial_sources_answer = call_tool("sources_answer", {"query": "Stepik public API evidence"})
     assert partial_sources_answer["sources_answer"]["status"] == "partial"
     assert partial_sources_answer["sources_answer"]["response_count"] == 1

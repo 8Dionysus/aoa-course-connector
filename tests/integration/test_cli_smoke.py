@@ -559,6 +559,7 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
         {"jsonrpc": "2.0", "id": 101, "method": "tools/call", "params": {"name": "connected_run_query", "arguments": {"run": "connected-calibration", "kinds": ["smoke"], "entry_limit": 1}}},
         {"jsonrpc": "2.0", "id": 102, "method": "tools/call", "params": {"name": "source_answer", "arguments": {"platforms": ["stepik"], "query": "Stepik public API evidence"}}},
         {"jsonrpc": "2.0", "id": 103, "method": "tools/call", "params": {"name": "sources_answer", "arguments": {"platforms": ["stepik"], "query": "Stepik public API evidence"}}},
+        {"jsonrpc": "2.0", "id": 104, "method": "tools/call", "params": {"name": "sources_answer_matrix", "arguments": {"platforms": ["stepik"], "queries": ["Stepik public API evidence", "canonical course objects"]}}},
         {"jsonrpc": "2.0", "id": 11, "method": "tools/call", "params": {"name": "connector_readiness", "arguments": {"runs": ["starter-fixture"], "platforms": ["stepik"]}}},
     ]
     stdin = "\n".join(json.dumps(request) for request in requests) + "\n"
@@ -574,12 +575,13 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stdout + result.stderr
     responses = [json.loads(line) for line in result.stdout.splitlines()]
-    assert [response["id"] for response in responses] == [1, 2, 21, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 102, 103, 11]
+    assert [response["id"] for response in responses] == [1, 2, 21, 3, 31, 4, 5, 6, 7, 8, 9, 10, 101, 102, 103, 104, 11]
     assert responses[0]["result"]["serverInfo"]["name"] == "aoa-course-connector-mcp"
     assert any(tool["name"] == "search" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "answer" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "source_answer" for tool in responses[1]["result"]["tools"])
     assert any(tool["name"] == "sources_answer" for tool in responses[1]["result"]["tools"])
+    assert any(tool["name"] == "sources_answer_matrix" for tool in responses[1]["result"]["tools"])
     assert responses[2]["result"]["structuredContent"]["catalog"]["network_touched"] is False
     assert responses[2]["result"]["structuredContent"]["catalog"]["source_refs_included"] is False
     assert responses[2]["result"]["structuredContent"]["catalog"]["connected_runs"]["included"] is True
@@ -607,9 +609,14 @@ def test_mcp_stdio_jsonrpc_flow(tmp_path: Path) -> None:
     assert responses[14]["result"]["structuredContent"]["sources_answer"]["status"] == "ok"
     assert responses[14]["result"]["structuredContent"]["sources_answer"]["network_touched"] is False
     assert responses[14]["result"]["structuredContent"]["sources_answer"]["response_count"] == 1
-    assert responses[15]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
-    assert responses[15]["result"]["structuredContent"]["mcp"]["ready"] is True
-    assert responses[15]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
+    assert responses[15]["result"]["structuredContent"]["sources_answer_matrix"]["schema"] == "aoa_course_sources_answer_matrix_v1"
+    assert responses[15]["result"]["structuredContent"]["sources_answer_matrix"]["status"] == "ok"
+    assert responses[15]["result"]["structuredContent"]["sources_answer_matrix"]["network_touched"] is False
+    assert responses[15]["result"]["structuredContent"]["sources_answer_matrix"]["query_count"] == 2
+    assert responses[15]["result"]["structuredContent"]["sources_answer_matrix"]["quality"]["ready"] is True
+    assert responses[16]["result"]["structuredContent"]["schema"] == "aoa_course_connector_readiness_v1"
+    assert responses[16]["result"]["structuredContent"]["mcp"]["ready"] is True
+    assert responses[16]["result"]["structuredContent"]["semantic_provider_preflight"][0]["network_touched"] is False
 
 
 def test_cli_browser_auth_state_inspect(tmp_path: Path) -> None:
@@ -992,6 +999,15 @@ def test_cli_install_route_eval_proves_fresh_agent_route(tmp_path: Path) -> None
     assert result["sources_answer"]["response_count"] >= 1
     assert result["sources_answer"]["evidence_count_total"] >= 1
     assert result["sources_answer"]["source_refs_included"] is False
+    assert result["sources_answer_matrix"]["tool"] == "sources_answer_matrix"
+    assert result["sources_answer_matrix"]["schema"] == "aoa_course_sources_answer_matrix_v1"
+    assert result["sources_answer_matrix"]["status"] == "ok"
+    assert result["sources_answer_matrix"]["network_touched"] is False
+    assert result["sources_answer_matrix"]["quality_ready"] is True
+    assert result["sources_answer_matrix"]["query_count"] >= 2
+    assert result["sources_answer_matrix"]["ready_query_count"] >= 2
+    assert result["sources_answer_matrix"]["evidence_count_total"] >= 2
+    assert result["sources_answer_matrix"]["source_refs_included"] is False
 
 
 def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Path) -> None:
@@ -1173,6 +1189,35 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert sources_answer["responses"][0]["answer_packet"]["quality"]["ready"] is True
     assert sources_answer["responses"][0]["evidence_report"]["result_refs"]
     assert '"source_ref"' not in rendered_sources_answer
+    sources_answer_matrix = run_cli(
+        tmp_path,
+        "sources",
+        "answer-matrix",
+        "--query",
+        "Stepik public API evidence",
+        "--query",
+        "canonical course objects",
+        "--platform",
+        "stepik",
+        "--kind",
+        "smoke",
+        "--mode",
+        "hybrid",
+    )
+    rendered_sources_answer_matrix = json.dumps(sources_answer_matrix)
+    assert sources_answer_matrix["schema"] == "aoa_course_sources_answer_matrix_v1"
+    assert sources_answer_matrix["status"] == "ok"
+    assert sources_answer_matrix["network_touched"] is False
+    assert sources_answer_matrix["read_only"] is True
+    assert sources_answer_matrix["source_refs_included"] is False
+    assert sources_answer_matrix["query_count"] == 2
+    assert sources_answer_matrix["quality"]["ready"] is True
+    assert sources_answer_matrix["quality"]["ready_query_count"] == 2
+    assert sources_answer_matrix["quality"]["all_queries_have_evidence"] is True
+    assert len(sources_answer_matrix["query_packets"]) == 2
+    assert all(packet["schema"] == "aoa_course_sources_answer_packet_v1" for packet in sources_answer_matrix["query_packets"])
+    assert all(summary["top_result_refs"] for summary in sources_answer_matrix["query_summaries"])
+    assert '"source_ref"' not in rendered_sources_answer_matrix
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

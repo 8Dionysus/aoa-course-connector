@@ -271,6 +271,20 @@ def build_parser() -> argparse.ArgumentParser:
     sources_answer.add_argument("--include-disabled", action="store_true")
     sources_answer.add_argument("--include-source-refs", action="store_true")
     sources_answer.set_defaults(func=cmd_sources_answer)
+    sources_answer_matrix = sources_sub.add_parser("answer-matrix")
+    sources_answer_matrix.add_argument("--query", action="append", required=True)
+    sources_answer_matrix.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    sources_answer_matrix.add_argument("--source-id", action="append")
+    sources_answer_matrix.add_argument("--kind", choices=["smoke", "sync"], action="append")
+    sources_answer_matrix.add_argument("--limit", type=int, default=5)
+    sources_answer_matrix.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="keyword")
+    sources_answer_matrix.add_argument("--graph-limit", type=int, default=12)
+    sources_answer_matrix.add_argument("--source-limit", type=int, default=10)
+    sources_answer_matrix.add_argument("--connected-run-limit", type=int, default=5)
+    sources_answer_matrix.add_argument("--connected-receipt-limit", type=int, default=50)
+    sources_answer_matrix.add_argument("--include-disabled", action="store_true")
+    sources_answer_matrix.add_argument("--include-source-refs", action="store_true")
+    sources_answer_matrix.set_defaults(func=cmd_sources_answer_matrix)
 
     auth = sub.add_parser("auth")
     auth_sub = auth.add_subparsers(dest="auth_command", required=True)
@@ -1070,6 +1084,33 @@ def cmd_sources_answer(args: argparse.Namespace) -> int:
         _emit({"schema": "aoa_course_sources_answer_cli_v1", "status": "error", "error": str(exc), "network_touched": False})
         return 2
     packet = result.get("sources_answer") if isinstance(result.get("sources_answer"), dict) else {}
+    _emit(packet)
+    return 0 if packet.get("status") in {"ok", "partial"} else 1
+
+
+def cmd_sources_answer_matrix(args: argparse.Namespace) -> int:
+    try:
+        result = call_tool(
+            "sources_answer_matrix",
+            {
+                "queries": args.query,
+                "platforms": args.platform,
+                "source_ids": args.source_id,
+                "kinds": args.kind,
+                "limit": args.limit,
+                "mode": args.mode,
+                "graph_limit": args.graph_limit,
+                "source_limit": args.source_limit,
+                "connected_run_limit": args.connected_run_limit,
+                "connected_receipt_limit": args.connected_receipt_limit,
+                "include_disabled": args.include_disabled,
+                "include_source_refs": args.include_source_refs,
+            },
+        )
+    except ValueError as exc:
+        _emit({"schema": "aoa_course_sources_answer_matrix_cli_v1", "status": "error", "error": str(exc), "network_touched": False})
+        return 2
+    packet = result.get("sources_answer_matrix") if isinstance(result.get("sources_answer_matrix"), dict) else {}
     _emit(packet)
     return 0 if packet.get("status") in {"ok", "partial"} else 1
 
@@ -1884,6 +1925,14 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
         "sources_answer",
         {"platforms": ["stepik"], "query": "Stepik public API evidence", "mode": "hybrid"},
     )
+    sources_answer_matrix = call_tool(
+        "sources_answer_matrix",
+        {
+            "platforms": ["stepik"],
+            "queries": ["Stepik public API evidence", "canonical course objects"],
+            "mode": "hybrid",
+        },
+    )
     doc_paths = [
         "README.md",
         "docs/INSTALL.md",
@@ -1906,6 +1955,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
         connected_status=connected_status,
         sources=sources,
         sources_answer=sources_answer,
+        sources_answer_matrix=sources_answer_matrix,
     )
     query_plan_ready_count = _ready_query_entry_count(connected_status)
     source_count = _source_registry_count(sources)
@@ -1924,8 +1974,10 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
                 f"aoa-course readiness --run {DEFAULT_RUN} --connected-run {connected_run}",
                 f'aoa-course answer "bootloader rollback" --run {DEFAULT_RUN} --mode hybrid',
                 'aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid',
+                'aoa-course sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid',
                 f'aoa-course mcp call answer \'{{"query":"bootloader rollback","run":"{DEFAULT_RUN}","mode":"hybrid"}}\'',
                 'aoa-course mcp call sources_answer \'{"platforms":["stepik"],"query":"Stepik public API evidence","mode":"hybrid"}\'',
+                'aoa-course mcp call sources_answer_matrix \'{"platforms":["stepik"],"queries":["Stepik public API evidence","canonical course objects"],"mode":"hybrid"}\'',
                 f"aoa-course calibration status --run {connected_run}",
             ],
             "storage": {
@@ -1964,6 +2016,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
             },
             "source_registry": {"source_count": source_count},
             "sources_answer": _sources_answer_summary(sources_answer),
+            "sources_answer_matrix": _sources_answer_matrix_summary(sources_answer_matrix),
             "failures": failures,
         }
     )
@@ -2351,6 +2404,7 @@ def _install_route_failures(
     connected_status: dict[str, object],
     sources: dict[str, object],
     sources_answer: dict[str, object],
+    sources_answer_matrix: dict[str, object],
 ) -> list[dict[str, object]]:
     failures: list[dict[str, object]] = []
     missing_docs = [path for path in doc_paths if not (repo_root / path).exists()]
@@ -2457,6 +2511,55 @@ def _install_route_failures(
         })
     if int(sources_answer_quality.get("evidence_count_total") or 0) < 1:
         failures.append({"surface": "sources_answer.quality", "missing": "evidence"})
+    sources_answer_matrix_packet = (
+        sources_answer_matrix.get("sources_answer_matrix")
+        if isinstance(sources_answer_matrix.get("sources_answer_matrix"), dict)
+        else {}
+    )
+    sources_answer_matrix_quality = (
+        sources_answer_matrix_packet.get("quality")
+        if isinstance(sources_answer_matrix_packet.get("quality"), dict)
+        else {}
+    )
+    if sources_answer_matrix.get("tool") != "sources_answer_matrix":
+        failures.append({
+            "surface": "mcp.sources_answer_matrix",
+            "field": "tool",
+            "expected": "sources_answer_matrix",
+            "actual": sources_answer_matrix.get("tool"),
+        })
+    if sources_answer_matrix_packet.get("schema") != "aoa_course_sources_answer_matrix_v1":
+        failures.append({
+            "surface": "sources_answer_matrix",
+            "field": "schema",
+            "expected": "aoa_course_sources_answer_matrix_v1",
+            "actual": sources_answer_matrix_packet.get("schema"),
+        })
+    if sources_answer_matrix_packet.get("status") != "ok":
+        failures.append({
+            "surface": "sources_answer_matrix",
+            "field": "status",
+            "expected": "ok",
+            "actual": sources_answer_matrix_packet.get("status"),
+        })
+    if sources_answer_matrix_packet.get("network_touched") is not False:
+        failures.append({
+            "surface": "sources_answer_matrix",
+            "field": "network_touched",
+            "expected": False,
+            "actual": sources_answer_matrix_packet.get("network_touched"),
+        })
+    if int(sources_answer_matrix_packet.get("query_count") or 0) < 2:
+        failures.append({"surface": "sources_answer_matrix", "missing": "query breadth"})
+    if sources_answer_matrix_quality.get("ready") is not True:
+        failures.append({
+            "surface": "sources_answer_matrix.quality",
+            "field": "ready",
+            "expected": True,
+            "actual": sources_answer_matrix_quality.get("ready"),
+        })
+    if int(sources_answer_matrix_quality.get("evidence_count_total") or 0) < 2:
+        failures.append({"surface": "sources_answer_matrix.quality", "missing": "multi-query evidence"})
     return failures
 
 
@@ -2470,6 +2573,23 @@ def _sources_answer_summary(result: dict[str, object]) -> dict[str, object]:
         "network_touched": packet.get("network_touched"),
         "response_count": packet.get("response_count"),
         "quality_ready": quality.get("ready"),
+        "evidence_count_total": quality.get("evidence_count_total"),
+        "source_refs_included": packet.get("source_refs_included"),
+    }
+
+
+def _sources_answer_matrix_summary(result: dict[str, object]) -> dict[str, object]:
+    packet = result.get("sources_answer_matrix") if isinstance(result.get("sources_answer_matrix"), dict) else {}
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    return {
+        "tool": result.get("tool"),
+        "schema": packet.get("schema"),
+        "status": packet.get("status"),
+        "network_touched": packet.get("network_touched"),
+        "query_count": packet.get("query_count"),
+        "quality_ready": quality.get("ready"),
+        "ready_query_count": quality.get("ready_query_count"),
+        "response_count_total": quality.get("response_count_total"),
         "evidence_count_total": quality.get("evidence_count_total"),
         "source_refs_included": packet.get("source_refs_included"),
     }

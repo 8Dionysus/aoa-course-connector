@@ -34,6 +34,7 @@ REQUIRED_MCP_TOOLS = [
     "list_sources",
     "source_answer",
     "sources_answer",
+    "sources_answer_matrix",
     "ingest_status",
     "sync_status",
     "live_preflight",

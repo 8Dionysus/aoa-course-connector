@@ -118,6 +118,20 @@ def test_stdio_verifier_requires_sources_answer_ready() -> None:
         verifier._verify_stdio_tool_responses(stdout)
 
 
+def test_stdio_verifier_requires_sources_answer_matrix_ready() -> None:
+    verifier = load_verifier_module()
+    responses = _healthy_stdio_responses()
+    sources_answer_matrix = next(response for response in responses if response["id"] == 12)
+    sources_answer_matrix["result"]["structuredContent"]["sources_answer_matrix"]["quality"]["ready"] = False
+    stdout = "\n".join(json.dumps(response) for response in responses)
+
+    with pytest.raises(
+        verifier.StdioVerificationError,
+        match="sources_answer_matrix stdio response did not prove multi-query readiness",
+    ):
+        verifier._verify_stdio_tool_responses(stdout)
+
+
 def test_stdio_verifier_requires_ready_connected_run_mcp_call() -> None:
     verifier = load_verifier_module()
     responses = _healthy_stdio_responses()
@@ -251,6 +265,23 @@ def _healthy_stdio_responses() -> list[dict[str, object]]:
                         "network_touched": False,
                         "response_count": 1,
                         "quality": {"ready": True, "evidence_count_total": 1},
+                    },
+                },
+                "isError": False,
+            },
+        },
+        {
+            "jsonrpc": "2.0",
+            "id": 12,
+            "result": {
+                "structuredContent": {
+                    "tool": "sources_answer_matrix",
+                    "sources_answer_matrix": {
+                        "schema": "aoa_course_sources_answer_matrix_v1",
+                        "status": "ok",
+                        "network_touched": False,
+                        "query_count": 2,
+                        "quality": {"ready": True, "evidence_count_total": 2},
                     },
                 },
                 "isError": False,

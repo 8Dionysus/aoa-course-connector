@@ -7,6 +7,7 @@ Initial tools:
 - `list_sources`
 - `source_answer`
 - `sources_answer`
+- `sources_answer_matrix`
 - `connector_readiness`
 - `ingest_status`
 - `sync_status`
@@ -38,6 +39,7 @@ aoa-course mcp tools
 aoa-course mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 aoa-course mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
 aoa-course mcp call sources_answer '{"platforms":["stepik"],"query":"Stepik public API evidence"}'
+aoa-course mcp call sources_answer_matrix '{"platforms":["stepik"],"queries":["Stepik public API evidence","canonical course objects"]}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call search '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
@@ -129,6 +131,12 @@ source, blocked-source details, aggregate quality, and `network_touched: false`.
 It keeps per-source answer/context/evidence packets separate so agents can cite
 the exact course source that supported each result. Like `source_answer`, it
 defaults to `include_source_refs: false`.
+`sources_answer_matrix` is the breadth route for asking several questions
+across the same selected source set. It accepts `queries` plus the same source,
+mode, kind, and limit controls as `sources_answer`, then returns
+`aoa_course_sources_answer_matrix_v1` with one sources-answer packet per
+question, aggregate readiness, per-query top-result refs, blockers, failures,
+and `network_touched: false`.
 For shell-side use, the equivalent local command is
 `aoa-course sources answer "<query>" --platform stepik --mode hybrid`;
 it returns the same `aoa_course_sources_answer_packet_v1` without requiring a
