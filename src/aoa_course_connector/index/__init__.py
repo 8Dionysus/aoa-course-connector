@@ -252,6 +252,14 @@ def _embedding_text_for_doc(doc: dict[str, object]) -> str:
             doc.get("kind"),
             doc.get("platform"),
             doc.get("authority_tier"),
+            doc.get("authority_label"),
+            doc.get("source_authority"),
+            doc.get("item_title"),
+            doc.get("item_url"),
+            doc.get("thread_title"),
+            doc.get("author_label"),
+            doc.get("access_state"),
+            doc.get("download_state"),
             doc.get("text"),
         ]
         if part
@@ -269,6 +277,15 @@ def _keyword_text_for_doc(doc: dict[str, object]) -> str:
             path_text,
             doc.get("platform"),
             doc.get("kind"),
+            doc.get("authority_tier"),
+            doc.get("authority_label"),
+            doc.get("source_authority"),
+            doc.get("item_title"),
+            doc.get("item_url"),
+            doc.get("thread_title"),
+            doc.get("author_label"),
+            doc.get("access_state"),
+            doc.get("download_state"),
             doc.get("text"),
         ]
         if part
@@ -398,13 +415,27 @@ def _iter_docs(bundle: dict[str, object]) -> list[dict[str, object]]:
                                     [*lesson_path, thread_label, comment_label],
                                     comment.get("evidence") or lesson_evidence,
                                     comment,
+                                    place_context={"thread_id": thread.get("thread_id"), "thread_title": thread_label},
                                 )
                             )
                 for asset in lesson.get("assets", []):
                     if isinstance(asset, dict):
                         text = f"{asset.get('title', '')} {asset.get('kind', '')} {asset.get('download_state', '')}"
                         asset_label = str(asset.get("title") or asset.get("asset_id") or "asset")
-                        docs.append(_doc("asset", asset.get("asset_id"), text, course, module, lesson, [*lesson_path, asset_label], asset.get("evidence") or lesson_evidence, asset))
+                        docs.append(
+                            _doc(
+                                "asset",
+                                asset.get("asset_id"),
+                                text,
+                                course,
+                                module,
+                                lesson,
+                                [*lesson_path, asset_label],
+                                asset.get("evidence") or lesson_evidence,
+                                asset,
+                                place_context={"item_title": asset_label, "item_url": asset.get("url")},
+                            )
+                        )
     return docs
 
 
@@ -421,7 +452,21 @@ def _semantic_features_for_doc(doc: dict[str, object]) -> list[tuple[str, float]
     )
     path_text = " ".join(str(item) for item in doc.get("path", []) if item) if isinstance(doc.get("path"), list) else ""
     features.extend(_weighted_text_features(f"{title_path_text} {path_text}", weight=1.6))
-    for key in ["kind", "platform", "authority_tier"]:
+    native_place_text = " ".join(
+        str(doc.get(key) or "")
+        for key in [
+            "authority_label",
+            "source_authority",
+            "item_title",
+            "item_url",
+            "thread_title",
+            "author_label",
+            "access_state",
+            "download_state",
+        ]
+    )
+    features.extend(_weighted_text_features(native_place_text, weight=1.3))
+    for key in ["kind", "platform", "authority_tier", "source_authority"]:
         value = str(doc.get(key) or "").casefold()
         if value:
             features.append((f"{key}:{value}", 2.0))
@@ -503,13 +548,27 @@ def _doc(
     path: list[str],
     evidence: object,
     source_item: dict[str, object] | None = None,
+    place_context: dict[str, object] | None = None,
 ) -> dict[str, object]:
     evidence_dict = evidence if isinstance(evidence, dict) else {}
     item = source_item or {}
+    place_context = place_context or {}
     doc_id = f"{kind}:{item_id}"
+    item_title = item.get("title") or place_context.get("item_title") or ""
+    item_url = item.get("url") or place_context.get("item_url") or ""
+    author_label = str(item.get("author_label") or item.get("author_role") or item.get("author") or item.get("role") or "")
     return {
         "doc_id": doc_id,
         "kind": kind,
+        "native_item_id": item_id,
+        "item_title": item_title,
+        "item_url": item_url,
+        "thread_id": place_context.get("thread_id") or "",
+        "thread_title": place_context.get("thread_title") or "",
+        "author_label": author_label,
+        "posted_at": item.get("posted_at") or "",
+        "download_state": item.get("download_state") or "",
+        "access_state": item.get("access_state") or lesson.get("access_state") or "",
         "course_id": course.get("course_id"),
         "source_id": course.get("source_id"),
         "course_title": course.get("title"),
@@ -524,7 +583,7 @@ def _doc(
         "platform": course.get("platform"),
         "freshness_state": lesson.get("freshness_state", "unknown"),
         "authority_tier": _authority_tier(kind, item),
-        "authority_label": str(item.get("authority_label") or item.get("author_label") or item.get("role") or ""),
+        "authority_label": str(item.get("authority_label") or author_label),
         "source_authority": str(item.get("source_authority") or ""),
         "version_group_id": item.get("version_group_id") or lesson.get("version_group_id") or "",
         "valid_from": item.get("valid_from") or lesson.get("valid_from") or "",

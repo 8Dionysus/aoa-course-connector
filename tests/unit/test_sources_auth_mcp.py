@@ -676,6 +676,34 @@ def test_browser_state_inspect_matches_expected_origin_from_cookie_domain(tmp_pa
     assert status["expected_origin_matched"] is True
 
 
+def test_browser_state_inspect_rejects_tracking_only_skillspace_state(tmp_path: Path) -> None:
+    state_file = tmp_path / "account.storage-state.json"
+    state_file.write_text(
+        json.dumps({
+            "cookies": [
+                {"name": "carrotquest_auth_token", "value": "TRACKING_SECRET", "domain": ".school.skillspace.edu", "path": "/"},
+                {"name": "carrotquest_session", "value": "TRACKING_SESSION", "domain": ".school.skillspace.edu", "path": "/"},
+            ],
+            "origins": [{"origin": "https://school.skillspace.edu", "localStorage": []}],
+        }),
+        encoding="utf-8",
+    )
+
+    status = inspect_browser_state(state_file, expect_origin_contains="school.skillspace.edu", platform="skillspace")
+
+    assert status["status"] == "no_auth_signal"
+    assert status["usable"] is False
+    assert status["expected_origin_matched"] is True
+    assert status["cookie_count"] == 2
+    assert status["tracking_cookie_count"] == 2
+    assert status["auth_cookie_count"] == 0
+    assert status["auth_storage_entry_count"] == 0
+    assert status["auth_signal_present"] is False
+    rendered = str(status)
+    assert "TRACKING_SECRET" not in rendered
+    assert "TRACKING_SESSION" not in rendered
+
+
 def test_browser_state_inspect_rejects_subdomain_cookie_for_parent_origin(tmp_path: Path) -> None:
     state_file = tmp_path / "account.storage-state.json"
     state_file.write_text(

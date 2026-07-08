@@ -330,7 +330,14 @@ This proves:
   matches, freshness/authority fields, refresh hints, or complete provenance.
 - Freshness-aware result ranking with visible `rank_score`/`rank_features` and
   a conflict fixture proving current source-backed material beats stale material
-  when base relevance is tied.
+  when base relevance is tied. Answer packets also include
+  `aoa_course_temporal_answer_report_v1`, so agents can see timestamp coverage,
+  version groups, and detected current/stale conflicts without recomputing the
+  graph.
+- Place-aware ranking preserves native hierarchy fields such as thread title,
+  author label, attachment title/URL, access state, and download state in index
+  docs and evidence chains, with `place-ranking` proving source-path accuracy
+  and evidence attribution for thread/comment and attachment lookups.
 - Authority-aware result ranking with visible `authority_tier`,
   `authority_boost`, `rank_score`, and a conflict fixture proving official
   lesson text and mentor comments beat learner comments when base relevance is
@@ -342,9 +349,9 @@ This proves:
   platform topology: working GetCourse, Skillspace, and Stepik;
   future Moodle, Canvas, Coursera, Teachable, Thinkific, and Kajabi entries
   without claiming their ingestion routes are implemented yet.
-- Browser live preflight rejects unsafe origin substring matches and withholds
-  the live sync command until registered source hosts match the saved browser
-  storage state.
+- Browser live preflight rejects unsafe origin substring matches, tracking-only
+  storage states without an auth signal, and withholds the live sync command
+  until registered source hosts match the saved browser storage state.
 - Fixture-safe live calibration packets through `eval live-calibration` and
   `calibration build`, covering GetCourse, Skillspace, and Stepik smoke reports,
   answer evidence/timestamps, transcript/caption health, caption-resource

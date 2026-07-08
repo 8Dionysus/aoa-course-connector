@@ -143,6 +143,13 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
     version_packet = render_answer_packet(storage, "version history firmware rollback policy", run_id="freshness-ranking-fixture", limit=2, mode="hybrid")
     assert version_packet["query_intent_report"]["intent_class"] == "version_comparison"
     assert {item["version_group_id"] for item in version_packet["evidence_chain"]} == {"version-group:freshness:firmware-rollback-policy"}
+    temporal_report = version_packet["temporal_report"]
+    assert temporal_report["schema"] == "aoa_course_temporal_answer_report_v1"
+    assert temporal_report["conflict_detected"] is True
+    assert temporal_report["conflict_group_count"] == 1
+    assert temporal_report["timestamp_coverage"] == 1.0
+    assert temporal_report["groups"][0]["current_doc_ids"] == ["step:step:freshness:zzz-current-policy"]
+    assert temporal_report["groups"][0]["stale_doc_ids"] == ["step:step:freshness:aaa-stale-policy"]
 
     graph = json.loads(graph_path.read_text(encoding="utf-8"))
     assert graph["temporal"]["version_group_count"] == 1
@@ -167,6 +174,33 @@ def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -
         "lesson:freshness:aaa-stale-policy",
         "lesson:freshness:zzz-current-policy",
     ]
+
+
+def test_place_ranking_preserves_native_hierarchy_fields(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(
+        storage,
+        run_id="place-ranking-fixture",
+        fixture=REPO_ROOT / "connector" / "fixtures" / "course" / "place_conflict_course.json",
+    )
+    build_keyword_index(storage, run_id="place-ranking-fixture")
+    build_semantic_index(storage, run_id="place-ranking-fixture")
+
+    thread_hits = query_hybrid_index(storage, "where in thread Mentor Answers timestamp window reproduction step", run_id="place-ranking-fixture", limit=4)
+    assert thread_hits[0]["doc_id"] == "comment:comment:place:mentor-answer"
+    assert thread_hits[0]["thread_title"] == "Mentor Answers"
+    assert thread_hits[0]["author_label"] == "mentor"
+    assert thread_hits[0]["rank_features"]["place_complete"] is True
+    assert thread_hits[0]["rank_features"]["place_match_count"] >= 2
+    thread_packet = render_answer_packet(storage, "where in thread Mentor Answers timestamp window reproduction step", run_id="place-ranking-fixture", limit=4, mode="hybrid")
+    assert thread_packet["query_intent_report"]["intent_class"] == "place_lookup"
+    assert thread_packet["evidence_chain"][0]["thread_title"] == "Mentor Answers"
+    assert thread_packet["evidence_chain"][0]["author_label"] == "mentor"
+
+    asset_hits = query_hybrid_index(storage, "where attachment Camera Evidence Pack", run_id="place-ranking-fixture", limit=4)
+    assert asset_hits[0]["doc_id"] == "asset:asset:place:camera-pack"
+    assert asset_hits[0]["item_title"] == "Camera Evidence Pack"
+    assert str(asset_hits[0]["item_url"]).endswith("/camera-evidence-pack.txt")
 
 
 def test_authority_ranking_prefers_official_and_mentor_sources_when_relevance_ties(tmp_path: Path) -> None:

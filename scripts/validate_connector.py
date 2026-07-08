@@ -680,7 +680,8 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "expected_origin_contains",
         "expected_origin_matched",
         "capture_command += f\" --expect-origin-contains",
-        "inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None)",
+        "inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None, platform=platform)",
+        "STRICT_AUTH_SIGNAL_PLATFORMS",
     ]:
         if token not in browser_state_raw:
             errors.append(f"Browser auth state code missing expected-origin token: {token}")

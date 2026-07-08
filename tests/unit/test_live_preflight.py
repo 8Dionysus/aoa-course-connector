@@ -267,6 +267,40 @@ def test_live_preflight_reports_missing_browser_state_as_warning(tmp_path: Path)
     assert any("capture-browser-state" in command for command in report["next_commands"])
 
 
+def test_live_preflight_blocks_tracking_only_skillspace_state(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    upsert_source(storage.data, "skillspace", "https://school.skillspace.edu/courses", "School")
+    state_file = storage.auth / "skillspace" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [
+                {"name": "carrotquest_auth_token", "value": "TRACKING_SECRET", "domain": ".school.skillspace.edu", "path": "/"},
+                {"name": "carrotquest_session", "value": "TRACKING_SESSION", "domain": ".school.skillspace.edu", "path": "/"},
+            ],
+            "origins": [{"origin": "https://school.skillspace.edu", "localStorage": []}],
+        }),
+        encoding="utf-8",
+    )
+
+    report = live_preflight(storage, platforms=["skillspace"])
+
+    browser_state = next(check for check in report["checks"] if check["kind"] == "browser_state")
+    assert browser_state["status"] == "no_auth_signal"
+    assert browser_state["ready"] is False
+    assert browser_state["tracking_cookie_count"] == 2
+    assert browser_state["auth_cookie_count"] == 0
+    assert browser_state["auth_signal_present"] is False
+    source_check = next(check for check in report["checks"] if check["kind"] == "source")
+    assert source_check["ready"] is False
+    assert "browser storage state is no_auth_signal" in source_check["blockers"]
+    assert report["ready"] is False
+    assert not any(command.startswith("aoa-course sync browser-live") for command in report["next_commands"])
+    rendered = json.dumps(report)
+    assert "TRACKING_SECRET" not in rendered
+    assert "TRACKING_SESSION" not in rendered
+
+
 def test_connected_source_plan_defaults_to_all_priority_platforms(tmp_path: Path, monkeypatch) -> None:
     storage = roots(tmp_path)
     upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
@@ -430,7 +464,7 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert "--expect-origin-contains school.operator.edu" in plan["commands"]["capture"]
     assert "inspect-browser-state" in plan["commands"]["inspect"]
     assert plan["commands"]["inspect_source_hosts"] == [
-        'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --expect-origin-contains school.operator.edu'
+        'aoa-course auth inspect-browser-state "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/getcourse/account.storage-state.json" --platform getcourse --expect-origin-contains school.operator.edu'
     ]
     assert "preflight connected-plan --platform getcourse" in plan["commands"]["recheck"]
     rendered = json.dumps(plan)
