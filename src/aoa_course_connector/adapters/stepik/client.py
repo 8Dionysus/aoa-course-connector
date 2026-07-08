@@ -87,7 +87,7 @@ class StepikClient:
 
     def _headers(self) -> dict[str, str]:
         headers = {"Accept": "application/json", "User-Agent": "aoa-course-connector/0.1"}
-        if self.token:
+        if self.token and not self.cookie_header:
             headers["Authorization"] = f"Bearer {self.token}"
         if self.cookie_header:
             headers["Cookie"] = self.cookie_header
@@ -111,7 +111,7 @@ def fetch_stepik_course(
 ) -> dict[str, Any]:
     client = StepikClient(base_url=base_url, token=token, timeout=timeout, cookie_header=cookie_header)
     course = client.first("courses", course_id)
-    access_mode = "api_token" if token else "browser_session" if cookie_header else "public_api"
+    access_mode = "browser_session" if cookie_header else "api_token" if token else "public_api"
     sections = []
     step_source_attempt_count = 0
     step_source_skipped_count = 0

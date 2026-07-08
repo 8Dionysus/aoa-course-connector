@@ -191,6 +191,50 @@ def test_getcourse_catalog_discovery_reads_canonical_onclick_stream_view_url() -
     assert discovery["courses"][0]["title"] == "Курс из onClick"
 
 
+def test_getcourse_catalog_discovery_preserves_absolute_onclick_url_before_training_id() -> None:
+    raw = {
+        "platform": "getcourse",
+        "captured_at": "2026-07-08T08:10:00Z",
+        "pages": [
+            {
+                "url": "https://school.example/c/s/index",
+                "title": "GetCourse",
+                "html": "<main></main>",
+                "api_payloads": [
+                    {
+                        "url": "https://app.gcext.su/api/2.0/proxy/https://school.example/c/s/index",
+                        "content_type": "application/json; charset=utf-8",
+                        "json": {
+                            "data": {
+                                "blocks": [
+                                    {
+                                        "type": "screen",
+                                        "id": "116/training/911642804",
+                                        "title": "Canonical host",
+                                        "onClick": {
+                                            "type": "navigate",
+                                            "url": "https://getcourse.ru/teach/control/stream/view/id/911642804",
+                                        },
+                                    }
+                                ]
+                            }
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    discovery = build_browser_catalog_discovery(
+        raw,
+        platform="getcourse",
+        link_pattern="https://getcourse.ru/teach/control/stream/view/id/*",
+    )
+
+    assert discovery["course_count"] == 1
+    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/911642804"
+
+
 def test_skillspace_catalog_discovery_reads_student_course_list_payload() -> None:
     raw = {
         "platform": "skillspace",

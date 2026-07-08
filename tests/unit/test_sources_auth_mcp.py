@@ -865,6 +865,46 @@ def test_stepik_source_defaults_to_public_api(tmp_path: Path) -> None:
     assert source["access_mode"] == "public_api"
 
 
+def test_stepik_live_preflight_requires_cookie_header_for_browser_sources(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    source, _path, _state = upsert_source(storage.data, "stepik", "67", "Stepik Browser", access_mode="browser_session")
+    state_file = storage.auth / "stepik" / "account.storage-state.json"
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps(
+            {
+                "cookies": [],
+                "origins": [
+                    {
+                        "origin": "https://stepik.org",
+                        "localStorage": [{"name": "session_token", "value": "SUPER_SECRET_TOKEN"}],
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.delenv("STEPIK_API_TOKEN", raising=False)
+
+    preflight = cli_module.live_preflight(storage, platforms=["stepik"], browser_state_file=state_file)
+
+    browser_state = next(check for check in preflight["checks"] if check["kind"] == "browser_state")
+    source_check = next(check for check in preflight["checks"] if check["kind"] == "source" and check["source_id"] == source["source_id"])
+    assert browser_state["usable"] is True
+    assert browser_state["ready"] is False
+    assert browser_state["status"] == "missing_cookie_header"
+    assert browser_state["cookie_header_ready"] is False
+    assert "does not contain cookies for stepik.org" in browser_state["cookie_header_error"]
+    assert source_check["ready"] is False
+    assert "browser storage state is missing_cookie_header" in source_check["blockers"]
+
+
 def test_mcp_connected_source_plan_exposes_ready_subset_without_secret_values(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
@@ -1400,6 +1440,51 @@ def test_sources_answer_matrix_portfolio_mode_allows_relevant_source_coverage(tm
     assert any(not ref.get("doc_id") for summary in strict_packet["query_summaries"] for ref in summary["top_result_refs"])
     assert "--coverage-mode portfolio" in portfolio_packet["next_commands"][0]
     assert '"coverage_mode":"portfolio"' in portfolio_packet["next_commands"][1]
+
+
+def test_source_registry_query_eval_blocks_external_semantic_provider(tmp_path: Path) -> None:
+    semantic_index = tmp_path / "semantic_index.json"
+    semantic_index.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_semantic_index_v1",
+                "provider": "http_json_v1",
+                "provider_config": {"provider": "http_json_v1", "endpoint_configured": True},
+                "docs": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    catalog = {
+        "connected_runs": {
+            "by_source_id": {
+                "source:stepik:67": [
+                    {
+                        "run_id": "connected-stepik",
+                        "query_ready": True,
+                        "paths": {"semantic_index": str(semantic_index)},
+                    }
+                ]
+            }
+        }
+    }
+
+    failures = cli_module._source_registry_external_semantic_provider_failures(catalog, "hybrid")
+
+    assert failures == [
+        {
+            "surface": "connected_runs",
+            "source_id": "source:stepik:67",
+            "run_id": "connected-stepik",
+            "field": "semantic_index.provider",
+            "expected": "local_hashing_v1",
+            "actual": "http_json_v1",
+            "path": str(semantic_index),
+            "reason": "external_semantic_provider_requires_network",
+            "next_command": "aoa-course build-semantic-index --run connected-stepik --provider local_hashing_v1",
+        }
+    ]
+    assert cli_module._source_registry_external_semantic_provider_failures(catalog, "keyword") == []
 
 
 def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path: Path, monkeypatch) -> None:

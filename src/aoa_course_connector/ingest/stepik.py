@@ -68,6 +68,8 @@ def materialize_stepik_live(
     raw_dir.mkdir(parents=True, exist_ok=True)
     token = os.environ.get(token_env)
     cookie_header = browser_state_cookie_header(state_file, "stepik.org") if state_file else None
+    if cookie_header:
+        token = None
     raw = fetch_stepik_course(
         course_id,
         token=token,
