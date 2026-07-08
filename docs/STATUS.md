@@ -385,6 +385,19 @@ This proves:
   total evidence items, and MCP `sources_answer_matrix` answered 3/3 with 15
   total evidence items; both retrieval checks used the local indexes/graphs
   with `network_touched: false` and top results from the same fresh sync run.
+- A runtime-only multi-source GetCourse plus Stepik connected run has been
+  exercised locally: run `connected-ready-getcourse-stepik-20260708` completed
+  `ok` at `2026-07-08T08:54:25Z` across 6 ready sources
+  (`source:getcourse:15b891afce`, `source:getcourse:c991bf28c8`, and four
+  Stepik sources). It produced healthy live sync, live smoke, calibration
+  packet, and intake stages, 0 repair lanes, clean raw/secret privacy flags, 2
+  healthy browser snapshot audits, 14 visible transcripts, and 21 source-backed
+  smoke evidence items. CLI `calibration query-matrix` then answered 3/3
+  operator questions from local indexes/graphs with `network_touched: false`,
+  41 evidence items, 43 results, and graph context for every query. MCP
+  `connected_run_query_matrix` answered the same 3/3 questions with
+  `network_touched: false`, 55 evidence items, 57 results, all 6 source ids,
+  and graph context for every query.
 - Operator-owned GetCourse live connected-run has been exercised locally with
   runtime-only artifacts: preflight, live sync, smoke, calibration packet,
   intake, CLI `calibration query`, and MCP `connected_run_query` returned `ok`;
@@ -444,11 +457,15 @@ This proves:
 
 The next layer is broader live connected-source work:
 
-- run gated live smoke with connected Skillspace accounts and additional
-  operator-owned GetCourse courses to calibrate real login redirects, theme
-  selectors, and pagination behavior after `preflight connected-plan` reports
-  ready local auth/source state and emits the runtime smoke/calibration
-  commands;
+- connect a Skillspace account/source into
+  `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/skillspace/account.storage-state.json`
+  and the source registry, then run the same gated live sync, smoke,
+  calibration, CLI query-matrix, and MCP query-matrix route that is now proven
+  for the GetCourse plus Stepik ready subset;
+- run gated live smoke with additional operator-owned GetCourse courses to
+  calibrate real login redirects, theme selectors, and pagination behavior
+  after `preflight connected-plan` reports ready local auth/source state and
+  emits the runtime smoke/calibration commands;
 - broader live selector coverage for real GetCourse and Skillspace themes where
   progress, comment, transcript, caption, and caption-sidecar resources use
   unusual markup or protected text-resource behavior;
