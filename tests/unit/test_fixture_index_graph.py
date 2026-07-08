@@ -5,9 +5,10 @@ from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import build_keyword_index, build_semantic_index
+from aoa_course_connector.index import build_keyword_index, build_semantic_index, tokenize
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.query import graph_neighbors, query_hybrid_index, query_keyword_index, render_answer_packet
+from aoa_course_connector.storage import run_data_dir
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -91,6 +92,66 @@ def test_keyword_index_preserves_item_timestamp_before_fetch_timestamp(tmp_path:
     mentor_comment = next(doc for doc in index["docs"] if doc["doc_id"] == "comment:comment:starter:mentor-warning")
 
     assert mentor_comment["observed_at"] == "2026-06-29T12:15:00Z"
+
+
+def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path: Path) -> None:
+    assert tokenize("PRO C#. Основы программирования")[:3] == ["pro", "c#", "основы"]
+
+    storage = roots(tmp_path)
+    run_id = "csharp-title-fixture"
+    bundle_path = run_data_dir(storage, run_id) / "normalized" / "course_bundle.json"
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    bundle_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_bundle_v1",
+                "courses": [
+                    {
+                        "course_id": "course:csharp",
+                        "source_id": "source:stepik:csharp",
+                        "title": "PRO C#. Основы программирования",
+                        "url": "https://stepik.org/course/5482",
+                        "platform": "stepik",
+                        "modules": [
+                            {
+                                "module_id": "module:intro",
+                                "title": "Общая информация о курсе",
+                                "lessons": [
+                                    {
+                                        "lesson_id": "lesson:welcome",
+                                        "title": "Добро пожаловать",
+                                        "url": "https://stepik.org/lesson/1263653",
+                                        "freshness_state": "current",
+                                        "evidence": {
+                                            "evidence_id": "evidence:csharp:welcome",
+                                            "source_url": "https://stepik.org/lesson/1263653",
+                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                        },
+                                        "steps": [
+                                            {
+                                                "step_id": "step:welcome",
+                                                "text": "Добро пожаловать в курс.",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    }
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    build_keyword_index(storage, run_id=run_id)
+
+    results = query_keyword_index(storage, "C#", run_id=run_id)
+
+    assert results
+    assert results[0]["course_title"] == "PRO C#. Основы программирования"
+    assert results[0]["evidence_id"] == "evidence:csharp:welcome"
 
 
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:

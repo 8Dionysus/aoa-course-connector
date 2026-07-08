@@ -17,6 +17,8 @@ from aoa_course_connector.storage import run_artifact_dir, run_data_dir
 
 
 TOKEN_RE = re.compile(r"[\w.+#/-]+", re.UNICODE)
+TOKEN_LEADING_PUNCTUATION = "\"'([{«"
+TOKEN_TRAILING_PUNCTUATION = "\"'.,:;!?)]}»"
 DEFAULT_VECTOR_DIMENSIONS = 256
 LOCAL_HASHING_PROVIDER = "local_hashing_v1"
 HTTP_JSON_PROVIDER = "http_json_v1"
@@ -107,7 +109,13 @@ def build_semantic_index(
 
 
 def tokenize(text: str) -> list[str]:
-    return [token.casefold() for token in TOKEN_RE.findall(text) if token.strip()]
+    tokens: list[str] = []
+    for raw_token in TOKEN_RE.findall(text):
+        token = raw_token.casefold().strip()
+        token = token.lstrip(TOKEN_LEADING_PUNCTUATION).rstrip(TOKEN_TRAILING_PUNCTUATION)
+        if token:
+            tokens.append(token)
+    return tokens
 
 
 def vectorize_semantic_query(
