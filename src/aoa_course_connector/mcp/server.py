@@ -1125,11 +1125,15 @@ def _sources_answer_matrix_top_result_refs(packet: dict[str, object], *, grounde
                 "path": top_result.get("path"),
                 "fetched_at": top_result.get("fetched_at"),
                 "freshness_state": top_result.get("freshness_state"),
+                "score": top_result.get("score"),
+                "rank_score": top_result.get("rank_score"),
             }
         )
         if grounded_only and not ref.get("doc_id"):
             continue
         refs.append(ref)
+    if grounded_only:
+        refs = sorted(refs, key=lambda ref: (float(ref.get("rank_score") or 0.0), float(ref.get("score") or 0.0)), reverse=True)
     return refs
 
 

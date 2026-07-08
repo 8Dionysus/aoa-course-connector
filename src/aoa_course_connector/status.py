@@ -581,7 +581,7 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         "connected_run_status": receipt.get("status") or "unknown",
         "connected_completed_at": receipt.get("completed_at"),
         "connected_started_at": receipt.get("started_at"),
-        "status": receipt.get("status") or "unknown",
+        "status": entry.get("status") or receipt.get("status") or "unknown",
         "updated_at": receipt.get("completed_at") or receipt.get("started_at"),
         "receipt_path": str(path),
         "mode": receipt.get("mode"),

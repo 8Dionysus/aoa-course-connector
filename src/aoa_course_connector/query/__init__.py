@@ -1007,41 +1007,57 @@ def _temporal_boost(query_intents: set[str], freshness_state: str, *, intent_cla
 def _place_features(doc: dict[str, object], query_terms: list[str], query_intents: set[str]) -> dict[str, object]:
     path = doc.get("path") if isinstance(doc.get("path"), list) else []
     place_complete = bool(path) and bool(doc.get("platform")) and bool(doc.get("source_id")) and bool(doc.get("source_url"))
-    place_text = " ".join(
+    primary_place_text = " ".join(
+        str(part)
+        for part in [
+            doc.get("course_title"),
+            doc.get("module_title"),
+            doc.get("lesson_title"),
+            doc.get("item_title"),
+            doc.get("thread_title"),
+            doc.get("author_label"),
+            " ".join(str(item) for item in path if item),
+        ]
+        if part
+    )
+    secondary_place_text = " ".join(
         str(part)
         for part in [
             doc.get("platform"),
             doc.get("kind"),
-            doc.get("course_title"),
-            doc.get("module_title"),
-            doc.get("lesson_title"),
             doc.get("lesson_url"),
             doc.get("source_url"),
             doc.get("source_id"),
             doc.get("authority_tier"),
             doc.get("authority_label"),
             doc.get("source_authority"),
-            doc.get("item_title"),
             doc.get("item_url"),
-            doc.get("thread_title"),
-            doc.get("author_label"),
             doc.get("posted_at"),
             doc.get("download_state"),
             doc.get("access_state"),
-            " ".join(str(item) for item in path if item),
         ]
         if part
     )
-    place_terms = set(tokenize(place_text))
+    primary_place_terms = set(tokenize(primary_place_text))
+    place_terms = primary_place_terms | set(tokenize(secondary_place_text))
     intent_terms = ACCESS_INTENT_TERMS | FRESH_INTENT_TERMS | HISTORICAL_INTENT_TERMS | PLACE_INTENT_TERMS
     meaningful_query_terms = {term for term in query_terms if term not in intent_terms}
     matches = sorted(meaningful_query_terms & place_terms)
-    path_boost = min(0.12, 0.025 * len(matches))
-    requested_boost = 0.05 if "place" in query_intents and place_complete else 0.0
+    primary_matches = sorted(meaningful_query_terms & primary_place_terms)
+    secondary_match_count = len(set(matches) - set(primary_matches))
+    if primary_matches:
+        path_boost = min(0.55, 0.34 + (0.08 * (len(primary_matches) - 1)) + (0.03 * secondary_match_count))
+    elif matches:
+        path_boost = min(0.18, 0.06 * len(matches))
+    else:
+        path_boost = 0.0
+    requested_boost = 0.05 if "place" in query_intents and place_complete and matches else 0.0
     return {
         "place_complete": place_complete,
         "place_matches": matches,
         "place_match_count": len(matches),
+        "place_primary_matches": primary_matches,
+        "place_primary_match_count": len(primary_matches),
         "place_boost": round(path_boost + requested_boost, 6),
     }
 
