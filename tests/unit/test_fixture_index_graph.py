@@ -137,7 +137,39 @@ def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path
                                 ],
                             }
                         ],
-                    }
+                    },
+                    {
+                        "course_id": "course:python",
+                        "source_id": "source:stepik:python",
+                        "title": "Программирование на Python",
+                        "url": "https://stepik.org/course/67",
+                        "platform": "stepik",
+                        "modules": [
+                            {
+                                "module_id": "module:python-basics",
+                                "title": "Заключение",
+                                "lessons": [
+                                    {
+                                        "lesson_id": "lesson:python-finish",
+                                        "title": "Основы программирования",
+                                        "url": "https://stepik.org/lesson/7630",
+                                        "freshness_state": "current",
+                                        "evidence": {
+                                            "evidence_id": "evidence:python:finish",
+                                            "source_url": "https://stepik.org/lesson/7630",
+                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                        },
+                                        "steps": [
+                                            {
+                                                "step_id": "step:python-finish",
+                                                "text": "Изучайте основы программирования и программируйте с удовольствием.",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
                 ],
             },
             indent=2,
@@ -146,12 +178,111 @@ def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path
         encoding="utf-8",
     )
     build_keyword_index(storage, run_id=run_id)
+    build_semantic_index(storage, run_id=run_id)
 
     results = query_keyword_index(storage, "C#", run_id=run_id)
 
     assert results
     assert results[0]["course_title"] == "PRO C#. Основы программирования"
     assert results[0]["evidence_id"] == "evidence:csharp:welcome"
+
+    hybrid_results = query_hybrid_index(storage, "C# основы программирования", run_id=run_id)
+
+    assert hybrid_results[0]["course_title"] == "PRO C#. Основы программирования"
+    assert hybrid_results[0]["rank_features"]["place_match_count"] == 3
+    assert set(hybrid_results[0]["rank_features"]["place_matches"]) == {"c#", "основы", "программирования"}
+    assert hybrid_results[0]["rank_features"]["place_boost"] > hybrid_results[1]["rank_features"]["place_boost"]
+
+
+def test_single_course_title_match_beats_cross_source_semantic_noise(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    run_id = "single-course-title-place-fixture"
+    bundle_path = run_data_dir(storage, run_id) / "normalized" / "course_bundle.json"
+    bundle_path.parent.mkdir(parents=True, exist_ok=True)
+    bundle_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_bundle_v1",
+                "courses": [
+                    {
+                        "course_id": "course:philosophy",
+                        "source_id": "source:stepik:philosophy",
+                        "title": "Философия",
+                        "url": "https://stepik.org/course/6667",
+                        "platform": "stepik",
+                        "modules": [
+                            {
+                                "module_id": "module:philosophy-intro",
+                                "title": "Введение",
+                                "lessons": [
+                                    {
+                                        "lesson_id": "lesson:philosophy-short",
+                                        "title": "КРАТКО: чем философия отличается от науки, религии и искусства?",
+                                        "url": "https://stepik.org/lesson/459388",
+                                        "freshness_state": "current",
+                                        "evidence": {
+                                            "evidence_id": "evidence:philosophy:short",
+                                            "source_url": "https://stepik.org/lesson/459388",
+                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                        },
+                                        "steps": [
+                                            {
+                                                "step_id": "step:philosophy-short",
+                                                "text": "Философия помогает понять основания знания, ценностей и искусства.",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                    {
+                        "course_id": "course:bot",
+                        "source_id": "source:stepik:bot",
+                        "title": "Telegram-бот на Python за вечер",
+                        "url": "https://stepik.org/course/268845",
+                        "platform": "stepik",
+                        "modules": [
+                            {
+                                "module_id": "module:bot-bonus",
+                                "title": "Бонус",
+                                "lessons": [
+                                    {
+                                        "lesson_id": "lesson:bot-business",
+                                        "title": "Бот-визитка репетитора",
+                                        "url": "https://stepik.org/lesson/1592972",
+                                        "freshness_state": "current",
+                                        "evidence": {
+                                            "evidence_id": "evidence:bot:business",
+                                            "source_url": "https://stepik.org/lesson/1592972",
+                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                        },
+                                        "steps": [
+                                            {
+                                                "step_id": "step:bot-business",
+                                                "text": "Зачем нужна визитка, зачем нужна заявка и зачем нужна автоматизация общения.",
+                                            }
+                                        ],
+                                    }
+                                ],
+                            }
+                        ],
+                    },
+                ],
+            },
+            indent=2,
+            sort_keys=True,
+        ),
+        encoding="utf-8",
+    )
+    build_keyword_index(storage, run_id=run_id)
+    build_semantic_index(storage, run_id=run_id)
+
+    hybrid_results = query_hybrid_index(storage, "философия зачем нужна", run_id=run_id, limit=2)
+
+    assert [result["course_title"] for result in hybrid_results] == ["Философия", "Telegram-бот на Python за вечер"]
+    assert hybrid_results[0]["rank_features"]["place_matches"] == ["философия"]
+    assert hybrid_results[0]["rank_features"]["place_boost"] > hybrid_results[1]["rank_features"]["place_boost"]
 
 
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:

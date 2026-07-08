@@ -31,7 +31,7 @@ from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
-from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
+from aoa_course_connector.mcp.server import _sources_answer_matrix_top_result_refs, call_tool, handle_jsonrpc_message, tools_manifest
 from aoa_course_connector.readiness import semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.status import connected_query_run_catalog
@@ -589,6 +589,130 @@ def test_connected_query_run_catalog_counts_invalid_cached_answer_ready(tmp_path
     assert entry["answer_evidence_count"] == 0
     assert catalog["answer_ready_entry_count"] == 0
     assert catalog["invalid_answer_ready_entry_count"] == 1
+
+
+def test_connected_query_run_catalog_preserves_entry_status_and_coverage_counts(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    receipt_dir = storage.artifact / "runs" / "partial-run-ok-entry" / "connected"
+    receipt_dir.mkdir(parents=True)
+    receipt_path = receipt_dir / "connected_calibration_receipt.json"
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "run_id": "partial-run-ok-entry",
+                "status": "partial",
+                "completed_at": "2026-07-08T12:00:00Z",
+                "query_plan": {
+                    "entries": [
+                        {
+                            "source_id": "source:stepik:67",
+                            "platform": "stepik",
+                            "kind": "sync",
+                            "run_id": "stepik-sync-67",
+                            "status": "ok",
+                            "query": "course-specific evidence",
+                            "query_mode": "hybrid",
+                            "query_ready": True,
+                            "answer_ready": False,
+                            "stable_identity": {
+                                "schema": "aoa_course_stable_identity_summary_v1",
+                                "available": True,
+                                "fingerprint": "sha256:123",
+                                "counts": {
+                                    "course_ids": 1,
+                                    "module_ids": 3,
+                                    "lesson_ids": 28,
+                                    "step_ids": 174,
+                                    "asset_ids": 74,
+                                    "assignment_ids": 145,
+                                    "evidence_ids": 203,
+                                },
+                            },
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    catalog = connected_query_run_catalog(storage, receipt_limit=3)
+    entry = catalog["by_source_id"]["source:stepik:67"][0]
+
+    assert entry["connected_run_status"] == "partial"
+    assert entry["status"] == "ok"
+    assert entry["updated_at"] == "2026-07-08T12:00:00Z"
+    assert entry["content_counts"] == {
+        "asset_count": 74,
+        "assignment_count": 145,
+        "course_count": 1,
+        "evidence_count": 203,
+        "lesson_count": 28,
+        "module_count": 3,
+        "step_count": 174,
+    }
+    assert entry["stable_identity"]["fingerprint"] == "sha256:123"
+    assert "samples" not in entry["stable_identity"]
+
+
+def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> None:
+    refs = _sources_answer_matrix_top_result_refs(
+        {
+            "responses": [
+                {
+                    "source_id": "source:stepik:python",
+                    "platform": "stepik",
+                    "connected_run_id": "run",
+                    "answer_packet": {
+                        "quality": {
+                            "top_result": {
+                                "doc_id": "step:python",
+                                "score": 0.51,
+                                "rank_score": 0.59,
+                                "path": ["Python"],
+                                "fetched_at": "2026-07-08T00:00:00Z",
+                                "freshness_state": "current",
+                            }
+                        }
+                    },
+                },
+                {
+                    "source_id": "source:stepik:empty",
+                    "platform": "stepik",
+                    "connected_run_id": "run",
+                    "answer_packet": {"quality": {"top_result": {}}},
+                },
+                {
+                    "source_id": "source:stepik:csharp",
+                    "platform": "stepik",
+                    "connected_run_id": "run",
+                    "answer_packet": {
+                        "quality": {
+                            "top_result": {
+                                "doc_id": "step:csharp",
+                                "score": 0.45,
+                                "rank_score": 0.63,
+                                "path": ["PRO C#"],
+                                "fetched_at": "2026-07-08T00:00:00Z",
+                                "freshness_state": "current",
+                            }
+                        }
+                    },
+                },
+            ]
+        },
+        grounded_only=True,
+    )
+
+    assert [ref["doc_id"] for ref in refs] == ["step:csharp", "step:python"]
+    assert all(ref.get("doc_id") for ref in refs)
+    assert refs[0]["rank_score"] > refs[1]["rank_score"]
 
 
 def test_connected_query_run_catalog_reports_unreadable_sync_checkpoint_store(tmp_path: Path) -> None:
