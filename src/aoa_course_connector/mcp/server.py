@@ -118,6 +118,18 @@ def _sources_answer_schema() -> dict[str, object]:
     return _object_schema(properties, required=["query"])
 
 
+def _sources_answer_matrix_schema() -> dict[str, object]:
+    properties = dict(_sources_answer_schema()["properties"])
+    properties.pop("query", None)
+    properties["queries"] = {
+        "type": "array",
+        "items": {"type": "string"},
+        "minItems": 1,
+        "description": "Course questions to answer across the selected query-ready sources.",
+    }
+    return _object_schema(properties, required=["queries"])
+
+
 def _connector_readiness_schema() -> dict[str, object]:
     return _object_schema(
         {
@@ -343,6 +355,7 @@ TOOLS = [
     {"name": "list_sources", "description": "List configured course sources as a read-only catalog with counts, filters, registry path, and privacy flags.", "inputSchema": _list_sources_schema()},
     {"name": "source_answer", "description": "Select one configured source and answer a course question from its latest query-ready connected run without touching the network.", "inputSchema": _source_answer_schema()},
     {"name": "sources_answer", "description": "Answer one course question across selected query-ready sources and return per-source evidence packets without touching the network.", "inputSchema": _sources_answer_schema()},
+    {"name": "sources_answer_matrix", "description": "Answer several course questions across selected query-ready sources and return aggregate source-scoped retrieval quality without touching the network.", "inputSchema": _sources_answer_matrix_schema()},
     {"name": "connector_readiness", "description": "Inspect install, storage, source, run, connected-run, and MCP readiness without touching the network.", "inputSchema": _connector_readiness_schema()},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
@@ -399,6 +412,8 @@ def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "source_answer": _call_source_answer(roots, args)}
     if name == "sources_answer":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sources_answer": _call_sources_answer(roots, args)}
+    if name == "sources_answer_matrix":
+        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sources_answer_matrix": _call_sources_answer_matrix(roots, args)}
     if name == "connector_readiness":
         return _call_connector_readiness(roots, args)
     if name == "ingest_status":
@@ -746,6 +761,40 @@ def _call_sources_answer(roots: StorageRoots, args: dict[str, object]) -> dict[s
     }
 
 
+def _call_sources_answer_matrix(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+    mode_value = args.get("mode")
+    if mode_value is not None and not isinstance(mode_value, str):
+        raise ValueError("sources_answer_matrix mode must be a string")
+    queries = _string_array_arg(args.get("queries"), tool_name="sources_answer_matrix", field_name="queries")
+    if not queries:
+        raise ValueError("sources_answer_matrix queries must include at least one string")
+    query_packets = [
+        _call_sources_answer(roots, {key: value for key, value in args.items() if key != "queries"} | {"query": query})
+        for query in queries
+    ]
+    quality = _sources_answer_matrix_quality(query_packets)
+    source_ids = _string_array_arg(args.get("source_ids"), tool_name="sources_answer_matrix", field_name="source_ids")
+    platforms = _platform_arg(args.get("platforms"), tool_name="sources_answer_matrix")
+    return {
+        "schema": "aoa_course_sources_answer_matrix_v1",
+        "status": _sources_answer_matrix_status(query_packets, quality),
+        "network_touched": False,
+        "read_only": True,
+        "queries": queries,
+        "query_count": len(queries),
+        "source_refs_included": bool(query_packets[0].get("source_refs_included")) if query_packets else False,
+        "response_count_total": quality["response_count_total"],
+        "blocked_source_count_total": quality["blocked_source_count_total"],
+        "failure_count_total": quality["failure_count_total"],
+        "query_packets": query_packets,
+        "query_summaries": [_sources_answer_matrix_summary(packet) for packet in query_packets],
+        "blocked_sources": _sources_answer_matrix_nested_items(query_packets, "blocked_sources"),
+        "failures": _sources_answer_matrix_nested_items(query_packets, "failures"),
+        "quality": quality,
+        "next_commands": _sources_answer_matrix_next_commands(queries, source_ids, platforms, mode_value),
+    }
+
+
 def _source_answer_entries(source: dict[str, object], kinds: list[str] | None) -> list[dict[str, object]]:
     entries = source.get("latest_connected_runs") if isinstance(source.get("latest_connected_runs"), list) else []
     if kinds:
@@ -811,6 +860,109 @@ def _sources_answer_status(responses: list[dict[str, object]], blocked_sources: 
     return "missing"
 
 
+def _sources_answer_matrix_quality(query_packets: list[dict[str, object]]) -> dict[str, object]:
+    summaries = [_sources_answer_matrix_summary(packet) for packet in query_packets]
+    ready_count = sum(1 for summary in summaries if bool(summary.get("ready")))
+    response_count_total = sum(int(summary.get("response_count") or 0) for summary in summaries)
+    evidence_count_total = sum(int(summary.get("evidence_count_total") or 0) for summary in summaries)
+    result_count_total = sum(int(summary.get("result_count_total") or 0) for summary in summaries)
+    blocked_source_count_total = sum(int(summary.get("blocked_source_count") or 0) for summary in summaries)
+    failure_count_total = sum(int(summary.get("failure_count") or 0) for summary in summaries)
+    return {
+        "ready": bool(query_packets)
+        and ready_count == len(query_packets)
+        and response_count_total >= len(query_packets)
+        and evidence_count_total >= len(query_packets)
+        and blocked_source_count_total == 0
+        and failure_count_total == 0,
+        "query_count": len(query_packets),
+        "ready_query_count": ready_count,
+        "blocked_query_count": len(query_packets) - ready_count,
+        "response_count_total": response_count_total,
+        "result_count_total": result_count_total,
+        "evidence_count_total": evidence_count_total,
+        "blocked_source_count_total": blocked_source_count_total,
+        "failure_count_total": failure_count_total,
+        "all_queries_have_responses": bool(query_packets) and all(int(summary.get("response_count") or 0) > 0 for summary in summaries),
+        "all_queries_have_evidence": bool(query_packets) and all(int(summary.get("evidence_count_total") or 0) > 0 for summary in summaries),
+        "platforms": sorted({
+            platform
+            for summary in summaries
+            for platform in summary.get("platforms", [])
+            if isinstance(platform, str) and platform
+        }),
+        "source_ids": sorted({
+            source_id
+            for summary in summaries
+            for source_id in summary.get("source_ids", [])
+            if isinstance(source_id, str) and source_id
+        }),
+    }
+
+
+def _sources_answer_matrix_summary(packet: dict[str, object]) -> dict[str, object]:
+    quality = packet.get("quality") if isinstance(packet.get("quality"), dict) else {}
+    return {
+        "query": packet.get("query"),
+        "status": packet.get("status"),
+        "ready": bool(quality.get("ready")),
+        "response_count": int(packet.get("response_count") or 0),
+        "blocked_source_count": int(packet.get("blocked_source_count") or 0),
+        "failure_count": int(packet.get("failure_count") or 0),
+        "result_count_total": int(quality.get("result_count_total") or 0),
+        "evidence_count_total": int(quality.get("evidence_count_total") or 0),
+        "all_responses_have_evidence": bool(quality.get("all_responses_have_evidence")),
+        "platforms": quality.get("platforms", []),
+        "source_ids": quality.get("source_ids", []),
+        "top_result_refs": _sources_answer_matrix_top_result_refs(packet),
+    }
+
+
+def _sources_answer_matrix_top_result_refs(packet: dict[str, object]) -> list[dict[str, object]]:
+    responses = packet.get("responses") if isinstance(packet.get("responses"), list) else []
+    refs: list[dict[str, object]] = []
+    for response in responses:
+        if not isinstance(response, dict):
+            continue
+        answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
+        quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+        top_result = quality.get("top_result") if isinstance(quality.get("top_result"), dict) else {}
+        refs.append(
+            _compact_dict(
+                {
+                    "source_id": response.get("source_id"),
+                    "platform": response.get("platform"),
+                    "connected_run_id": response.get("connected_run_id"),
+                    "doc_id": top_result.get("doc_id"),
+                    "lesson_path": top_result.get("lesson_path"),
+                    "fetched_at": top_result.get("fetched_at"),
+                }
+            )
+        )
+    return refs
+
+
+def _sources_answer_matrix_status(query_packets: list[dict[str, object]], quality: dict[str, object]) -> str:
+    if not query_packets:
+        return "missing"
+    statuses = {str(packet.get("status") or "") for packet in query_packets}
+    if statuses <= {"ok"} and bool(quality.get("ready")):
+        return "ok"
+    if int(quality.get("response_count_total") or 0) > 0:
+        return "partial"
+    return "blocked"
+
+
+def _sources_answer_matrix_nested_items(query_packets: list[dict[str, object]], key: str) -> list[dict[str, object]]:
+    items: list[dict[str, object]] = []
+    for packet in query_packets:
+        values = packet.get(key) if isinstance(packet.get(key), list) else []
+        for item in values:
+            if isinstance(item, dict):
+                items.append({"query": packet.get("query"), **item})
+    return items
+
+
 def _sources_answer_next_commands(query: str, source_ids: list[str] | None, platforms: list[str] | None, mode: str | None) -> list[str]:
     payload: dict[str, object] = {"query": query}
     if source_ids:
@@ -823,6 +975,21 @@ def _sources_answer_next_commands(query: str, source_ids: list[str] | None, plat
         _sources_answer_cli_command(query, source_ids=source_ids, platforms=platforms, mode=mode),
         f"aoa-course mcp call sources_answer {shlex.quote(json.dumps(payload, ensure_ascii=True, separators=(',', ':')))}",
         "aoa-course mcp call list_sources '{\"include_source_refs\":false,\"connected_run_limit\":5}'",
+    ]
+
+
+def _sources_answer_matrix_next_commands(queries: list[str], source_ids: list[str] | None, platforms: list[str] | None, mode: str | None) -> list[str]:
+    payload: dict[str, object] = {"queries": queries}
+    if source_ids:
+        payload["source_ids"] = source_ids
+    if platforms:
+        payload["platforms"] = platforms
+    if mode:
+        payload["mode"] = mode
+    return [
+        _sources_answer_matrix_cli_command(queries, source_ids=source_ids, platforms=platforms, mode=mode),
+        f"aoa-course mcp call sources_answer_matrix {shlex.quote(json.dumps(payload, ensure_ascii=True, separators=(',', ':')))}",
+        "aoa-course sources list --no-source-refs --connected-run-limit 5",
     ]
 
 
@@ -926,6 +1093,28 @@ def _sources_answer_cli_command(
     for kind in kinds or []:
         if kind:
             parts.extend(["--kind", shlex.quote(kind)])
+    if mode:
+        parts.extend(["--mode", shlex.quote(mode)])
+    return " ".join(parts)
+
+
+def _sources_answer_matrix_cli_command(
+    queries: list[str],
+    *,
+    source_ids: list[str] | None = None,
+    platforms: list[str] | None = None,
+    mode: str | None = None,
+) -> str:
+    parts = ["aoa-course", "sources", "answer-matrix"]
+    for query in queries:
+        if query:
+            parts.extend(["--query", shlex.quote(query)])
+    for source_id in source_ids or []:
+        if source_id:
+            parts.extend(["--source-id", shlex.quote(source_id)])
+    for platform in platforms or []:
+        if platform:
+            parts.extend(["--platform", shlex.quote(platform)])
     if mode:
         parts.extend(["--mode", shlex.quote(mode)])
     return " ".join(parts)

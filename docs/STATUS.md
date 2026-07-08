@@ -13,6 +13,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixt
 PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback" --run starter-fixture
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
@@ -72,6 +73,10 @@ This proves:
   returns per-source answer/context/evidence packets with aggregate quality,
   blockers, and `network_touched: false`, preserving provenance instead of
   collapsing results into an opaque summary;
+- MCP `sources_answer_matrix` asks several questions across selected
+  query-ready sources and returns one sources-answer packet per question plus
+  aggregate breadth quality, per-query summaries, blockers, and
+  `network_touched: false`;
 - connected-run query plans and source catalogs now attach direct CLI
   `sources answer` commands beside lower-level run-id `query`, `answer`, and
   `lesson-context` commands, so shell-side agents can ask one question against

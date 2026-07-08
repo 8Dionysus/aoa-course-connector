@@ -26,6 +26,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" -
 PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
@@ -408,8 +409,15 @@ handwriting MCP JSON:
 ```bash
 PYTHONPATH=src python -m aoa_course_connector.cli sources list --platform getcourse --no-source-refs --connected-run-limit 2
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "course-specific question" --source-id "source:getcourse:..." --mode hybrid
 ```
+
+Use `sources answer-matrix` or MCP `sources_answer_matrix` when a selected
+source set needs a breadth check across several operator questions without
+naming run ids by hand. It returns `aoa_course_sources_answer_matrix_v1` with
+one source-scoped answer packet per question, aggregate quality, per-query
+summaries, and `network_touched: false`.
 
 Use `calibration query-matrix --run <run> --query ... --query ...` or MCP
 `connected_run_query_matrix` when one saved connected run needs to prove several
@@ -496,6 +504,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call sources_answer '{"platforms":["stepik"],"query":"Stepik public API evidence"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call sources_answer_matrix '{"platforms":["stepik"],"queries":["Stepik public API evidence","canonical course objects"]}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
