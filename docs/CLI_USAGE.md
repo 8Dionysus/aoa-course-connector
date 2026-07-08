@@ -253,9 +253,14 @@ printing raw HTML or caption text.
 Use `readiness` when an agent or operator needs one read-only route audit before
 continuing. It emits `aoa_course_connector_readiness_v1` with install route
 files, storage roots, source registry counts, per-run `agent_query_ready`,
-connected-source `connected_live_ready`, semantic provider readiness,
-`semantic_provider_ready`, connected-run receipt status, MCP tool coverage, embedded
-`connected_run_plan`, and next commands. For
+source-registry query-ready connected receipts, connected-source
+`connected_live_ready`, semantic provider readiness, `semantic_provider_ready`,
+connected-run receipt status, MCP tool coverage, embedded `connected_run_plan`,
+and next commands. If a selected starter run is missing but the source registry
+already has query-ready connected-run receipts, `lanes.agent_query_ready` is
+true through `lanes.source_registry_query_ready` and `next_commands` points to
+`sources list`, `sources answer`, or `sources answer-matrix` before fixture
+bootstrap. For
 browser-session sources, `--link-pattern` flows into the embedded connected
 plan and its ready connected-run plan. `--max-lessons`, `--max-pages`,
 `--max-sources`, `--live-scope`, and `--include-step-sources` also flow into

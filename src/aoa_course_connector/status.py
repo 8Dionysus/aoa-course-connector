@@ -91,7 +91,13 @@ def connector_readiness(
     missing_route_files = [rel for rel in REQUIRED_ROUTE_FILES if not (repo_root / rel).exists()]
     storage = storage_status(repo_root, roots)
     registry = load_registry(roots.data)
-    source_summary = _source_registry_summary(roots, registry, include_disabled=include_disabled, source_ids=source_ids)
+    source_summary = _source_registry_summary(
+        roots,
+        registry,
+        include_disabled=include_disabled,
+        platforms=selected_platforms,
+        source_ids=source_ids,
+    )
     run_statuses = [ingest_status(roots, run_id) for run_id in selected_runs]
     preflight = live_preflight(
         roots,
@@ -135,16 +141,24 @@ def connector_readiness(
     connected_status = load_connected_calibration_status(roots, run_id=connected_run)
     mcp = _mcp_surface(mcp_tool_names)
     storage_exists = storage.get("exists") if isinstance(storage.get("exists"), dict) else {}
-    query_ready = any(
+    run_query_ready = any(
         bool(status.get("readiness", {}).get("agent_query_ready"))
         for status in run_statuses
         if isinstance(status.get("readiness"), dict)
     )
+    source_connected_runs = source_summary.get("connected_runs") if isinstance(source_summary.get("connected_runs"), dict) else {}
+    source_query_ready_entry_count = int(source_connected_runs.get("query_ready_entry_count") or 0)
+    source_query_ready = source_query_ready_entry_count > 0
+    query_ready = run_query_ready or source_query_ready
     lanes = {
         "repo_route_ready": not missing_route_files,
         "data_artifact_roots_ready": bool(storage_exists.get("data")) and bool(storage_exists.get("artifact")),
         "all_storage_roots_exist": all(bool(storage_exists.get(name)) for name in ["data", "cache", "auth", "artifact"]),
         "source_registry_configured": int(source_summary.get("selected_source_count", 0)) > 0,
+        "run_agent_query_ready": run_query_ready,
+        "source_registry_query_ready": source_query_ready,
+        "source_registry_query_ready_entry_count": source_query_ready_entry_count,
+        "source_registry_query_ready_source_count": len(source_connected_runs.get("source_ids_with_query_runs", [])) if isinstance(source_connected_runs.get("source_ids_with_query_runs"), list) else 0,
         "agent_query_ready": query_ready,
         "connected_live_ready": bool(plan.get("ready")),
         "semantic_provider_ready": all(bool(item.get("ready")) for item in semantic_preflights),
@@ -350,14 +364,24 @@ def source_registry_catalog(
     }
 
 
-def _source_registry_summary(roots: StorageRoots, registry: dict[str, object], *, include_disabled: bool, source_ids: list[str] | None = None) -> dict[str, object]:
+def _source_registry_summary(
+    roots: StorageRoots,
+    registry: dict[str, object],
+    *,
+    include_disabled: bool,
+    platforms: list[str] | None = None,
+    source_ids: list[str] | None = None,
+) -> dict[str, object]:
     return source_registry_catalog(
         roots,
         registry,
         include_disabled=include_disabled,
+        platforms=platforms,
         source_ids=source_ids,
         include_source_refs=False,
-        include_connected_runs=False,
+        include_connected_runs=True,
+        connected_run_limit=5,
+        connected_receipt_limit=50,
     )
 
 
@@ -551,6 +575,22 @@ def _sources_answer_command(query: str, *, source_id: str, platform: str, kind: 
     return " ".join(parts)
 
 
+def _sources_answer_matrix_command(queries: list[str], *, source_ids: list[str], platforms: list[str]) -> str:
+    parts = ["aoa-course", "sources", "answer-matrix"]
+    for query in queries:
+        if query:
+            parts.extend(["--query", shlex.quote(query)])
+    for source_id in source_ids:
+        if source_id:
+            parts.extend(["--source-id", shlex.quote(source_id)])
+    if not source_ids:
+        for platform in platforms:
+            if platform:
+                parts.extend(["--platform", shlex.quote(platform)])
+    parts.extend(["--mode", "hybrid"])
+    return " ".join(parts)
+
+
 def _mcp_surface(tool_names: list[str] | set[str] | None) -> dict[str, object]:
     advertised = sorted({str(name) for name in (tool_names or []) if str(name)})
     missing = [name for name in REQUIRED_MCP_TOOLS if name not in advertised]
@@ -634,17 +674,20 @@ def _next_commands(
 ) -> list[str]:
     commands: list[str] = []
     connected_run_id = str(connected_run.get("run_id") or DEFAULT_CONNECTED_RUN)
+    source_query_ready = _source_summary_query_ready(source_summary)
     if not all(bool(storage_exists.get(name)) for name in ["data", "cache", "auth", "artifact"]):
         commands.append("aoa-course init")
     runs_ready = not any(run_status.get("status") != "ready" for run_status in run_statuses)
     connected_run_status = str(connected_run.get("status") or "")
-    if not runs_ready:
+    if not runs_ready and not source_query_ready:
         commands.append(f"aoa-course bootstrap fixture --connected-run {connected_run_id}")
-    elif connected_run_status == "missing":
+    elif connected_run_status == "missing" and not source_query_ready:
         commands.append(f"aoa-course bootstrap fixture --connected-run {connected_run_id}")
-    elif connected_run_status != "ok":
+    elif connected_run_status not in {"ok", "missing"}:
         commands.extend(_connected_run_repair_commands(connected_run, connected_run_id))
     connected_run_repairing = connected_run_status not in {"", "ok", "missing"}
+    if source_query_ready:
+        commands.extend(_source_registry_query_commands(source_summary))
     for run_status in run_statuses:
         commands.extend([str(command) for command in run_status.get("next_commands", []) if str(command)])
     if int(source_summary.get("enabled_source_count", 0)) == 0:
@@ -681,6 +724,45 @@ def _next_commands(
         readiness_command = f"{readiness_command} --connected-run {connected_run_id}"
     commands.append(readiness_command)
     return _dedupe(commands)
+
+
+def _source_summary_query_ready(source_summary: dict[str, object]) -> bool:
+    connected_runs = source_summary.get("connected_runs") if isinstance(source_summary.get("connected_runs"), dict) else {}
+    return int(connected_runs.get("query_ready_entry_count") or 0) > 0
+
+
+def _source_registry_query_commands(source_summary: dict[str, object]) -> list[str]:
+    commands = ["aoa-course sources list --no-source-refs --connected-run-limit 5"]
+    sources = source_summary.get("sources") if isinstance(source_summary.get("sources"), list) else []
+    query_samples: list[str] = []
+    selected_source_ids: list[str] = []
+    selected_platforms = (
+        [str(platform) for platform in source_summary.get("selected_platforms", []) if str(platform)]
+        if isinstance(source_summary.get("selected_platforms"), list)
+        else []
+    )
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        source_id = str(source.get("source_id") or "")
+        latest_runs = source.get("latest_connected_runs") if isinstance(source.get("latest_connected_runs"), list) else []
+        if latest_runs and source_id:
+            selected_source_ids.append(source_id)
+        command_added = False
+        for entry in latest_runs:
+            if not isinstance(entry, dict):
+                continue
+            query = str(entry.get("query") or "")
+            if query and not query.startswith("<") and query not in query_samples:
+                query_samples.append(query)
+            entry_commands = entry.get("commands") if isinstance(entry.get("commands"), dict) else {}
+            command = str(entry_commands.get("sources_answer") or "")
+            if command and not command_added and "<course-specific question>" not in command:
+                commands.append(command)
+                command_added = True
+    if len(query_samples) >= 2:
+        commands.append(_sources_answer_matrix_command(query_samples[:2], source_ids=selected_source_ids[:5], platforms=selected_platforms))
+    return commands
 
 
 def _connected_run_repair_commands(connected_run: dict[str, object], connected_run_id: str) -> list[str]:

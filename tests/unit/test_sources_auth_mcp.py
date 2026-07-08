@@ -939,6 +939,65 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert '"source_ref"' not in json.dumps(ambiguous)
 
 
+def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    stepik, _, _ = upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
+    run_connected_calibration(
+        storage,
+        run_id="source-registry-query-ready",
+        mode="fixture",
+        platforms=["stepik"],
+        query="Stepik public API evidence",
+    )
+    run_connected_calibration(
+        storage,
+        run_id="source-registry-query-ready-second",
+        mode="fixture",
+        platforms=["stepik"],
+        query="canonical course objects",
+    )
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    readiness = call_tool(
+        "connector_readiness",
+        {
+            "runs": ["missing-starter-run"],
+            "platforms": ["stepik"],
+            "connected_run": "missing-connected-run",
+        },
+    )
+
+    rendered = json.dumps(readiness)
+    assert readiness["schema"] == "aoa_course_connector_readiness_v1"
+    assert readiness["status"] == "ready"
+    assert readiness["operational_ready"] is True
+    assert readiness["runs"][0]["status"] == "missing"
+    assert readiness["lanes"]["run_agent_query_ready"] is False
+    assert readiness["lanes"]["source_registry_query_ready"] is True
+    assert readiness["lanes"]["source_registry_query_ready_entry_count"] >= 1
+    assert readiness["lanes"]["source_registry_query_ready_source_count"] == 1
+    assert readiness["lanes"]["agent_query_ready"] is True
+    assert readiness["sources"]["connected_runs"]["included"] is True
+    assert readiness["sources"]["connected_runs"]["query_ready_entry_count"] >= 1
+    assert readiness["sources"]["sources"][0]["source_id"] == stepik["source_id"]
+    assert readiness["sources"]["sources"][0]["query_ready_connected_run_count"] >= 1
+    assert readiness["sources"]["source_refs_included"] is False
+    assert any(command.startswith("aoa-course sources list --no-source-refs") for command in readiness["next_commands"])
+    assert any("sources answer " in command and f"--source-id {stepik['source_id']}" in command for command in readiness["next_commands"])
+    assert any("sources answer-matrix " in command and f"--source-id {stepik['source_id']}" in command for command in readiness["next_commands"])
+    assert not any(command.startswith("aoa-course bootstrap fixture") for command in readiness["next_commands"])
+    assert '"source_ref"' not in rendered
+
+
 def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",

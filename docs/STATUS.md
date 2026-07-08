@@ -89,8 +89,12 @@ This proves:
   storage roots, source registry counts, selected run/index/graph readiness,
   semantic provider readiness, connected-source plan status, compact
   `connected_run_plan`, connected-run receipt status, MCP tool coverage,
-  `operational_ready`, `connected_live_ready`, and next commands. The embedded
-  connected plan
+  registry-backed source query readiness, `operational_ready`,
+  `connected_live_ready`, and next commands. When starter run artifacts are
+  missing but recent source-registry connected-run receipts are query-ready,
+  `lanes.source_registry_query_ready` keeps agent retrieval ready and
+  `next_commands` points to `sources list`, `sources answer`, or
+  `sources answer-matrix` before fixture bootstrap. The embedded connected plan
   preserves operator-selected `live_scope`, `include_step_sources`,
   `link_pattern`, `max_lessons`, `max_pages`, and `max_sources` through the
   ready connected-run plan. If the selected connected-run receipt is partial

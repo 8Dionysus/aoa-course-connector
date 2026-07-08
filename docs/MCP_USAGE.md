@@ -144,9 +144,15 @@ manual `mcp call` JSON wrapper.
 
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,
-source registry counts, selected run readiness, connected-source plan summary,
-connected-run receipt status, MCP tool coverage, `operational_ready`,
-`connected_live_ready`, embedded `connected_run_plan`, and next commands.
+source registry counts, selected run readiness, source-registry query-ready
+connected receipts, connected-source plan summary, connected-run receipt
+status, MCP tool coverage, `operational_ready`, `connected_live_ready`,
+embedded `connected_run_plan`, and next commands.
+When selected run artifacts are missing but the source registry already has
+query-ready connected-run receipts, `lanes.source_registry_query_ready` keeps
+`lanes.agent_query_ready` true and `next_commands` points agents to
+`sources list`, `sources answer`, or `sources answer-matrix` without requiring
+fixture bootstrap first.
 For browser-session sources, pass `link_pattern` when the whole-connector audit
 should preserve a narrowed course/lesson glob in the connected-source plan and
 ready connected-run plan. Pass `max_lessons`, `max_pages`, `max_sources`,
