@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
+import re
 from fnmatch import fnmatch
 from typing import Any
-from urllib.parse import urlparse
+from urllib.parse import urljoin, urlparse
 
 from aoa_course_connector.adapters.browser.snapshot import parse_html_snapshot
 
@@ -30,6 +31,7 @@ NON_COURSE_URL_HINTS = (
     "logout",
 )
 NON_COURSE_PATH_SEGMENTS = set(NON_COURSE_URL_HINTS)
+GETCOURSE_TRAINING_ID_RE = re.compile(r"(?:^|/)training/(\d+)/?(?:$|[?#])")
 
 
 def build_browser_catalog_discovery(
@@ -57,6 +59,15 @@ def build_browser_catalog_discovery(
             platform=resolved_platform,
             max_sources=max_sources,
             link_pattern=link_pattern,
+        )
+        links.extend(
+            discover_embedded_catalog_links(
+                page.get("api_payloads"),
+                page_url,
+                platform=resolved_platform,
+                max_sources=max_sources,
+                link_pattern=link_pattern,
+            )
         )
         for link in links:
             href = str(link["href"])
@@ -131,6 +142,46 @@ def discover_course_links(
     return links
 
 
+def discover_embedded_catalog_links(
+    payloads: object,
+    base_url: str,
+    *,
+    platform: str | None = None,
+    max_sources: int = 50,
+    link_pattern: str | None = None,
+) -> list[dict[str, str]]:
+    if max_sources <= 0 or platform != "getcourse":
+        return []
+    links: list[dict[str, str]] = []
+    seen: set[str] = set()
+    for payload in _iter_payload_json(payloads):
+        for block in _iter_dicts(payload):
+            training_id = _getcourse_training_id(block)
+            if not training_id:
+                continue
+            href = urljoin(base_url, f"/teach/control/stream/view/id/{training_id}")
+            if link_pattern and not fnmatch(href, link_pattern):
+                continue
+            if href in seen:
+                continue
+            title = _getcourse_training_title(block)
+            if not title:
+                continue
+            seen.add(href)
+            links.append(
+                {
+                    "href": href,
+                    "text": title,
+                    "kind": "training",
+                    "module": "",
+                    "title": title,
+                }
+            )
+            if len(links) >= max_sources:
+                return links
+    return links
+
+
 def is_course_link(link: dict[str, str], *, platform: str | None = None, link_pattern: str | None = None) -> bool:
     href = str(link.get("href") or "")
     if not href:
@@ -157,3 +208,56 @@ def is_course_link(link: dict[str, str], *, platform: str | None = None, link_pa
 def _has_non_course_path_segment(href: str) -> bool:
     segments = {segment for segment in urlparse(href).path.casefold().split("/") if segment}
     return bool(segments & NON_COURSE_PATH_SEGMENTS)
+
+
+def _iter_payload_json(payloads: object) -> list[object]:
+    if not isinstance(payloads, list):
+        return []
+    items: list[object] = []
+    for payload in payloads:
+        if isinstance(payload, dict) and "json" in payload:
+            items.append(payload["json"])
+    return items
+
+
+def _iter_dicts(value: object) -> list[dict[str, Any]]:
+    found: list[dict[str, Any]] = []
+    if isinstance(value, dict):
+        found.append(value)
+        for child in value.values():
+            found.extend(_iter_dicts(child))
+    elif isinstance(value, list):
+        for child in value:
+            found.extend(_iter_dicts(child))
+    return found
+
+
+def _getcourse_training_id(block: dict[str, Any]) -> str:
+    candidates = [
+        block.get("id"),
+        block.get("route"),
+        block.get("shortRoute"),
+    ]
+    onclick = block.get("onClick")
+    if isinstance(onclick, dict):
+        candidates.extend([onclick.get("url"), onclick.get("route")])
+    for value in candidates:
+        match = GETCOURSE_TRAINING_ID_RE.search(str(value or ""))
+        if match:
+            return match.group(1)
+    return ""
+
+
+def _getcourse_training_title(block: dict[str, Any]) -> str:
+    for key in ["title", "name", "text"]:
+        value = str(block.get(key) or "").strip()
+        if value:
+            return value
+    parents = block.get("parents")
+    if isinstance(parents, list):
+        for parent in parents:
+            if isinstance(parent, dict):
+                value = str(parent.get("name") or parent.get("title") or "").strip()
+                if value:
+                    return value
+    return ""

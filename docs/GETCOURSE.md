@@ -65,6 +65,14 @@ aoa-course discover browser-live "https://school.example/teach/control/stream" \
   --max-sources 50 \
   --max-pages 5
 
+aoa-course discover browser-live "https://school.example/c/s/index" \
+  --platform getcourse \
+  --run getcourse-live-chatium-discovery \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --register \
+  --max-sources 50 \
+  --max-pages 5
+
 aoa-course crawl browser-live "https://school.example/teach/control/stream" \
   --platform getcourse \
   --run getcourse-live-crawl \
@@ -89,6 +97,11 @@ aoa-course smoke browser-live \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
   --query "course-specific question"
 ```
+
+Some GetCourse student catalogs render training cards through the
+Chatium/app-proxy route instead of plain `<a href>` links. Live discovery
+captures those JSON catalog payloads and registers `training/<id>` blocks as
+canonical `/teach/control/stream/view/id/<id>` browser-session sources.
 
 Pass the registered `--source-id` (or use the exact registered course URL so the
 CLI can resolve it from the local registry) when running live crawl, materialize,

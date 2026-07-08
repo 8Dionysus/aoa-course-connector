@@ -490,7 +490,7 @@ evidence; central proof verdicts and scoring stay with `aoa-evals`.
 
 | Platform | Route |
 | --- | --- |
-| GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints with keyword/semantic/graph artifacts, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
+| GetCourse | Working browser-session discovery with paginated fixture/snapshot/live receipts plus Chatium/app-proxy training-card extraction, source sync checkpoints with keyword/semantic/graph artifacts, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Skillspace | Working browser-session discovery with paginated fixture/snapshot/live receipts, source sync checkpoints with keyword/semantic/graph artifacts, snapshot progress/comments extraction, and bounded course-tree crawl adapter; live Playwright routes gated by local auth state |
 | Stepik | Working clean API reference adapter with fixture/live smoke reports, source-registry sync checkpoints with keyword/semantic/graph artifacts, batched full-course materialization, and optional authenticated step-source enrichment |
 | Moodle / Canvas | Future clean LMS adapters |

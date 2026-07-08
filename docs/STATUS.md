@@ -222,6 +222,10 @@ This proves:
   mistake empty sidecar files for healthy transcript coverage.
 - GetCourse and Skillspace paginated catalog fixture receipts with page-count
   and next-link evidence in discovery output.
+- GetCourse live catalog discovery now also reads Chatium/app-proxy JSON
+  training blocks from student app pages such as `/c/s/index`, so SPA-rendered
+  training cards without plain `<a href>` links can still register canonical
+  `/teach/control/stream/view/id/<id>` browser-session sources.
 - Browser catalog discovery rejects pagination links even when a broad
   `link_pattern` would otherwise match them.
 - Browser-session parser heuristics for unannotated, aria-only, and
@@ -381,6 +385,11 @@ This proves:
   raw/secret privacy guards clean, and CLI/MCP `connected_run_query_matrix`
   answered two questions across both sync runs with evidence, graph context,
   and `network_touched: false`.
+- A runtime-only GetCourse Chatium/student-app discovery proof has been
+  exercised locally: `/user/my/profile` still exposed no course links, while
+  `/c/s/index` returned two registered training sources through the app-proxy
+  JSON route and no raw secrets were printed. The newly expected free-course
+  source was not visible in the connected account during this bounded check.
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,

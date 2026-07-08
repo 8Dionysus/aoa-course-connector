@@ -98,6 +98,58 @@ def test_skillspace_catalog_discovery_registers_sources(tmp_path: Path) -> None:
     assert all(source["access_mode"] == "browser_session" for source in sources)
 
 
+def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> None:
+    raw = {
+        "platform": "getcourse",
+        "captured_at": "2026-07-08T08:10:00Z",
+        "pages": [
+            {
+                "url": "https://getcourse.ru/c/s/index",
+                "title": "GetCourse",
+                "html": "<main><div class='ScreenBlock__item-title-left'>Марафон</div></main>",
+                "api_payloads": [
+                    {
+                        "url": "https://app.gcext.su/api/2.0/proxy/https://getcourse.ru/c/s/index",
+                        "content_type": "application/json; charset=utf-8",
+                        "json": {
+                            "success": True,
+                            "data": {
+                                "blocks": [
+                                    {
+                                        "type": "screen",
+                                        "id": "116/training/911642804",
+                                        "title": "Марафон «Точка Старта»",
+                                        "onClick": {
+                                            "type": "navigate",
+                                            "url": "https://getcourse.ru/teach/control/stream/view/id/911642804",
+                                        },
+                                    },
+                                    {
+                                        "type": "screen",
+                                        "id": "116/training/659592",
+                                        "title": "Помощь",
+                                        "onClick": {"type": "navigate", "url": "https://getcourse.ru/menublog"},
+                                    },
+                                ]
+                            },
+                        },
+                    }
+                ],
+            }
+        ],
+    }
+
+    discovery = build_browser_catalog_discovery(raw, platform="getcourse")
+
+    assert discovery["course_count"] == 2
+    assert [course["title"] for course in discovery["courses"]] == ["Марафон «Точка Старта»", "Помощь"]
+    assert [course["source_ref"] for course in discovery["courses"]] == [
+        "https://getcourse.ru/teach/control/stream/view/id/911642804",
+        "https://getcourse.ru/teach/control/stream/view/id/659592",
+    ]
+    assert discovery["courses"][0]["source_kind"] == "training"
+
+
 def test_live_catalog_page_collector_follows_bounded_next_links() -> None:
     page = FakePage(
         {
@@ -128,6 +180,46 @@ def test_live_catalog_page_collector_follows_bounded_next_links() -> None:
     assert discovery["pagination"]["next_link_count"] == 2
 
 
+def test_live_catalog_page_collector_captures_getcourse_chatium_proxy_json() -> None:
+    payload = {
+        "success": True,
+        "data": {
+            "blocks": [
+                {
+                    "type": "screen",
+                    "id": "116/training/300",
+                    "title": "Free GetCourse Training",
+                    "onClick": {"type": "navigate", "url": "https://getcourse.ru/teach/control/stream/view/id/300"},
+                }
+            ]
+        },
+    }
+    page = FakePageWithResponses(
+        {
+            "https://getcourse.ru/c/s/index": (
+                "GetCourse",
+                "<main><div class='ScreenBlock __clickable'>Free GetCourse Training</div></main>",
+            )
+        },
+        {
+            "https://getcourse.ru/c/s/index": [
+                FakeResponse(
+                    "https://app.gcext.su/api/2.0/proxy/https://getcourse.ru/c/s/index?ccc=1",
+                    {"content-type": "application/json; charset=utf-8"},
+                    payload,
+                )
+            ]
+        },
+    )
+
+    pages = collect_live_catalog_pages(page, "https://getcourse.ru/c/s/index", platform="getcourse")
+
+    assert pages[0]["api_payloads"][0]["json"] == payload
+    discovery = build_browser_catalog_discovery({"platform": "getcourse", "pages": pages}, platform="getcourse")
+    assert discovery["course_count"] == 1
+    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/300"
+
+
 class FakePage:
     def __init__(self, pages: dict[str, tuple[str, str]]) -> None:
         self.pages = pages
@@ -144,3 +236,35 @@ class FakePage:
 
     def title(self) -> str:
         return self.pages[self.url][0]
+
+
+class FakeResponse:
+    def __init__(self, url: str, headers: dict[str, str], payload: object) -> None:
+        self.url = url
+        self.headers = headers
+        self._payload = payload
+
+    def json(self) -> object:
+        return self._payload
+
+
+class FakePageWithResponses(FakePage):
+    def __init__(self, pages: dict[str, tuple[str, str]], responses: dict[str, list[FakeResponse]]) -> None:
+        super().__init__(pages)
+        self.responses = responses
+        self.handlers: dict[str, list[object]] = {}
+
+    def on(self, event: str, callback: object) -> None:
+        self.handlers.setdefault(event, []).append(callback)
+
+    def goto(self, url: str, wait_until: str = "networkidle") -> None:
+        super().goto(url, wait_until=wait_until)
+        for response in self.responses.get(url, []):
+            for callback in self.handlers.get("response", []):
+                callback(response)  # type: ignore[operator]
+
+    def wait_for_load_state(self, state: str, timeout: int = 0) -> None:
+        del state, timeout
+
+    def wait_for_timeout(self, timeout: int) -> None:
+        del timeout
