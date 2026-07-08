@@ -38,7 +38,9 @@
     values, and `apply` mutates only the local source registry. MCP agents can
     inspect it through `connection_profile_inspect`. Use `--write-runbook` to
     write the same redacted source/auth/connected-plan/semantic checklist as
-    Markdown beside the profile JSON. Run `connect status` or MCP
+    Markdown beside the profile JSON. Browser-auth sections include
+    `auth import-firefox-state` when the source host is known, then capture and
+    inspect fallback commands. Run `connect status` or MCP
     `connection_profile_status` to get the compact
     `aoa_course_connection_profile_status_v1` go/no-go packet before any
     `calibration connected-run --mode live --allow-network` command. Use

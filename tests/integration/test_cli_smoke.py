@@ -380,15 +380,21 @@ def test_cli_connection_profile_route(tmp_path: Path, monkeypatch) -> None:
     assert profile_path.is_file()
     assert receipt["inspection"]["runbook"]["written"] is True
     assert runbook_path.is_file()
-    assert "Course Connection Profile Runbook" in runbook_path.read_text(encoding="utf-8")
+    runbook_text = runbook_path.read_text(encoding="utf-8")
+    assert "Course Connection Profile Runbook" in runbook_text
+    assert "auth import-firefox-state getcourse" in runbook_text
+    assert "auth import-firefox-state skillspace" in runbook_text
     assert receipt["inspection"]["live_readiness"]["schema"] == "aoa_course_connection_profile_readiness_v1"
     assert receipt["inspection"]["live_readiness"]["ready_for_connected_run"] is False
     assert receipt["inspection"]["source_registry"]["registered_profile_source_count"] == 0
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in json.dumps(receipt)
+    assert any("auth import-firefox-state getcourse" in command for command in receipt["inspection"]["next_commands"])
+    assert any("auth import-firefox-state skillspace" in command for command in receipt["inspection"]["next_commands"])
 
     inspection = run_cli(tmp_path, "connect", "inspect", str(profile_path))
     assert inspection["schema"] == "aoa_course_connection_profile_inspection_v1"
     assert any("sources add" in command for command in inspection["next_commands"])
+    assert any("auth import-firefox-state getcourse" in command for command in inspection["next_commands"])
     status = run_cli(tmp_path, "connect", "status", str(profile_path))
     assert status["schema"] == "aoa_course_connection_profile_status_v1"
     assert status["live_readiness"]["ready_for_connected_run"] is False

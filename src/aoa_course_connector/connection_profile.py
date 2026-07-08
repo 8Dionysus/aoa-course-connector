@@ -183,7 +183,7 @@ def render_connection_profile_runbook(inspection: dict[str, object]) -> str:
                     f"- expected_origin_contains: `{item.get('expected_origin_contains')}`",
                 ]
             )
-            for label in ["capture_command", "inspect_command", "preflight_command"]:
+            for label in ["import_firefox_command", "capture_command", "inspect_command", "preflight_command"]:
                 command = str(item.get(label) or "")
                 if command:
                     lines.extend(["", label.replace("_", " ").title() + ":", "```bash", command, "```"])
@@ -526,6 +526,12 @@ def _browser_plan(roots: StorageRoots, source: dict[str, object], *, source_id: 
     state_file = Path(str(source.get("state_file") or default_browser_state_path(roots.auth, platform, source_ref)))
     expected_origin = str(source.get("expected_origin_contains") or _host_fragment(source_ref))
     state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
+    import_firefox_command = (
+        f"aoa-course auth import-firefox-state {shlex.quote(platform)} {shlex.quote(source_ref)} "
+        f"--state-file {shlex.quote(str(state_file))} --expect-origin-contains {shlex.quote(expected_origin)}"
+        if expected_origin
+        else ""
+    )
     return {
         "platform": platform,
         "source_ref": source_ref,
@@ -535,6 +541,7 @@ def _browser_plan(roots: StorageRoots, source: dict[str, object], *, source_id: 
         "state_status": state.get("status"),
         "state_ready": bool(state.get("usable")),
         "state": state,
+        "import_firefox_command": import_firefox_command,
         "capture_command": (
             f"aoa-course auth capture-browser-state {shlex.quote(platform)} {shlex.quote(source_ref)} "
             f"--login-url <login-or-account-url> --state-file {shlex.quote(str(state_file))}"
@@ -654,6 +661,7 @@ def _live_readiness(
     next_commands = _dedupe(
         [
             *[str(source.get("register_command") or "") for source in source_plans if not source.get("registered")],
+            *[str(plan.get("import_firefox_command") or "") for plan in browser_plans if not plan.get("state_ready")],
             *[str(plan.get("capture_command") or "") for plan in browser_plans if not plan.get("state_ready")],
             *[str(plan.get("inspect_command") or "") for plan in browser_plans],
             *[str(plan.get("command") or "") for plan in connected_plans],
