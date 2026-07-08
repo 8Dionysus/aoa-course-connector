@@ -405,7 +405,10 @@ work. Live receipts and status packets include `source_selection`, so agents can
 see requested, selected, ready, and blocked source ids before deciding the next
 sync or repair. Partial receipts include `repair_lanes`, classifying network
 gate, source readiness, source selection, sync, smoke/selector, and packet
-intake failures into concrete next commands. CLI `readiness` and MCP
+intake failures into concrete next commands. Stepik repair and rerun commands
+preserve the selected `--include-step-sources`, `--max-step-sources`, and
+`--step-source-timeout` budget so an operator-selected enrichment run is not
+silently narrowed during follow-up. CLI `readiness` and MCP
 `connector_readiness` surface those lane commands at the top-level when a
 selected connected-run receipt is partial, while a missing receipt still points
 to fixture bootstrap or connected-run commands.

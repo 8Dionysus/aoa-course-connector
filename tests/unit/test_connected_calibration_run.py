@@ -196,21 +196,35 @@ def test_connected_calibration_live_requires_explicit_network_gate(tmp_path: Pat
     storage = roots(tmp_path)
     upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
 
-    receipt = run_connected_calibration(storage, run_id="connected-live-blocked", mode="live", platforms=["stepik"])
+    receipt = run_connected_calibration(
+        storage,
+        run_id="connected-live-blocked",
+        mode="live",
+        platforms=["stepik"],
+        include_step_sources=True,
+        max_step_sources=None,
+        step_source_timeout=0.5,
+    )
 
     assert receipt["status"] == "partial"
     assert receipt["mode"] == "live"
     assert receipt["allow_network"] is False
     assert receipt["network_touched"] is False
     assert receipt["execution_options"]["max_lessons"] == 50
+    assert receipt["execution_options"]["max_step_sources"] == "all"
+    assert receipt["execution_options"]["step_source_timeout"] == 0.5
     assert receipt["execution_options"]["link_pattern"] == ""
     assert receipt["artifacts"]["packet_path"] is None
     assert any(failure["reason"] == "live mode requires --allow-network" for failure in receipt["failures"])
     assert receipt["repair_lane_count"] == 1
     assert receipt["repair_lanes"][0]["lane"] == "network_gate"
     assert receipt["repair_lanes"][0]["severity"] == "blocker"
-    assert any("preflight connected-plan --platform stepik" in command for command in receipt["repair_lanes"][0]["next_commands"])
-    assert any("calibration connected-run --mode live --allow-network" in command for command in receipt["repair_lanes"][0]["next_commands"])
+    repair_commands = receipt["repair_lanes"][0]["next_commands"]
+    assert any("preflight connected-plan --platform stepik" in command for command in repair_commands)
+    assert any("calibration connected-run --mode live --allow-network" in command for command in repair_commands)
+    assert all("--include-step-sources" in command for command in repair_commands)
+    assert all("--max-step-sources all" in command for command in repair_commands)
+    assert all("--step-source-timeout 0.5" in command for command in repair_commands)
     assert Path(str(receipt["artifacts"]["plan_path"])).is_file()
     assert Path(str(receipt["artifacts"]["runbook_path"])).is_file()
     status = load_connected_calibration_status(storage, run_id="connected-live-blocked")
@@ -421,6 +435,9 @@ def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Pa
         source_ids=[str(blocked["source_id"])],
         allow_network=True,
         stepik_token_env="CUSTOM_STEPIK_TOKEN",
+        include_step_sources=True,
+        max_step_sources=3,
+        step_source_timeout=0.25,
     )
 
     assert receipt["status"] == "partial"
@@ -437,6 +454,9 @@ def test_connected_calibration_live_reports_explicit_blocked_source(tmp_path: Pa
     assert any(command.startswith("export CUSTOM_STEPIK_TOKEN=") for command in repair_commands)
     assert not any(command.startswith("export STEPIK_API_TOKEN=") for command in repair_commands)
     assert any("--stepik-token-env CUSTOM_STEPIK_TOKEN" in command for command in repair_commands)
+    assert any("--include-step-sources" in command for command in repair_commands)
+    assert any("--max-step-sources 3" in command for command in repair_commands)
+    assert any("--step-source-timeout 0.25" in command for command in repair_commands)
     status = load_connected_calibration_status(storage, run_id="connected-live-explicit-blocked")
     assert status["repair_lane_count"] == receipt["repair_lane_count"]
     assert {lane["lane"] for lane in status["repair_lanes"]} == {"source_auth_or_readiness", "source_selection"}
