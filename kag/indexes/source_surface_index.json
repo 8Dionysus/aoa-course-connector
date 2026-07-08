@@ -60,7 +60,7 @@
   },
   "index_identity": {
     "artifact_kind": "source_surface_index",
-    "content_digest": "e84f60eac5233bb69ed63842209a88223678c5565b40321e27452686764cec3a",
+    "content_digest": "a3ab303bb94c9f499cb19a9785ed147551831914fb2f541fa8d0acc8aa8ad35e",
     "local_id": "index:repo-local:source-surfaces",
     "schema_ref": "aoa-kag:schemas/repo-local-kag-index.schema.json"
   },
@@ -5885,13 +5885,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "081c94a4bbca0da64ac7fe0a2804874a294113711feef19ba7368b59f77e05d6",
+        "content_hash": "48f7ae4781eb7de8e5b36656d73b7f2572419923849c83d2df25031c2d950b5f",
         "git_ref": "git-index-source-tree",
         "id": "file:docs/cli_usage.md:d2aa184d2e",
         "mime": "text/markdown",
         "path": "docs/CLI_USAGE.md",
         "repo": "aoa-course-connector",
-        "size_bytes": 27248
+        "size_bytes": 27775
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -5932,7 +5932,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "081c94a4bbca0da64ac7fe0a2804874a294113711feef19ba7368b59f77e05d6",
+        "digest": "48f7ae4781eb7de8e5b36656d73b7f2572419923849c83d2df25031c2d950b5f",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -6993,13 +6993,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "7ab1a9bcf8d38f4a28d7b322b860e5ba6d606e8b71d433effca24ea463c89cdb",
+        "content_hash": "d381767769effb0ff188ea05a7aa37f5b6697ea3c4e864bc222813a51c155182",
         "git_ref": "git-index-source-tree",
         "id": "file:docs/status.md:88ecb7d5a7",
         "mime": "text/markdown",
         "path": "docs/STATUS.md",
         "repo": "aoa-course-connector",
-        "size_bytes": 32620
+        "size_bytes": 33977
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -7042,7 +7042,7 @@
           {
             "anchor": "remaining-connector-work",
             "level": 2,
-            "line": 458,
+            "line": 476,
             "ref": "docs/STATUS.md#remaining-connector-work",
             "title": "Remaining Connector Work"
           }
@@ -7054,7 +7054,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "7ab1a9bcf8d38f4a28d7b322b860e5ba6d606e8b71d433effca24ea463c89cdb",
+        "digest": "d381767769effb0ff188ea05a7aa37f5b6697ea3c4e864bc222813a51c155182",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -7102,13 +7102,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "36206b121ffa641908dc040a6d85cdfe5779b78f458ee4f181ac1c5b1fae526b",
+        "content_hash": "dd5e6efb4544f92d5e37e0163e31b9aab7ead10c97d4296130d918c8420d386d",
         "git_ref": "git-index-source-tree",
         "id": "file:docs/stepik.md:11732d86db",
         "mime": "text/markdown",
         "path": "docs/STEPIK.md",
         "repo": "aoa-course-connector",
-        "size_bytes": 7965
+        "size_bytes": 8426
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -7165,28 +7165,28 @@
           {
             "anchor": "source-registry-sync-route",
             "level": 2,
-            "line": 55,
+            "line": 62,
             "ref": "docs/STEPIK.md#source-registry-sync-route",
             "title": "Source Registry Sync Route"
           },
           {
             "anchor": "account-discovery-route",
             "level": 2,
-            "line": 84,
+            "line": 91,
             "ref": "docs/STEPIK.md#account-discovery-route",
             "title": "Account Discovery Route"
           },
           {
             "anchor": "smoke-reports",
             "level": 2,
-            "line": 167,
+            "line": 174,
             "ref": "docs/STEPIK.md#smoke-reports",
             "title": "Smoke Reports"
           },
           {
             "anchor": "mapped-api-shape",
             "level": 2,
-            "line": 194,
+            "line": 201,
             "ref": "docs/STEPIK.md#mapped-api-shape",
             "title": "Mapped API Shape"
           }
@@ -7198,7 +7198,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "36206b121ffa641908dc040a6d85cdfe5779b78f458ee4f181ac1c5b1fae526b",
+        "digest": "dd5e6efb4544f92d5e37e0163e31b9aab7ead10c97d4296130d918c8420d386d",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -12003,13 +12003,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "b15ef81dc9a52697da3d31e67c6a309216d2b82793f371b027b7a7abc9998f4e",
+        "content_hash": "32db68c7e7f0cb6f8ff612637861d145550ce0925b55e27efcb3dc00f7cfeeab",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/adapters/stepik/client.py:630764c6bb",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/adapters/stepik/client.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 14938
+        "size_bytes": 16490
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -12042,7 +12042,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "b15ef81dc9a52697da3d31e67c6a309216d2b82793f371b027b7a7abc9998f4e",
+        "digest": "32db68c7e7f0cb6f8ff612637861d145550ce0925b55e27efcb3dc00f7cfeeab",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -12448,13 +12448,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "4b276376377921b3e265951ebaf70b12501faf5a8668b5addb2e4240eb1f5130",
+        "content_hash": "cfb9754abe3de59568fbed5f8bcfdb81c6bfaffe5f9cee4fefb27d6049a9332b",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/calibration/connected_run.py:0cc172a5c8",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/calibration/connected_run.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 91137
+        "size_bytes": 94041
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -12487,7 +12487,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "4b276376377921b3e265951ebaf70b12501faf5a8668b5addb2e4240eb1f5130",
+        "digest": "cfb9754abe3de59568fbed5f8bcfdb81c6bfaffe5f9cee4fefb27d6049a9332b",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -12537,13 +12537,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "a601026fe620f08f0e4b0a0492d37067da1758c83b8cb3793195068266e9b181",
+        "content_hash": "e848845c4a0c5cfb5e0f2828da785f42b89bde5385d1b4ab10d2f136c7a1eab0",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/cli.py:4d27ad45a3",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/cli.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 194883
+        "size_bytes": 196398
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -12576,7 +12576,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "a601026fe620f08f0e4b0a0492d37067da1758c83b8cb3793195068266e9b181",
+        "digest": "e848845c4a0c5cfb5e0f2828da785f42b89bde5385d1b4ab10d2f136c7a1eab0",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -13872,13 +13872,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "6c87b59d3a3fd408db6fb4019e9fb0a915fab529143a2fc8cfed8625ceb9c52b",
+        "content_hash": "dd2aa12d54f73a8bac048125abde1ec2de55bdb7964effbdf6a1ca31e9541e28",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/ingest/stepik.py:9dd3d98ae5",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/ingest/stepik.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 4695
+        "size_bytes": 4864
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -13911,7 +13911,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "6c87b59d3a3fd408db6fb4019e9fb0a915fab529143a2fc8cfed8625ceb9c52b",
+        "digest": "dd2aa12d54f73a8bac048125abde1ec2de55bdb7964effbdf6a1ca31e9541e28",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -14762,13 +14762,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "980ce0e859874b198b097b2b78669d2a1e1a5585b3b16a48ccd5070c2ebe2328",
+        "content_hash": "ad33c611ecd7747cc3d8cf5e88a9121db97ab0a743d4edebb8d3186c38763e70",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/smoke/__init__.py:bfbfc33918",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/smoke/__init__.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 415
+        "size_bytes": 469
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -14801,7 +14801,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "980ce0e859874b198b097b2b78669d2a1e1a5585b3b16a48ccd5070c2ebe2328",
+        "digest": "ad33c611ecd7747cc3d8cf5e88a9121db97ab0a743d4edebb8d3186c38763e70",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -15029,13 +15029,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "e9567599e6ceb4b60cff082a06bef842e00ff98d4f06f257cb75a52a41142d1c",
+        "content_hash": "c067c7eee745367c6aaaedf9b6b5bf7f356cef2db380c6f76c2124622d6b1b5f",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/smoke/stepik.py:375aed4645",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/smoke/stepik.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 11587
+        "size_bytes": 13303
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -15068,7 +15068,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "e9567599e6ceb4b60cff082a06bef842e00ff98d4f06f257cb75a52a41142d1c",
+        "digest": "c067c7eee745367c6aaaedf9b6b5bf7f356cef2db380c6f76c2124622d6b1b5f",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -15652,13 +15652,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "217a26193ce2d26b3b70bff10ccb8a8060668f31850e0475dc49865b0928db88",
+        "content_hash": "ba3504a4218373ede6dc28208bb791de346f20123a1fc55c22a162588a1024f3",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/sync/stepik.py:086ed03939",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/sync/stepik.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 9717
+        "size_bytes": 9902
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -15691,7 +15691,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "217a26193ce2d26b3b70bff10ccb8a8060668f31850e0475dc49865b0928db88",
+        "digest": "ba3504a4218373ede6dc28208bb791de346f20123a1fc55c22a162588a1024f3",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -16651,13 +16651,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "25256e58f976abc66f5585225565322e422b426dd976511f080e8c42de595f2d",
+        "content_hash": "230624b483b5ef7d7b8a6c8e0a1c023153eb0c4205ada5f7dedc39c1845848e4",
         "git_ref": "git-index-source-tree",
         "id": "file:tests/unit/test_connected_calibration_run.py:6c68db7e4c",
         "mime": "text/x-python",
         "path": "tests/unit/test_connected_calibration_run.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 29686
+        "size_bytes": 31155
       },
       "mechanics_role": "none",
       "observed_form": "command",
@@ -16690,7 +16690,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "25256e58f976abc66f5585225565322e422b426dd976511f080e8c42de595f2d",
+        "digest": "230624b483b5ef7d7b8a6c8e0a1c023153eb0c4205ada5f7dedc39c1845848e4",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -17288,13 +17288,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "fdd88fae0eb7ec1fccb55e450af4bb0c4b8c403c022bb5fcfbf487b6fa6764a2",
+        "content_hash": "469649430e0c2dc191886825e9daf92b52f17e74f2a8e8518bc5bd1ec567a67e",
         "git_ref": "git-index-source-tree",
         "id": "file:tests/unit/test_stepik_adapter.py:69b56a5c3a",
         "mime": "text/x-python",
         "path": "tests/unit/test_stepik_adapter.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 14024
+        "size_bytes": 16646
       },
       "mechanics_role": "none",
       "observed_form": "command",
@@ -17327,7 +17327,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "fdd88fae0eb7ec1fccb55e450af4bb0c4b8c403c022bb5fcfbf487b6fa6764a2",
+        "digest": "469649430e0c2dc191886825e9daf92b52f17e74f2a8e8518bc5bd1ec567a67e",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
