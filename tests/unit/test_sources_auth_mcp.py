@@ -447,6 +447,55 @@ def test_import_firefox_state_writes_redacted_browser_state(tmp_path: Path) -> N
     assert "OTHER_SECRET_COOKIE" not in state_file.read_text(encoding="utf-8")
 
 
+def test_import_firefox_state_normalizes_session_cookie_expiry_for_playwright(tmp_path: Path) -> None:
+    profile = tmp_path / "firefox/example.default-release"
+    profile.mkdir(parents=True)
+    db_path = profile / "cookies.sqlite"
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute(
+            """
+            CREATE TABLE moz_cookies (
+              id INTEGER PRIMARY KEY,
+              name TEXT,
+              value TEXT,
+              host TEXT,
+              path TEXT,
+              expiry INTEGER,
+              isSecure INTEGER,
+              isHttpOnly INTEGER
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("sessionid", "SUPER_SECRET_STEPIK_COOKIE", ".stepik.org", "/", 0, 1, 1),
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("persistent", "SUPER_SECRET_PERSISTENT_COOKIE", ".stepik.org", "/", 1_999_999_999_000, 1, 1),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    state_file = tmp_path / "auth/stepik/account.storage-state.json"
+
+    receipt = import_firefox_browser_state(
+        tmp_path / "auth",
+        "stepik",
+        "account",
+        state_file=state_file,
+        profile_dir=profile,
+        expect_origin_contains="stepik.org",
+    )
+
+    state = json.loads(state_file.read_text(encoding="utf-8"))
+    expires_by_name = {cookie["name"]: cookie["expires"] for cookie in state["cookies"]}
+    assert receipt["status"] == "ok"
+    assert expires_by_name["sessionid"] == -1
+    assert expires_by_name["persistent"] == 1_999_999_999
+
+
 def test_import_firefox_state_selects_profile_with_matching_cookies(tmp_path: Path) -> None:
     firefox_root = tmp_path / "firefox"
     empty_profile = firefox_root / "empty.default"
