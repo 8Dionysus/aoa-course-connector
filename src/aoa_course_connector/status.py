@@ -154,6 +154,9 @@ def connector_readiness(
     )
     source_connected_runs = source_summary.get("connected_runs") if isinstance(source_summary.get("connected_runs"), dict) else {}
     source_query_ready_entry_count = int(source_connected_runs.get("query_ready_entry_count") or 0)
+    source_answer_ready_entry_count = int(source_connected_runs.get("answer_ready_entry_count") or 0)
+    source_answer_probe_missing_entry_count = int(source_connected_runs.get("answer_probe_missing_entry_count") or 0)
+    source_invalid_answer_ready_entry_count = int(source_connected_runs.get("invalid_answer_ready_entry_count") or 0)
     source_query_ready = source_query_ready_entry_count > 0
     query_ready = run_query_ready or source_query_ready
     lanes = {
@@ -165,6 +168,9 @@ def connector_readiness(
         "source_registry_query_ready": source_query_ready,
         "source_registry_query_ready_entry_count": source_query_ready_entry_count,
         "source_registry_query_ready_source_count": len(source_connected_runs.get("source_ids_with_query_runs", [])) if isinstance(source_connected_runs.get("source_ids_with_query_runs"), list) else 0,
+        "source_registry_answer_ready_entry_count": source_answer_ready_entry_count,
+        "source_registry_answer_probe_missing_entry_count": source_answer_probe_missing_entry_count,
+        "source_registry_invalid_answer_ready_entry_count": source_invalid_answer_ready_entry_count,
         "agent_query_ready": query_ready,
         "connected_live_ready": bool(plan.get("ready")),
         "semantic_provider_ready": all(bool(item.get("ready")) for item in semantic_preflights),
@@ -435,7 +441,11 @@ def connected_query_run_catalog(
     per_source = max(1, int(per_source_limit or 1))
     for source_id, entries in list(by_source.items()):
         by_source[source_id] = sorted(entries, key=_connected_query_run_sort_key, reverse=True)[:per_source]
-    query_ready_count = sum(len(entries) for entries in by_source.values())
+    flattened_entries = [entry for entries in by_source.values() for entry in entries]
+    query_ready_count = len(flattened_entries)
+    answer_ready_count = sum(1 for entry in flattened_entries if _query_run_answer_ready(entry))
+    invalid_answer_ready_count = sum(1 for entry in flattened_entries if _query_run_invalid_answer_ready(entry))
+    answer_probe_missing_count = query_ready_count - answer_ready_count
     return {
         "schema": "aoa_course_connected_query_run_catalog_v1",
         "included": True,
@@ -450,6 +460,9 @@ def connected_query_run_catalog(
         "selected_platforms": selected_platforms,
         "source_ids_with_query_runs": sorted(by_source),
         "query_ready_entry_count": query_ready_count,
+        "answer_ready_entry_count": answer_ready_count,
+        "answer_probe_missing_entry_count": answer_probe_missing_count,
+        "invalid_answer_ready_entry_count": invalid_answer_ready_count,
         "error_count": len(errors),
         "errors": errors,
         "by_source_id": by_source,
@@ -471,6 +484,9 @@ def _empty_connected_query_run_catalog(roots: StorageRoots, *, included: bool, p
         "selected_platforms": [],
         "source_ids_with_query_runs": [],
         "query_ready_entry_count": 0,
+        "answer_ready_entry_count": 0,
+        "answer_probe_missing_entry_count": 0,
+        "invalid_answer_ready_entry_count": 0,
         "error_count": 0,
         "errors": [],
         "by_source_id": {},
@@ -539,6 +555,9 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
                 "mode": str(entry.get("query_mode") or "keyword"),
             },
         )
+    answer_result_count = int(entry.get("answer_result_count") or 0)
+    answer_evidence_count = int(entry.get("answer_evidence_count") or 0)
+    answer_ready = bool(entry.get("answer_ready")) and answer_result_count > 0 and answer_evidence_count > 0
     payload = {
         "connected_run_id": receipt.get("run_id") or path.parent.parent.name,
         "connected_run_status": receipt.get("status") or "unknown",
@@ -557,9 +576,10 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         "query_ready": bool(entry.get("query_ready")),
         "semantic_query_ready": bool(entry.get("semantic_query_ready")),
         "graph_ready": bool(entry.get("graph_ready")),
-        "answer_ready": bool(entry.get("answer_ready")),
-        "answer_result_count": int(entry.get("answer_result_count") or 0),
-        "answer_evidence_count": int(entry.get("answer_evidence_count") or 0),
+        "answer_ready": answer_ready,
+        "answer_result_count": answer_result_count,
+        "answer_evidence_count": answer_evidence_count,
+        "answer_readiness_source": "cached_probe" if answer_ready else "not_cached",
         "paths": entry.get("paths") if isinstance(entry.get("paths"), dict) else {},
         "commands": commands,
         "mcp_commands": mcp_commands,
@@ -611,9 +631,11 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
         "query_ready": True,
         "semantic_query_ready": semantic_ready,
         "graph_ready": graph_ready,
-        "answer_ready": True,
+        "answer_ready": False,
         "answer_result_count": 0,
         "answer_evidence_count": 0,
+        "answer_readiness_source": "not_cached",
+        "answer_readiness_reason": "sync checkpoint has local query artifacts; run sources answer to evaluate grounded answer evidence",
         "paths": {
             "normalized": checkpoint.get("normalized_path"),
             "index": checkpoint.get("index_path"),
@@ -629,6 +651,18 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
     if isinstance(stable_identity, dict):
         payload["stable_identity"] = _compact_stable_identity(stable_identity)
     return {key: value for key, value in payload.items() if value not in (None, "")}
+
+
+def _query_run_answer_ready(entry: dict[str, object]) -> bool:
+    return (
+        bool(entry.get("answer_ready"))
+        and int(entry.get("answer_result_count") or 0) > 0
+        and int(entry.get("answer_evidence_count") or 0) > 0
+    )
+
+
+def _query_run_invalid_answer_ready(entry: dict[str, object]) -> bool:
+    return bool(entry.get("answer_ready")) and not _query_run_answer_ready(entry)
 
 
 def _compact_stable_identity(stable_identity: dict[str, object]) -> dict[str, object]:

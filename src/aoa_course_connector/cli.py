@@ -2237,6 +2237,9 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
                 "included": connected_runs.get("included"),
                 "receipt_count": connected_runs.get("receipt_count"),
                 "query_ready_entry_count": connected_runs.get("query_ready_entry_count"),
+                "answer_ready_entry_count": connected_runs.get("answer_ready_entry_count"),
+                "answer_probe_missing_entry_count": connected_runs.get("answer_probe_missing_entry_count"),
+                "invalid_answer_ready_entry_count": connected_runs.get("invalid_answer_ready_entry_count"),
                 "source_ids_with_query_runs": connected_runs.get("source_ids_with_query_runs", []),
                 "error_count": connected_runs.get("error_count"),
             },
@@ -2313,6 +2316,15 @@ def _source_registry_query_eval_failures(
                 "field": "query_ready_entry_count",
                 "expected_min": min_source_count,
                 "actual": connected_runs.get("query_ready_entry_count"),
+            }
+        )
+    if int(connected_runs.get("invalid_answer_ready_entry_count") or 0) > 0:
+        failures.append(
+            {
+                "surface": "connected_runs",
+                "field": "invalid_answer_ready_entry_count",
+                "expected": 0,
+                "actual": connected_runs.get("invalid_answer_ready_entry_count"),
             }
         )
     if len(queries) < min_query_count:

@@ -1012,11 +1012,16 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert run_catalog["included"] is True
     assert run_catalog["network_touched"] is False
     assert run_catalog["query_ready_entry_count"] >= 1
+    assert run_catalog["answer_ready_entry_count"] >= 1
+    assert run_catalog["invalid_answer_ready_entry_count"] == 0
     assert run_catalog["source_ids_with_query_runs"] == [stepik["source_id"]]
     assert source["query_ready_connected_run_count"] >= 1
     assert latest_runs[0]["connected_run_id"] == "source-catalog-connected"
     assert latest_runs[0]["source_id"] == stepik["source_id"]
     assert latest_runs[0]["query_ready"] is True
+    assert latest_runs[0]["answer_ready"] is True
+    assert latest_runs[0]["answer_result_count"] >= 1
+    assert latest_runs[0]["answer_evidence_count"] >= 1
     assert latest_runs[0]["commands"]["sources_answer"].startswith("aoa-course sources answer ")
     assert f"--source-id {stepik['source_id']}" in latest_runs[0]["commands"]["sources_answer"]
     assert "--kind smoke" in latest_runs[0]["commands"]["sources_answer"]
@@ -1268,9 +1273,12 @@ def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path:
     assert readiness["lanes"]["source_registry_query_ready"] is True
     assert readiness["lanes"]["source_registry_query_ready_entry_count"] >= 1
     assert readiness["lanes"]["source_registry_query_ready_source_count"] == 1
+    assert readiness["lanes"]["source_registry_answer_ready_entry_count"] >= 1
+    assert readiness["lanes"]["source_registry_invalid_answer_ready_entry_count"] == 0
     assert readiness["lanes"]["agent_query_ready"] is True
     assert readiness["sources"]["connected_runs"]["included"] is True
     assert readiness["sources"]["connected_runs"]["query_ready_entry_count"] >= 1
+    assert readiness["sources"]["connected_runs"]["invalid_answer_ready_entry_count"] == 0
     assert readiness["sources"]["sources"][0]["source_id"] == stepik["source_id"]
     assert readiness["sources"]["sources"][0]["query_ready_connected_run_count"] >= 1
     assert readiness["sources"]["source_refs_included"] is False
