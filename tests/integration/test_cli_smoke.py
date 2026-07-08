@@ -1399,6 +1399,8 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
         "smoke",
         "--mode",
         "hybrid",
+        "--coverage-mode",
+        "portfolio",
     )
     rendered_source_registry_eval = json.dumps(source_registry_eval)
     assert source_registry_eval["schema"] == "aoa_course_eval_source_registry_query_v1"
@@ -1408,11 +1410,18 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert source_registry_eval["query_source"] == "explicit"
     assert source_registry_eval["source_registry"]["selected_source_count"] == 1
     assert source_registry_eval["connected_runs"]["query_ready_entry_count"] >= 1
+    assert source_registry_eval["selection"]["coverage_mode"] == "portfolio"
     assert source_registry_eval["sources_answer_matrix"]["status"] == "ok"
     assert source_registry_eval["sources_answer_matrix"]["quality_ready"] is True
+    assert source_registry_eval["sources_answer_matrix"]["coverage_mode"] == "portfolio"
     assert source_registry_eval["sources_answer_matrix"]["query_count"] == 2
     assert source_registry_eval["sources_answer_matrix"]["ready_query_count"] == 2
     assert source_registry_eval["sources_answer_matrix"]["evidence_count_total"] >= 2
+    assert source_registry_eval["sources_answer_matrix"]["grounded_response_count_total"] >= 2
+    assert source_registry_eval["sources_answer_matrix"]["all_queries_have_grounded_response"] is True
+    assert source_registry_eval["sources_answer_matrix"]["all_grounded_responses_have_path"] is True
+    assert source_registry_eval["sources_answer_matrix"]["all_grounded_responses_have_fetched_at"] is True
+    assert source_registry_eval["sources_answer_matrix"]["all_grounded_responses_have_freshness"] is True
     assert source_registry_eval["failures"] == []
     assert '"source_ref"' not in rendered_source_registry_eval
 

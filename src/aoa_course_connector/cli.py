@@ -743,6 +743,7 @@ def build_parser() -> argparse.ArgumentParser:
     source_registry_query.add_argument("--kind", choices=["smoke", "sync"], action="append")
     source_registry_query.add_argument("--limit", type=int, default=5)
     source_registry_query.add_argument("--mode", choices=["keyword", "semantic", "hybrid"], default="hybrid")
+    source_registry_query.add_argument("--coverage-mode", choices=["all-sources", "portfolio"], default="all-sources")
     source_registry_query.add_argument("--graph-limit", type=int, default=12)
     source_registry_query.add_argument("--source-limit", type=int, default=10)
     source_registry_query.add_argument("--connected-run-limit", type=int, default=5)
@@ -752,6 +753,7 @@ def build_parser() -> argparse.ArgumentParser:
     source_registry_query.add_argument("--min-ready-query-count", type=int)
     source_registry_query.add_argument("--min-response-count", type=int, default=1)
     source_registry_query.add_argument("--min-evidence-count", type=int, default=1)
+    source_registry_query.add_argument("--min-grounded-response-count", type=int, default=1)
     source_registry_query.add_argument("--min-source-count", type=int, default=1)
     source_registry_query.add_argument("--include-disabled", action="store_true")
     source_registry_query.set_defaults(func=cmd_eval_source_registry_query)
@@ -2169,6 +2171,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
                 "kinds": args.kind,
                 "limit": args.limit,
                 "mode": args.mode,
+                "coverage_mode": args.coverage_mode,
                 "graph_limit": args.graph_limit,
                 "source_limit": args.source_limit,
                 "connected_run_limit": args.connected_run_limit,
@@ -2186,6 +2189,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
         min_ready_query_count=args.min_ready_query_count,
         min_response_count=max(1, args.min_response_count),
         min_evidence_count=max(1, args.min_evidence_count),
+        min_grounded_response_count=max(1, args.min_grounded_response_count),
         min_source_count=max(1, args.min_source_count),
     )
     connected_runs = catalog.get("connected_runs") if isinstance(catalog.get("connected_runs"), dict) else {}
@@ -2207,6 +2211,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
                 "platforms": args.platform or [],
                 "source_ids": args.source_id or [],
                 "kinds": args.kind or [],
+                "coverage_mode": args.coverage_mode,
                 "source_limit": args.source_limit,
                 "connected_run_limit": args.connected_run_limit,
                 "connected_receipt_limit": args.connected_receipt_limit,
@@ -2216,6 +2221,7 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
                 "min_ready_query_count": args.min_ready_query_count or max(1, args.min_query_count),
                 "min_response_count": max(1, args.min_response_count),
                 "min_evidence_count": max(1, args.min_evidence_count),
+                "min_grounded_response_count": max(1, args.min_grounded_response_count),
                 "min_source_count": max(1, args.min_source_count),
             },
             "source_registry": {
@@ -2285,6 +2291,7 @@ def _source_registry_query_eval_failures(
     min_ready_query_count: int | None,
     min_response_count: int,
     min_evidence_count: int,
+    min_grounded_response_count: int,
     min_source_count: int,
 ) -> list[dict[str, object]]:
     failures: list[dict[str, object]] = []
@@ -2373,6 +2380,23 @@ def _source_registry_query_eval_failures(
                 "actual": quality.get("evidence_count_total"),
             }
         )
+    if int(quality.get("grounded_response_count_total") or 0) < min_grounded_response_count:
+        failures.append(
+            {
+                "surface": "sources_answer_matrix.quality",
+                "field": "grounded_response_count_total",
+                "expected_min": min_grounded_response_count,
+                "actual": quality.get("grounded_response_count_total"),
+            }
+        )
+    for field in [
+        "all_queries_have_grounded_response",
+        "all_grounded_responses_have_path",
+        "all_grounded_responses_have_fetched_at",
+        "all_grounded_responses_have_freshness",
+    ]:
+        if quality.get(field) is not True:
+            failures.append({"surface": "sources_answer_matrix.quality", "field": field, "expected": True, "actual": quality.get(field)})
     if matrix_packet.get("blocked_source_count_total", 0):
         failures.append({"surface": "sources_answer_matrix", "field": "blocked_source_count_total", "expected": 0, "actual": matrix_packet.get("blocked_source_count_total")})
     if matrix_packet.get("failure_count_total", 0):
@@ -2575,11 +2599,19 @@ def _sources_answer_matrix_summary(result: dict[str, object]) -> dict[str, objec
         "schema": packet.get("schema"),
         "status": packet.get("status"),
         "network_touched": packet.get("network_touched"),
+        "coverage_mode": packet.get("coverage_mode"),
         "query_count": packet.get("query_count"),
         "quality_ready": quality.get("ready"),
         "ready_query_count": quality.get("ready_query_count"),
+        "source_scoped_ready": quality.get("source_scoped_ready"),
+        "portfolio_ready": quality.get("portfolio_ready"),
         "response_count_total": quality.get("response_count_total"),
         "evidence_count_total": quality.get("evidence_count_total"),
+        "grounded_response_count_total": quality.get("grounded_response_count_total"),
+        "all_queries_have_grounded_response": quality.get("all_queries_have_grounded_response"),
+        "all_grounded_responses_have_path": quality.get("all_grounded_responses_have_path"),
+        "all_grounded_responses_have_fetched_at": quality.get("all_grounded_responses_have_fetched_at"),
+        "all_grounded_responses_have_freshness": quality.get("all_grounded_responses_have_freshness"),
         "source_refs_included": packet.get("source_refs_included"),
     }
 
