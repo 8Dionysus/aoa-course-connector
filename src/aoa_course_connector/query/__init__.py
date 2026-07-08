@@ -79,6 +79,91 @@ ACCESS_INTENT_TERMS = {
     "открыть",
     "разблокировать",
 }
+FRESH_INTENT_TERMS = {
+    "actual",
+    "актуален",
+    "актуальна",
+    "актуально",
+    "актуальные",
+    "current",
+    "fresh",
+    "latest",
+    "new",
+    "newest",
+    "now",
+    "present",
+    "recent",
+    "today",
+    "version",
+    "версия",
+    "последняя",
+    "последний",
+    "последнее",
+    "свежая",
+    "свежие",
+    "свежий",
+    "сейчас",
+    "текущая",
+    "текущий",
+}
+HISTORICAL_INTENT_TERMS = {
+    "archive",
+    "archived",
+    "before",
+    "deprecated",
+    "earlier",
+    "history",
+    "historical",
+    "legacy",
+    "old",
+    "older",
+    "outdated",
+    "past",
+    "previous",
+    "then",
+    "архив",
+    "архивная",
+    "архивный",
+    "было",
+    "историческая",
+    "история",
+    "раньше",
+    "старая",
+    "старый",
+    "устаревшая",
+    "устаревший",
+}
+PLACE_INTENT_TERMS = {
+    "block",
+    "breadcrumb",
+    "chapter",
+    "comment",
+    "course",
+    "forum",
+    "lesson",
+    "module",
+    "path",
+    "place",
+    "section",
+    "source",
+    "thread",
+    "url",
+    "where",
+    "блок",
+    "где",
+    "источник",
+    "комментарий",
+    "курс",
+    "место",
+    "модуле",
+    "модуль",
+    "путь",
+    "раздел",
+    "ссылка",
+    "тред",
+    "урок",
+    "уроке",
+}
 
 
 def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
@@ -187,6 +272,8 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
         components["freshness"] = round(float(rank_features.get("freshness_boost") or 0.0), 6)
         components["authority"] = round(float(rank_features.get("authority_boost") or 0.0), 6)
         components["intent"] = round(float(rank_features.get("intent_boost") or 0.0), 6)
+        components["temporal"] = round(float(rank_features.get("temporal_boost") or 0.0), 6)
+        components["place"] = round(float(rank_features.get("place_boost") or 0.0), 6)
         components["provenance"] = round(float(rank_features.get("provenance_boost") or 0.0), 6)
         ranked.append(
             {
@@ -218,6 +305,7 @@ def graph_neighbors(roots: StorageRoots, node_id: str, run_id: str = "starter-fi
         "node": nodes.get(node_id),
         "edges": edges,
         "neighbors": [nodes[item] for item in sorted(neighbor_ids) if item in nodes and item != node_id],
+        "temporal_context": _graph_temporal_context(node_id, nodes, graph.get("edges", [])),
     }
 
 
@@ -251,6 +339,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
         "result_count": len(results),
         "results": results,
         "evidence_chain": evidence_chain,
+        "query_intent_report": _query_intent_report(query, results),
         "freshness_report": {
             "states": sorted({str(result.get("freshness_state") or "unknown") for result in results}),
             "has_source_timestamps": all(result.get("fetched_at") for result in results),
@@ -345,6 +434,10 @@ def _evidence_chain_item(result: dict[str, object], evidence_id: object) -> dict
         "lesson_id": result.get("lesson_id"),
         "lesson_title": result.get("lesson_title"),
         "freshness_state": result.get("freshness_state"),
+        "version_group_id": result.get("version_group_id"),
+        "valid_from": result.get("valid_from"),
+        "valid_until": result.get("valid_until"),
+        "observed_at": result.get("observed_at"),
         "authority_tier": result.get("authority_tier"),
         "authority_label": result.get("authority_label"),
         "source_authority": result.get("source_authority"),
@@ -383,6 +476,66 @@ def _snippet(text: str, terms: list[str]) -> str:
     start = max(0, min(positions) - 80) if positions else 0
     end = min(len(text), start + 240)
     return text[start:end]
+
+
+def _graph_temporal_context(node_id: str, nodes: dict[str, dict[str, object]], edges: list[object]) -> dict[str, object]:
+    node = nodes.get(node_id) or {}
+    version_group_id = str(node.get("version_group_id") or "")
+    if node.get("kind") == "version_group":
+        version_group_id = node_id
+    if not version_group_id:
+        return {
+            "schema": "aoa_course_graph_temporal_context_v1",
+            "status": "not_versioned",
+            "node_id": node_id,
+            "version_group_id": "",
+            "version_count": 0,
+            "versions": [],
+        }
+    if node.get("kind") == "version_group":
+        snapshot_ids = {
+            str(edge.get("to_node"))
+            for edge in edges
+            if isinstance(edge, dict)
+            and edge.get("from_node") == version_group_id
+            and str(edge.get("kind") or "").startswith("version_group_has_")
+        }
+        versions = [nodes[item] for item in snapshot_ids if item in nodes]
+    else:
+        versions = [
+            item
+            for item in nodes.values()
+            if str(item.get("version_group_id") or "") == version_group_id and item.get("kind") == node.get("kind")
+        ]
+    version_items = [_temporal_version_item(item, selected=str(item.get("node_id") or "") == node_id) for item in versions]
+    version_items.sort(key=lambda item: (str(item.get("valid_from") or ""), str(item.get("observed_at") or ""), str(item.get("node_id") or "")))
+    return {
+        "schema": "aoa_course_graph_temporal_context_v1",
+        "status": "ready",
+        "node_id": node_id,
+        "version_group_id": version_group_id,
+        "version_count": len(version_items),
+        "versions": version_items,
+    }
+
+
+def _temporal_version_item(node: dict[str, object], *, selected: bool) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in {
+            "node_id": node.get("node_id"),
+            "kind": node.get("kind"),
+            "label": node.get("label"),
+            "selected": selected,
+            "freshness_state": node.get("freshness_state"),
+            "valid_from": node.get("valid_from"),
+            "valid_until": node.get("valid_until"),
+            "observed_at": node.get("observed_at"),
+            "indexed_at": node.get("indexed_at"),
+            "temporal_state": node.get("temporal_state"),
+        }.items()
+        if value not in {None, ""}
+    }
 
 
 def _attach_refresh_hints(roots: StorageRoots, results: list[dict[str, object]], *, query: str, run_id: str, mode: str) -> list[dict[str, object]]:
@@ -602,7 +755,11 @@ def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None)
     state = str(doc.get("freshness_state") or "unknown").casefold()
     authority_tier = str(doc.get("authority_tier") or "unknown").casefold()
     source_authority = str(doc.get("source_authority") or "").casefold()
-    intent_boost = _intent_boost(query_terms or [], state, authority_tier, source_authority)
+    terms = query_terms or []
+    query_intents = _query_intents(terms)
+    access_boost = _access_intent_boost(terms, state, authority_tier, source_authority)
+    temporal_boost = _temporal_boost(query_intents, state)
+    place_features = _place_features(doc, terms, query_intents)
     evidence_fields = ["source_id", "source_url", "fetched_at", "evidence_id"]
     provenance_complete = all(doc.get(field) for field in evidence_fields)
     return {
@@ -610,8 +767,12 @@ def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None)
         "freshness_boost": FRESHNESS_RANK_WEIGHTS.get(state, 0.0),
         "authority_tier": authority_tier,
         "authority_boost": AUTHORITY_RANK_WEIGHTS.get(authority_tier, 0.0),
-        "intent_boost": intent_boost,
-        "intent": "access_state" if intent_boost else "",
+        "intent_boost": access_boost,
+        "intent": _primary_intent(query_intents, access_boost=access_boost),
+        "query_intents": sorted(query_intents),
+        "temporal_boost": temporal_boost,
+        "access_boost": access_boost,
+        **place_features,
         "provenance_boost": 0.03 if provenance_complete else 0.0,
         "provenance_complete": provenance_complete,
     }
@@ -622,13 +783,104 @@ def _rank_score(score: float, features: dict[str, object]) -> float:
         1.0
         + float(features.get("freshness_boost") or 0.0)
         + float(features.get("authority_boost") or 0.0)
+        + float(features.get("temporal_boost") or 0.0)
+        + float(features.get("place_boost") or 0.0)
         + float(features.get("provenance_boost") or 0.0)
     )
     adjusted = (score * multiplier) + float(features.get("intent_boost") or 0.0)
     return round(max(0.0, adjusted), 6)
 
 
-def _intent_boost(query_terms: list[str], freshness_state: str, authority_tier: str, source_authority: str) -> float:
+def _query_intent_report(query: str, results: list[dict[str, object]]) -> dict[str, object]:
+    intents = _query_intents(tokenize(query))
+    return {
+        "schema": "aoa_course_query_intent_report_v1",
+        "intents": sorted(intents),
+        "temporal_intent": "historical" if "historical" in intents else "fresh" if "fresh" in intents else "stable",
+        "place_intent": "place" in intents,
+        "top_result_intent": results[0].get("rank_features", {}).get("intent") if results and isinstance(results[0].get("rank_features"), dict) else "",
+        "top_result_place_complete": bool(results[0].get("rank_features", {}).get("place_complete")) if results and isinstance(results[0].get("rank_features"), dict) else False,
+    }
+
+
+def _query_intents(query_terms: list[str]) -> set[str]:
+    terms = set(query_terms)
+    intents: set[str] = set()
+    if terms & ACCESS_INTENT_TERMS:
+        intents.add("access")
+    if terms & FRESH_INTENT_TERMS:
+        intents.add("fresh")
+    if terms & HISTORICAL_INTENT_TERMS:
+        intents.add("historical")
+    if terms & PLACE_INTENT_TERMS:
+        intents.add("place")
+    if "historical" in intents and "fresh" in intents:
+        intents.add("temporal_comparison")
+    return intents
+
+
+def _primary_intent(query_intents: set[str], *, access_boost: float) -> str:
+    if access_boost:
+        return "access_state"
+    if "temporal_comparison" in query_intents:
+        return "temporal_comparison"
+    if "historical" in query_intents:
+        return "historical"
+    if "fresh" in query_intents:
+        return "fresh"
+    if "place" in query_intents:
+        return "place"
+    return ""
+
+
+def _temporal_boost(query_intents: set[str], freshness_state: str) -> float:
+    if "historical" in query_intents:
+        if freshness_state in {"stale", "outdated", "deprecated", "archived"}:
+            return 0.28
+        if freshness_state in {"current", "fresh", "verified", "active"}:
+            return -0.04
+        return 0.0
+    if "fresh" in query_intents:
+        if freshness_state in {"current", "fresh", "verified", "active"}:
+            return 0.16
+        if freshness_state in {"stale", "outdated", "deprecated", "archived"}:
+            return -0.20
+    return 0.0
+
+
+def _place_features(doc: dict[str, object], query_terms: list[str], query_intents: set[str]) -> dict[str, object]:
+    path = doc.get("path") if isinstance(doc.get("path"), list) else []
+    place_complete = bool(path) and bool(doc.get("platform")) and bool(doc.get("source_id")) and bool(doc.get("source_url"))
+    place_text = " ".join(
+        str(part)
+        for part in [
+            doc.get("platform"),
+            doc.get("kind"),
+            doc.get("course_title"),
+            doc.get("module_title"),
+            doc.get("lesson_title"),
+            doc.get("lesson_url"),
+            doc.get("source_url"),
+            doc.get("source_id"),
+            " ".join(str(item) for item in path if item),
+        ]
+        if part
+    )
+    place_terms = set(tokenize(place_text))
+    intent_terms = ACCESS_INTENT_TERMS | FRESH_INTENT_TERMS | HISTORICAL_INTENT_TERMS | PLACE_INTENT_TERMS
+    meaningful_query_terms = {term for term in query_terms if term not in intent_terms}
+    matches = sorted(meaningful_query_terms & place_terms)
+    path_boost = min(0.12, 0.025 * len(matches))
+    requested_boost = 0.05 if "place" in query_intents and place_complete else 0.0
+    return {
+        "place_complete": place_complete,
+        "place_matches": matches,
+        "place_match_count": len(matches),
+        "place_boost": round(path_boost + requested_boost, 6),
+    }
+
+
+def _access_intent_boost(query_terms: list[str], freshness_state: str, authority_tier: str, source_authority: str) -> float:
     if not (set(query_terms) & ACCESS_INTENT_TERMS):
         return 0.0
     if freshness_state == "access_denied" or authority_tier == "access_notice" or source_authority == "browser_access_denied":

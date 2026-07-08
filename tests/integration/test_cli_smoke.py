@@ -1162,6 +1162,13 @@ def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Pat
     assert result["status"] == "ok"
     assert result["suite_id"] == "freshness-ranking"
     assert {case["failure_count"] for case in result["case_results"]} == {0}
+    for case in result["case_results"]:
+        metrics = case["metrics"]
+        assert metrics["temporal_ndcg"] == 1.0
+        assert metrics["source_path_accuracy"] == 1.0
+        assert metrics["evidence_attribution"] == 1.0
+        assert metrics["freshness_coverage"] == 1.0
+        assert metrics["conflict_detected"] is True
 
 
 def test_cli_authority_ranking_eval_proves_higher_authority_beats_lower_tie(tmp_path: Path) -> None:

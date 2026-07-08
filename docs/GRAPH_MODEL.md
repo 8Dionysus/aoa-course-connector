@@ -19,6 +19,12 @@ Lesson and step nodes may carry `freshness_state`, `authority_tier`, and
 `discovered_not_fetched` or `fetch_error` crawl evidence in graph traversals
 without presenting an unfetched lesson link as complete lesson content.
 
+Versioned facts may also carry `version_group_id`, `valid_from`,
+`valid_until`, `observed_at`, `indexed_at`, and `temporal_state`. The graph
+keeps each source-backed snapshot as its own node and links related snapshots
+through `version_group_has_snapshot` or `version_group_has_step_snapshot`
+edges, so newer course evidence does not overwrite historical course evidence.
+
 Required edges:
 
 - source_contains_course;
@@ -29,3 +35,5 @@ Required edges:
 - lesson_has_transcript;
 - step_mentions_entity;
 - lesson_about_topic.
+- version_group_has_snapshot;
+- version_group_has_step_snapshot.

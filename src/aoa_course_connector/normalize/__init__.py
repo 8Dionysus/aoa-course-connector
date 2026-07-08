@@ -43,6 +43,7 @@ def normalize_fixture(raw_path: Path, run_id: str, raw_ref: str | None = None) -
             for raw_lesson in raw_module.get("lessons", []):
                 lesson_url = str(raw_lesson.get("url") or course_url)
                 lesson_evidence = _evidence(evidence, platform, lesson_url, captured_at, f"lesson:{raw_lesson['lesson_id']}", raw_ref)
+                lesson_temporal = _temporal_fields(raw_lesson, captured_at)
                 lesson = {
                     "lesson_id": raw_lesson["lesson_id"],
                     "course_id": course["course_id"],
@@ -59,26 +60,27 @@ def normalize_fixture(raw_path: Path, run_id: str, raw_ref: str | None = None) -
                     "topics": raw_lesson.get("topics", []),
                     "entities": _entities(raw_lesson.get("entities", []), lesson_evidence),
                     "evidence": lesson_evidence,
+                    **lesson_temporal,
                 }
                 for raw_step in raw_lesson.get("steps", []):
                     step_evidence = _evidence(evidence, platform, lesson_url, captured_at, f"step:{raw_step['step_id']}", raw_ref)
-                    lesson["steps"].append({**raw_step, "lesson_id": lesson["lesson_id"], "evidence": step_evidence})
+                    lesson["steps"].append({**raw_step, "lesson_id": lesson["lesson_id"], "evidence": step_evidence, **_temporal_fields(raw_step, captured_at, lesson_temporal)})
                 for raw_asset in raw_lesson.get("assets", []):
                     asset_evidence = _evidence(evidence, platform, str(raw_asset.get("url") or lesson_url), captured_at, f"asset:{raw_asset['asset_id']}", raw_ref)
-                    lesson["assets"].append({**raw_asset, "lesson_id": lesson["lesson_id"], "evidence": asset_evidence})
+                    lesson["assets"].append({**raw_asset, "lesson_id": lesson["lesson_id"], "evidence": asset_evidence, **_temporal_fields(raw_asset, captured_at, lesson_temporal)})
                 for raw_transcript in raw_lesson.get("transcripts", []):
                     transcript_evidence = _evidence(evidence, platform, lesson_url, captured_at, f"transcript:{raw_transcript['transcript_id']}", raw_ref)
-                    lesson["transcripts"].append({**raw_transcript, "lesson_id": lesson["lesson_id"], "evidence": transcript_evidence})
+                    lesson["transcripts"].append({**raw_transcript, "lesson_id": lesson["lesson_id"], "evidence": transcript_evidence, **_temporal_fields(raw_transcript, captured_at, lesson_temporal)})
                 for raw_assignment in raw_lesson.get("assignments", []):
                     assignment_evidence = _evidence(evidence, platform, lesson_url, captured_at, f"assignment:{raw_assignment['assignment_id']}", raw_ref)
-                    lesson["assignments"].append({**raw_assignment, "lesson_id": lesson["lesson_id"], "evidence": assignment_evidence})
+                    lesson["assignments"].append({**raw_assignment, "lesson_id": lesson["lesson_id"], "evidence": assignment_evidence, **_temporal_fields(raw_assignment, captured_at, lesson_temporal)})
                 for raw_thread in raw_lesson.get("comment_threads", []):
                     thread_evidence = _evidence(evidence, platform, lesson_url, captured_at, f"thread:{raw_thread['thread_id']}", raw_ref)
                     comments = []
                     for raw_comment in raw_thread.get("comments", []):
                         comment_evidence = _evidence(evidence, platform, lesson_url, captured_at, f"comment:{raw_comment['comment_id']}", raw_ref)
-                        comments.append({**raw_comment, "thread_id": raw_thread["thread_id"], "evidence": comment_evidence})
-                    lesson["comment_threads"].append({**raw_thread, "lesson_id": lesson["lesson_id"], "comments": comments, "evidence": thread_evidence})
+                        comments.append({**raw_comment, "thread_id": raw_thread["thread_id"], "evidence": comment_evidence, **_temporal_fields(raw_comment, captured_at, lesson_temporal)})
+                    lesson["comment_threads"].append({**raw_thread, "lesson_id": lesson["lesson_id"], "comments": comments, "evidence": thread_evidence, **_temporal_fields(raw_thread, captured_at, lesson_temporal)})
                 module["lessons"].append(lesson)
             course["modules"].append(module)
         courses.append(course)
@@ -103,6 +105,19 @@ def _evidence(store: dict[str, dict[str, object]], platform: str, source_url: st
     item = make_evidence(platform, source_url, fetched_at, selector=selector, raw_ref=raw_ref or "")
     store[str(item["evidence_id"])] = item
     return item
+
+
+def _temporal_fields(raw: dict[str, object], captured_at: str, inherited: dict[str, object] | None = None) -> dict[str, object]:
+    inherited = inherited or {}
+    fields: dict[str, object] = {}
+    for key in ["version_group_id", "valid_from", "valid_until"]:
+        value = raw.get(key) if raw.get(key) is not None else inherited.get(key)
+        if value:
+            fields[key] = value
+    observed_at = raw.get("observed_at") or raw.get("updated_at") or raw.get("posted_at") or raw.get("captured_at") or inherited.get("observed_at") or captured_at
+    if observed_at:
+        fields["observed_at"] = observed_at
+    return fields
 
 
 def _entities(raw_entities: list[object], evidence: dict[str, object]) -> list[dict[str, object]]:

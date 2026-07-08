@@ -42,7 +42,7 @@ def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") ->
     docs = list(_iter_docs(bundle))
     inverted: dict[str, list[dict[str, object]]] = defaultdict(list)
     for doc in docs:
-        counts = Counter(tokenize(str(doc.get("text") or "")))
+        counts = Counter(tokenize(_keyword_text_for_doc(doc)))
         for term, count in sorted(counts.items()):
             inverted[term].append({"doc_id": doc["doc_id"], "count": count})
     output_dir = run_artifact_dir(roots, run_id) / "indexes"
@@ -258,6 +258,23 @@ def _embedding_text_for_doc(doc: dict[str, object]) -> str:
     )
 
 
+def _keyword_text_for_doc(doc: dict[str, object]) -> str:
+    path_text = " ".join(str(item) for item in doc.get("path", []) if item) if isinstance(doc.get("path"), list) else ""
+    return " ".join(
+        str(part)
+        for part in [
+            doc.get("course_title"),
+            doc.get("module_title"),
+            doc.get("lesson_title"),
+            path_text,
+            doc.get("platform"),
+            doc.get("kind"),
+            doc.get("text"),
+        ]
+        if part
+    )
+
+
 def _embed_http_json(texts: list[str], config: dict[str, object]) -> list[list[float]]:
     endpoint = str(config.get("endpoint") or "")
     if not endpoint:
@@ -417,6 +434,7 @@ def _serialize_vector(vector: dict[str, float]) -> list[dict[str, object]]:
 
 def _course_doc(kind: str, item_id: object, text: object, course: dict[str, object], path: list[str], evidence: object) -> dict[str, object]:
     evidence_dict = evidence if isinstance(evidence, dict) else {}
+    progress = course.get("progress") if isinstance(course.get("progress"), dict) else {}
     doc_id = f"{kind}:{item_id}"
     return {
         "doc_id": doc_id,
@@ -436,6 +454,10 @@ def _course_doc(kind: str, item_id: object, text: object, course: dict[str, obje
         "freshness_state": "current",
         "authority_tier": "progress_metadata",
         "authority_label": "",
+        "version_group_id": progress.get("version_group_id") or course.get("version_group_id") or "",
+        "valid_from": progress.get("valid_from") or course.get("valid_from") or "",
+        "valid_until": progress.get("valid_until") or course.get("valid_until") or "",
+        "observed_at": progress.get("observed_at") or progress.get("updated_at") or evidence_dict.get("fetched_at"),
         "source_url": evidence_dict.get("source_url") or course.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),
@@ -475,6 +497,10 @@ def _doc(
         "authority_tier": _authority_tier(kind, item),
         "authority_label": str(item.get("authority_label") or item.get("author_label") or item.get("role") or ""),
         "source_authority": str(item.get("source_authority") or ""),
+        "version_group_id": item.get("version_group_id") or lesson.get("version_group_id") or "",
+        "valid_from": item.get("valid_from") or lesson.get("valid_from") or "",
+        "valid_until": item.get("valid_until") or lesson.get("valid_until") or "",
+        "observed_at": item.get("observed_at") or lesson.get("observed_at") or evidence_dict.get("fetched_at"),
         "source_url": evidence_dict.get("source_url") or lesson.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),

@@ -14,7 +14,13 @@
       "stale_doc_id": "step:step:freshness:aaa-stale-policy",
       "expect_equal_relevance_score": true,
       "expect_current_ranked_above_stale": true,
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
+      "required_rank_features": ["freshness_state", "freshness_boost", "temporal_boost", "place_complete", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "version_group_id", "valid_from", "observed_at", "authority_tier", "rank_score"],
+      "min_temporal_ndcg": 1.0,
+      "min_source_path_accuracy": 1.0,
+      "min_evidence_attribution": 1.0,
+      "min_freshness_coverage": 1.0,
+      "require_conflict_detection": true
     },
     {
       "query": "firmware rollback policy",
@@ -27,7 +33,57 @@
       "current_doc_id": "step:step:freshness:zzz-current-policy",
       "stale_doc_id": "step:step:freshness:aaa-stale-policy",
       "expect_current_ranked_above_stale": true,
-      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]
+      "required_rank_features": ["freshness_state", "freshness_boost", "temporal_boost", "place_complete", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "version_group_id", "valid_from", "observed_at", "authority_tier", "rank_score"],
+      "min_temporal_ndcg": 1.0,
+      "min_source_path_accuracy": 1.0,
+      "min_evidence_attribution": 1.0,
+      "min_freshness_coverage": 1.0,
+      "require_conflict_detection": true
+    },
+    {
+      "query": "latest firmware rollback policy",
+      "run": "freshness-ranking-fixture",
+      "mode": "keyword",
+      "limit": 2,
+      "min_results": 2,
+      "expected_query_intents": ["fresh"],
+      "expected_top_rank_intent": "fresh",
+      "expected_top_doc_id": "step:step:freshness:zzz-current-policy",
+      "expected_top_freshness_state": "current",
+      "current_doc_id": "step:step:freshness:zzz-current-policy",
+      "stale_doc_id": "step:step:freshness:aaa-stale-policy",
+      "expect_equal_relevance_score": true,
+      "expect_current_ranked_above_stale": true,
+      "required_rank_features": ["freshness_state", "freshness_boost", "temporal_boost", "query_intents", "place_complete", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "version_group_id", "valid_from", "observed_at", "authority_tier", "rank_score"],
+      "min_temporal_ndcg": 1.0,
+      "min_source_path_accuracy": 1.0,
+      "min_evidence_attribution": 1.0,
+      "min_freshness_coverage": 1.0,
+      "require_conflict_detection": true
+    },
+    {
+      "query": "old firmware rollback policy",
+      "run": "freshness-ranking-fixture",
+      "mode": "keyword",
+      "limit": 2,
+      "min_results": 2,
+      "expected_query_intents": ["historical"],
+      "expected_top_rank_intent": "historical",
+      "expected_top_doc_id": "step:step:freshness:aaa-stale-policy",
+      "expected_top_freshness_state": "stale",
+      "current_doc_id": "step:step:freshness:zzz-current-policy",
+      "stale_doc_id": "step:step:freshness:aaa-stale-policy",
+      "expect_equal_relevance_score": true,
+      "expect_stale_ranked_above_current": true,
+      "required_rank_features": ["freshness_state", "freshness_boost", "temporal_boost", "query_intents", "place_complete", "provenance_complete"],
+      "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "version_group_id", "valid_from", "observed_at", "authority_tier", "rank_score"],
+      "min_temporal_ndcg": 1.0,
+      "min_source_path_accuracy": 1.0,
+      "min_evidence_attribution": 1.0,
+      "min_freshness_coverage": 1.0,
+      "require_conflict_detection": true
     }
   ]
 }
