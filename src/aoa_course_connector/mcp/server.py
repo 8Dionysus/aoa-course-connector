@@ -965,10 +965,15 @@ def _sources_answer_quality(responses: list[dict[str, object]], blocked_sources:
     answer_ready_count = sum(1 for response in responses if bool(response.get("answer_ready")))
     evidence_count_total = sum(int(response.get("evidence_count") or 0) for response in responses)
     result_count_total = sum(int(response.get("result_count") or 0) for response in responses)
+    grounded_response_count = sum(1 for response in responses if _response_is_grounded(response))
+    top_result_path_count = sum(1 for response in responses if _response_top_result_field(response, "path"))
+    top_result_fetched_at_count = sum(1 for response in responses if _response_top_result_field(response, "fetched_at"))
+    top_result_freshness_count = sum(1 for response in responses if _response_top_result_field(response, "freshness_state"))
     return {
         "ready": bool(responses) and answer_ready_count == len(responses) and not blocked_sources and not failures,
         "response_count": len(responses),
         "answer_ready_count": answer_ready_count,
+        "grounded_response_count": grounded_response_count,
         "result_count_total": result_count_total,
         "evidence_count_total": evidence_count_total,
         "blocked_source_count": len(blocked_sources),
@@ -976,7 +981,25 @@ def _sources_answer_quality(responses: list[dict[str, object]], blocked_sources:
         "platforms": sorted({str(response.get("platform") or "") for response in responses if response.get("platform")}),
         "source_ids": sorted({str(response.get("source_id") or "") for response in responses if response.get("source_id")}),
         "all_responses_have_evidence": bool(responses) and all(int(response.get("evidence_count") or 0) > 0 for response in responses),
+        "all_grounded_responses_have_path": grounded_response_count > 0 and grounded_response_count == top_result_path_count,
+        "all_grounded_responses_have_fetched_at": grounded_response_count > 0 and grounded_response_count == top_result_fetched_at_count,
+        "all_grounded_responses_have_freshness": grounded_response_count > 0 and grounded_response_count == top_result_freshness_count,
     }
+
+
+def _response_is_grounded(response: dict[str, object]) -> bool:
+    answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
+    quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+    return bool(quality.get("ready")) and int(response.get("evidence_count") or 0) > 0
+
+
+def _response_top_result_field(response: dict[str, object], field: str) -> object:
+    if not _response_is_grounded(response):
+        return None
+    answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
+    quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
+    top_result = quality.get("top_result") if isinstance(quality.get("top_result"), dict) else {}
+    return top_result.get(field)
 
 
 def _sources_answer_status(responses: list[dict[str, object]], blocked_sources: list[dict[str, object]], failures: list[dict[str, object]]) -> str:
@@ -993,9 +1016,11 @@ def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, co
     summaries = [_sources_answer_matrix_summary(packet) for packet in query_packets]
     ready_count = sum(1 for summary in summaries if bool(summary.get("ready")))
     evidence_ready_count = sum(1 for summary in summaries if int(summary.get("evidence_count_total") or 0) > 0)
+    grounded_ready_count = sum(1 for summary in summaries if int(summary.get("grounded_response_count") or 0) > 0)
     response_count_total = sum(int(summary.get("response_count") or 0) for summary in summaries)
     evidence_count_total = sum(int(summary.get("evidence_count_total") or 0) for summary in summaries)
     result_count_total = sum(int(summary.get("result_count_total") or 0) for summary in summaries)
+    grounded_response_count_total = sum(int(summary.get("grounded_response_count") or 0) for summary in summaries)
     blocked_source_count_total = sum(int(summary.get("blocked_source_count") or 0) for summary in summaries)
     failure_count_total = sum(int(summary.get("failure_count") or 0) for summary in summaries)
     source_scoped_ready = (
@@ -1006,9 +1031,9 @@ def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, co
         and blocked_source_count_total == 0
         and failure_count_total == 0
     )
-    portfolio_ready = bool(query_packets) and evidence_ready_count == len(query_packets) and blocked_source_count_total == 0 and failure_count_total == 0
+    portfolio_ready = bool(query_packets) and grounded_ready_count == len(query_packets) and blocked_source_count_total == 0 and failure_count_total == 0
     ready = portfolio_ready if coverage_mode == "portfolio" else source_scoped_ready
-    selected_ready_count = evidence_ready_count if coverage_mode == "portfolio" else ready_count
+    selected_ready_count = grounded_ready_count if coverage_mode == "portfolio" else ready_count
     return {
         "ready": ready,
         "coverage_mode": coverage_mode,
@@ -1017,18 +1042,25 @@ def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, co
         "query_count": len(query_packets),
         "ready_query_count": selected_ready_count,
         "source_scoped_ready_query_count": ready_count,
-        "portfolio_ready_query_count": evidence_ready_count,
+        "portfolio_ready_query_count": grounded_ready_count,
         "evidence_ready_query_count": evidence_ready_count,
+        "grounded_ready_query_count": grounded_ready_count,
         "blocked_query_count": len(query_packets) - selected_ready_count,
         "source_scoped_gap_query_count": len(query_packets) - ready_count,
         "evidence_gap_query_count": len(query_packets) - evidence_ready_count,
+        "grounding_gap_query_count": len(query_packets) - grounded_ready_count,
         "response_count_total": response_count_total,
         "result_count_total": result_count_total,
         "evidence_count_total": evidence_count_total,
+        "grounded_response_count_total": grounded_response_count_total,
         "blocked_source_count_total": blocked_source_count_total,
         "failure_count_total": failure_count_total,
         "all_queries_have_responses": bool(query_packets) and all(int(summary.get("response_count") or 0) > 0 for summary in summaries),
         "all_queries_have_evidence": bool(query_packets) and all(int(summary.get("evidence_count_total") or 0) > 0 for summary in summaries),
+        "all_queries_have_grounded_response": bool(query_packets) and all(int(summary.get("grounded_response_count") or 0) > 0 for summary in summaries),
+        "all_grounded_responses_have_path": grounded_response_count_total > 0 and all(bool(summary.get("all_grounded_responses_have_path")) for summary in summaries if int(summary.get("grounded_response_count") or 0) > 0),
+        "all_grounded_responses_have_fetched_at": grounded_response_count_total > 0 and all(bool(summary.get("all_grounded_responses_have_fetched_at")) for summary in summaries if int(summary.get("grounded_response_count") or 0) > 0),
+        "all_grounded_responses_have_freshness": grounded_response_count_total > 0 and all(bool(summary.get("all_grounded_responses_have_freshness")) for summary in summaries if int(summary.get("grounded_response_count") or 0) > 0),
         "platforms": sorted({
             platform
             for summary in summaries
@@ -1055,7 +1087,11 @@ def _sources_answer_matrix_summary(packet: dict[str, object]) -> dict[str, objec
         "failure_count": int(packet.get("failure_count") or 0),
         "result_count_total": int(quality.get("result_count_total") or 0),
         "evidence_count_total": int(quality.get("evidence_count_total") or 0),
+        "grounded_response_count": int(quality.get("grounded_response_count") or 0),
         "all_responses_have_evidence": bool(quality.get("all_responses_have_evidence")),
+        "all_grounded_responses_have_path": bool(quality.get("all_grounded_responses_have_path")),
+        "all_grounded_responses_have_fetched_at": bool(quality.get("all_grounded_responses_have_fetched_at")),
+        "all_grounded_responses_have_freshness": bool(quality.get("all_grounded_responses_have_freshness")),
         "platforms": quality.get("platforms", []),
         "source_ids": quality.get("source_ids", []),
         "top_result_refs": _sources_answer_matrix_top_result_refs(packet),
@@ -1078,8 +1114,9 @@ def _sources_answer_matrix_top_result_refs(packet: dict[str, object]) -> list[di
                     "platform": response.get("platform"),
                     "connected_run_id": response.get("connected_run_id"),
                     "doc_id": top_result.get("doc_id"),
-                    "lesson_path": top_result.get("lesson_path"),
+                    "path": top_result.get("path"),
                     "fetched_at": top_result.get("fetched_at"),
+                    "freshness_state": top_result.get("freshness_state"),
                 }
             )
         )
