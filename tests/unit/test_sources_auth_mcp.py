@@ -2,13 +2,21 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import sys
 import types
 from pathlib import Path
 
 import aoa_course_connector.cli as cli_module
 from aoa_course_connector.adapters import adapter_list
-from aoa_course_connector.auth import browser_state_plan, capture_browser_state, default_browser_state_path, inspect_browser_state
+from aoa_course_connector.auth import (
+    browser_state_cookie_header,
+    browser_state_plan,
+    capture_browser_state,
+    default_browser_state_path,
+    import_firefox_browser_state,
+    inspect_browser_state,
+)
 from aoa_course_connector.calibration.connected_run import run_connected_calibration
 from aoa_course_connector.connection_profile import (
     apply_connection_profile,
@@ -375,6 +383,124 @@ def test_capture_browser_state_receipt_verifies_expected_origin(tmp_path: Path, 
     rendered = json.dumps(receipt) + json.dumps(alias) + json.dumps(mismatch)
     assert "SUPER_SECRET_COOKIE" not in rendered
     assert "SUPER_SECRET_TOKEN" not in rendered
+
+
+def test_import_firefox_state_writes_redacted_browser_state(tmp_path: Path) -> None:
+    profile = tmp_path / "firefox/example.default-release"
+    profile.mkdir(parents=True)
+    db_path = profile / "cookies.sqlite"
+    connection = sqlite3.connect(db_path)
+    try:
+        connection.execute(
+            """
+            CREATE TABLE moz_cookies (
+              id INTEGER PRIMARY KEY,
+              name TEXT,
+              value TEXT,
+              host TEXT,
+              path TEXT,
+              expiry INTEGER,
+              isSecure INTEGER,
+              isHttpOnly INTEGER
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("sessionid", "SUPER_SECRET_STEPIK_COOKIE", ".stepik.org", "/", 1999999999, 1, 1),
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("other", "OTHER_SECRET_COOKIE", ".example.org", "/", 1999999999, 1, 1),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    state_file = tmp_path / "auth/stepik/account.storage-state.json"
+
+    receipt = import_firefox_browser_state(
+        tmp_path / "auth",
+        "stepik",
+        "account",
+        state_file=state_file,
+        profile_dir=profile,
+        expect_origin_contains="stepik.org",
+    )
+
+    assert receipt["schema"] == "aoa_course_firefox_state_import_receipt_v1"
+    assert receipt["status"] == "ok"
+    assert receipt["network_touched"] is False
+    assert receipt["firefox_profile"]["matched_cookie_count"] == 1
+    assert receipt["privacy"]["cookie_values_logged"] is False
+    assert state_file.exists()
+    status = inspect_browser_state(state_file, expect_origin_contains="stepik.org")
+    assert status["status"] == "ok"
+    assert browser_state_cookie_header(state_file, "stepik.org") == "sessionid=SUPER_SECRET_STEPIK_COOKIE"
+    rendered = json.dumps(receipt) + json.dumps(status)
+    assert "SUPER_SECRET_STEPIK_COOKIE" not in rendered
+    assert "OTHER_SECRET_COOKIE" not in state_file.read_text(encoding="utf-8")
+
+
+def test_import_firefox_state_selects_profile_with_matching_cookies(tmp_path: Path) -> None:
+    firefox_root = tmp_path / "firefox"
+    empty_profile = firefox_root / "empty.default"
+    stepik_profile = firefox_root / "stepik.default"
+    empty_profile.mkdir(parents=True)
+    stepik_profile.mkdir()
+    (firefox_root / "profiles.ini").write_text(
+        "\n".join(
+            [
+                "[Profile0]",
+                "Name=empty",
+                "IsRelative=1",
+                "Path=empty.default",
+                "Default=1",
+                "",
+                "[Profile1]",
+                "Name=stepik",
+                "IsRelative=1",
+                "Path=stepik.default",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    connection = sqlite3.connect(stepik_profile / "cookies.sqlite")
+    try:
+        connection.execute(
+            """
+            CREATE TABLE moz_cookies (
+              id INTEGER PRIMARY KEY,
+              name TEXT,
+              value TEXT,
+              host TEXT,
+              path TEXT,
+              expiry INTEGER,
+              isSecure INTEGER,
+              isHttpOnly INTEGER
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("sessionid", "SUPER_SECRET_AUTO_PROFILE_COOKIE", ".stepik.org", "/", 1999999999, 1, 1),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+
+    receipt = import_firefox_browser_state(
+        tmp_path / "auth",
+        "stepik",
+        "account",
+        profiles_ini=firefox_root / "profiles.ini",
+        expect_origin_contains="stepik.org",
+    )
+
+    assert receipt["status"] == "ok"
+    assert receipt["candidate_count"] == 2
+    assert receipt["firefox_profile"]["name"] == "stepik"
+    assert receipt["firefox_profile"]["matched_cookie_count"] == 1
+    assert "SUPER_SECRET_AUTO_PROFILE_COOKIE" not in json.dumps(receipt)
 
 
 def test_adapter_registry_covers_connector_platform_topology(tmp_path: Path) -> None:

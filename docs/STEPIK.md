@@ -100,13 +100,24 @@ The live route reads the current account through Stepik API auth, discovers
 course IDs from enrollment data, and writes only local source-registry entries.
 It does not store or print the token value.
 
-`preflight live --platform stepik` checks token presence and registered Stepik
-sources without touching the network. It reports `token_present` but never logs
-the token value, and it can be used with `--require-ready` in operator scripts.
+`preflight live --platform stepik` checks token presence, local Stepik browser
+state, and registered Stepik sources without touching the network. It reports
+`token_present` and storage-state readiness but never logs token or cookie
+values, and it can be used with `--require-ready` in operator scripts.
 Registered `public_api` sources can be sync-ready without `STEPIK_API_TOKEN`;
 registered `api_token` or `oauth` sources still require the token before live
-sync is ready. Account discovery is treated as required only when no Stepik
-sources are already registered.
+sync is ready. Browser-session sources require a matching `stepik.org` state
+file. If Firefox already has a logged-in Stepik session, create that state
+without a fresh login:
+
+```bash
+aoa-course auth import-firefox-state stepik account \
+  --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
+  --expect-origin-contains stepik.org
+```
+
+Account discovery is treated as required only when no Stepik sources are
+already registered.
 
 For a Stepik-focused agent plan, narrow the read-only connected plan:
 

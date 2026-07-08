@@ -70,15 +70,31 @@ not ready yet.
 
 ## Stepik Browser-State Account Route
 
-Stepik can use either the public API, an OAuth/API token, or a captured
-`stepik.org` browser state. For account discovery from a local browser session:
+Stepik can use either the public API, an OAuth/API token, or a local
+`stepik.org` browser state. If Firefox already has a logged-in Stepik session,
+import only matching Stepik cookies into a Playwright-compatible state file:
+
+```bash
+aoa-course auth import-firefox-state stepik account \
+  --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
+  --expect-origin-contains stepik.org
+```
+
+The import reads the local Firefox cookie database, copies only cookies whose
+domain matches `stepik.org`, and returns a redacted receipt. It does not touch
+the network or print cookie values. If there is no usable Firefox session,
+capture a fresh local browser state instead:
 
 ```bash
 aoa-course auth capture-browser-state stepik account \
   --login-url "https://stepik.org/users/me" \
   --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
   --expect-origin-contains stepik.org
+```
 
+Then run account discovery through the local state:
+
+```bash
 aoa-course discover stepik-account \
   --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
   --register --max-pages 5

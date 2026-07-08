@@ -9,6 +9,10 @@ from __future__ import annotations
 
 import json
 import shlex
+import shutil
+import sqlite3
+import tempfile
+from configparser import ConfigParser
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -48,6 +52,64 @@ def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[
 
 def default_browser_state_path(auth_root: Path, platform: str, source_ref: str) -> Path:
     return auth_root / _slug(platform) / f"{_slug(source_ref)}.storage-state.json"
+
+
+def import_firefox_browser_state(
+    auth_root: Path,
+    platform: str,
+    source_ref: str,
+    *,
+    state_file: Path | None = None,
+    profile_dir: Path | None = None,
+    profile_name: str | None = None,
+    profiles_ini: Path | None = None,
+    expect_origin_contains: str | None = None,
+) -> dict[str, object]:
+    expected_origin = expect_origin_contains or _source_ref_origin_hint(source_ref) or _platform_origin_hint(platform)
+    if not expected_origin:
+        raise ValueError("provide --expect-origin-contains when source_ref does not contain a host")
+    selected_profile, candidates = _select_firefox_profile(
+        profile_dir=profile_dir,
+        profile_name=profile_name,
+        profiles_ini=profiles_ini,
+        expected_origin=expected_origin,
+    )
+    cookies = _firefox_cookies_for_host(selected_profile["path"], expected_origin)
+    if not cookies:
+        raise ValueError(f"Firefox profile does not contain cookies for {_host_fragment(expected_origin)}")
+    resolved_state = (state_file or default_browser_state_path(auth_root, platform, source_ref)).expanduser().resolve()
+    resolved_state.parent.mkdir(parents=True, exist_ok=True)
+    origin_host = _host_fragment(expected_origin)
+    storage_state = {
+        "cookies": cookies,
+        "origins": [{"origin": f"https://{origin_host}", "localStorage": []}],
+    }
+    resolved_state.write_text(json.dumps(storage_state, indent=2, sort_keys=True), encoding="utf-8")
+    status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin)
+    return {
+        "schema": "aoa_course_firefox_state_import_receipt_v1",
+        "status": "ok" if status.get("usable") else "warning",
+        "platform": platform,
+        "source_ref": source_ref,
+        "expected_origin_contains": expected_origin,
+        "expected_origin_matched": status.get("expected_origin_matched"),
+        "state_file": str(resolved_state),
+        "firefox_profile": {
+            "name": selected_profile.get("name") or "",
+            "path": str(selected_profile["path"]),
+            "is_default": bool(selected_profile.get("is_default")),
+            "matched_cookie_count": len(cookies),
+        },
+        "candidate_count": len(candidates),
+        "network_touched": False,
+        "state": status,
+        "privacy": {
+            "cookie_values_logged": False,
+            "local_storage_values_logged": False,
+            "token_values_logged": False,
+            "do_not_commit_browser_state": True,
+        },
+    }
 
 
 def browser_state_cookie_header(state_file: Path, expect_origin_contains: str) -> str:
@@ -179,6 +241,125 @@ def capture_browser_state(
     }
 
 
+def _select_firefox_profile(
+    *,
+    profile_dir: Path | None,
+    profile_name: str | None,
+    profiles_ini: Path | None,
+    expected_origin: str,
+) -> tuple[dict[str, object], list[dict[str, object]]]:
+    if profile_dir is not None:
+        path = profile_dir.expanduser().resolve()
+        return {"name": path.name, "path": path, "is_default": False}, []
+    candidates = _firefox_profile_candidates(profiles_ini=profiles_ini)
+    if profile_name:
+        matches = [item for item in candidates if item.get("name") == profile_name or Path(str(item.get("path"))).name == profile_name]
+        if not matches:
+            raise ValueError(f"Firefox profile not found: {profile_name}")
+        return matches[0], candidates
+    with_host_cookies = [
+        item for item in candidates
+        if _firefox_cookie_count_for_host(Path(str(item["path"])), expected_origin) > 0
+    ]
+    if with_host_cookies:
+        default_matches = [item for item in with_host_cookies if item.get("is_default")]
+        return (default_matches or with_host_cookies)[0], candidates
+    default_candidates = [item for item in candidates if item.get("is_default")]
+    if default_candidates:
+        return default_candidates[0], candidates
+    if candidates:
+        return candidates[0], candidates
+    raise ValueError("Firefox profiles were not found")
+
+
+def _firefox_profile_candidates(*, profiles_ini: Path | None = None) -> list[dict[str, object]]:
+    ini_path = (profiles_ini or Path.home() / ".mozilla/firefox/profiles.ini").expanduser().resolve()
+    root = ini_path.parent
+    if not ini_path.exists():
+        return []
+    parser = ConfigParser()
+    parser.read(ini_path, encoding="utf-8")
+    install_defaults = {
+        str(parser[section].get("Default"))
+        for section in parser.sections()
+        if section.startswith("Install") and parser[section].get("Default")
+    }
+    candidates = []
+    for section in parser.sections():
+        if not section.startswith("Profile"):
+            continue
+        raw_path = str(parser[section].get("Path") or "")
+        if not raw_path:
+            continue
+        is_relative = parser[section].get("IsRelative", "1") == "1"
+        path = (root / raw_path if is_relative else Path(raw_path)).expanduser().resolve()
+        cookies_db = path / "cookies.sqlite"
+        candidates.append(
+            {
+                "name": parser[section].get("Name") or path.name,
+                "path": path,
+                "is_default": parser[section].get("Default") == "1" or raw_path in install_defaults,
+                "cookies_sqlite_exists": cookies_db.exists(),
+                "cookies_sqlite_size": cookies_db.stat().st_size if cookies_db.exists() else 0,
+            }
+        )
+    return sorted(candidates, key=lambda item: (not bool(item.get("is_default")), str(item.get("name") or ""), str(item.get("path") or "")))
+
+
+def _firefox_cookie_count_for_host(profile_dir: Path, expected_origin: str) -> int:
+    try:
+        return len(_firefox_cookies_for_host(profile_dir, expected_origin, include_values=False))
+    except Exception:
+        return 0
+
+
+def _firefox_cookies_for_host(profile_dir: Path, expected_origin: str, *, include_values: bool = True) -> list[dict[str, object]]:
+    cookies_db = profile_dir.expanduser().resolve() / "cookies.sqlite"
+    if not cookies_db.exists():
+        return []
+    expected_host = _host_fragment(expected_origin)
+    cookies = []
+    with tempfile.TemporaryDirectory(prefix="aoa-course-firefox-cookies-") as temp_dir:
+        db_copy = Path(temp_dir) / "cookies.sqlite"
+        for suffix in ["", "-wal", "-shm"]:
+            source = Path(f"{cookies_db}{suffix}")
+            if source.exists():
+                shutil.copy2(source, Path(f"{db_copy}{suffix}"))
+        connection = sqlite3.connect(db_copy)
+        try:
+            connection.row_factory = sqlite3.Row
+            columns = {row["name"] for row in connection.execute("PRAGMA table_info(moz_cookies)").fetchall()}
+            wanted_columns = [
+                column
+                for column in ["name", "value", "host", "path", "expiry", "isHttpOnly", "isSecure"]
+                if column in columns
+            ]
+            if {"name", "value", "host"} - set(wanted_columns):
+                return []
+            rows = connection.execute(
+                f"SELECT {', '.join(wanted_columns)} FROM moz_cookies WHERE lower(host) LIKE ?",
+                (f"%{expected_host.casefold()}%",),
+            ).fetchall()
+        finally:
+            connection.close()
+    for row in rows:
+        host = str(row["host"] or "")
+        if not _host_domain_matches(expected_host, _host_fragment(host)):
+            continue
+        cookie = {
+            "name": str(row["name"] or ""),
+            "value": str(row["value"] if include_values else ""),
+            "domain": host,
+            "path": str(row["path"] or "/"),
+            "expires": int(row["expiry"]) if "expiry" in row.keys() and row["expiry"] is not None else -1,
+            "httpOnly": bool(row["isHttpOnly"]) if "isHttpOnly" in row.keys() else False,
+            "secure": bool(row["isSecure"]) if "isSecure" in row.keys() else False,
+        }
+        if cookie["name"]:
+            cookies.append(cookie)
+    return sorted(cookies, key=lambda item: (str(item.get("domain") or ""), str(item.get("path") or ""), str(item.get("name") or "")))
+
+
 def _slug(value: str) -> str:
     return "".join(ch if ch.isalnum() else "-" for ch in value.casefold()).strip("-") or "source"
 
@@ -225,6 +406,10 @@ def _source_ref_origin_hint(source_ref: str) -> str:
     if host in {"account", "default", "browser", "session"}:
         return ""
     return host
+
+
+def _platform_origin_hint(platform: str) -> str:
+    return {"stepik": "stepik.org"}.get(platform.casefold().strip(), "")
 
 
 def _origin_matches_expected_origin(expected_origin: str, origin: str) -> bool:

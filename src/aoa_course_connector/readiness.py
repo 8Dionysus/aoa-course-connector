@@ -1552,6 +1552,10 @@ def _append_stepik_preflight(
                 f"--login-url https://stepik.org/users/me --state-file {str(state_file)!r} "
                 "--expect-origin-contains stepik.org"
             ),
+            "import_firefox_command": (
+                "aoa-course auth import-firefox-state stepik account "
+                f"--state-file {str(state_file)!r} --expect-origin-contains stepik.org"
+            ),
         }
     )
     for source in sources:
@@ -1611,6 +1615,10 @@ def _append_stepik_preflight(
         next_commands.append(f"export {token_env}=<stepik-api-token>")
     if not state_ready and (not sources or any(str(source.get("access_mode") or "") == "browser_session" for source in sources)):
         next_commands.append("aoa-course auth plan-browser-state stepik account")
+        next_commands.append(
+            "aoa-course auth import-firefox-state stepik account "
+            f"--state-file {str(state_file)!r} --expect-origin-contains stepik.org"
+        )
         next_commands.append(
             "aoa-course auth capture-browser-state stepik account "
             f"--login-url https://stepik.org/users/me --state-file {str(state_file)!r} "

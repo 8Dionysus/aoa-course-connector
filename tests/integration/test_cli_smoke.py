@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import sqlite3
 import subprocess
 import sys
 import threading
@@ -935,6 +936,67 @@ def test_cli_stepik_browser_state_preflight_plans_sync(tmp_path: Path) -> None:
     assert "--state-file" in plan["source_plans"][0]["sync_command"]
     assert "--state-file" in plan["source_plans"][0]["smoke_command"]
     assert "SUPER_SECRET_COOKIE" not in json.dumps(preflight) + json.dumps(plan)
+
+
+def test_cli_imports_stepik_firefox_state_for_preflight(tmp_path: Path) -> None:
+    profile = tmp_path / "firefox/default-release"
+    profile.mkdir(parents=True)
+    connection = sqlite3.connect(profile / "cookies.sqlite")
+    try:
+        connection.execute(
+            """
+            CREATE TABLE moz_cookies (
+              id INTEGER PRIMARY KEY,
+              name TEXT,
+              value TEXT,
+              host TEXT,
+              path TEXT,
+              expiry INTEGER,
+              isSecure INTEGER,
+              isHttpOnly INTEGER
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("sessionid", "SUPER_SECRET_FIREFOX_COOKIE", ".stepik.org", "/", 1999999999, 1, 1),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    state_file = tmp_path / "auth/stepik/account.storage-state.json"
+
+    imported = run_cli(
+        tmp_path,
+        "auth",
+        "import-firefox-state",
+        "stepik",
+        "account",
+        "--profile-dir",
+        str(profile),
+        "--state-file",
+        str(state_file),
+        "--expect-origin-contains",
+        "stepik.org",
+    )
+    run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "67",
+        "--platform",
+        "stepik",
+        "--title",
+        "Stepik Browser",
+        "--access-mode",
+        "browser_session",
+    )
+    preflight = run_cli(tmp_path, "preflight", "live", "--platform", "stepik", "--state-file", str(state_file))
+
+    assert imported["status"] == "ok"
+    assert imported["firefox_profile"]["matched_cookie_count"] == 1
+    assert preflight["ready"] is True
+    assert "SUPER_SECRET_FIREFOX_COOKIE" not in json.dumps(imported) + json.dumps(preflight)
 
 
 def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:

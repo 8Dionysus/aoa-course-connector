@@ -31,6 +31,7 @@ aoa-course smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik pu
 aoa-course smoke stepik-live 67 --run stepik-live-public-smoke --query "Python course"
 aoa-course discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
 aoa-course discover stepik-account --run stepik-account-discovery-live --token-env STEPIK_API_TOKEN --register --max-pages 5
+aoa-course auth import-firefox-state stepik account --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --expect-origin-contains stepik.org
 aoa-course auth capture-browser-state stepik account --login-url "https://stepik.org/users/me" --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --expect-origin-contains stepik.org
 aoa-course discover stepik-account --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --register --max-pages 5
 aoa-course sync stepik-live --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" --source-id "source:stepik:..." --build-artifacts
@@ -180,7 +181,9 @@ without touching the network.
 
 Use `auth plan-browser-state` before browser live work. Its capture and inspect
 commands include `--expect-origin-contains` when the source ref has a host.
-`auth capture-browser-state` repeats that redacted check in the receipt through
+For Stepik, `auth import-firefox-state` can build the same local storage-state
+from an existing Firefox login without touching the network. `auth
+capture-browser-state` repeats the redacted origin check in the receipt through
 `expected_origin_matched`, so a state file captured from the wrong school host
 is caught before discovery or sync.
 `preflight connected-plan` also emits `state_file_candidates` inside
