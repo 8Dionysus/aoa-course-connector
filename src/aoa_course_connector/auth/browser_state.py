@@ -19,10 +19,42 @@ from pathlib import Path
 from urllib.parse import urlparse
 
 
+TRACKING_COOKIE_PREFIXES = (
+    "_ga",
+    "_gid",
+    "_ym",
+    "amplitude",
+    "carrotquest",
+    "fbp",
+    "fbc",
+    "intercom",
+    "jivo",
+    "mindbox",
+    "roistat",
+    "tmr_",
+    "ymex",
+)
+AUTH_STORAGE_NAME_HINTS = (
+    "access",
+    "account",
+    "auth",
+    "identity",
+    "jwt",
+    "login",
+    "member",
+    "refresh",
+    "session",
+    "sid",
+    "token",
+    "user",
+)
+STRICT_AUTH_SIGNAL_PLATFORMS = {"getcourse", "skillspace", "stepik"}
+
+
 def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[str, object]:
     state_file = default_browser_state_path(auth_root, platform, source_ref)
     expected_origin = _host_fragment(source_ref)
-    inspect_command = f"aoa-course auth inspect-browser-state {str(state_file)!r}"
+    inspect_command = f"aoa-course auth inspect-browser-state {str(state_file)!r} --platform {platform}"
     capture_command = (
         f"aoa-course auth capture-browser-state {platform} {source_ref!r} "
         f"--login-url <login-or-account-url> --state-file {str(state_file)!r}"
@@ -92,7 +124,7 @@ def import_firefox_browser_state(
         "origins": [{"origin": f"https://{origin_host}", "localStorage": []}],
     }
     resolved_state.write_text(json.dumps(storage_state, indent=2, sort_keys=True), encoding="utf-8")
-    status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin)
+    status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin, platform=platform)
     return {
         "schema": "aoa_course_firefox_state_import_receipt_v1",
         "status": "ok" if status.get("usable") else "warning",
@@ -146,11 +178,13 @@ def browser_state_cookie_header(state_file: Path, expect_origin_contains: str) -
     return "; ".join(pairs)
 
 
-def inspect_browser_state(state_file: Path, expect_origin_contains: str | None = None) -> dict[str, object]:
+def inspect_browser_state(state_file: Path, expect_origin_contains: str | None = None, *, platform: str | None = None) -> dict[str, object]:
     path = state_file.expanduser().resolve()
+    platform_key = str(platform or "").casefold().strip()
     base: dict[str, object] = {
         "schema": "aoa_course_browser_state_status_v1",
         "state_file": str(path),
+        "platform": platform_key or None,
         "exists": path.exists(),
         "git_safe": False,
         "secrets_redacted": True,
@@ -169,6 +203,7 @@ def inspect_browser_state(state_file: Path, expect_origin_contains: str | None =
     origin_values = [str(item.get("origin")) for item in origins if isinstance(item, dict) and item.get("origin")]
     local_storage_count = sum(_entry_count(item, "localStorage") for item in origins if isinstance(item, dict))
     session_storage_count = sum(_entry_count(item, "sessionStorage") for item in origins if isinstance(item, dict))
+    auth_signal = _auth_signal_summary(cookies, origins, platform_key)
     expect_match = None
     if expect_origin_contains:
         expect_match = _storage_state_matches_expected_origin(
@@ -178,6 +213,8 @@ def inspect_browser_state(state_file: Path, expect_origin_contains: str | None =
         )
     has_session_material = bool(cookies or local_storage_count or session_storage_count)
     status = "ok" if has_session_material else "empty"
+    if status == "ok" and platform_key in STRICT_AUTH_SIGNAL_PLATFORMS and not auth_signal["auth_signal_present"]:
+        status = "no_auth_signal"
     if expect_match is False:
         status = "mismatch"
     stat = path.stat()
@@ -188,6 +225,11 @@ def inspect_browser_state(state_file: Path, expect_origin_contains: str | None =
         "size_bytes": stat.st_size,
         "modified_at": _from_timestamp(stat.st_mtime),
         "cookie_count": len(cookies),
+        "auth_cookie_count": auth_signal["auth_cookie_count"],
+        "tracking_cookie_count": auth_signal["tracking_cookie_count"],
+        "auth_storage_entry_count": auth_signal["auth_storage_entry_count"],
+        "auth_signal_present": auth_signal["auth_signal_present"],
+        "auth_signal_required": auth_signal["auth_signal_required"],
         "origin_count": len(origin_values),
         "local_storage_entry_count": local_storage_count,
         "session_storage_entry_count": session_storage_count,
@@ -230,7 +272,7 @@ def capture_browser_state(
         finally:
             browser.close()
     expected_origin = expect_origin_contains or _source_ref_origin_hint(source_ref) or _host_fragment(login_url)
-    status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None)
+    status = inspect_browser_state(resolved_state, expect_origin_contains=expected_origin or None, platform=platform)
     return {
         "schema": "aoa_course_browser_state_capture_receipt_v1",
         "status": "ok" if status.get("usable") else "warning",
@@ -386,6 +428,45 @@ def _slug(value: str) -> str:
 def _entry_count(mapping: dict[str, object], key: str) -> int:
     entries = mapping.get(key)
     return len(entries) if isinstance(entries, list) else 0
+
+
+def _auth_signal_summary(cookies: list[object], origins: list[object], platform: str) -> dict[str, object]:
+    cookie_names = [
+        str(cookie.get("name") or "")
+        for cookie in cookies
+        if isinstance(cookie, dict) and cookie.get("name")
+    ]
+    tracking_cookie_count = sum(1 for name in cookie_names if _is_tracking_cookie_name(name))
+    auth_cookie_count = sum(1 for name in cookie_names if not _is_tracking_cookie_name(name))
+    auth_storage_entry_count = 0
+    for origin in origins:
+        if not isinstance(origin, dict):
+            continue
+        for key in ["localStorage", "sessionStorage"]:
+            entries = origin.get(key)
+            if not isinstance(entries, list):
+                continue
+            for entry in entries:
+                if isinstance(entry, dict) and _is_auth_storage_name(str(entry.get("name") or "")):
+                    auth_storage_entry_count += 1
+    auth_signal_required = platform in STRICT_AUTH_SIGNAL_PLATFORMS
+    return {
+        "auth_cookie_count": auth_cookie_count,
+        "tracking_cookie_count": tracking_cookie_count,
+        "auth_storage_entry_count": auth_storage_entry_count,
+        "auth_signal_present": bool(auth_cookie_count or auth_storage_entry_count),
+        "auth_signal_required": auth_signal_required,
+    }
+
+
+def _is_tracking_cookie_name(name: str) -> bool:
+    normalized = name.casefold().strip().lstrip(".")
+    return any(normalized == prefix or normalized.startswith(prefix) for prefix in TRACKING_COOKIE_PREFIXES)
+
+
+def _is_auth_storage_name(name: str) -> bool:
+    normalized = name.casefold().strip()
+    return any(hint in normalized for hint in AUTH_STORAGE_NAME_HINTS)
 
 
 def _storage_state_matches_expected_origin(

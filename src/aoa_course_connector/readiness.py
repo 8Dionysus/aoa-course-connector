@@ -1266,7 +1266,7 @@ def _host_state_file_candidates(
                         f"--login-url <login-or-account-url> --state-file {state_file} "
                         f"--expect-origin-contains {shlex.quote(host)}"
                     ),
-                    "inspect": f"aoa-course auth inspect-browser-state {state_file} --expect-origin-contains {shlex.quote(host)}",
+                    "inspect": f"aoa-course auth inspect-browser-state {state_file} --platform {platform} --expect-origin-contains {shlex.quote(host)}",
                     "recheck": recheck,
                 },
             }
@@ -1296,7 +1296,7 @@ def _browser_auth_plan_commands(
     expected_origin_contains: str | None,
 ) -> dict[str, object]:
     state_arg = _state_file_arg(platform, browser_state_file)
-    inspect = f"aoa-course auth inspect-browser-state {state_arg}"
+    inspect = f"aoa-course auth inspect-browser-state {state_arg} --platform {platform}"
     capture = (
         f"aoa-course auth capture-browser-state {platform} account "
         f"--login-url <login-or-account-url> --state-file {state_arg}"
@@ -1317,7 +1317,7 @@ def _browser_auth_plan_commands(
         "capture": capture,
         "inspect": inspect,
         "inspect_source_hosts": [
-            f"aoa-course auth inspect-browser-state {state_arg} --expect-origin-contains {shlex.quote(host)}"
+            f"aoa-course auth inspect-browser-state {state_arg} --platform {platform} --expect-origin-contains {shlex.quote(host)}"
             for host in source_hosts
         ],
         "recheck": recheck,
@@ -1436,7 +1436,7 @@ def _append_stepik_preflight(
     source_id_flags = _source_id_flags(sources)
     token_present = bool(os.environ.get(token_env))
     state_file = (browser_state_file or roots.auth / "stepik" / "account.storage-state.json").expanduser().resolve()
-    state = inspect_browser_state(state_file, expect_origin_contains="stepik.org")
+    state = inspect_browser_state(state_file, expect_origin_contains="stepik.org", platform="stepik")
     state_ready = bool(state.get("usable"))
     checks.append(
         {
@@ -1463,6 +1463,10 @@ def _append_stepik_preflight(
             "expected_origin_contains": "stepik.org",
             "expected_origin_matched": state.get("expected_origin_matched"),
             "cookie_count": state.get("cookie_count", 0),
+            "auth_cookie_count": state.get("auth_cookie_count", 0),
+            "tracking_cookie_count": state.get("tracking_cookie_count", 0),
+            "auth_storage_entry_count": state.get("auth_storage_entry_count", 0),
+            "auth_signal_present": state.get("auth_signal_present"),
             "origin_count": state.get("origin_count", 0),
             "local_storage_entry_count": state.get("local_storage_entry_count", 0),
             "session_storage_entry_count": state.get("session_storage_entry_count", 0),
@@ -1572,8 +1576,8 @@ def _append_browser_preflight(
     expected_origin = expect_origin_contains or _origin_hint(sources)
     capture_command = _capture_browser_state_command(platform, state_file, expected_origin)
     import_firefox_command = _import_firefox_state_command(platform, "account", state_file, expected_origin)
-    inspect_command = _inspect_browser_state_command(state_file, expected_origin)
-    state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
+    inspect_command = _inspect_browser_state_command(platform, state_file, expected_origin)
+    state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None, platform=platform)
     state_ready = bool(state.get("usable"))
     checks.append(
         {
@@ -1587,6 +1591,10 @@ def _append_browser_preflight(
             "expected_origin_contains": state.get("expect_origin_contains"),
             "expected_origin_matched": state.get("expected_origin_matched"),
             "cookie_count": state.get("cookie_count", 0),
+            "auth_cookie_count": state.get("auth_cookie_count", 0),
+            "tracking_cookie_count": state.get("tracking_cookie_count", 0),
+            "auth_storage_entry_count": state.get("auth_storage_entry_count", 0),
+            "auth_signal_present": state.get("auth_signal_present"),
             "origin_count": state.get("origin_count", 0),
             "local_storage_entry_count": state.get("local_storage_entry_count", 0),
             "session_storage_entry_count": state.get("session_storage_entry_count", 0),
@@ -1603,7 +1611,7 @@ def _append_browser_preflight(
         source_host = _host(source_ref)
         fixture_or_example = _is_example_source_ref(source_ref)
         source_state = state if fixture_or_example else (
-            inspect_browser_state(state_file, expect_origin_contains=source_host)
+            inspect_browser_state(state_file, expect_origin_contains=source_host, platform=platform)
             if source_host
             else state
         )
@@ -1730,8 +1738,8 @@ def _import_firefox_state_command(platform: str, source_ref: str, state_file: Pa
     )
 
 
-def _inspect_browser_state_command(state_file: Path, expected_origin: str | None) -> str:
-    command = f"aoa-course auth inspect-browser-state {str(state_file)!r}"
+def _inspect_browser_state_command(platform: str, state_file: Path, expected_origin: str | None) -> str:
+    command = f"aoa-course auth inspect-browser-state {str(state_file)!r} --platform {platform}"
     if expected_origin:
         command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
     return command

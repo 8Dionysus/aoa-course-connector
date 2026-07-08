@@ -83,7 +83,7 @@ def discover_stepik_account_browser_state(
     source_limit: int | None = None,
 ) -> dict[str, object]:
     resolved_state = (state_file or roots.auth / "stepik" / "account.storage-state.json").expanduser().resolve()
-    state = inspect_browser_state(resolved_state, expect_origin_contains="stepik.org")
+    state = inspect_browser_state(resolved_state, expect_origin_contains="stepik.org", platform="stepik")
     if not state.get("usable"):
         raise ValueError(f"Stepik browser-state discovery requires usable storage state for stepik.org: {state.get('status')}")
     cookie_header = browser_state_cookie_header(resolved_state, "stepik.org")

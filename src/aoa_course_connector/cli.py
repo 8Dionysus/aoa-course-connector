@@ -1264,7 +1264,7 @@ def cmd_auth_inspect_browser_state(args: argparse.Namespace) -> int:
             "usable": False,
         })
         return 2
-    status = inspect_browser_state(state_file, expect_origin_contains=args.expect_origin_contains)
+    status = inspect_browser_state(state_file, expect_origin_contains=args.expect_origin_contains, platform=args.platform)
     _emit(status)
     return 0 if status.get("usable") else 1
 

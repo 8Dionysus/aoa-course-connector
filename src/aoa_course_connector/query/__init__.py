@@ -103,8 +103,11 @@ FRESH_INTENT_TERMS = {
     "свежие",
     "свежий",
     "сейчас",
+    "сегодня",
     "текущая",
     "текущий",
+    "нынешняя",
+    "нынешний",
 }
 VERSION_COMPARISON_INTENT_TERMS = {
     "between",
@@ -182,6 +185,8 @@ PLACE_INTENT_TERMS = {
     "место",
     "модуле",
     "модуль",
+    "автор",
+    "вложение",
     "путь",
     "раздел",
     "ссылка",
@@ -369,6 +374,7 @@ def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter
             "states": sorted({str(result.get("freshness_state") or "unknown") for result in results}),
             "has_source_timestamps": all(result.get("fetched_at") for result in results),
         },
+        "temporal_report": _temporal_report(results),
         "authority_report": {
             "tiers": sorted({str(result.get("authority_tier") or "unknown") for result in results}),
         },
@@ -456,6 +462,15 @@ def _evidence_chain_item(result: dict[str, object], evidence_id: object) -> dict
         "fetched_at": result.get("fetched_at"),
         "platform": result.get("platform"),
         "path": result.get("path"),
+        "native_item_id": result.get("native_item_id"),
+        "item_title": result.get("item_title"),
+        "item_url": result.get("item_url"),
+        "thread_id": result.get("thread_id"),
+        "thread_title": result.get("thread_title"),
+        "author_label": result.get("author_label"),
+        "posted_at": result.get("posted_at"),
+        "download_state": result.get("download_state"),
+        "access_state": result.get("access_state"),
         "lesson_id": result.get("lesson_id"),
         "lesson_title": result.get("lesson_title"),
         "freshness_state": result.get("freshness_state"),
@@ -839,6 +854,67 @@ def _query_intent_report(query: str, results: list[dict[str, object]]) -> dict[s
     }
 
 
+def _temporal_report(results: list[dict[str, object]]) -> dict[str, object]:
+    versioned: dict[str, list[dict[str, object]]] = {}
+    timestamped = 0
+    for result in results:
+        if result.get("observed_at") or result.get("valid_from") or result.get("valid_until") or result.get("fetched_at"):
+            timestamped += 1
+        group_id = str(result.get("version_group_id") or "")
+        if group_id:
+            versioned.setdefault(group_id, []).append(result)
+    groups = [_temporal_group_item(group_id, items) for group_id, items in sorted(versioned.items())]
+    conflict_groups = [
+        group
+        for group in groups
+        if int(group.get("result_count") or 0) > 1
+        and (len(group.get("freshness_states", [])) > 1 or len(group.get("valid_from_values", [])) > 1)
+    ]
+    top = results[0] if results else {}
+    return {
+        "schema": "aoa_course_temporal_answer_report_v1",
+        "result_count": len(results),
+        "timestamped_result_count": timestamped,
+        "timestamp_coverage": round(timestamped / len(results), 6) if results else 0.0,
+        "version_group_count": len(groups),
+        "conflict_group_count": len(conflict_groups),
+        "conflict_detected": bool(conflict_groups),
+        "top_result_version_group_id": top.get("version_group_id") or "",
+        "top_result_valid_from": top.get("valid_from") or "",
+        "top_result_observed_at": top.get("observed_at") or top.get("fetched_at") or "",
+        "groups": groups,
+        "conflict_groups": conflict_groups,
+    }
+
+
+def _temporal_group_item(group_id: str, items: list[dict[str, object]]) -> dict[str, object]:
+    sorted_items = sorted(
+        items,
+        key=lambda item: (
+            str(item.get("valid_from") or ""),
+            str(item.get("observed_at") or item.get("fetched_at") or ""),
+            str(item.get("doc_id") or ""),
+        ),
+    )
+    current_states = {"current", "fresh", "verified", "active"}
+    stale_states = {"stale", "outdated", "deprecated", "archived"}
+    current_doc_ids = [str(item.get("doc_id") or "") for item in sorted_items if str(item.get("freshness_state") or "") in current_states]
+    stale_doc_ids = [str(item.get("doc_id") or "") for item in sorted_items if str(item.get("freshness_state") or "") in stale_states]
+    observed_values = sorted({str(item.get("observed_at") or item.get("fetched_at") or "") for item in sorted_items if item.get("observed_at") or item.get("fetched_at")})
+    valid_from_values = sorted({str(item.get("valid_from") or "") for item in sorted_items if item.get("valid_from")})
+    return {
+        "version_group_id": group_id,
+        "result_count": len(sorted_items),
+        "doc_ids": [str(item.get("doc_id") or "") for item in sorted_items],
+        "freshness_states": sorted({str(item.get("freshness_state") or "unknown") for item in sorted_items}),
+        "current_doc_ids": current_doc_ids,
+        "stale_doc_ids": stale_doc_ids,
+        "valid_from_values": valid_from_values,
+        "observed_at_min": observed_values[0] if observed_values else "",
+        "observed_at_max": observed_values[-1] if observed_values else "",
+    }
+
+
 def _query_intents(query_terms: list[str]) -> set[str]:
     terms = set(query_terms)
     intents: set[str] = set()
@@ -941,6 +1017,16 @@ def _place_features(doc: dict[str, object], query_terms: list[str], query_intent
             doc.get("lesson_url"),
             doc.get("source_url"),
             doc.get("source_id"),
+            doc.get("authority_tier"),
+            doc.get("authority_label"),
+            doc.get("source_authority"),
+            doc.get("item_title"),
+            doc.get("item_url"),
+            doc.get("thread_title"),
+            doc.get("author_label"),
+            doc.get("posted_at"),
+            doc.get("download_state"),
+            doc.get("access_state"),
             " ".join(str(item) for item in path if item),
         ]
         if part

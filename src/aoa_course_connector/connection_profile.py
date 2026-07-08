@@ -391,7 +391,7 @@ def _browser_plan(roots: StorageRoots, source: dict[str, object], *, source_id: 
     source_ref = str(source.get("source_ref") or "")
     state_file = Path(str(source.get("state_file") or default_browser_state_path(roots.auth, platform, source_ref)))
     expected_origin = str(source.get("expected_origin_contains") or _host_fragment(source_ref))
-    state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
+    state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None, platform=platform)
     import_firefox_command = (
         f"aoa-course auth import-firefox-state {shlex.quote(platform)} {shlex.quote(source_ref)} "
         f"--state-file {shlex.quote(str(state_file))} --expect-origin-contains {shlex.quote(expected_origin)}"
@@ -414,7 +414,7 @@ def _browser_plan(roots: StorageRoots, source: dict[str, object], *, source_id: 
             + (f" --expect-origin-contains {shlex.quote(expected_origin)}" if expected_origin else "")
         ),
         "inspect_command": (
-            f"aoa-course auth inspect-browser-state {shlex.quote(str(state_file))}"
+            f"aoa-course auth inspect-browser-state {shlex.quote(str(state_file))} --platform {shlex.quote(platform)}"
             + (f" --expect-origin-contains {shlex.quote(expected_origin)}" if expected_origin else "")
         ),
         "preflight_command": (
