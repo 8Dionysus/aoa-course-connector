@@ -28,6 +28,35 @@ def run_cli(tmp_path: Path, *args: str) -> dict[str, object]:
     return json.loads(result.stdout)
 
 
+def write_firefox_cookie_profile(tmp_path: Path, host: str, value: str) -> Path:
+    profile = tmp_path / "firefox/default-release"
+    profile.mkdir(parents=True)
+    connection = sqlite3.connect(profile / "cookies.sqlite")
+    try:
+        connection.execute(
+            """
+            CREATE TABLE moz_cookies (
+              id INTEGER PRIMARY KEY,
+              name TEXT,
+              value TEXT,
+              host TEXT,
+              path TEXT,
+              expiry INTEGER,
+              isSecure INTEGER,
+              isHttpOnly INTEGER
+            )
+            """
+        )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("sessionid", value, host, "/", 1999999999, 1, 1),
+        )
+        connection.commit()
+    finally:
+        connection.close()
+    return profile
+
+
 def test_cli_rejects_path_like_run_id_before_writing_runtime_artifacts(tmp_path: Path) -> None:
     escape = tmp_path / "absolute-run-escape"
     result = subprocess.run(
@@ -702,6 +731,8 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     plan = plan["browser_auth_plans"][0]
     assert plan["ready"] is True
     assert plan["source_hosts"] == ["school.operator.edu"]
+    assert "import-firefox-state getcourse account" in plan["commands"]["import_firefox"]
+    assert "--expect-origin-contains school.operator.edu" in plan["commands"]["import_firefox"]
     assert "capture-browser-state getcourse account" in plan["commands"]["capture"]
     assert "preflight connected-plan --platform getcourse" in plan["commands"]["recheck"]
     rendered_plan = json.dumps(plan)
@@ -730,6 +761,7 @@ def test_cli_live_preflight_uses_registered_source_and_redacted_auth_state(tmp_p
     runbook = runbook_path.read_text(encoding="utf-8")
     assert "# Connected Source Runbook" in runbook
     assert "Browser Auth Plans" in runbook
+    assert "import-firefox-state getcourse account" in runbook
     assert "capture-browser-state getcourse account" in runbook
     assert "preflight connected-plan --platform getcourse" in runbook
     assert "calibration connected-run --mode live --allow-network" in runbook
@@ -811,6 +843,8 @@ def test_cli_and_mcp_connected_plan_can_scope_to_selected_source(tmp_path: Path)
     assert candidate_a["state_file"].endswith("/getcourse/a-operator-edu.storage-state.json")
     assert candidate_a["selected_by_default"] is True
     assert candidate_a["source_ids"] == [source_a["source_id"]]
+    assert "auth import-firefox-state getcourse a.operator.edu" in candidate_a["commands"]["import_firefox"]
+    assert "--expect-origin-contains a.operator.edu" in candidate_a["commands"]["import_firefox"]
     assert f"--source-id {source_a['source_id']}" in candidate_a["commands"]["recheck"]
     assert str(source_b["source_id"]) not in candidate_a["commands"]["recheck"]
     assert scoped["ready"] is True
@@ -1007,31 +1041,7 @@ def test_cli_stepik_browser_state_preflight_plans_sync(tmp_path: Path) -> None:
 
 
 def test_cli_imports_stepik_firefox_state_for_preflight(tmp_path: Path) -> None:
-    profile = tmp_path / "firefox/default-release"
-    profile.mkdir(parents=True)
-    connection = sqlite3.connect(profile / "cookies.sqlite")
-    try:
-        connection.execute(
-            """
-            CREATE TABLE moz_cookies (
-              id INTEGER PRIMARY KEY,
-              name TEXT,
-              value TEXT,
-              host TEXT,
-              path TEXT,
-              expiry INTEGER,
-              isSecure INTEGER,
-              isHttpOnly INTEGER
-            )
-            """
-        )
-        connection.execute(
-            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
-            ("sessionid", "SUPER_SECRET_FIREFOX_COOKIE", ".stepik.org", "/", 1999999999, 1, 1),
-        )
-        connection.commit()
-    finally:
-        connection.close()
+    profile = write_firefox_cookie_profile(tmp_path, ".stepik.org", "SUPER_SECRET_FIREFOX_COOKIE")
     state_file = tmp_path / "auth/stepik/account.storage-state.json"
 
     imported = run_cli(
@@ -1065,6 +1075,46 @@ def test_cli_imports_stepik_firefox_state_for_preflight(tmp_path: Path) -> None:
     assert imported["firefox_profile"]["matched_cookie_count"] == 1
     assert preflight["ready"] is True
     assert "SUPER_SECRET_FIREFOX_COOKIE" not in json.dumps(imported) + json.dumps(preflight)
+
+
+def test_cli_imports_skillspace_firefox_state_for_preflight(tmp_path: Path) -> None:
+    profile = write_firefox_cookie_profile(tmp_path, ".academy.operator.edu", "SUPER_SECRET_SKILLSPACE_COOKIE")
+    state_file = tmp_path / "auth/skillspace/account.storage-state.json"
+
+    plan = run_cli(tmp_path, "auth", "plan-browser-state", "skillspace", "https://academy.operator.edu/courses/demo")
+    imported = run_cli(
+        tmp_path,
+        "auth",
+        "import-firefox-state",
+        "skillspace",
+        "account",
+        "--profile-dir",
+        str(profile),
+        "--state-file",
+        str(state_file),
+        "--expect-origin-contains",
+        "academy.operator.edu",
+    )
+    run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "https://academy.operator.edu/courses/demo",
+        "--platform",
+        "skillspace",
+        "--title",
+        "Skillspace Browser",
+    )
+    preflight = run_cli(tmp_path, "preflight", "live", "--platform", "skillspace", "--state-file", str(state_file))
+
+    assert plan["import_firefox_command"] is not None
+    assert "import-firefox-state skillspace" in plan["import_firefox_command"]
+    assert "--expect-origin-contains academy.operator.edu" in plan["import_firefox_command"]
+    assert imported["status"] == "ok"
+    assert imported["network_touched"] is False
+    assert imported["firefox_profile"]["matched_cookie_count"] == 1
+    assert preflight["ready"] is True
+    assert "SUPER_SECRET_SKILLSPACE_COOKIE" not in json.dumps(imported) + json.dumps(preflight)
 
 
 def test_cli_browser_hard_adapter_fixture_flow(tmp_path: Path) -> None:

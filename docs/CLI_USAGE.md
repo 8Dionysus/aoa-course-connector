@@ -183,18 +183,20 @@ API-token work. It emits `aoa_course_eval_preauth_readiness_v1` with
 live preflight, connected-source planning, and fixture `connected_run_query`
 without touching the network.
 
-Use `auth plan-browser-state` before browser live work. Its capture and inspect
-commands include `--expect-origin-contains` when the source ref has a host.
-For Stepik, `auth import-firefox-state` can build the same local storage-state
-from an existing Firefox login without touching the network. `auth
-capture-browser-state` repeats the redacted origin check in the receipt through
-`expected_origin_matched`, so a state file captured from the wrong school host
-is caught before discovery or sync.
+Use `auth plan-browser-state` before browser live work. Its import, capture,
+and inspect commands include `--expect-origin-contains` when the source ref has
+a host. For Stepik, GetCourse, and Skillspace, `auth import-firefox-state` can
+build the same local storage-state from an existing Firefox login without
+touching the network when the expected host is known. `auth
+capture-browser-state` remains the fresh-login fallback and repeats the
+redacted origin check in the receipt through `expected_origin_matched`, so a
+state file captured from the wrong school host is caught before discovery or
+sync.
 `preflight connected-plan` also emits `state_file_candidates` inside
 `browser_auth_plans`: one per operator source host, with a host-specific
-state-file path, capture, inspect, and source-scoped recheck command. Use those
-per-host candidates when one GetCourse or Skillspace platform plan contains
-several schools or custom domains.
+state-file path, Firefox import, capture, inspect, and source-scoped recheck
+command. Use those per-host candidates when one GetCourse or Skillspace
+platform plan contains several schools or custom domains.
 
 Use `calibration connected-run --mode fixture` as the one-command local proof
 that source registry sync, smoke reports, calibration packet, intake, and the

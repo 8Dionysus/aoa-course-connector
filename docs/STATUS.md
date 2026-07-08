@@ -255,14 +255,15 @@ This proves:
   calibration packets aggregate snapshot-audit counts, readiness, failures, and
   repair lanes.
 - Browser-session auth-state onboarding through CLI planning, optional
-  Playwright capture, expected-origin capture receipts, and redacted
-  storage-state inspection. `auth plan-browser-state` and connected-source
-  plans carry `--expect-origin-contains` so wrong-login or cross-school
-  storage-state mismatches are visible before live discovery or sync.
-- Stepik browser-session onboarding can now import matching `stepik.org`
-  cookies from an existing local Firefox profile into a Playwright-compatible
-  storage-state file, with a redacted no-network receipt and no cookie values
-  printed.
+  Firefox cookie import, Playwright capture, expected-origin capture receipts,
+  and redacted storage-state inspection. `auth plan-browser-state` and
+  connected-source plans carry `--expect-origin-contains` so wrong-login or
+  cross-school storage-state mismatches are visible before live discovery or
+  sync.
+- Stepik, GetCourse, and Skillspace browser-session onboarding can import
+  matching cookies from an existing local Firefox profile into a
+  Playwright-compatible storage-state file, with a redacted no-network receipt
+  and no cookie values printed.
 - Stepik account discovery uses both enrollment data and `course-grades`, so
   accounts whose current `/enrollments` endpoint is empty can still expose
   queryable course sources.
@@ -293,12 +294,12 @@ This proves:
   being blocked by another source whose auth state or token is not ready yet.
 - GetCourse and Skillspace connected plans now include browser auth plan
   packets that group registered sources by host, show state-file readiness, and
-  provide capture, redacted inspect, and recheck commands before live sync is
-  allowed.
+  provide Firefox import, capture, redacted inspect, and recheck commands
+  before live sync is allowed.
 - Browser auth plans include per-host `state_file_candidates` with
-  host-specific state-file paths plus capture, inspect, and source-scoped
-  recheck commands for multi-school/custom-domain GetCourse and Skillspace
-  registries.
+  host-specific state-file paths plus Firefox import, capture, inspect, and
+  source-scoped recheck commands for multi-school/custom-domain GetCourse and
+  Skillspace registries.
 - Browser connected plans distinguish fixture/example registry entries from
   operator-owned live sources. Reserved hosts such as `*.example` are marked as
   `fixture_or_example_source` with `operator_live_candidate: false`; live

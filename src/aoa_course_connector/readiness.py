@@ -98,7 +98,7 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
             commands = auth_plan.get("commands") if isinstance(auth_plan.get("commands"), dict) else {}
             if commands:
                 lines.extend(["", "Commands:"])
-                for label in ["plan", "capture", "inspect", "recheck"]:
+                for label in ["plan", "import_firefox", "capture", "inspect", "recheck"]:
                     command = str(commands.get(label) or "")
                     if command:
                         lines.extend([f"- {label}:", "  ```bash", f"  {command}", "  ```"])
@@ -113,7 +113,7 @@ def render_connected_source_runbook(plan: dict[str, object]) -> str:
                 for candidate in candidates:
                     lines.append(f"- `{candidate.get('host')}` -> `{candidate.get('state_file')}`")
                     candidate_commands = candidate.get("commands") if isinstance(candidate.get("commands"), dict) else {}
-                    for label in ["plan", "capture", "inspect", "recheck"]:
+                    for label in ["plan", "import_firefox", "capture", "inspect", "recheck"]:
                         command = str(candidate_commands.get(label) or "")
                         if command:
                             lines.extend(["  ```bash", f"  {command}", "  ```"])
@@ -821,6 +821,8 @@ def _setup_actions(preflight: dict[str, object]) -> list[dict[str, object]]:
 def _setup_kind(command: str) -> str:
     if command.startswith("export "):
         return "set_token_env"
+    if "import-firefox-state" in command:
+        return "import_firefox_state"
     if "capture-browser-state" in command:
         return "capture_browser_state"
     if "inspect-browser-state" in command:
@@ -1355,6 +1357,10 @@ def _host_state_file_candidates(
         )
         if source_id_flags:
             recheck += f" {source_id_flags}"
+        import_firefox = (
+            f"aoa-course auth import-firefox-state {platform} {shlex.quote(host)} "
+            f"--state-file {state_file} --expect-origin-contains {shlex.quote(host)}"
+        )
         candidates.append(
             {
                 "host": host,
@@ -1364,6 +1370,7 @@ def _host_state_file_candidates(
                 "source_count": len(sources),
                 "commands": {
                     "plan": f"aoa-course auth plan-browser-state {platform} {shlex.quote(host)}",
+                    "import_firefox": import_firefox,
                     "capture": (
                         f"aoa-course auth capture-browser-state {platform} {shlex.quote(host)} "
                         f"--login-url <login-or-account-url> --state-file {state_file} "
@@ -1405,12 +1412,17 @@ def _browser_auth_plan_commands(
         f"--login-url <login-or-account-url> --state-file {state_arg}"
     )
     recheck = f"aoa-course preflight connected-plan --platform {platform} --live-scope bounded --state-file {state_arg}"
+    import_firefox = None
     if expected_origin_contains:
         quoted_origin = shlex.quote(expected_origin_contains)
         inspect += f" --expect-origin-contains {quoted_origin}"
         capture += f" --expect-origin-contains {quoted_origin}"
         recheck += f" --expect-origin {quoted_origin}"
-    return {
+        import_firefox = (
+            f"aoa-course auth import-firefox-state {platform} account "
+            f"--state-file {state_arg} --expect-origin-contains {quoted_origin}"
+        )
+    commands: dict[str, object] = {
         "plan": f"aoa-course auth plan-browser-state {platform} account",
         "capture": capture,
         "inspect": inspect,
@@ -1420,6 +1432,9 @@ def _browser_auth_plan_commands(
         ],
         "recheck": recheck,
     }
+    if import_firefox:
+        commands["import_firefox"] = import_firefox
+    return commands
 
 
 def _platform_plans(
@@ -1651,6 +1666,7 @@ def _append_browser_preflight(
     state_file = (browser_state_file or roots.auth / platform / "account.storage-state.json").expanduser().resolve()
     expected_origin = expect_origin_contains or _origin_hint(sources)
     capture_command = _capture_browser_state_command(platform, state_file, expected_origin)
+    import_firefox_command = _import_firefox_state_command(platform, "account", state_file, expected_origin)
     inspect_command = _inspect_browser_state_command(state_file, expected_origin)
     state = inspect_browser_state(state_file, expect_origin_contains=expected_origin or None)
     state_ready = bool(state.get("usable"))
@@ -1671,6 +1687,7 @@ def _append_browser_preflight(
             "session_storage_entry_count": state.get("session_storage_entry_count", 0),
             "secrets_redacted": True,
             "next_command": capture_command,
+            "import_firefox_command": import_firefox_command,
         }
     )
     operator_source_ready_flags: list[bool] = []
@@ -1741,6 +1758,8 @@ def _append_browser_preflight(
     )
     if not state_ready:
         next_commands.append(f"aoa-course auth plan-browser-state {platform} account")
+        if import_firefox_command:
+            next_commands.append(import_firefox_command)
         next_commands.append(capture_command)
         next_commands.append(inspect_command)
     if fixture_source_count and not operator_source_ready_flags:
@@ -1795,6 +1814,15 @@ def _capture_browser_state_command(platform: str, state_file: Path, expected_ori
     if expected_origin:
         command += f" --expect-origin-contains {shlex.quote(expected_origin)}"
     return command
+
+
+def _import_firefox_state_command(platform: str, source_ref: str, state_file: Path, expected_origin: str | None) -> str | None:
+    if not expected_origin:
+        return None
+    return (
+        f"aoa-course auth import-firefox-state {platform} {shlex.quote(source_ref)} "
+        f"--state-file {str(state_file)!r} --expect-origin-contains {shlex.quote(expected_origin)}"
+    )
 
 
 def _inspect_browser_state_command(state_file: Path, expected_origin: str | None) -> str:

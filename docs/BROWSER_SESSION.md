@@ -248,6 +248,10 @@ python -m pip install -e ".[browser]"
 Create and verify a local Playwright storage-state file:
 
 ```bash
+aoa-course auth import-firefox-state getcourse "https://school.example" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
+  --expect-origin-contains "school.example"
+
 aoa-course auth capture-browser-state getcourse "https://school.example" \
   --login-url "https://school.example/cms/system/login" \
   --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
@@ -262,8 +266,9 @@ aoa-course preflight live \
   --expect-origin school.example
 ```
 
-The capture receipt is safe to inspect: it reports counts and
-`expected_origin_matched` without printing cookies, localStorage values, or
+The Firefox import is the fastest path when the operator is already logged in
+for the same host. The capture receipt is safe to inspect: it reports counts
+and `expected_origin_matched` without printing cookies, localStorage values, or
 tokens. Treat a `warning` receipt as a blocked live route until the saved state
 matches the operator-owned course host.
 
@@ -298,12 +303,14 @@ the plan, the connected-run plan preserves it for live sync and smoke.
 Its `browser_auth_plans` section is the operator/agent checklist for
 blocked browser sources. It groups registered sources by host, shows the
 storage-state file to create or inspect, lists blocked hosts, and gives
-portable `auth plan-browser-state`, `auth capture-browser-state`,
-`auth inspect-browser-state`, and `preflight connected-plan` recheck commands.
+portable `auth plan-browser-state`, `auth import-firefox-state`,
+`auth capture-browser-state`, `auth inspect-browser-state`, and
+`preflight connected-plan` recheck commands.
 When one GetCourse or Skillspace plan contains several schools or custom
 domains, `browser_auth_plans[].state_file_candidates` gives one per-host
-state-file path with capture, inspect, and source-scoped recheck commands, so
-an agent does not accidentally reuse an auth state from the wrong school.
+state-file path with Firefox import, capture, inspect, and source-scoped
+recheck commands, so an agent does not accidentally reuse an auth state from
+the wrong school.
 
 Then capture a visible page:
 

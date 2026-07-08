@@ -48,6 +48,10 @@ For live operator-owned pages, use `discover browser-live` or
 crawl the selected course entrypoint:
 
 ```bash
+aoa-course auth import-firefox-state skillspace "https://academy.example" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
+  --expect-origin-contains "academy.example"
+
 aoa-course auth capture-browser-state skillspace "https://academy.example" \
   --login-url "https://academy.example/login" \
   --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \

@@ -263,6 +263,7 @@ def test_live_preflight_reports_missing_browser_state_as_warning(tmp_path: Path)
     assert report["status"] == "warning"
     assert report["ready"] is False
     assert any(check["kind"] == "browser_state" and check["status"] == "missing" for check in report["checks"])
+    assert not any("import-firefox-state" in command for command in report["next_commands"])
     assert any("capture-browser-state" in command for command in report["next_commands"])
 
 
@@ -423,6 +424,8 @@ def test_connected_source_plan_browser_ready_includes_sync_smoke_and_calibration
     assert plan["source_hosts"] == ["school.operator.edu"]
     assert plan["blocked_source_count"] == 0
     assert plan["host_readiness"][0]["ready_source_count"] == 1
+    assert "import-firefox-state getcourse account" in plan["commands"]["import_firefox"]
+    assert "--expect-origin-contains school.operator.edu" in plan["commands"]["import_firefox"]
     assert "capture-browser-state getcourse account" in plan["commands"]["capture"]
     assert "--expect-origin-contains school.operator.edu" in plan["commands"]["capture"]
     assert "inspect-browser-state" in plan["commands"]["inspect"]
@@ -468,10 +471,15 @@ def test_connected_source_plan_blocks_browser_without_auth_state(tmp_path: Path)
         }
     ]
     assert plan["blockers"] == ["browser storage state is missing"]
+    assert "import-firefox-state skillspace account" in plan["commands"]["import_firefox"]
+    assert "--expect-origin-contains school.skillspace.edu" in plan["commands"]["import_firefox"]
     assert "capture-browser-state skillspace account" in plan["commands"]["capture"]
     assert "--state-file" in plan["commands"]["capture"]
     assert "--expect-origin school.skillspace.edu" in plan["commands"]["recheck"]
+    assert plan["state_file_candidates"][0]["commands"]["import_firefox"].startswith("aoa-course auth import-firefox-state skillspace school.skillspace.edu")
+    assert "--expect-origin-contains school.skillspace.edu" in plan["state_file_candidates"][0]["commands"]["import_firefox"]
     assert not any("sync browser-live" in command for command in next_commands)
+    assert any("import-firefox-state skillspace account" in command for command in next_commands)
     assert any("capture-browser-state" in command for command in next_commands)
 
 
