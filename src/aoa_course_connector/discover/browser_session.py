@@ -120,7 +120,7 @@ def discover_browser_live(
             context_kwargs["storage_state"] = str(state_file)
         context = browser.new_context(**context_kwargs)
         page = context.new_page()
-        pages = collect_live_catalog_pages(page, url, wait_until=wait_until, max_pages=max_pages)
+        pages = collect_live_catalog_pages(page, url, wait_until=wait_until, max_pages=max_pages, platform=platform)
         title = str(pages[0].get("title") or url) if pages else url
         raw = {
             "schema": "aoa_course_browser_snapshot_v1",
@@ -155,13 +155,25 @@ def discover_browser_live(
     )
 
 
-def collect_live_catalog_pages(page: Any, start_url: str, *, wait_until: str = "domcontentloaded", max_pages: int = 5) -> list[dict[str, object]]:
+def collect_live_catalog_pages(
+    page: Any,
+    start_url: str,
+    *,
+    wait_until: str = "domcontentloaded",
+    max_pages: int = 5,
+    platform: str | None = None,
+) -> list[dict[str, object]]:
     pages: list[dict[str, object]] = []
     seen: set[str] = set()
     next_url = start_url
     page_limit = max(1, max_pages)
+    api_payloads: list[dict[str, object]] = []
+    if platform == "getcourse":
+        _attach_getcourse_catalog_response_recorder(page, api_payloads)
     for index in range(1, page_limit + 1):
+        payload_start = len(api_payloads)
         page.goto(next_url, wait_until=wait_until)
+        _wait_for_catalog_api_payloads(page)
         current_url = str(getattr(page, "url", "") or next_url)
         if current_url in seen:
             break
@@ -175,6 +187,7 @@ def collect_live_catalog_pages(page: Any, start_url: str, *, wait_until: str = "
                 "url": current_url,
                 "title": title,
                 "html": html,
+                "api_payloads": api_payloads[payload_start:],
             }
         )
         candidate = _first_unseen_pagination_url(html, current_url, seen)
@@ -191,6 +204,40 @@ def _first_unseen_pagination_url(html: str, current_url: str, seen: set[str]) ->
         if href and href not in seen:
             return href
     return None
+
+
+def _attach_getcourse_catalog_response_recorder(page: Any, payloads: list[dict[str, object]]) -> None:
+    if not hasattr(page, "on"):
+        return
+
+    def on_response(response: Any) -> None:
+        url = str(getattr(response, "url", "") or "")
+        if "app.gcext.su/api/2.0/proxy/" not in url:
+            return
+        headers = getattr(response, "headers", {}) or {}
+        content_type = str(headers.get("content-type") or "")
+        if "json" not in content_type.casefold():
+            return
+        try:
+            payload = response.json()
+        except Exception:
+            return
+        payloads.append({"url": url, "content_type": content_type, "json": payload})
+
+    page.on("response", on_response)
+
+
+def _wait_for_catalog_api_payloads(page: Any) -> None:
+    if hasattr(page, "wait_for_load_state"):
+        try:
+            page.wait_for_load_state("networkidle", timeout=5000)
+        except Exception:
+            pass
+    if hasattr(page, "wait_for_timeout"):
+        try:
+            page.wait_for_timeout(500)
+        except Exception:
+            pass
 
 
 def _receipt_from_raw(
