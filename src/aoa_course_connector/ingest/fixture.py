@@ -8,6 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots, find_repo_root
+from aoa_course_connector.ingest.counts import bundle_content_counts
 from aoa_course_connector.normalize import normalize_fixture, write_normalized_bundle
 from aoa_course_connector.storage import create_storage_roots, run_data_dir
 
@@ -27,6 +28,7 @@ def materialize_fixture(roots: StorageRoots, run_id: str = "starter-fixture", fi
     shutil.copyfile(fixture_path, raw_copy)
     bundle = normalize_fixture(raw_copy, run_id=run_id, raw_ref=str(raw_copy))
     normalized_path = write_normalized_bundle(bundle, normalized_dir)
+    counts = bundle_content_counts(bundle)
     receipt = {
         "schema": "aoa_course_materialize_receipt_v1",
         "status": "ok",
@@ -34,8 +36,8 @@ def materialize_fixture(roots: StorageRoots, run_id: str = "starter-fixture", fi
         "source": str(fixture_path),
         "raw_path": str(raw_copy),
         "normalized_path": str(normalized_path),
-        "course_count": len(bundle.get("courses", [])),
-        "evidence_count": len(bundle.get("evidence", [])),
+        **counts,
+        "content_counts": counts,
         "completed_at": _now(),
         "network_touched": False,
     }

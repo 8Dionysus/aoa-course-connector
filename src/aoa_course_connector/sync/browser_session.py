@@ -13,6 +13,7 @@ from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import crawl_browser_live
 from aoa_course_connector.ingest.browser_session import FIXTURES
+from aoa_course_connector.ingest.counts import bundle_content_counts
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.sources import load_registry
@@ -151,6 +152,7 @@ def _materialize_source_fixture(
     raw_path.write_text(json.dumps(crawled, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
     bundle = normalize_browser_snapshot(crawled, run_id=run_id, raw_ref=str(raw_path))
     normalized_path = write_normalized_bundle(bundle, normalized_dir)
+    counts = bundle_content_counts(bundle)
     receipt = {
         "schema": "aoa_course_browser_materialize_receipt_v1",
         "status": "ok",
@@ -158,8 +160,8 @@ def _materialize_source_fixture(
         "source_mode": f"{platform}_browser_source_sync_fixture",
         "raw_path": str(raw_path),
         "normalized_path": str(normalized_path),
-        "course_count": len(bundle.get("courses", [])),
-        "evidence_count": len(bundle.get("evidence", [])),
+        **counts,
+        "content_counts": counts,
         "completed_at": _now(),
         "network_touched": False,
     }

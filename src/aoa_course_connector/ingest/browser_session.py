@@ -10,6 +10,7 @@ from typing import Any
 
 from aoa_course_connector.adapters.browser import build_crawled_snapshot, caption_resource_key, caption_text_from_resource, discover_lesson_links, is_caption_asset, parse_html_snapshot, placeholder_lesson_page, resource_looks_like_caption
 from aoa_course_connector.config import StorageRoots, find_repo_root
+from aoa_course_connector.ingest.counts import bundle_content_counts
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.storage import create_storage_roots, run_data_dir
@@ -312,6 +313,7 @@ def _materialize_browser_raw(
 
 def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path, normalized_path: Path, bundle: dict[str, object], *, network_touched: bool) -> dict[str, object]:
     raw = json.loads(raw_path.read_text(encoding="utf-8"))
+    counts = bundle_content_counts(bundle)
     receipt = {
         "schema": "aoa_course_browser_materialize_receipt_v1",
         "status": "ok",
@@ -319,8 +321,8 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
         "source_mode": source_mode,
         "raw_path": str(raw_path),
         "normalized_path": str(normalized_path),
-        "course_count": len(bundle.get("courses", [])),
-        "evidence_count": len(bundle.get("evidence", [])),
+        **counts,
+        "content_counts": counts,
         "completed_at": _now(),
         "network_touched": network_touched,
     }
