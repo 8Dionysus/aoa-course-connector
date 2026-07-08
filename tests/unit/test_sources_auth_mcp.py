@@ -105,10 +105,21 @@ def test_connection_profile_plans_and_applies_operator_sources(tmp_path: Path, m
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in rendered
     assert "SUPER_SECRET_STEPIK_TOKEN" not in rendered
     assert any("sources add" in command for command in inspection["next_commands"])
+    assert any("auth import-firefox-state getcourse" in command for command in inspection["next_commands"])
+    assert any("auth import-firefox-state skillspace" in command for command in inspection["next_commands"])
     assert any("auth capture-browser-state" in command for command in inspection["next_commands"])
+    getcourse_auth = next(plan for plan in inspection["browser_auth"] if plan["platform"] == "getcourse")
+    skillspace_auth = next(plan for plan in inspection["browser_auth"] if plan["platform"] == "skillspace")
+    assert "auth import-firefox-state getcourse" in getcourse_auth["import_firefox_command"]
+    assert "--expect-origin-contains school.example" in getcourse_auth["import_firefox_command"]
+    assert "auth import-firefox-state skillspace" in skillspace_auth["import_firefox_command"]
+    assert "--expect-origin-contains academy.example" in skillspace_auth["import_firefox_command"]
     runbook_text = render_connection_profile_runbook(inspection)
     assert "Course Connection Profile Runbook" in runbook_text
     assert "Browser Auth" in runbook_text
+    assert "Import Firefox Command" in runbook_text
+    assert "auth import-firefox-state getcourse" in runbook_text
+    assert "auth import-firefox-state skillspace" in runbook_text
     assert "Live Readiness" in runbook_text
     assert "Semantic Provider" in runbook_text
     assert "SUPER_SECRET_EMBEDDING_TOKEN" not in runbook_text

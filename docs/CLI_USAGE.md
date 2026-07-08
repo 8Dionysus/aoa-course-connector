@@ -306,10 +306,10 @@ provide real source refs and provider choices. The command writes
 `aoa_course_connection_profile_v1` under runtime artifact storage. It may
 include operator course URLs and state-file paths, so keep it outside Git; it
 does not include token values. `connect inspect` reads that profile and returns
-source registration commands, browser-state capture/inspect commands,
-per-platform `preflight connected-plan` commands, and semantic provider
-preflight/build/query commands without mutating local state or touching the
-network. `connect apply` registers the profile sources in the local source
+source registration commands, browser-state Firefox import/capture/inspect
+commands, per-platform `preflight connected-plan` commands, and semantic
+provider preflight/build/query commands without mutating local state or
+touching the network. `connect apply` registers the profile sources in the local source
 registry only; browser login, Stepik API calls, semantic builds, and connected
 live calibration remain separate explicit commands.
 Pass `--write-runbook` to emit a redacted Markdown checklist from

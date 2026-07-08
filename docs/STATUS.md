@@ -146,8 +146,9 @@ This proves:
   a local `aoa_course_connection_profile_v1` runtime artifact for source refs,
   browser state-file paths, Stepik token env names, and semantic provider
   settings; a read-only `aoa_course_connection_profile_inspection_v1` for
-  source registration/auth/connected-plan/semantic next commands; and a
-  registry-only apply step that does not touch the network or log token values.
+  source registration/auth/connected-plan/semantic next commands, including
+  browser-session Firefox import, capture, inspect, and preflight commands; and
+  a registry-only apply step that does not touch the network or log token values.
   The same inspection can be written as a redacted Markdown runbook through
   `--write-runbook`. CLI `connect status` and MCP
   `connection_profile_status` return `aoa_course_connection_profile_status_v1`

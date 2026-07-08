@@ -302,9 +302,9 @@ larger Stepik full-course/source-enrichment route.
 `connection_profile_inspect` is the MCP-side reader for a local
 `aoa_course_connection_profile_v1` file created by `aoa-course connect
 profile`. It returns `aoa_course_connection_profile_inspection_v1` with source
-registration state, browser auth capture/inspect commands, per-platform
-connected-plan commands, semantic-provider preflight/build/query commands, and
-`network_touched: false`. It does not mutate the source registry; use CLI
+registration state, browser auth Firefox import/capture/inspect commands,
+per-platform connected-plan commands, semantic-provider preflight/build/query
+commands, and `network_touched: false`. It does not mutate the source registry; use CLI
 `connect apply` when the operator wants to register the profile's non-secret
 source refs.
 `connection_profile_status` is the compact MCP go/no-go reader for the same
