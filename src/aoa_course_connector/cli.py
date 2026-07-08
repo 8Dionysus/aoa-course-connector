@@ -2982,6 +2982,19 @@ def _freshness_ranking_failures(packet: dict[str, object], case: dict[str, objec
     expected_top_rank_intent = case.get("expected_top_rank_intent")
     if expected_top_rank_intent is not None and str(top_rank_features.get("intent") or "") != str(expected_top_rank_intent):
         failures.append({**context, "field": "top_rank_intent", "expected": expected_top_rank_intent, "actual": top_rank_features.get("intent")})
+    expected_intent_class = case.get("expected_intent_class")
+    if expected_intent_class is not None and str(query_intent_report.get("intent_class") or "") != str(expected_intent_class):
+        failures.append(
+            {
+                **context,
+                "field": "query_intent_report.intent_class",
+                "expected": expected_intent_class,
+                "actual": query_intent_report.get("intent_class"),
+            }
+        )
+    expected_top_intent_class = case.get("expected_top_intent_class")
+    if expected_top_intent_class is not None and str(top_rank_features.get("intent_class") or "") != str(expected_top_intent_class):
+        failures.append({**context, "field": "top_rank_intent_class", "expected": expected_top_intent_class, "actual": top_rank_features.get("intent_class")})
     current = by_doc.get(str(case.get("current_doc_id") or ""))
     stale = by_doc.get(str(case.get("stale_doc_id") or ""))
     if case.get("expect_current_ranked_above_stale"):
@@ -3036,6 +3049,8 @@ def _freshness_ranking_failures(packet: dict[str, object], case: dict[str, objec
                 failures.append({**context, "evidence_index": index, "missing_evidence_field": field})
     metrics = _freshness_ranking_metrics(packet, case)
     for threshold_field, metric_field in [
+        ("min_latest_at_k", "latest_at_k"),
+        ("min_staleness_at_k", "staleness_at_k"),
         ("min_temporal_ndcg", "temporal_ndcg"),
         ("min_source_path_accuracy", "source_path_accuracy"),
         ("min_evidence_attribution", "evidence_attribution"),
