@@ -28,7 +28,7 @@ chain.
 
 ```bash
 export STEPIK_API_TOKEN=...
-aoa-course materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources
+aoa-course materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources --max-step-sources all
 aoa-course build-index --run stepik-full-course
 aoa-course build-graph --run stepik-full-course
 aoa-course answer "course-specific question" --run stepik-full-course
@@ -45,6 +45,13 @@ the course order stable while reducing one-request-per-object traversal.
 source block text during normalization. Some accounts or courses may not expose
 step source data; those failures are stored as `step_source_error` on the raw
 step object instead of failing the whole course sync.
+
+Step source enrichment is bounded by default: `--max-step-sources 10` with
+`--step-source-timeout 5.0`. Use `--max-step-sources N` to widen the enrichment
+budget, or `--max-step-sources all` only for an explicit operator-selected run
+where a long Stepik traversal is acceptable. Raw Stepik payloads record the
+effective limits and `diagnostics.step_source_attempt_count` /
+`diagnostics.step_source_skipped_count`.
 
 Stepik normalized steps, assignments, and asset metadata carry
 `authority_tier`, `authority_label`, and `source_authority` so official API or
@@ -160,7 +167,7 @@ aoa-course sources list
 Live source-registry sync uses the registered course refs:
 
 ```bash
-aoa-course sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
+aoa-course sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --max-step-sources all --build-artifacts
 aoa-course mcp call sync_status '{"sync_run":"stepik-live-sync","platform":"stepik"}'
 ```
 

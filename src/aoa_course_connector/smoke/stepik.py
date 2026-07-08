@@ -92,6 +92,8 @@ def smoke_stepik_live(
     max_steps_per_lesson: int | None = 5,
     batch_size: int = 20,
     include_step_sources: bool = False,
+    max_step_sources: int | None = 10,
+    step_source_timeout: float = 5.0,
     query: str | None = None,
     build_artifacts: bool = True,
 ) -> dict[str, object]:
@@ -107,6 +109,8 @@ def smoke_stepik_live(
         max_steps_per_lesson=max_steps_per_lesson,
         batch_size=batch_size,
         include_step_sources=include_step_sources,
+        max_step_sources=max_step_sources,
+        step_source_timeout=step_source_timeout,
         source_refs=[source_ref],
         source_limit=1,
         build_artifacts=build_artifacts,
@@ -120,6 +124,53 @@ def smoke_stepik_live(
         query=query or DEFAULT_QUERY,
         build_artifacts=build_artifacts,
         network_touched=True,
+    )
+
+
+def smoke_stepik_from_sync(
+    roots: StorageRoots,
+    *,
+    run_id: str,
+    source: dict[str, object],
+    sync: dict[str, object],
+    query: str | None = None,
+    build_artifacts: bool = True,
+) -> dict[str, object]:
+    """Build a Stepik smoke report from an already completed sync receipt."""
+
+    source_id = str(source.get("source_id") or "")
+    source_ref = str(source.get("source_ref") or "")
+    checkpoints = sync.get("synced_sources") if isinstance(sync.get("synced_sources"), list) else []
+    checkpoint = next(
+        (
+            item
+            for item in checkpoints
+            if isinstance(item, dict)
+            and (
+                (source_id and str(item.get("source_id") or "") == source_id)
+                or (source_ref and str(item.get("source_ref") or "") == source_ref)
+            )
+        ),
+        None,
+    )
+    failed_sources = sync.get("failed_sources") if isinstance(sync.get("failed_sources"), list) else []
+    scoped_sync = {
+        **sync,
+        "source_count": 1,
+        "synced_sources": [checkpoint] if checkpoint else [],
+        "failed_sources": [] if checkpoint else failed_sources,
+        "synced_count": 1 if checkpoint else 0,
+        "failed_count": 0 if checkpoint else len(failed_sources),
+    }
+    return _report(
+        roots,
+        run_id=run_id,
+        source=source,
+        source_mode="stepik_live_smoke_from_sync",
+        sync=scoped_sync,
+        query=query or DEFAULT_QUERY,
+        build_artifacts=build_artifacts,
+        network_touched=False,
     )
 
 

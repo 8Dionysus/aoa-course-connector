@@ -76,6 +76,8 @@ def sync_stepik_live_sources(
     max_steps_per_lesson: int | None = 5,
     batch_size: int = 20,
     include_step_sources: bool = False,
+    max_step_sources: int | None = 10,
+    step_source_timeout: float = 5.0,
     source_refs: list[str] | None = None,
     source_ids: list[str] | None = None,
     source_limit: int | None = None,
@@ -99,6 +101,8 @@ def sync_stepik_live_sources(
                 max_steps_per_lesson=max_steps_per_lesson,
                 batch_size=batch_size,
                 include_step_sources=include_step_sources,
+                max_step_sources=max_step_sources,
+                step_source_timeout=step_source_timeout,
                 source=source,
             )
             checkpoint = _checkpoint_from_materialized(

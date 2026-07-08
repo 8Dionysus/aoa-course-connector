@@ -21,10 +21,10 @@ aoa-course sources answer "course-specific question" --source-id "source:getcour
 aoa-course materialize fixture --run starter-fixture
 aoa-course materialize stepik-fixture --run stepik-fixture
 aoa-course materialize stepik-live 67 --run stepik-live-smoke --max-sections 1 --max-units-per-section 1 --max-steps-per-lesson 2
-aoa-course materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources
+aoa-course materialize stepik-live 67 --run stepik-full-course --full-course --batch-size 20 --include-step-sources --max-step-sources all
 aoa-course discover stepik 67 --register --title "Stepik course 67"
 aoa-course sync stepik-fixture --run stepik-sync-fixture --source-id "source:stepik:..." --build-artifacts
-aoa-course sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --build-artifacts
+aoa-course sync stepik-live --run stepik-live-sync --source-id "source:stepik:..." --full-course --batch-size 20 --include-step-sources --max-step-sources all --build-artifacts
 aoa-course sync status --run stepik-sync-fixture --platform stepik
 aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN
 aoa-course smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
@@ -64,6 +64,7 @@ aoa-course calibration query --run connected-fixture-proof --kind smoke
 aoa-course calibration query --run connected-fixture-proof --kind sync --query "course-specific question" --entry-limit 3
 aoa-course calibration query-matrix --run connected-fixture-proof --kind smoke --query "GetCourse bootloader rollback evidence" --query "Skillspace logcat bugreport evidence" --query "Stepik public API evidence"
 aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope bounded --source-limit 1 --run connected-stepik-live-calibration
+aoa-course calibration connected-run --mode live --platform stepik --allow-network --live-scope full-course --include-step-sources --max-step-sources 10 --source-id "source:stepik:..." --query "course-specific question" --run connected-stepik-full-course-calibration
 aoa-course calibration build --run connected-live-calibration --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
 aoa-course calibration intake --run connected-live-calibration-intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
 aoa-course build-index --run starter-fixture
@@ -213,6 +214,9 @@ cover GetCourse, Skillspace, and Stepik together; pass `--platform`/`platforms`
 to narrow a diagnostic run and `--source-id`/`source_ids` to plan only one
 registered source so another not-yet-authorized source does not block the
 ready source's connected-run plan.
+For Stepik, `--include-step-sources` is bounded by `--max-step-sources 10` and
+`--step-source-timeout 5.0` unless you pass a different limit. Use
+`--max-step-sources all` only for a deliberate long enrichment run.
 Fixture-discovered browser sources and reserved example hosts such as
 `*.example` are install proof only. Live preflight marks them as
 `fixture_or_example_source` with `operator_live_candidate: false`, does not
