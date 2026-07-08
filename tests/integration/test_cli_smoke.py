@@ -1171,6 +1171,25 @@ def test_cli_freshness_ranking_eval_proves_current_beats_stale_tie(tmp_path: Pat
         assert metrics["conflict_detected"] is True
 
 
+def test_cli_place_ranking_eval_proves_native_hierarchy_beats_flat_chunks(tmp_path: Path) -> None:
+    fixture = Path("connector/fixtures/course/place_conflict_course.json")
+    run_cli(tmp_path, "materialize", "fixture", "--run", "place-ranking-fixture", "--fixture", str(fixture))
+    run_cli(tmp_path, "build-index", "--run", "place-ranking-fixture")
+    run_cli(tmp_path, "build-semantic-index", "--run", "place-ranking-fixture")
+
+    result = run_cli(tmp_path, "eval", "place-ranking")
+
+    assert result["status"] == "ok"
+    assert result["suite_id"] == "place-ranking"
+    assert {case["failure_count"] for case in result["case_results"]} == {0}
+    for case in result["case_results"]:
+        metrics = case["metrics"]
+        assert metrics["place_at_1"] == 1.0
+        assert metrics["source_path_accuracy"] == 1.0
+        assert metrics["place_path_accuracy"] == 1.0
+        assert metrics["evidence_attribution"] == 1.0
+
+
 def test_cli_authority_ranking_eval_proves_higher_authority_beats_lower_tie(tmp_path: Path) -> None:
     fixture = Path("connector/fixtures/course/authority_conflict_course.json")
     run_cli(tmp_path, "materialize", "fixture", "--run", "authority-ranking-fixture", "--fixture", str(fixture))
