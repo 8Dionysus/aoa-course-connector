@@ -874,12 +874,20 @@ def test_cli_sources_answer_uses_stepik_sync_checkpoint(tmp_path: Path) -> None:
     assert catalog["connected_runs"]["answer_probe_missing_entry_count"] == 1
     assert catalog["connected_runs"]["invalid_answer_ready_entry_count"] == 0
     assert latest["entry_source"] == "sync_checkpoint"
+    assert latest["status"] == "ok"
+    assert latest["updated_at"]
     assert latest["kind"] == "sync"
     assert latest["query_ready"] is True
     assert latest["answer_ready"] is False
     assert latest["answer_result_count"] == 0
     assert latest["answer_evidence_count"] == 0
     assert latest["answer_readiness_source"] == "not_cached"
+    assert latest["stable_identity"]["available"] is True
+    assert latest["stable_identity"]["fingerprint"].startswith("sha256:")
+    assert latest["content_counts"]["course_count"] == latest["stable_identity"]["counts"]["course_ids"]
+    assert latest["content_counts"]["lesson_count"] == latest["stable_identity"]["counts"]["lesson_ids"]
+    assert latest["content_counts"]["step_count"] == latest["stable_identity"]["counts"]["step_ids"]
+    assert latest["content_counts"]["evidence_count"] == latest["stable_identity"]["counts"]["evidence_ids"]
 
     answer = run_cli(
         tmp_path,

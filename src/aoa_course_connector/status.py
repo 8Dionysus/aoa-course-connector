@@ -570,11 +570,19 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
     answer_result_count = int(entry.get("answer_result_count") or 0)
     answer_evidence_count = int(entry.get("answer_evidence_count") or 0)
     answer_ready = bool(entry.get("answer_ready"))
+    stable_identity = entry.get("stable_identity")
+    content_counts = entry.get("content_counts") if isinstance(entry.get("content_counts"), dict) else None
+    if content_counts is None and isinstance(stable_identity, dict):
+        content_counts = _content_counts_from_stable_identity(stable_identity)
+    if not content_counts:
+        content_counts = None
     payload = {
         "connected_run_id": receipt.get("run_id") or path.parent.parent.name,
         "connected_run_status": receipt.get("status") or "unknown",
         "connected_completed_at": receipt.get("completed_at"),
         "connected_started_at": receipt.get("started_at"),
+        "status": receipt.get("status") or "unknown",
+        "updated_at": receipt.get("completed_at") or receipt.get("started_at"),
         "receipt_path": str(path),
         "mode": receipt.get("mode"),
         "network_touched": bool(receipt.get("network_touched")),
@@ -592,14 +600,14 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         "answer_result_count": answer_result_count,
         "answer_evidence_count": answer_evidence_count,
         "answer_readiness_source": "cached_probe" if answer_ready else "not_cached",
+        "content_counts": content_counts,
         "paths": entry.get("paths") if isinstance(entry.get("paths"), dict) else {},
         "commands": commands,
         "mcp_commands": mcp_commands,
     }
     if include_source_refs:
         payload["source_ref"] = entry.get("source_ref")
-    stable_identity = entry.get("stable_identity")
-    if isinstance(stable_identity, dict):
+    if isinstance(stable_identity, dict) and stable_identity:
         payload["stable_identity"] = _compact_stable_identity(stable_identity)
     return {key: value for key, value in payload.items() if value not in (None, "")}
 
@@ -624,12 +632,16 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
         "lesson_context": _mcp_call_command("lesson_context", {"query": query, "run": run_id, "mode": mode, "graph_limit": 12}),
         "evidence_report": _mcp_call_command("evidence_report", {"query": query, "run": run_id, "mode": mode}),
     }
+    stable_identity = checkpoint.get("stable_identity") if isinstance(checkpoint.get("stable_identity"), dict) else {}
+    content_counts = _content_counts_from_stable_identity(stable_identity) or None
     payload = {
         "entry_source": "sync_checkpoint",
         "connected_run_id": checkpoint.get("sync_run_id") or run_id,
         "sync_run_id": checkpoint.get("sync_run_id"),
         "connected_run_status": checkpoint.get("status") or "unknown",
         "connected_completed_at": checkpoint.get("updated_at"),
+        "status": checkpoint.get("status") or "unknown",
+        "updated_at": checkpoint.get("updated_at"),
         "receipt_path": checkpoint.get("receipt_path"),
         "mode": "sync",
         "network_touched": False,
@@ -648,6 +660,7 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
         "answer_evidence_count": 0,
         "answer_readiness_source": "not_cached",
         "answer_readiness_reason": "sync checkpoint has local query artifacts; run sources answer to evaluate grounded answer evidence",
+        "content_counts": content_counts,
         "paths": {
             "normalized": checkpoint.get("normalized_path"),
             "index": checkpoint.get("index_path"),
@@ -659,8 +672,7 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
     }
     if include_source_refs:
         payload["source_ref"] = checkpoint.get("source_ref")
-    stable_identity = checkpoint.get("stable_identity")
-    if isinstance(stable_identity, dict):
+    if isinstance(stable_identity, dict) and stable_identity:
         payload["stable_identity"] = _compact_stable_identity(stable_identity)
     return {key: value for key, value in payload.items() if value not in (None, "")}
 
@@ -687,6 +699,29 @@ def _compact_stable_identity(stable_identity: dict[str, object]) -> dict[str, ob
             "counts": stable_identity.get("counts"),
         }.items()
         if value is not None
+    }
+
+
+def _content_counts_from_stable_identity(stable_identity: dict[str, object]) -> dict[str, int]:
+    counts = stable_identity.get("counts") if isinstance(stable_identity.get("counts"), dict) else {}
+    mapping = {
+        "course_count": "course_ids",
+        "module_count": "module_ids",
+        "lesson_count": "lesson_ids",
+        "step_count": "step_ids",
+        "asset_count": "asset_ids",
+        "transcript_count": "transcript_ids",
+        "assignment_count": "assignment_ids",
+        "thread_count": "thread_ids",
+        "comment_count": "comment_ids",
+        "topic_count": "topic_ids",
+        "entity_count": "entity_ids",
+        "evidence_count": "evidence_ids",
+    }
+    return {
+        output_key: int(counts.get(identity_key) or 0)
+        for output_key, identity_key in mapping.items()
+        if identity_key in counts
     }
 
 
