@@ -1218,6 +1218,36 @@ def test_cli_live_calibration_eval_and_build_route(tmp_path: Path) -> None:
     assert all(packet["schema"] == "aoa_course_sources_answer_packet_v1" for packet in sources_answer_matrix["query_packets"])
     assert all(summary["top_result_refs"] for summary in sources_answer_matrix["query_summaries"])
     assert '"source_ref"' not in rendered_sources_answer_matrix
+    source_registry_eval = run_cli(
+        tmp_path,
+        "eval",
+        "source-registry-query",
+        "--query",
+        "Stepik public API evidence",
+        "--query",
+        "canonical course objects",
+        "--platform",
+        "stepik",
+        "--kind",
+        "smoke",
+        "--mode",
+        "hybrid",
+    )
+    rendered_source_registry_eval = json.dumps(source_registry_eval)
+    assert source_registry_eval["schema"] == "aoa_course_eval_source_registry_query_v1"
+    assert source_registry_eval["status"] == "ok"
+    assert source_registry_eval["network_touched"] is False
+    assert source_registry_eval["read_only"] is True
+    assert source_registry_eval["query_source"] == "explicit"
+    assert source_registry_eval["source_registry"]["selected_source_count"] == 1
+    assert source_registry_eval["connected_runs"]["query_ready_entry_count"] >= 1
+    assert source_registry_eval["sources_answer_matrix"]["status"] == "ok"
+    assert source_registry_eval["sources_answer_matrix"]["quality_ready"] is True
+    assert source_registry_eval["sources_answer_matrix"]["query_count"] == 2
+    assert source_registry_eval["sources_answer_matrix"]["ready_query_count"] == 2
+    assert source_registry_eval["sources_answer_matrix"]["evidence_count_total"] >= 2
+    assert source_registry_eval["failures"] == []
+    assert '"source_ref"' not in rendered_source_registry_eval
 
 
 def test_cli_browser_course_tree_crawl_fixture_flow(tmp_path: Path) -> None:

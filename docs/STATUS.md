@@ -14,6 +14,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock roll
 PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval preauth-readiness
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
@@ -77,6 +78,12 @@ This proves:
   query-ready sources and returns one sources-answer packet per question plus
   aggregate breadth quality, per-query summaries, blockers, and
   `network_touched: false`;
+- CLI `eval source-registry-query` returns
+  `aoa_course_eval_source_registry_query_v1`, a read-only gate over the current
+  source registry that uses explicit operator queries or non-placeholder saved
+  connected-run query samples, requires `sources_answer_matrix` ready-query
+  breadth, evidence, response counts, `network_touched: false`, and
+  `source_ref` redaction;
 - connected-run query plans and source catalogs now attach direct CLI
   `sources answer` commands beside lower-level run-id `query`, `answer`, and
   `lesson-context` commands, so shell-side agents can ask one question against
