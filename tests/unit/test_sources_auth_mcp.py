@@ -34,6 +34,7 @@ from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool, handle_jsonrpc_message, tools_manifest
 from aoa_course_connector.readiness import semantic_provider_preflight
 from aoa_course_connector.sources import load_registry, upsert_source
+from aoa_course_connector.status import connected_query_run_catalog
 from aoa_course_connector.storage import run_data_dir
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
 
@@ -475,6 +476,10 @@ def test_import_firefox_state_normalizes_session_cookie_expiry_for_playwright(tm
             "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
             ("persistent", "SUPER_SECRET_PERSISTENT_COOKIE", ".stepik.org", "/", 1_999_999_999_000, 1, 1),
         )
+        connection.execute(
+            "INSERT INTO moz_cookies (name, value, host, path, expiry, isSecure, isHttpOnly) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            ("far_future", "SUPER_SECRET_FAR_FUTURE_COOKIE", ".stepik.org", "/", 253_402_300_799, 1, 1),
+        )
         connection.commit()
     finally:
         connection.close()
@@ -494,6 +499,54 @@ def test_import_firefox_state_normalizes_session_cookie_expiry_for_playwright(tm
     assert receipt["status"] == "ok"
     assert expires_by_name["sessionid"] == -1
     assert expires_by_name["persistent"] == 1_999_999_999
+    assert expires_by_name["far_future"] == 253_402_300_799
+
+
+def test_connected_query_run_catalog_counts_invalid_cached_answer_ready(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    receipt_dir = storage.artifact / "runs" / "invalid-answer-ready" / "connected"
+    receipt_dir.mkdir(parents=True)
+    receipt_path = receipt_dir / "connected_calibration_receipt.json"
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "run_id": "invalid-answer-ready",
+                "status": "ok",
+                "completed_at": "2026-07-08T12:00:00Z",
+                "query_plan": {
+                    "entries": [
+                        {
+                            "source_id": "source:stepik:67",
+                            "platform": "stepik",
+                            "kind": "smoke",
+                            "query": "course-specific evidence",
+                            "query_mode": "keyword",
+                            "query_ready": True,
+                            "answer_ready": True,
+                            "answer_result_count": 0,
+                            "answer_evidence_count": 0,
+                        }
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    catalog = connected_query_run_catalog(storage, receipt_limit=3)
+    entry = catalog["by_source_id"]["source:stepik:67"][0]
+
+    assert entry["answer_ready"] is True
+    assert entry["answer_result_count"] == 0
+    assert entry["answer_evidence_count"] == 0
+    assert catalog["answer_ready_entry_count"] == 0
+    assert catalog["invalid_answer_ready_entry_count"] == 1
 
 
 def test_import_firefox_state_selects_profile_with_matching_cookies(tmp_path: Path) -> None:

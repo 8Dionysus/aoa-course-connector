@@ -797,9 +797,9 @@ def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None)
     source_authority = str(doc.get("source_authority") or "").casefold()
     terms = query_terms or []
     query_intents = _query_intents(terms)
-    intent_class = _intent_class(query_intents)
-    recency_gate = _recency_gate(intent_class)
     access_boost = _access_intent_boost(terms, state, authority_tier, source_authority)
+    intent_class = _intent_class(query_intents, access_boost=access_boost)
+    recency_gate = _recency_gate(intent_class)
     base_freshness_boost = FRESHNESS_RANK_WEIGHTS.get(state, 0.0)
     freshness_boost = round(base_freshness_boost * recency_gate, 6)
     temporal_boost = _temporal_boost(query_intents, state, intent_class=intent_class)
@@ -840,7 +840,8 @@ def _rank_score(score: float, features: dict[str, object]) -> float:
 
 def _query_intent_report(query: str, results: list[dict[str, object]]) -> dict[str, object]:
     intents = _query_intents(tokenize(query))
-    intent_class = _intent_class(intents)
+    access_boost = _top_result_access_boost(results)
+    intent_class = _intent_class(intents, access_boost=access_boost)
     return {
         "schema": "aoa_course_query_intent_report_v1",
         "intents": sorted(intents),
@@ -947,8 +948,8 @@ def _primary_intent(query_intents: set[str], *, access_boost: float) -> str:
     return ""
 
 
-def _intent_class(query_intents: set[str]) -> str:
-    if "access" in query_intents:
+def _intent_class(query_intents: set[str], *, access_boost: float = 0.0) -> str:
+    if access_boost:
         return "access_state"
     if "version_comparison" in query_intents:
         return "version_comparison"
@@ -1050,6 +1051,14 @@ def _access_intent_boost(query_terms: list[str], freshness_state: str, authority
         return 0.0
     if freshness_state == "access_denied" or authority_tier == "access_notice" or source_authority == "browser_access_denied":
         return 0.65
+    return 0.0
+
+
+def _top_result_access_boost(results: list[dict[str, object]]) -> float:
+    for result in results[:1]:
+        features = result.get("rank_features") if isinstance(result, dict) else {}
+        if isinstance(features, dict):
+            return float(features.get("access_boost") or 0.0)
     return 0.0
 
 
