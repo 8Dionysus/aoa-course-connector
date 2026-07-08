@@ -67,7 +67,11 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
         "kajabi",
     } <= platforms
     run_cli(tmp_path, "init")
-    run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
+    materialized = run_cli(tmp_path, "materialize", "fixture", "--run", "starter-fixture")
+    assert materialized["content_counts"]["course_count"] == materialized["course_count"]
+    assert materialized["content_counts"]["lesson_count"] >= 1
+    assert materialized["content_counts"]["step_count"] >= 1
+    assert materialized["content_counts"]["evidence_count"] == materialized["evidence_count"]
     run_cli(tmp_path, "build-index", "--run", "starter-fixture")
     run_cli(tmp_path, "build-graph", "--run", "starter-fixture")
     answer = run_cli(tmp_path, "answer", "bootloader unlock rollback", "--run", "starter-fixture")

@@ -12,6 +12,7 @@ from typing import Any
 from aoa_course_connector.auth import browser_state_cookie_header
 from aoa_course_connector.adapters.stepik import fetch_stepik_course
 from aoa_course_connector.config import StorageRoots, find_repo_root
+from aoa_course_connector.ingest.counts import bundle_content_counts
 from aoa_course_connector.normalize.stepik import normalize_stepik_raw
 from aoa_course_connector.normalize import write_normalized_bundle
 from aoa_course_connector.storage import create_storage_roots, run_data_dir
@@ -95,6 +96,7 @@ def _source_payload(source: dict[str, Any]) -> dict[str, object]:
 
 
 def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path, normalized_path: Path, bundle: dict[str, object], *, network_touched: bool) -> dict[str, object]:
+    counts = bundle_content_counts(bundle)
     receipt = {
         "schema": "aoa_course_stepik_materialize_receipt_v1",
         "status": "ok",
@@ -102,8 +104,8 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
         "source_mode": source_mode,
         "raw_path": str(raw_path),
         "normalized_path": str(normalized_path),
-        "course_count": len(bundle.get("courses", [])),
-        "evidence_count": len(bundle.get("evidence", [])),
+        **counts,
+        "content_counts": counts,
         "completed_at": _now(),
         "network_touched": network_touched,
     }

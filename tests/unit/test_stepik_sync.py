@@ -57,6 +57,11 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert stable_identity["counts"]["lesson_ids"] >= 1
     assert stable_identity["counts"]["step_ids"] >= 1
     assert Path(str(checkpoint["semantic_index_path"])).is_file()
+    materialize_receipt = json.loads(Path(str(checkpoint["receipt_path"])).read_text(encoding="utf-8"))
+    assert materialize_receipt["content_counts"]["course_count"] == stable_identity["counts"]["course_ids"]
+    assert materialize_receipt["content_counts"]["lesson_count"] == stable_identity["counts"]["lesson_ids"]
+    assert materialize_receipt["content_counts"]["step_count"] == stable_identity["counts"]["step_ids"]
+    assert materialize_receipt["content_counts"]["evidence_count"] == materialize_receipt["evidence_count"]
     raw = json.loads(Path(str(checkpoint["cursor"])).read_text(encoding="utf-8"))
     assert raw["source"]["source_id"] == source["source_id"]
     assert raw["source"]["source_ref"] == "67"

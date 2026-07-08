@@ -97,6 +97,11 @@ This proves:
 - MCP `ingest_status` returns a read-only run readiness packet with normalized
   counts, materialization receipts, index/semantic/graph metadata, next
   commands, and `agent_query_ready`;
+- fixture, Stepik, browser materialize, and browser source-sync receipts now
+  include explicit `content_counts` plus top-level content counters for courses,
+  modules, lessons, steps, assets, transcripts, assignments, threads, comments,
+  topics, entities, and evidence, so agents can distinguish a bounded smoke
+  sample from a full-course ingestion without reopening raw data;
 - CLI `readiness` and MCP `connector_readiness` return one read-only
   `aoa_course_connector_readiness_v1` route audit with install-route files,
   storage roots, source registry counts, selected run/index/graph readiness,
@@ -370,6 +375,16 @@ This proves:
   produced an `ok` connected-source plan, live sync, live smoke, calibration
   packet, and intake with source-backed answer evidence, timestamps, and clean
   raw/secret privacy guards.
+- A runtime-only Stepik full-course sync for course `268845` has been exercised
+  locally through source `source:stepik:2df698200b`: sync run
+  `stepik-full-course-telegram-counts-20260708` completed `ok` at
+  `2026-07-08T08:45:45Z`, produced 1 course, 4 modules, 15 lessons, 101 steps,
+  81 assignments, 117 evidence items, keyword/semantic/graph artifacts, and a
+  materialization receipt with matching `content_counts`. CLI
+  `sources answer-matrix` answered 4/4 aiogram/Telegram-bot questions with 20
+  total evidence items, and MCP `sources_answer_matrix` answered 3/3 with 15
+  total evidence items; both retrieval checks used the local indexes/graphs
+  with `network_touched: false` and top results from the same fresh sync run.
 - Operator-owned GetCourse live connected-run has been exercised locally with
   runtime-only artifacts: preflight, live sync, smoke, calibration packet,
   intake, CLI `calibration query`, and MCP `connected_run_query` returned `ok`;

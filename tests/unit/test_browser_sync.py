@@ -52,6 +52,11 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert stable_identity["counts"]["lesson_ids"] >= 1
     assert stable_identity["counts"]["step_ids"] >= 1
     assert Path(str(checkpoint["semantic_index_path"])).is_file()
+    materialize_receipt = json.loads(Path(str(checkpoint["receipt_path"])).read_text(encoding="utf-8"))
+    assert materialize_receipt["content_counts"]["course_count"] == stable_identity["counts"]["course_ids"]
+    assert materialize_receipt["content_counts"]["lesson_count"] == stable_identity["counts"]["lesson_ids"]
+    assert materialize_receipt["content_counts"]["step_count"] == stable_identity["counts"]["step_ids"]
+    assert materialize_receipt["content_counts"]["evidence_count"] == materialize_receipt["evidence_count"]
     status = load_sync_status(storage, sync_run_id="browser-sync-fixture", platform="getcourse")
     assert status["ok_count"] == 1
     packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=checkpoint["run_id"])
