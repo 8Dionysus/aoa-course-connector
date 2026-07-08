@@ -137,6 +137,10 @@ mode, kind, and limit controls as `sources_answer`, then returns
 `aoa_course_sources_answer_matrix_v1` with one sources-answer packet per
 question, aggregate readiness, per-query top-result refs, blockers, failures,
 and `network_touched: false`.
+Its default `coverage_mode: "all-sources"` is a strict source-scoped gate. Use
+`coverage_mode: "portfolio"` when the agent needs to know whether every query
+has at least one source-backed evidence chain somewhere in the selected source
+portfolio, without treating unrelated sources as retrieval failures.
 For shell-side use, the equivalent local command is
 `aoa-course sources answer "<query>" --platform stepik --mode hybrid`;
 it returns the same `aoa_course_sources_answer_packet_v1` without requiring a

@@ -927,6 +927,28 @@ def test_cli_sources_answer_uses_stepik_sync_checkpoint(tmp_path: Path) -> None:
     assert answer["responses"][0]["answer_packet"]["quality"]["ready"] is True
     assert answer["responses"][0]["evidence_report"]["result_refs"]
 
+    matrix = run_cli(
+        tmp_path,
+        "sources",
+        "answer-matrix",
+        "--query",
+        "Stepik public API evidence",
+        "--source-id",
+        str(source["source_id"]),
+        "--mode",
+        "hybrid",
+        "--coverage-mode",
+        "portfolio",
+    )
+
+    assert matrix["schema"] == "aoa_course_sources_answer_matrix_v1"
+    assert matrix["status"] == "ok"
+    assert matrix["coverage_mode"] == "portfolio"
+    assert matrix["quality"]["coverage_mode"] == "portfolio"
+    assert matrix["quality"]["ready"] is True
+    assert matrix["quality"]["portfolio_ready"] is True
+    assert "--coverage-mode portfolio" in matrix["next_commands"][0]
+
 
 def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     receipt = run_cli(
