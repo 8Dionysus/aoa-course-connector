@@ -314,14 +314,14 @@ def _skillspace_courseish_block(block: dict[str, Any]) -> bool:
 def _skillspace_course_link(block: dict[str, Any], base_url: str) -> dict[str, str] | None:
     href = _first_course_url(block)
     course_block = block.get("course") if isinstance(block.get("course"), dict) else block
-    course_id = _skillspace_course_id(block) or _skillspace_course_id(course_block)
+    course_id = _skillspace_course_id(course_block) or _skillspace_course_id(block)
     if not href and course_id:
         href = urljoin(base_url, f"/course/{course_id}")
     elif href:
         href = urljoin(base_url, href)
     if not href:
         return None
-    title = _skillspace_course_title(block) or _skillspace_course_title(course_block) or href
+    title = _skillspace_course_title(course_block) or _skillspace_course_title(block) or href
     return {
         "href": href,
         "text": title,

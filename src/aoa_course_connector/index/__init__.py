@@ -588,7 +588,15 @@ def _doc(
         "version_group_id": item.get("version_group_id") or lesson.get("version_group_id") or "",
         "valid_from": item.get("valid_from") or lesson.get("valid_from") or "",
         "valid_until": item.get("valid_until") or lesson.get("valid_until") or "",
-        "observed_at": item.get("observed_at") or lesson.get("observed_at") or evidence_dict.get("fetched_at"),
+        "observed_at": (
+            item.get("observed_at")
+            or item.get("posted_at")
+            or item.get("updated_at")
+            or lesson.get("observed_at")
+            or lesson.get("posted_at")
+            or lesson.get("updated_at")
+            or evidence_dict.get("fetched_at")
+        ),
         "source_url": evidence_dict.get("source_url") or lesson.get("url"),
         "fetched_at": evidence_dict.get("fetched_at"),
         "evidence_id": evidence_dict.get("evidence_id"),

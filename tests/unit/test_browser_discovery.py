@@ -306,6 +306,43 @@ def test_live_catalog_page_collector_captures_skillspace_student_course_list() -
     assert discovery["courses"][0]["source_ref"] == "https://academy.example/course/course-a"
 
 
+def test_skillspace_api_catalog_prefers_nested_course_identity() -> None:
+    discovery = build_browser_catalog_discovery(
+        {
+            "platform": "skillspace",
+            "pages": [
+                {
+                    "url": "https://academy.example/school/courses",
+                    "title": "Skillspace",
+                    "html": "<main id='app'></main>",
+                    "api_payloads": [
+                        {
+                            "url": "https://academy.example/api/rest/student/course/list",
+                            "json": {
+                                "items": [
+                                    {
+                                        "id": "enrollment-1",
+                                        "name": "Wrapper title",
+                                        "course": {
+                                            "id": "course-a",
+                                            "title": "Mobile Debugging",
+                                        },
+                                    }
+                                ]
+                            },
+                        }
+                    ],
+                }
+            ],
+        },
+        platform="skillspace",
+    )
+
+    assert discovery["course_count"] == 1
+    assert discovery["courses"][0]["source_ref"] == "https://academy.example/course/course-a"
+    assert discovery["courses"][0]["title"] == "Mobile Debugging"
+
+
 class FakePage:
     def __init__(self, pages: dict[str, tuple[str, str]]) -> None:
         self.pages = pages

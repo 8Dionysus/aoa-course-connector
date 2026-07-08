@@ -557,7 +557,7 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         )
     answer_result_count = int(entry.get("answer_result_count") or 0)
     answer_evidence_count = int(entry.get("answer_evidence_count") or 0)
-    answer_ready = bool(entry.get("answer_ready")) and answer_result_count > 0 and answer_evidence_count > 0
+    answer_ready = bool(entry.get("answer_ready"))
     payload = {
         "connected_run_id": receipt.get("run_id") or path.parent.parent.name,
         "connected_run_status": receipt.get("status") or "unknown",

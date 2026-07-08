@@ -51,6 +51,13 @@ def test_fixture_to_query_answer_with_evidence(tmp_path: Path) -> None:
     assert evidence["snippet"] == packet["results"][0]["snippet"]
     assert "bootloader" in evidence["snippet"].casefold()
 
+    unlock_results = query_keyword_index(storage, "bootloader unlock rollback", run_id="test-run")
+    assert unlock_results[0]["rank_features"]["access_boost"] == 0.0
+    assert unlock_results[0]["rank_features"]["intent_class"] == "stable_knowledge"
+    unlock_packet = render_answer_packet(storage, "bootloader unlock rollback", run_id="test-run")
+    assert unlock_packet["query_intent_report"]["intent_class"] == "stable_knowledge"
+    assert unlock_packet["query_intent_report"]["top_result_intent_class"] == "stable_knowledge"
+
     place_results = query_keyword_index(storage, "where Course Knowledge Indexing Evidence-Backed Search", run_id="test-run")
     assert place_results[0]["doc_id"] == "step:step:starter:evidence-search:packet"
     assert place_results[0]["rank_features"]["intent"] == "place"
@@ -73,6 +80,17 @@ def test_answer_packet_omits_missing_optional_evidence_fields(tmp_path: Path) ->
     assert progress_evidence["authority_label"] == ""
     assert "source_authority" not in progress_evidence
     assert all(value is not None for value in progress_evidence.values())
+
+
+def test_keyword_index_preserves_item_timestamp_before_fetch_timestamp(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(storage, run_id="test-run")
+    index_path = build_keyword_index(storage, run_id="test-run")
+
+    index = json.loads(index_path.read_text(encoding="utf-8"))
+    mentor_comment = next(doc for doc in index["docs"] if doc["doc_id"] == "comment:comment:starter:mentor-warning")
+
+    assert mentor_comment["observed_at"] == "2026-06-29T12:15:00Z"
 
 
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:

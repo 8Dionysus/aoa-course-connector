@@ -49,6 +49,7 @@ AUTH_STORAGE_NAME_HINTS = (
     "user",
 )
 STRICT_AUTH_SIGNAL_PLATFORMS = {"getcourse", "skillspace", "stepik"}
+MAX_PLAYWRIGHT_COOKIE_EXPIRES_SECONDS = 253_402_300_799
 
 
 def browser_state_plan(auth_root: Path, platform: str, source_ref: str) -> dict[str, object]:
@@ -416,7 +417,7 @@ def _playwright_cookie_expires(value: object) -> int:
         expires = int(value)
     except (TypeError, ValueError):
         return -1
-    if expires > 9_999_999_999:
+    if expires > MAX_PLAYWRIGHT_COOKIE_EXPIRES_SECONDS:
         expires = expires // 1000
     return expires if expires > 0 else -1
 
