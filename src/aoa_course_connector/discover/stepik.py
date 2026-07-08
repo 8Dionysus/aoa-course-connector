@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from aoa_course_connector.adapters.stepik import fetch_stepik_account_courses
+from aoa_course_connector.auth import browser_state_cookie_header, inspect_browser_state
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.sources import registry_path, upsert_source
 from aoa_course_connector.storage import create_storage_roots, discovery_data_dir
@@ -70,6 +71,36 @@ def discover_stepik_account_live(
     )
 
 
+def discover_stepik_account_browser_state(
+    roots: StorageRoots,
+    *,
+    run_id: str = "stepik-account-discovery-browser-state",
+    state_file: Path | None = None,
+    max_pages: int = 5,
+    batch_size: int = 20,
+    register: bool = False,
+    access_mode: str = "browser_session",
+    source_limit: int | None = None,
+) -> dict[str, object]:
+    resolved_state = (state_file or roots.auth / "stepik" / "account.storage-state.json").expanduser().resolve()
+    state = inspect_browser_state(resolved_state, expect_origin_contains="stepik.org")
+    if not state.get("usable"):
+        raise ValueError(f"Stepik browser-state discovery requires usable storage state for stepik.org: {state.get('status')}")
+    cookie_header = browser_state_cookie_header(resolved_state, "stepik.org")
+    raw = fetch_stepik_account_courses(cookie_header=cookie_header, max_pages=max_pages, batch_size=batch_size)
+    return _finish_account_discovery(
+        roots,
+        raw,
+        run_id=run_id,
+        source_mode="stepik_account_browser_state",
+        register=register,
+        access_mode=access_mode,
+        source_limit=source_limit,
+        network_touched=True,
+        state_file=str(resolved_state),
+    )
+
+
 def _finish_account_discovery(
     roots: StorageRoots,
     raw: dict[str, Any],
@@ -82,6 +113,7 @@ def _finish_account_discovery(
     network_touched: bool,
     fixture: str | None = None,
     token_env: str | None = None,
+    state_file: str | None = None,
 ) -> dict[str, object]:
     create_storage_roots(roots)
     courses = _course_records(raw, source_limit=source_limit)
@@ -111,6 +143,8 @@ def _finish_account_discovery(
         "privacy": {
             "token_env": token_env or "",
             "token_value_logged": False,
+            "state_file": state_file or "",
+            "cookie_values_logged": False,
             "do_not_commit_account_receipts": True,
         },
     }

@@ -362,8 +362,10 @@ def live_preflight(
             checks,
             workflows,
             next_commands,
+            roots=roots,
             sources=[source for source in sources if source.get("platform") == "stepik"],
             token_env=stepik_token_env,
+            browser_state_file=browser_state_file,
         )
 
     for platform in [item for item in ["getcourse", "skillspace"] if item in selected_platforms]:
@@ -478,6 +480,7 @@ def connected_source_plan(
         workflow_by_key,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
+        stepik_browser_state_file=browser_state_file or roots.auth / "stepik" / "account.storage-state.json",
         max_lessons=max_lessons,
         link_pattern=link_pattern,
         live_scope=selected_live_scope,
@@ -487,6 +490,7 @@ def connected_source_plan(
         source_checks,
         stepik_token_env=stepik_token_env,
         browser_state_file=browser_state_file,
+        stepik_browser_state_file=browser_state_file or roots.auth / "stepik" / "account.storage-state.json",
         query=query,
         max_lessons=max_lessons,
         max_pages=max_pages,
@@ -835,6 +839,7 @@ def _sync_actions(
     *,
     stepik_token_env: str,
     browser_state_file: Path | None,
+    stepik_browser_state_file: Path | None,
     max_lessons: int,
     link_pattern: str | None,
     live_scope: str,
@@ -868,6 +873,7 @@ def _sync_actions(
             source_id = str(source.get("source_id") or "")
             command = _stepik_sync_command(
                 stepik_token_env=stepik_token_env,
+                state_file=stepik_browser_state_file if str(source.get("access_mode") or "") == "browser_session" else None,
                 live_scope=live_scope,
                 include_step_sources=include_step_sources,
                 source_id=source_id,
@@ -892,6 +898,7 @@ def _smoke_actions(
     *,
     stepik_token_env: str,
     browser_state_file: Path | None,
+    stepik_browser_state_file: Path | None,
     query: str | None,
     max_lessons: int,
     max_pages: int,
@@ -938,6 +945,7 @@ def _smoke_actions(
                 slug=slug,
                 access_mode=str(source.get("access_mode") or "public_api"),
                 stepik_token_env=stepik_token_env,
+                state_file=stepik_browser_state_file if str(source.get("access_mode") or "") == "browser_session" else None,
                 live_scope=live_scope,
                 include_step_sources=include_step_sources,
             )
@@ -1446,6 +1454,7 @@ def _platform_plans(
 def _stepik_sync_command(
     *,
     stepik_token_env: str,
+    state_file: Path | None = None,
     live_scope: str,
     include_step_sources: bool,
     source_id: str | None = None,
@@ -1456,6 +1465,8 @@ def _stepik_sync_command(
         f"aoa-course sync stepik-live --run {shlex.quote(run_id)} "
         f"--token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
     )
+    if state_file is not None:
+        command += f"--state-file {str(state_file)!r} "
     if source_id:
         command += f"--source-id {shlex.quote(source_id)} "
     if live_scope == "full-course":
@@ -1473,6 +1484,7 @@ def _stepik_smoke_command(
     slug: str,
     access_mode: str,
     stepik_token_env: str,
+    state_file: Path | None = None,
     live_scope: str,
     include_step_sources: bool,
 ) -> str:
@@ -1480,6 +1492,8 @@ def _stepik_smoke_command(
         f"aoa-course smoke stepik-live {course_id} --run stepik-live-smoke-{slug} "
         f"--access-mode {shlex.quote(access_mode)} --token-env {shlex.quote(stepik_token_env)} --batch-size 20 "
     )
+    if state_file is not None:
+        command += f"--state-file {str(state_file)!r} "
     if live_scope == "full-course":
         command += "--full-course "
     else:
@@ -1494,11 +1508,16 @@ def _append_stepik_preflight(
     workflows: list[dict[str, object]],
     next_commands: list[str],
     *,
+    roots: StorageRoots,
     sources: list[dict[str, object]],
     token_env: str,
+    browser_state_file: Path | None,
 ) -> None:
     source_id_flags = _source_id_flags(sources)
     token_present = bool(os.environ.get(token_env))
+    state_file = (browser_state_file or roots.auth / "stepik" / "account.storage-state.json").expanduser().resolve()
+    state = inspect_browser_state(state_file, expect_origin_contains="stepik.org")
+    state_ready = bool(state.get("usable"))
     checks.append(
         {
             "kind": "token",
@@ -1512,27 +1531,59 @@ def _append_stepik_preflight(
             "next_command": f"export {token_env}=<stepik-api-token>",
         }
     )
+    checks.append(
+        {
+            "kind": "browser_state",
+            "platform": "stepik",
+            "status": state.get("status"),
+            "ready": state_ready,
+            "state_file": str(state_file),
+            "exists": state.get("exists"),
+            "usable": state.get("usable"),
+            "expected_origin_contains": "stepik.org",
+            "expected_origin_matched": state.get("expected_origin_matched"),
+            "cookie_count": state.get("cookie_count", 0),
+            "origin_count": state.get("origin_count", 0),
+            "local_storage_entry_count": state.get("local_storage_entry_count", 0),
+            "session_storage_entry_count": state.get("session_storage_entry_count", 0),
+            "secrets_redacted": True,
+            "next_command": (
+                "aoa-course auth capture-browser-state stepik account "
+                f"--login-url https://stepik.org/users/me --state-file {str(state_file)!r} "
+                "--expect-origin-contains stepik.org"
+            ),
+        }
+    )
     for source in sources:
         access_mode = str(source.get("access_mode") or "")
         needs_token = access_mode in {"api_token", "oauth"}
-        ready = bool(source.get("enabled", True)) and (token_present if needs_token else True)
+        needs_browser_state = access_mode == "browser_session"
+        ready = bool(source.get("enabled", True)) and (
+            token_present if needs_token else state_ready if needs_browser_state else True
+        )
         blockers = []
         if needs_token and not token_present:
             blockers.append(f"missing token env {token_env}")
+        if needs_browser_state and not state_ready:
+            blockers.append(f"browser storage state is {state.get('status')}")
         checks.append(_source_check(source, ready=ready, blockers=blockers))
 
     account_discovery_required = not bool(sources)
+    account_discovery_ready = token_present or state_ready
+    account_discovery_command = (
+        f"aoa-course discover stepik-account --state-file {str(state_file)!r} --register --max-pages 5"
+        if state_ready
+        else f"aoa-course discover stepik-account --token-env {token_env} --register --max-pages 5"
+    )
+    state_file_flag = f"--state-file {str(state_file)!r} " if any(str(source.get("access_mode") or "") == "browser_session" for source in sources) else ""
     workflows.append(
         {
             "name": "stepik_account_discovery",
             "platform": "stepik",
-            "ready": token_present,
+            "ready": account_discovery_ready,
             "required_for_ready": account_discovery_required,
             "source_count": len(sources),
-            "next_command": (
-                "aoa-course discover stepik-account "
-                f"--token-env {token_env} --register --max-pages 5"
-            ),
+            "next_command": account_discovery_command,
         }
     )
     workflows.append(
@@ -1544,6 +1595,7 @@ def _append_stepik_preflight(
             "source_count": len(sources),
             "next_command": (
                 "aoa-course sync stepik-live --run stepik-live-sync "
+                f"{state_file_flag}"
                 f"{source_id_flags}"
                 "--batch-size 20 --max-sections 1 --max-units-per-section 2 "
                 "--max-steps-per-lesson 5 --build-artifacts"
@@ -1557,11 +1609,20 @@ def _append_stepik_preflight(
     ]
     if not token_present and (not sources or token_blocked_sources):
         next_commands.append(f"export {token_env}=<stepik-api-token>")
+    if not state_ready and (not sources or any(str(source.get("access_mode") or "") == "browser_session" for source in sources)):
+        next_commands.append("aoa-course auth plan-browser-state stepik account")
+        next_commands.append(
+            "aoa-course auth capture-browser-state stepik account "
+            f"--login-url https://stepik.org/users/me --state-file {str(state_file)!r} "
+            "--expect-origin-contains stepik.org"
+        )
+        next_commands.append(f"aoa-course auth inspect-browser-state {str(state_file)!r} --expect-origin-contains stepik.org")
     if not sources:
-        next_commands.append(f"aoa-course discover stepik-account --token-env {token_env} --register --max-pages 5")
+        next_commands.append(account_discovery_command)
     else:
         next_commands.append(
             "aoa-course sync stepik-live --run stepik-live-sync --batch-size 20 "
+            f"{state_file_flag}"
             f"{source_id_flags}"
             "--max-sections 1 --max-units-per-section 2 --max-steps-per-lesson 5 "
             "--build-artifacts"

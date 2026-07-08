@@ -288,8 +288,9 @@ This proves:
   real `runs/<run>/connected/...` and `runs/<run>/calibration/...` artifact
   layouts.
 - Live preflight distinguishes Stepik `public_api` sources from token-gated
-  `api_token`/`oauth` sources and checks browser-session storage state against
-  each registered source host before marking sync ready.
+  `api_token`/`oauth` sources; Stepik `browser_session` sources can now use a
+  captured `stepik.org` storage-state file for account discovery, live sync,
+  smoke, and connected-run execution without printing cookie values.
 - Stepik source-registry sync route with fixture checkpoint proof, optional
   keyword/semantic/graph builds, CLI status, MCP status, and eval coverage.
 - Stepik fixture/live smoke report routes that combine source registration,

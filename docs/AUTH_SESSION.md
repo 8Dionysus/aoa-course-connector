@@ -67,3 +67,31 @@ token presence when requested, and next commands. It is read-only, returns
 `network_touched: false`, and redacts cookie, localStorage, and token values.
 Use `--require-ready` when an automation script should fail if a live source is
 not ready yet.
+
+## Stepik Browser-State Account Route
+
+Stepik can use either the public API, an OAuth/API token, or a captured
+`stepik.org` browser state. For account discovery from a local browser session:
+
+```bash
+aoa-course auth capture-browser-state stepik account \
+  --login-url "https://stepik.org/users/me" \
+  --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
+  --expect-origin-contains stepik.org
+
+aoa-course discover stepik-account \
+  --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
+  --register --max-pages 5
+```
+
+Registered Stepik `browser_session` sources can then be synced through the same
+state file:
+
+```bash
+aoa-course sync stepik-live \
+  --state-file "$AOA_COURSE_AUTH_ROOT/stepik/account.storage-state.json" \
+  --source-id "source:stepik:..." --build-artifacts
+```
+
+The connector uses cookies only inside the local API request. Receipts and
+preflight reports keep cookie and token values redacted.
