@@ -2303,7 +2303,7 @@ def _source_registry_external_semantic_provider_failures(catalog: dict[str, obje
             if not isinstance(entry, dict):
                 continue
             paths = entry.get("paths") if isinstance(entry.get("paths"), dict) else {}
-            semantic_path = str(paths.get("semantic_index") or "")
+            semantic_path = str(paths.get("semantic_index") or paths.get("semantic_index_path") or "")
             provider = _semantic_index_provider(semantic_path)
             if not semantic_path or not provider or provider == LOCAL_HASHING_PROVIDER:
                 continue
