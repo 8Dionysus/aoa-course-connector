@@ -231,6 +231,8 @@ def _lesson_access_state(page: dict[str, Any], text: str) -> str:
     lowered = " ".join(str(text or "").casefold().split())
     if not lowered:
         return ""
+    if not _looks_like_access_notice_page(page, lowered):
+        return ""
     if "у вас нет доступа к этому уроку" in lowered:
         return "access_denied"
     if "чтобы получить доступ" in lowered and "выполните задание" in lowered:
@@ -242,12 +244,30 @@ def _lesson_access_state(page: dict[str, Any], text: str) -> str:
     return ""
 
 
+def _looks_like_access_notice_page(page: dict[str, Any], lowered_text: str) -> bool:
+    title = " ".join(str(page.get("title") or "").casefold().split())
+    html = str(page.get("html") or "").casefold()
+    markers = [
+        "нет доступа",
+        "access denied",
+        "locked lesson",
+        "lesson locked",
+        "unavailable lesson",
+    ]
+    if any(marker in title for marker in markers):
+        return True
+    if any(lowered_text.startswith(marker) for marker in markers):
+        return True
+    return any(f"<h1>{marker}" in html or f"<title>{marker}" in html for marker in markers)
+
+
 def _step_text(page: dict[str, Any], snapshot: object, lesson_id: str, access_state: str) -> str:
     if access_state == "access_denied":
         return (
             "Нет доступа к содержанию урока. Платформа сообщает, что connected account "
             "должен выполнить предварительное условие или получить доступ, прежде чем "
-            "текст урока можно считать доступным course evidence."
+            "текст урока можно считать доступным course evidence. "
+            "Access denied locked lesson notice; unavailable lesson content."
         )
     return str(getattr(snapshot, "text", "") or page.get("title") or getattr(snapshot, "title", "") or lesson_id)
 

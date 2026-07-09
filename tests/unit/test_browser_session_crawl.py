@@ -259,3 +259,61 @@ def test_getcourse_access_denied_lessons_remain_access_notices(tmp_path: Path) -
     assert step_node["authority_tier"] == "access_notice"
     assert step_node["source_authority"] == "browser_access_denied"
     assert any(edge["kind"] == "module_contains_lesson" and edge["to_node"] == locked["lesson_id"] and edge["confidence"] == 0.45 for edge in graph["edges"])
+
+
+def test_access_denied_terms_inside_visible_lesson_do_not_replace_content(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    source_ref = "https://school.operator.edu/teach/control/stream"
+    source, _path, _state = upsert_source(storage.data, "getcourse", source_ref, "Debugging School")
+    raw = {
+        "schema": "aoa_course_browser_snapshot_v1",
+        "platform": "getcourse",
+        "captured_at": "2026-07-07T00:00:00Z",
+        "source": {
+            "source_id": source["source_id"],
+            "platform": "getcourse",
+            "source_ref": source_ref,
+            "access_mode": "browser_session",
+            "title": "Debugging School",
+        },
+        "pages": [
+            {
+                "page_id": "debug-index",
+                "kind": "course_index",
+                "url": source_ref,
+                "title": "Debugging School",
+                "html": """
+                <main>
+                  <a data-aoa-kind="lesson" href="/teach/control/lesson/view/id/300">Access debugging lesson</a>
+                </main>
+                """,
+            },
+            {
+                "page_id": "debug-lesson",
+                "kind": "lesson",
+                "url": "https://school.operator.edu/teach/control/lesson/view/id/300",
+                "title": "Access debugging lesson",
+                "html": """
+                <article>
+                  <h1>Access debugging lesson</h1>
+                  <p>When logs say access denied, check whether the user really does not have access.</p>
+                  <p>This visible lesson content must remain indexed for troubleshooting.</p>
+                </article>
+                """,
+            },
+        ],
+    }
+    crawled = build_crawled_snapshot(raw, platform="getcourse")
+    raw_path = tmp_path / "debug-crawl.json"
+    raw_path.write_text(json.dumps(crawled), encoding="utf-8")
+
+    materialize_browser_snapshot(storage, raw_path, platform="getcourse", run_id="debug-crawl")
+    bundle = json.loads((storage.data / "runs/debug-crawl/normalized/course_bundle.json").read_text(encoding="utf-8"))
+    lesson = bundle["courses"][0]["modules"][0]["lessons"][0]
+    step = lesson["steps"][0]
+
+    assert lesson["freshness_state"] == "current"
+    assert lesson["access_state"] == "available"
+    assert step["kind"] == "browser_html_text"
+    assert step["source_authority"] == "browser_visible_lesson"
+    assert "visible lesson content must remain indexed" in step["text"]

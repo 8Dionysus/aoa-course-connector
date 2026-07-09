@@ -1479,11 +1479,29 @@ def _browser_registry_source(roots: StorageRoots, *, platform: str, source_ref: 
     if source_id:
         for source in sources:
             if str(source.get("source_id") or "") == source_id:
+                registry_ref = str(source.get("source_ref") or "")
+                if source_ref and not _source_ref_matches(registry_ref, source_ref):
+                    raise ValueError(
+                        "source_ref_mismatch: "
+                        f"browser source id {source_id} points to {registry_ref!r}, "
+                        f"not requested source_ref {source_ref!r}"
+                    )
                 return source
         raise ValueError(f"browser source id not found in local registry: {source_id}")
     if not source_ref:
         return None
     return next((source for source in sources if str(source.get("source_ref") or "") == source_ref), None)
+
+
+def _source_ref_matches(expected: str, actual: str) -> bool:
+    return _normalized_source_ref(expected) == _normalized_source_ref(actual)
+
+
+def _normalized_source_ref(value: str) -> str:
+    text = str(value or "").strip()
+    if text.startswith(("http://", "https://")):
+        return text.rstrip("/")
+    return text
 
 
 def cmd_materialize_fixture(args: argparse.Namespace) -> int:
@@ -2294,6 +2312,39 @@ def _source_registry_external_semantic_provider_failures(catalog: dict[str, obje
         return []
     failures: list[dict[str, object]] = []
     seen: set[tuple[str, str]] = set()
+    for surface, source_id, entry in _source_registry_connected_run_entries(catalog):
+        paths = entry.get("paths") if isinstance(entry.get("paths"), dict) else {}
+        semantic_path = str(paths.get("semantic_index") or paths.get("semantic_index_path") or "")
+        provider = _semantic_index_provider(semantic_path)
+        if not semantic_path or not provider or provider == LOCAL_HASHING_PROVIDER:
+            continue
+        key = (source_id, semantic_path)
+        if key in seen:
+            continue
+        seen.add(key)
+        run_id = str(entry.get("run_id") or entry.get("connected_run_id") or "")
+        next_command = "aoa-course build-semantic-index"
+        if run_id:
+            next_command += f" --run {shlex.quote(run_id)}"
+        next_command += f" --provider {LOCAL_HASHING_PROVIDER}"
+        failures.append(
+            {
+                "surface": surface,
+                "source_id": source_id,
+                "run_id": run_id,
+                "field": "semantic_index.provider",
+                "expected": LOCAL_HASHING_PROVIDER,
+                "actual": provider,
+                "path": semantic_path,
+                "reason": "external_semantic_provider_requires_network",
+                "next_command": next_command,
+            }
+        )
+    return failures
+
+
+def _source_registry_connected_run_entries(catalog: dict[str, object]) -> list[tuple[str, str, dict[str, object]]]:
+    entries_by_source: list[tuple[str, str, dict[str, object]]] = []
     connected_runs = catalog.get("connected_runs") if isinstance(catalog.get("connected_runs"), dict) else {}
     by_source = connected_runs.get("by_source_id") if isinstance(connected_runs.get("by_source_id"), dict) else {}
     for source_id, entries in by_source.items():
@@ -2302,34 +2353,18 @@ def _source_registry_external_semantic_provider_failures(catalog: dict[str, obje
         for entry in entries:
             if not isinstance(entry, dict):
                 continue
-            paths = entry.get("paths") if isinstance(entry.get("paths"), dict) else {}
-            semantic_path = str(paths.get("semantic_index") or paths.get("semantic_index_path") or "")
-            provider = _semantic_index_provider(semantic_path)
-            if not semantic_path or not provider or provider == LOCAL_HASHING_PROVIDER:
+            entries_by_source.append(("connected_runs", str(source_id), entry))
+    sources = catalog.get("sources") if isinstance(catalog.get("sources"), list) else []
+    for source in sources:
+        if not isinstance(source, dict):
+            continue
+        source_id = str(source.get("source_id") or "")
+        latest_runs = source.get("latest_connected_runs") if isinstance(source.get("latest_connected_runs"), list) else []
+        for entry in latest_runs:
+            if not isinstance(entry, dict):
                 continue
-            key = (str(source_id), semantic_path)
-            if key in seen:
-                continue
-            seen.add(key)
-            run_id = str(entry.get("run_id") or "")
-            next_command = "aoa-course build-semantic-index"
-            if run_id:
-                next_command += f" --run {shlex.quote(run_id)}"
-            next_command += f" --provider {LOCAL_HASHING_PROVIDER}"
-            failures.append(
-                {
-                    "surface": "connected_runs",
-                    "source_id": str(source_id),
-                    "run_id": run_id,
-                    "field": "semantic_index.provider",
-                    "expected": LOCAL_HASHING_PROVIDER,
-                    "actual": provider,
-                    "path": semantic_path,
-                    "reason": "external_semantic_provider_requires_network",
-                    "next_command": next_command,
-                }
-            )
-    return failures
+            entries_by_source.append(("sources.latest_connected_runs", source_id or str(entry.get("source_id") or ""), entry))
+    return entries_by_source
 
 
 def _semantic_index_provider(path: str) -> str:
