@@ -73,6 +73,21 @@ def test_getcourse_crawler_extracts_embedded_lesson_urls_without_stream_noise() 
     ]
 
 
+def test_getcourse_crawler_does_not_treat_redirect_query_as_lesson_url() -> None:
+    html = """
+    <script>
+      const login = "https://school.example/login?next=/teach/control/lesson/view/id/123";
+      const lesson = "https://school.example/teach/control/lesson/view/id/456";
+    </script>
+    """
+
+    links = discover_lesson_links(html, "https://school.example/teach/control/stream", platform="getcourse", max_lessons=10)
+
+    assert [link["href"] for link in links] == [
+        "https://school.example/teach/control/lesson/view/id/456",
+    ]
+
+
 def test_getcourse_browser_crawl_fixture_to_answer_packet(tmp_path: Path) -> None:
     storage = roots(tmp_path)
     receipt = crawl_browser_fixture(storage, "getcourse", run_id="getcourse-browser-crawl-fixture")

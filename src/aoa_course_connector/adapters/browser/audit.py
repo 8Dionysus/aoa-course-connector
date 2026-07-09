@@ -71,7 +71,7 @@ def audit_browser_snapshot(
         lesson_links = discover_lesson_links(
             html,
             page_url,
-            platform=platform,
+            platform=resolved_platform,
             max_lessons=max_lessons,
             link_pattern=link_pattern,
         )

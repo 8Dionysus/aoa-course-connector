@@ -383,8 +383,13 @@ def _check_kag_provider(repo_root: Path, errors: list[str]) -> None:
         errors.append("KAG manifest repo must be aoa-course-connector")
     if manifest.get("owner_surface") != "kag/AGENTS.md":
         errors.append("KAG manifest owner_surface must be kag/AGENTS.md")
-    if set(manifest.get("record_classes", [])) != KAG_REQUIRED_RECORD_CLASSES:
-        errors.append("KAG manifest must declare node, edge, index, projection, and receipt classes")
+    record_classes = manifest.get("record_classes")
+    if not isinstance(record_classes, list):
+        errors.append("KAG manifest record_classes must be a list")
+    else:
+        declared_record_classes = {record_class for record_class in record_classes if isinstance(record_class, str)}
+        if declared_record_classes != KAG_REQUIRED_RECORD_CLASSES or len(declared_record_classes) != len(record_classes):
+            errors.append("KAG manifest must declare node, edge, index, projection, and receipt classes")
     source_surfaces = manifest.get("source_surfaces")
     if not isinstance(source_surfaces, list) or len(source_surfaces) < 4:
         errors.append("KAG manifest must keep source_surfaces for source, boundary, route, and validation owners")

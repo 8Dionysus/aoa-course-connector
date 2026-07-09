@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from aoa_course_connector.adapters.browser import audit_browser_snapshot_file
+from aoa_course_connector.adapters.browser import audit_browser_snapshot, audit_browser_snapshot_file
 from aoa_course_connector.config import find_repo_root
 
 
@@ -46,6 +46,34 @@ def test_browser_snapshot_audit_proves_catalog_discovery_snapshot() -> None:
     assert report["page_kind_counts"]["account_catalog"] == 2
     assert any("discover browser-snapshot" in command for command in report["next_commands"])
     assert not any("materialize browser-snapshot" in command for command in report["next_commands"])
+
+
+def test_browser_snapshot_audit_uses_snapshot_platform_for_embedded_getcourse_links() -> None:
+    report = audit_browser_snapshot(
+        {
+            "schema": "aoa_course_browser_snapshot_v1",
+            "platform": "getcourse",
+            "source": {
+                "source_id": "source:getcourse:demo",
+                "platform": "getcourse",
+                "source_ref": "https://school.example/teach/control/stream",
+                "access_mode": "browser_session",
+            },
+            "pages": [
+                {
+                    "page_id": "course-index",
+                    "kind": "course_index",
+                    "url": "https://school.example/teach/control/stream",
+                    "title": "Course index",
+                    "html": '<script>window.lessons=["/teach/control/lesson/view/id/101"];</script>',
+                }
+            ],
+        }
+    )
+
+    assert report["platform"] == "getcourse"
+    assert report["counts"]["lesson_link_count"] == 1
+    assert report["readiness"]["ready_for_crawl"] is True
 
 
 def test_browser_snapshot_audit_flags_missing_caption_resource(tmp_path: Path) -> None:
