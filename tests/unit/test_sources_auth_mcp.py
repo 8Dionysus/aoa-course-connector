@@ -1611,6 +1611,39 @@ def test_source_registry_query_eval_blocks_external_semantic_provider(tmp_path: 
     assert cli_module._source_registry_external_semantic_provider_failures(catalog, "keyword") == []
 
 
+def test_source_registry_query_eval_blocks_external_semantic_provider_path_alias(tmp_path: Path) -> None:
+    semantic_index = tmp_path / "semantic_index.json"
+    semantic_index.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_semantic_index_v1",
+                "provider": "http_json_v1",
+                "provider_config": {"provider": "http_json_v1", "endpoint_configured": True},
+                "docs": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    catalog = {
+        "connected_runs": {
+            "by_source_id": {
+                "source:stepik:67": [
+                    {
+                        "run_id": "connected-stepik",
+                        "query_ready": True,
+                        "paths": {"semantic_index_path": str(semantic_index)},
+                    }
+                ]
+            }
+        }
+    }
+
+    [failure] = cli_module._source_registry_external_semantic_provider_failures(catalog, "semantic")
+
+    assert failure["path"] == str(semantic_index)
+    assert failure["reason"] == "external_semantic_provider_requires_network"
+
+
 def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
