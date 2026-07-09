@@ -57,3 +57,22 @@ def test_agent_install_route_rejects_platform_before_required_bootstrap_args() -
 
     assert "Agent install route missing exact fixture bootstrap command" in errors
     assert "Agent install route must not narrow fixture bootstrap plan with --platform" in errors
+
+
+def test_kag_provider_validator_reports_non_list_record_classes(monkeypatch) -> None:
+    validator = load_validator_module()
+    original_read_json = validator._read_json
+
+    def read_json_with_bad_record_classes(path: Path, errors: list[str]):
+        payload = original_read_json(path, errors)
+        if path == Path("kag/manifest.json") and isinstance(payload, dict):
+            payload = dict(payload)
+            payload["record_classes"] = None
+        return payload
+
+    monkeypatch.setattr(validator, "_read_json", read_json_with_bad_record_classes)
+    errors: list[str] = []
+
+    validator._check_kag_provider(Path("."), errors)
+
+    assert "KAG manifest record_classes must be a list" in errors

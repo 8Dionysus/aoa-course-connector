@@ -19,7 +19,10 @@ LESSON_URL_HINTS = (
     "/training/",
     "/module/",
 )
-GETCOURSE_EMBEDDED_LESSON_RE = re.compile(r"(?P<url>(?:https?://[^\"'\\<>\s]+)?/teach/control/lesson/view/id/\d+)", re.IGNORECASE)
+GETCOURSE_EMBEDDED_LESSON_RE = re.compile(
+    r"(?<![=?&])(?P<url>(?:https?://[^/\"'\\<>\s]+)?/teach/control/lesson/view/id/\d+)",
+    re.IGNORECASE,
+)
 
 
 def build_crawled_snapshot(
