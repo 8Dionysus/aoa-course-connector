@@ -7,7 +7,7 @@ from pathlib import Path
 
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
-from aoa_course_connector.index import HTTP_JSON_PROVIDER, build_keyword_index, build_semantic_index
+from aoa_course_connector.index import HTTP_JSON_PROVIDER, build_keyword_index, build_semantic_index, query_lookup_tokens
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool
 from aoa_course_connector.query import query_hybrid_index, query_semantic_index, render_answer_packet
@@ -39,6 +39,17 @@ def test_semantic_index_builds_local_vector_artifact(tmp_path: Path) -> None:
     assert payload["feature_contract"]["authority_tier_features"] is True
     assert payload["doc_count"] >= 1
     assert payload["docs"][0]["vector"]
+
+
+def test_keyword_index_records_tokenizer_contract_and_queries_legacy_terms(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(storage, run_id="starter-fixture")
+    path = build_keyword_index(storage, run_id="starter-fixture")
+    payload = json.loads(path.read_text(encoding="utf-8"))
+
+    assert payload["feature_contract"]["tokenizer_contract"] == "course_tokenizer_v2_strip_edge_punctuation"
+    assert "course_tokenizer_v1_raw_regex" in payload["feature_contract"]["legacy_query_tokenizer_compatibility"]
+    assert query_lookup_tokens("C#.") == ["c#", "c#."]
 
 
 def test_semantic_index_uses_http_json_embedding_provider(tmp_path: Path, monkeypatch) -> None:
@@ -137,7 +148,7 @@ def test_index_manifest_schema_keeps_kind_specific_required_fields() -> None:
         for variant in schema["oneOf"]
     }
 
-    assert variants["aoa_course_keyword_index_v1"] >= {"schema", "run_id", "doc_count", "term_count"}
+    assert variants["aoa_course_keyword_index_v1"] >= {"schema", "run_id", "doc_count", "term_count", "feature_contract"}
     assert variants["aoa_course_semantic_index_v1"] >= {
         "schema",
         "run_id",

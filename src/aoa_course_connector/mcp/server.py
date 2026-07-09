@@ -614,6 +614,14 @@ def _call_source_answer(roots: StorageRoots, args: dict[str, object]) -> dict[st
     connected_run_id = str(selected_entry.get("connected_run_id") or selected_entry.get("sync_run_id") or selected_entry.get("run_id") or "")
     if not connected_run_id:
         return _source_answer_blocked(catalog, str(query_value), "missing_query_run_id", "selected query-ready entry has no connected_run_id or run_id")
+    external_provider_failure = _external_semantic_provider_failure(source, selected_entry, mode_value)
+    if external_provider_failure:
+        return _source_answer_blocked(
+            catalog,
+            str(query_value),
+            "external_semantic_provider_requires_network",
+            str(external_provider_failure["detail"]),
+        )
     query_packet = _query_source_entry(
         roots,
         source,
@@ -696,6 +704,16 @@ def _call_sources_answer(roots: StorageRoots, args: dict[str, object]) -> dict[s
         connected_run_id = str(selected_entry.get("connected_run_id") or selected_entry.get("sync_run_id") or selected_entry.get("run_id") or "")
         if not connected_run_id:
             blocked_sources.append(_source_blocked(source, "missing_query_run_id", "selected query-ready entry has no connected_run_id or run_id"))
+            continue
+        external_provider_failure = _external_semantic_provider_failure(source, selected_entry, mode_value)
+        if external_provider_failure:
+            blocked_sources.append(_source_blocked(
+                source,
+                "external_semantic_provider_requires_network",
+                str(external_provider_failure["detail"]),
+                selected_entry=selected_entry,
+                query_packet={"failures": [external_provider_failure]},
+            ))
             continue
         try:
             query_packet = _query_source_entry(
@@ -828,6 +846,46 @@ def _source_answer_entries(source: dict[str, object], kinds: list[str] | None) -
         if sync_entries:
             entries = sync_entries
     return [entry for entry in entries if isinstance(entry, dict) and bool(entry.get("query_ready"))]
+
+
+def _external_semantic_provider_failure(source: dict[str, object], selected_entry: dict[str, object], mode: str | None) -> dict[str, object] | None:
+    entry_mode = str(mode or selected_entry.get("query_mode") or "keyword")
+    if entry_mode not in {"semantic", "hybrid"}:
+        return None
+    paths = selected_entry.get("paths") if isinstance(selected_entry.get("paths"), dict) else {}
+    semantic_path = str(paths.get("semantic_index") or paths.get("semantic_index_path") or "")
+    provider = _semantic_index_provider(semantic_path)
+    if not semantic_path or not provider or provider == LOCAL_HASHING_PROVIDER:
+        return None
+    run_id = str(selected_entry.get("run_id") or "")
+    next_command = "aoa-course build-semantic-index"
+    if run_id:
+        next_command += f" --run {shlex.quote(run_id)}"
+    next_command += f" --provider {LOCAL_HASHING_PROVIDER}"
+    return {
+        "surface": "sources_answer",
+        "source_id": str(source.get("source_id") or selected_entry.get("source_id") or ""),
+        "run_id": run_id,
+        "field": "semantic_index.provider",
+        "expected": LOCAL_HASHING_PROVIDER,
+        "actual": provider,
+        "path": semantic_path,
+        "reason": "external_semantic_provider_requires_network",
+        "detail": "selected semantic index uses an external embedding provider; rebuild with local_hashing_v1 before using no-network answer routes",
+        "next_command": next_command,
+    }
+
+
+def _semantic_index_provider(path: str) -> str:
+    if not path:
+        return ""
+    try:
+        payload = json.loads(Path(path).read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return ""
+    if isinstance(payload, dict):
+        return str(payload.get("provider") or "")
+    return ""
 
 
 def _query_source_entry(
@@ -1112,6 +1170,8 @@ def _sources_answer_matrix_top_result_refs(packet: dict[str, object], *, grounde
     refs: list[dict[str, object]] = []
     for response in responses:
         if not isinstance(response, dict):
+            continue
+        if grounded_only and not _response_is_grounded(response):
             continue
         answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
         quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}

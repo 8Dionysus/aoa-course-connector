@@ -5,6 +5,7 @@ import os
 import sqlite3
 import sys
 import types
+from argparse import Namespace
 from pathlib import Path
 
 import aoa_course_connector.cli as cli_module
@@ -37,6 +38,23 @@ from aoa_course_connector.sources import load_registry, upsert_source
 from aoa_course_connector.status import connected_query_run_catalog
 from aoa_course_connector.storage import run_data_dir
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
+
+
+def _write_query_artifact_paths(storage: StorageRoots, run_id: str) -> dict[str, str]:
+    index_dir = storage.artifact / "runs" / run_id / "indexes"
+    graph_dir = storage.artifact / "runs" / run_id / "graphs"
+    index_dir.mkdir(parents=True, exist_ok=True)
+    graph_dir.mkdir(parents=True, exist_ok=True)
+    index_path = index_dir / "keyword_index.json"
+    semantic_path = index_dir / "semantic_index.json"
+    graph_path = graph_dir / "course_graph.json"
+    for path in [index_path, semantic_path, graph_path]:
+        path.write_text("{}", encoding="utf-8")
+    return {
+        "index_path": str(index_path),
+        "semantic_index_path": str(semantic_path),
+        "graph_path": str(graph_path),
+    }
 
 
 def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
@@ -573,6 +591,7 @@ def test_connected_query_run_catalog_counts_invalid_cached_answer_ready(tmp_path
                             "answer_ready": True,
                             "answer_result_count": 0,
                             "answer_evidence_count": 0,
+                            "paths": _write_query_artifact_paths(storage, "invalid-answer-ready"),
                         }
                     ]
                 },
@@ -619,7 +638,10 @@ def test_connected_query_run_catalog_preserves_entry_status_and_coverage_counts(
                             "query": "course-specific evidence",
                             "query_mode": "hybrid",
                             "query_ready": True,
+                            "semantic_query_ready": True,
+                            "graph_ready": True,
                             "answer_ready": False,
+                            "paths": _write_query_artifact_paths(storage, "stepik-sync-67"),
                             "stable_identity": {
                                 "schema": "aoa_course_stable_identity_summary_v1",
                                 "available": True,
@@ -671,6 +693,7 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                     "connected_run_id": "run",
                     "answer_packet": {
                         "quality": {
+                            "ready": True,
                             "top_result": {
                                 "doc_id": "step:python",
                                 "score": 0.51,
@@ -681,6 +704,7 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                             }
                         }
                     },
+                    "evidence_count": 1,
                 },
                 {
                     "source_id": "source:stepik:empty",
@@ -694,6 +718,7 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                     "connected_run_id": "run",
                     "answer_packet": {
                         "quality": {
+                            "ready": True,
                             "top_result": {
                                 "doc_id": "step:csharp",
                                 "score": 0.45,
@@ -704,6 +729,23 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                             }
                         }
                     },
+                    "evidence_count": 1,
+                },
+                {
+                    "source_id": "source:stepik:ungrounded",
+                    "platform": "stepik",
+                    "connected_run_id": "run",
+                    "answer_packet": {
+                        "quality": {
+                            "ready": False,
+                            "top_result": {
+                                "doc_id": "step:ungrounded",
+                                "score": 0.99,
+                                "rank_score": 0.99,
+                            },
+                        }
+                    },
+                    "evidence_count": 0,
                 },
             ]
         },
@@ -741,6 +783,7 @@ def test_connected_query_run_catalog_reports_unreadable_sync_checkpoint_store(tm
                             "query_mode": "keyword",
                             "query_ready": True,
                             "answer_ready": False,
+                            "paths": _write_query_artifact_paths(storage, "receipt-ready"),
                         }
                     ]
                 },
@@ -1644,6 +1687,52 @@ def test_source_registry_query_eval_blocks_external_semantic_provider_path_alias
     assert failure["reason"] == "external_semantic_provider_requires_network"
 
 
+def test_sources_answer_blocks_external_semantic_provider_before_query(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    stepik, _, _ = upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
+    receipt = run_connected_calibration(
+        storage,
+        run_id="external-semantic-provider",
+        mode="fixture",
+        platforms=["stepik"],
+        query="Stepik public API evidence",
+    )
+    assert receipt["receipt_path"]
+    for semantic_path in storage.artifact.glob("runs/**/indexes/semantic_index.json"):
+        semantic_path.write_text(
+            json.dumps(
+                {
+                    "schema": "aoa_course_semantic_index_v1",
+                    "provider": "http_json_v1",
+                    "provider_config": {"provider": "http_json_v1", "endpoint_configured": True},
+                    "docs": [],
+                }
+            ),
+            encoding="utf-8",
+        )
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    packet = call_tool(
+        "sources_answer",
+        {"source_ids": [stepik["source_id"]], "query": "Stepik public API evidence", "mode": "hybrid"},
+    )["sources_answer"]
+
+    assert packet["status"] == "blocked"
+    assert packet["network_touched"] is False
+    assert packet["blocked_source_count"] == 1
+    assert packet["blocked_sources"][0]["reason"] == "external_semantic_provider_requires_network"
+    assert packet["blocked_sources"][0]["query_packet_failures"][0]["actual"] == "http_json_v1"
+
+
 def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
@@ -1704,6 +1793,80 @@ def test_connector_readiness_accepts_source_registry_query_ready_route(tmp_path:
     assert any("sources answer-matrix " in command and f"--source-id {stepik['source_id']}" in command for command in readiness["next_commands"])
     assert not any(command.startswith("aoa-course bootstrap fixture") for command in readiness["next_commands"])
     assert '"source_ref"' not in rendered
+
+
+def test_connector_readiness_rejects_stale_source_registry_query_artifacts(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    stepik, _, _ = upsert_source(storage.data, "stepik", "67", "Stepik Public", access_mode="public_api")
+    receipt = run_connected_calibration(
+        storage,
+        run_id="source-registry-stale-artifacts",
+        mode="fixture",
+        platforms=["stepik"],
+        query="Stepik public API evidence",
+    )
+    assert receipt["receipt_path"]
+    for index_path in storage.artifact.glob("runs/**/indexes/keyword_index.json"):
+        index_path.unlink()
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    readiness = call_tool(
+        "connector_readiness",
+        {
+            "runs": ["missing-starter-run"],
+            "platforms": ["stepik"],
+            "connected_run": "missing-connected-run",
+        },
+    )
+
+    assert readiness["lanes"]["source_registry_query_ready"] is False
+    assert readiness["lanes"]["source_registry_query_ready_entry_count"] == 0
+    assert readiness["lanes"]["agent_query_ready"] is False
+    assert readiness["sources"]["connected_runs"]["query_ready_entry_count"] == 0
+    assert readiness["sources"]["connected_runs"]["errors"][0]["missing"] == "index_path"
+    assert readiness["sources"]["sources"][0]["source_id"] == stepik["source_id"]
+
+
+def test_cli_sources_answer_omits_mode_when_not_requested(monkeypatch, capsys) -> None:
+    captured: dict[str, object] = {}
+
+    def fake_call_tool(name: str, args: dict[str, object]) -> dict[str, object]:
+        captured["name"] = name
+        captured["args"] = args
+        return {"sources_answer": {"status": "ok"}}
+
+    monkeypatch.setattr(cli_module, "call_tool", fake_call_tool)
+
+    result = cli_module.cmd_sources_answer(
+        Namespace(
+            query="course evidence",
+            platform=None,
+            source_id=None,
+            kind=None,
+            limit=5,
+            mode=None,
+            graph_limit=12,
+            source_limit=10,
+            connected_run_limit=5,
+            connected_receipt_limit=50,
+            include_disabled=False,
+            include_source_refs=False,
+        )
+    )
+
+    assert result == 0
+    assert captured["name"] == "sources_answer"
+    assert captured["args"]["mode"] is None
+    capsys.readouterr()
 
 
 def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:

@@ -10,6 +10,7 @@ from pathlib import Path
 from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.index import (
     LOCAL_HASHING_PROVIDER,
+    query_lookup_tokens,
     semantic_doc_feature_keys,
     semantic_query_feature_keys,
     sparse_vector_from_json,
@@ -200,7 +201,7 @@ def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-
     index_path = run_artifact_dir(roots, run_id) / "indexes" / "keyword_index.json"
     index = json.loads(index_path.read_text(encoding="utf-8"))
     docs = {str(doc["doc_id"]): doc for doc in index.get("docs", [])}
-    query_terms = tokenize(query)
+    query_terms = query_lookup_tokens(query)
     scores: dict[str, float] = {}
     for term in query_terms:
         for hit in index.get("inverted", {}).get(term, []):
@@ -241,7 +242,7 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
         return []
     if provider == LOCAL_HASHING_PROVIDER and not query_features:
         return []
-    query_terms = tokenize(query)
+    query_terms = query_lookup_tokens(query)
     ranked = []
     for doc in index.get("docs", []):
         if not isinstance(doc, dict):

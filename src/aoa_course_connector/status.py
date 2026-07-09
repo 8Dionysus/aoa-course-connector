@@ -433,6 +433,17 @@ def connected_query_run_catalog(
                 continue
             if selected_platforms and platform not in selected_platforms:
                 continue
+            artifact_failure = _query_run_artifact_failure(entry)
+            if artifact_failure:
+                errors.append({
+                    "path": str(path),
+                    "source_id": source_id,
+                    "run_id": entry.get("run_id"),
+                    "reason": "query_artifact_missing",
+                    "missing": artifact_failure,
+                    "entry_source": "connected_receipt",
+                })
+                continue
             by_source.setdefault(source_id, []).append(_connected_query_run_ref(receipt, path, entry, include_source_refs=include_source_refs))
     try:
         sync_checkpoints = _sync_query_checkpoints(roots, source_ids=selected_ids, platforms=selected_platforms)
@@ -542,6 +553,18 @@ def _sync_query_checkpoints(roots: StorageRoots, *, source_ids: list[str], platf
             continue
         ready.append(item)
     return ready
+
+
+def _query_run_artifact_failure(entry: dict[str, object]) -> str:
+    paths = entry.get("paths") if isinstance(entry.get("paths"), dict) else {}
+    if not _path_is_file(paths.get("index_path") or paths.get("index")):
+        return "index_path"
+    query_mode = str(entry.get("query_mode") or "keyword")
+    if (query_mode in {"semantic", "hybrid"} or bool(entry.get("semantic_query_ready"))) and not _path_is_file(paths.get("semantic_index_path") or paths.get("semantic_index")):
+        return "semantic_index_path"
+    if not _path_is_file(paths.get("graph_path") or paths.get("graph")):
+        return "graph_path"
+    return ""
 
 
 def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict[str, object], *, include_source_refs: bool) -> dict[str, object]:
