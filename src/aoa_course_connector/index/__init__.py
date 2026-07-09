@@ -19,6 +19,8 @@ from aoa_course_connector.storage import run_artifact_dir, run_data_dir
 TOKEN_RE = re.compile(r"[\w.+#/-]+", re.UNICODE)
 TOKEN_LEADING_PUNCTUATION = "\"'([{«"
 TOKEN_TRAILING_PUNCTUATION = "\"'.,:;!?)]}»"
+TOKENIZER_CONTRACT = "course_tokenizer_v2_strip_edge_punctuation"
+LEGACY_TOKENIZER_CONTRACT = "course_tokenizer_v1_raw_regex"
 DEFAULT_VECTOR_DIMENSIONS = 256
 LOCAL_HASHING_PROVIDER = "local_hashing_v1"
 HTTP_JSON_PROVIDER = "http_json_v1"
@@ -55,6 +57,7 @@ def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") ->
         "run_id": run_id,
         "built_at": _now(),
         "unit": "course_knowledge_item",
+        "feature_contract": _keyword_feature_contract(),
         "doc_count": len(docs),
         "term_count": len(inverted),
         "docs": docs,
@@ -118,6 +121,14 @@ def tokenize(text: str) -> list[str]:
     return tokens
 
 
+def legacy_tokenize(text: str) -> list[str]:
+    return [token.casefold().strip() for token in TOKEN_RE.findall(text) if token.strip()]
+
+
+def query_lookup_tokens(text: str) -> list[str]:
+    return list(dict.fromkeys([*tokenize(text), *legacy_tokenize(text)]))
+
+
 def vectorize_semantic_query(
     query: str,
     *,
@@ -133,12 +144,12 @@ def vectorize_semantic_query(
         if vectors and len(vectors[0]) != dimensions:
             raise ValueError(f"embedding endpoint returned {len(vectors[0])}-dimension query vector for {dimensions}-dimension index")
         return _normalize_dense(vectors[0]) if vectors else {}
-    features = _weighted_text_features(query, weight=1.0)
+    features = _weighted_text_features(query, weight=1.0, include_legacy=True)
     return _normalize(_hash_features(features, dimensions=max(8, dimensions)))
 
 
 def semantic_query_feature_keys(query: str) -> set[str]:
-    return _feature_keys(_weighted_text_features(query, weight=1.0))
+    return _feature_keys(_weighted_text_features(query, weight=1.0, include_legacy=True))
 
 
 def semantic_doc_feature_keys(doc: dict[str, object]) -> set[str]:
@@ -221,12 +232,23 @@ def _feature_contract(provider: str) -> dict[str, object]:
             "collision_guard": "provider_vector_space",
         }
     return {
+        "tokenizer_contract": TOKENIZER_CONTRACT,
+        "legacy_query_tokenizer_compatibility": [LEGACY_TOKENIZER_CONTRACT],
         "text_tokens": True,
         "title_path_tokens": True,
         "adjacent_bigrams": True,
         "kind_platform_features": True,
         "authority_tier_features": True,
         "normalized_sparse_vectors": True,
+    }
+
+
+def _keyword_feature_contract() -> dict[str, object]:
+    return {
+        "tokenizer_contract": TOKENIZER_CONTRACT,
+        "legacy_query_tokenizer_compatibility": [LEGACY_TOKENIZER_CONTRACT],
+        "text_tokens": True,
+        "title_path_tokens": True,
     }
 
 
@@ -485,8 +507,8 @@ def _feature_keys(features: list[tuple[str, float]]) -> set[str]:
     return {feature for feature, _weight in features if feature}
 
 
-def _weighted_text_features(text: str, *, weight: float) -> list[tuple[str, float]]:
-    tokens = tokenize(text)
+def _weighted_text_features(text: str, *, weight: float, include_legacy: bool = False) -> list[tuple[str, float]]:
+    tokens = query_lookup_tokens(text) if include_legacy else tokenize(text)
     features = [(token, weight) for token in tokens]
     features.extend((f"{left}_{right}", weight * 1.25) for left, right in zip(tokens, tokens[1:]))
     return features

@@ -48,7 +48,8 @@
         "schema",
         "run_id",
         "doc_count",
-        "term_count"
+        "term_count",
+        "feature_contract"
       ]
     },
     {
