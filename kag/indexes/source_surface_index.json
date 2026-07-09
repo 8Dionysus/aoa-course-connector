@@ -60,7 +60,7 @@
   },
   "index_identity": {
     "artifact_kind": "source_surface_index",
-    "content_digest": "f252cfd935f458f4ac6e6f0948769c39024876b4ccef38651231c9d605086fdf",
+    "content_digest": "2cd24f28fdbc2d316ea4f72c4c7696fe4ac9747df94fd23d14036cbba2be66d7",
     "local_id": "index:repo-local:source-surfaces",
     "schema_ref": "aoa-kag:schemas/repo-local-kag-index.schema.json"
   },
@@ -12009,13 +12009,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "10b9a7693e64df92f7fc80b1b0b9f760f8188708eb74148976e0376783dccec7",
+        "content_hash": "b9befcea1910c56af9035f2a00e135a33c16efd3df15414f60ceb5cb2826b727",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/adapters/browser/discovery.py:1587f6992b",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/adapters/browser/discovery.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 14158
+        "size_bytes": 14483
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -12048,7 +12048,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "10b9a7693e64df92f7fc80b1b0b9f760f8188708eb74148976e0376783dccec7",
+        "digest": "b9befcea1910c56af9035f2a00e135a33c16efd3df15414f60ceb5cb2826b727",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -12276,13 +12276,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "32db68c7e7f0cb6f8ff612637861d145550ce0925b55e27efcb3dc00f7cfeeab",
+        "content_hash": "262d26bfddccf1b2aa0999b41565958bf9acc1f36c424fc4d5cf03d00e395e4c",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/adapters/stepik/client.py:630764c6bb",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/adapters/stepik/client.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 16490
+        "size_bytes": 16517
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -12315,7 +12315,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "32db68c7e7f0cb6f8ff612637861d145550ce0925b55e27efcb3dc00f7cfeeab",
+        "digest": "262d26bfddccf1b2aa0999b41565958bf9acc1f36c424fc4d5cf03d00e395e4c",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -12810,13 +12810,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "ae6ceaa6a94827cad043793aa81de68f6f62e0349518b2322094434706b4d9f5",
+        "content_hash": "f9e17e77f0757c7594139f8c78095924eaa519bf9abd0c73ad44a477148f9014",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/cli.py:4d27ad45a3",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/cli.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 190783
+        "size_bytes": 193631
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -12849,7 +12849,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "ae6ceaa6a94827cad043793aa81de68f6f62e0349518b2322094434706b4d9f5",
+        "digest": "f9e17e77f0757c7594139f8c78095924eaa519bf9abd0c73ad44a477148f9014",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -14145,13 +14145,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "dd2aa12d54f73a8bac048125abde1ec2de55bdb7964effbdf6a1ca31e9541e28",
+        "content_hash": "f7855970a60962506b6e95ea5d32a00de55ea401430cda8221cd335c6c6a2574",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/ingest/stepik.py:9dd3d98ae5",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/ingest/stepik.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 4864
+        "size_bytes": 4907
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -14184,7 +14184,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "dd2aa12d54f73a8bac048125abde1ec2de55bdb7964effbdf6a1ca31e9541e28",
+        "digest": "f7855970a60962506b6e95ea5d32a00de55ea401430cda8221cd335c6c6a2574",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -14323,13 +14323,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "db5f103d9de4fc4a5dbf442c53aca887ec4ffbe629b3d743a17aaf09fcc27a87",
+        "content_hash": "49383632b742f3ad3cea78de8299c0c24eaf2c12a4d56a4cc96f09320014df60",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/mcp/server.py:f3837b1bf9",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/mcp/server.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 97480
+        "size_bytes": 97741
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -14362,7 +14362,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "db5f103d9de4fc4a5dbf442c53aca887ec4ffbe629b3d743a17aaf09fcc27a87",
+        "digest": "49383632b742f3ad3cea78de8299c0c24eaf2c12a4d56a4cc96f09320014df60",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -14768,13 +14768,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "7642f019f50eeac3ad750cb59c0307642f746c14043cb9c1bc67257f79359a67",
+        "content_hash": "5895ef5990bf812453ae8c0ca13b03b5b9e36f57ffa5e2431627153ab9724057",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/query/__init__.py:f65413de9b",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/query/__init__.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 42614
+        "size_bytes": 43276
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -14807,7 +14807,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "7642f019f50eeac3ad750cb59c0307642f746c14043cb9c1bc67257f79359a67",
+        "digest": "5895ef5990bf812453ae8c0ca13b03b5b9e36f57ffa5e2431627153ab9724057",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -14857,13 +14857,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "453458c9eed901095bec86dd2bf6109bd877c2b11f0a9b9f3b5ad87b8b0d64d2",
+        "content_hash": "4e023cf32ef8a0be7cf075c9be14eff96c93ac3c535633833d5af8e72542c3d4",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/readiness.py:780e855039",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/readiness.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 73318
+        "size_bytes": 73880
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -14896,7 +14896,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "453458c9eed901095bec86dd2bf6109bd877c2b11f0a9b9f3b5ad87b8b0d64d2",
+        "digest": "4e023cf32ef8a0be7cf075c9be14eff96c93ac3c535633833d5af8e72542c3d4",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -15480,13 +15480,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "ce6fffbfca57aaad7d35b8910ec71769aab54adadd923aace4ae716eb34021ff",
+        "content_hash": "4ab2370bbf3a36ea6cbd97fae08c1b6cbbfeeadc6f04e0d827418b29428947cd",
         "git_ref": "git-index-source-tree",
         "id": "file:src/aoa_course_connector/status.py:d643b5b71e",
         "mime": "text/x-python",
         "path": "src/aoa_course_connector/status.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 50862
+        "size_bytes": 50885
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -15519,7 +15519,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "ce6fffbfca57aaad7d35b8910ec71769aab54adadd923aace4ae716eb34021ff",
+        "digest": "4ab2370bbf3a36ea6cbd97fae08c1b6cbbfeeadc6f04e0d827418b29428947cd",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -16467,13 +16467,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "29205ca19e66b52fa7b890433acdebd0fed0692bcb9d5f2158f086a87eb05346",
+        "content_hash": "b32f66aedf8cdca3f4b129c9a874d90be378987a0b224b654fd3dda4ff005bc7",
         "git_ref": "git-index-source-tree",
         "id": "file:tests/unit/test_browser_discovery.py:5a2296f098",
         "mime": "text/x-python",
         "path": "tests/unit/test_browser_discovery.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 17429
+        "size_bytes": 19183
       },
       "mechanics_role": "none",
       "observed_form": "command",
@@ -16506,7 +16506,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "29205ca19e66b52fa7b890433acdebd0fed0692bcb9d5f2158f086a87eb05346",
+        "digest": "b32f66aedf8cdca3f4b129c9a874d90be378987a0b224b654fd3dda4ff005bc7",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -17104,13 +17104,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "813068f91f74cd7f014b036826cf2915ade58e022c0fa98d2653aba7122499df",
+        "content_hash": "200b846f87ebd113ec6d81b435abf5955ffcc209c58feec4ef1fc040ba413e0d",
         "git_ref": "git-index-source-tree",
         "id": "file:tests/unit/test_fixture_index_graph.py:ae7f8a3c38",
         "mime": "text/x-python",
         "path": "tests/unit/test_fixture_index_graph.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 17620
+        "size_bytes": 25106
       },
       "mechanics_role": "none",
       "observed_form": "command",
@@ -17143,7 +17143,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "813068f91f74cd7f014b036826cf2915ade58e022c0fa98d2653aba7122499df",
+        "digest": "200b846f87ebd113ec6d81b435abf5955ffcc209c58feec4ef1fc040ba413e0d",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -17559,13 +17559,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "0e9ff2885eee08a9d758c94c640fef3cf1e0ca9c6e9ef985876d5f75fa0e5a57",
+        "content_hash": "67bf83a6afd8cc0a91727914ca39151671a6a2159692fd2441425fb1a361cc6c",
         "git_ref": "git-index-source-tree",
         "id": "file:tests/unit/test_sources_auth_mcp.py:9a802c6574",
         "mime": "text/x-python",
         "path": "tests/unit/test_sources_auth_mcp.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 104317
+        "size_bytes": 112613
       },
       "mechanics_role": "none",
       "observed_form": "command",
@@ -17598,7 +17598,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "0e9ff2885eee08a9d758c94c640fef3cf1e0ca9c6e9ef985876d5f75fa0e5a57",
+        "digest": "67bf83a6afd8cc0a91727914ca39151671a6a2159692fd2441425fb1a361cc6c",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -17650,13 +17650,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "469649430e0c2dc191886825e9daf92b52f17e74f2a8e8518bc5bd1ec567a67e",
+        "content_hash": "4c157d5e10f85f44846b29ef2749ce311baed9cb3241436208b5e5d363a4a991",
         "git_ref": "git-index-source-tree",
         "id": "file:tests/unit/test_stepik_adapter.py:69b56a5c3a",
         "mime": "text/x-python",
         "path": "tests/unit/test_stepik_adapter.py",
         "repo": "aoa-course-connector",
-        "size_bytes": 16646
+        "size_bytes": 19486
       },
       "mechanics_role": "none",
       "observed_form": "command",
@@ -17689,7 +17689,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "469649430e0c2dc191886825e9daf92b52f17e74f2a8e8518bc5bd1ec567a67e",
+        "digest": "4c157d5e10f85f44846b29ef2749ce311baed9cb3241436208b5e5d363a4a991",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
