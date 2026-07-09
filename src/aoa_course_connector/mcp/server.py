@@ -1588,7 +1588,7 @@ def _call_connected_run(roots: StorageRoots, args: dict[str, object]) -> dict[st
         include_step_sources=_bool_arg(args.get("include_step_sources"), default=False, tool_name="connected_run", field_name="include_step_sources"),
         max_step_sources=_max_step_sources_arg(args.get("max_step_sources", DEFAULT_MAX_STEP_SOURCES), tool_name="connected_run"),
         step_source_timeout=_step_source_timeout_arg(args.get("step_source_timeout"), tool_name="connected_run"),
-        allow_network=bool(args.get("allow_network", False)),
+        allow_network=_bool_arg(args.get("allow_network"), default=False, tool_name="connected_run", field_name="allow_network"),
         stepik_token_env=str(args.get("stepik_token_env") or "STEPIK_API_TOKEN"),
         browser_state_file=Path(state_file) if state_file else None,
         expect_origin_contains=str(args.get("expect_origin") or "") or None,

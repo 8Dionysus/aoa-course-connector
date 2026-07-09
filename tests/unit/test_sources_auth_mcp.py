@@ -283,6 +283,55 @@ def test_connection_profile_live_readiness_reports_ready_connected_run(tmp_path:
     assert "SUPER_SECRET_TOKEN" not in json.dumps(mcp_plan)
 
 
+def test_connection_profile_run_plan_requires_exactly_one_matched_candidate(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    ready_url = "https://school.operator.edu/teach/control/stream"
+    blocked_url = "https://other.operator.edu/teach/control/stream"
+    profile = build_connection_profile(
+        storage,
+        name="ambiguous-live",
+        getcourse_urls=[ready_url, blocked_url],
+        run_id="connected-live-calibration",
+        query="course-specific question",
+    )
+    state_file = default_browser_state_path(storage.auth, "getcourse", ready_url)
+    state_file.parent.mkdir(parents=True)
+    state_file.write_text(
+        json.dumps({
+            "cookies": [{"name": "session", "value": "SUPER_SECRET_COOKIE", "domain": ".school.operator.edu", "path": "/"}],
+            "origins": [{"origin": "https://school.operator.edu", "localStorage": []}],
+        }),
+        encoding="utf-8",
+    )
+    profile_path = tmp_path / "artifacts" / "connections" / "ambiguous-live.connection-profile.json"
+    write_connection_profile(profile, profile_path)
+    receipt = apply_connection_profile(storage, load_connection_profile(profile_path), profile_path=profile_path)
+
+    platform_plan = connection_profile_run_plan(profile, receipt["inspection"], platform="getcourse")
+
+    assert platform_plan["ready"] is False
+    assert platform_plan["status"] == "blocked"
+    assert "multiple connected plans matched; select exactly one --platform or --source-id" in platform_plan["blocked_by"]
+    assert any("workflow is not ready" in blocker for blocker in platform_plan["blocked_by"])
+    assert len(platform_plan["candidate_commands"]) == 1
+
+    ready_source = next(item["source"] for item in receipt["applied"] if item["source"]["source_ref"] == ready_url)
+    scoped_plan = connection_profile_run_plan(
+        profile,
+        receipt["inspection"],
+        platform="getcourse",
+        source_ids=[str(ready_source["source_id"])],
+    )
+    assert scoped_plan["ready"] is True
+    assert scoped_plan["source_ids"] == [ready_source["source_id"]]
+
+
 def test_connect_run_executes_ready_profile_with_network_gate(tmp_path: Path, monkeypatch, capsys) -> None:
     monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(tmp_path / "data"))
     monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(tmp_path / "cache"))
@@ -1374,10 +1423,12 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     )
     assert mcp_connected_matrix["tool"] == "connected_run_query_matrix"
     assert mcp_connected_matrix["query_matrix"]["schema"] == "aoa_course_connected_run_query_matrix_v1"
-    assert mcp_connected_matrix["query_matrix"]["status"] == "ok"
+    assert mcp_connected_matrix["query_matrix"]["status"] == "partial"
     assert mcp_connected_matrix["query_matrix"]["network_touched"] is False
     assert mcp_connected_matrix["query_matrix"]["query_count"] == 2
-    assert mcp_connected_matrix["query_matrix"]["quality"]["ready"] is True
+    assert mcp_connected_matrix["query_matrix"]["quality"]["ready"] is False
+    assert mcp_connected_matrix["query_matrix"]["quality"]["all_queries_have_graph_context"] is False
+    assert mcp_connected_matrix["query_matrix"]["quality"]["ready_query_count"] == 2
     assert mcp_connected_matrix["query_matrix"]["quality"]["all_queries_have_evidence"] is True
     missing_connected_run = call_tool("connected_run_status", {"run": "missing-connected-run"})
     assert missing_connected_run["tool"] == "connected_run_status"
@@ -2036,6 +2087,54 @@ def test_cli_sources_answer_omits_mode_when_not_requested(monkeypatch, capsys) -
     capsys.readouterr()
 
 
+def test_retrieval_loop_failures_validate_mcp_search_identity() -> None:
+    good_result = {
+        "kind": "step",
+        "platform": "stepik",
+        "source_id": "source:stepik:expected",
+        "snippet": "needle proof from expected source",
+        "doc_id": "step:expected",
+    }
+    graph_context = {"status": "ready", "contexts": [{"graph": {"neighbors": [{"node_id": "neighbor"}]}}]}
+    packet = {
+        "answer_packet": {
+            "results": [good_result],
+            "evidence_chain": [{"source_id": "source:stepik:expected"}],
+            "refresh_report": {"local_query_commands": ["aoa-course lesson-context q", "aoa-course evidence inspect q"]},
+        },
+        "lesson_context": {"graph_context": graph_context},
+        "mcp_search": {
+            "results": [
+                {
+                    **good_result,
+                    "source_id": "source:stepik:wrong",
+                }
+            ]
+        },
+        "mcp_answer": {"answer_packet": {"results": [good_result], "evidence_chain": [{"source_id": "source:stepik:expected"}]}},
+        "mcp_lesson_context": {"answer_packet": {"results": [good_result], "result_count": 1}, "graph_context": graph_context},
+        "mcp_evidence": {"evidence_chain": [{"source_id": "source:stepik:expected"}], "result_refs": [{"doc_id": "step:expected"}]},
+    }
+    case = {
+        "case_id": "wrong-mcp-source",
+        "query": "needle",
+        "min_results": 1,
+        "expected_top_kind": "step",
+        "expected_top_platform": "stepik",
+        "expected_top_source_id": "source:stepik:expected",
+        "expected_top_snippet_terms": ["needle"],
+    }
+
+    failures = cli_module._retrieval_loop_failures(packet, case)
+
+    assert any(
+        failure["surface"] == "mcp.search"
+        and failure["field"] == "source_id"
+        and failure["actual"] == "source:stepik:wrong"
+        for failure in failures
+    )
+
+
 def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypatch) -> None:
     storage = StorageRoots(
         data=tmp_path / "data",
@@ -2068,6 +2167,26 @@ def test_mcp_connected_run_live_requires_allow_network(tmp_path: Path, monkeypat
     status = call_tool("connected_run_status", {"run": "mcp-live-blocked"})
     assert status["connected_run"]["status"] == "partial"
     assert status["connected_run"]["network_touched"] is False
+
+
+def test_mcp_connected_run_rejects_string_allow_network(tmp_path: Path, monkeypatch) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(storage.data))
+    monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(storage.cache))
+    monkeypatch.setenv("AOA_COURSE_AUTH_ROOT", str(storage.auth))
+    monkeypatch.setenv("AOA_COURSE_ARTIFACT_ROOT", str(storage.artifact))
+
+    with pytest.raises(ValueError, match="connected_run allow_network must be a boolean"):
+        call_tool(
+            "connected_run",
+            {"run": "mcp-live-string-gate", "mode": "live", "platforms": ["stepik"], "allow_network": "false"},
+        )
 
 
 def test_semantic_provider_preflight_redacts_token_values(tmp_path: Path, monkeypatch) -> None:
@@ -2594,8 +2713,10 @@ def test_mcp_jsonrpc_initialize_list_and_call(tmp_path: Path, monkeypatch) -> No
         },
     })
     assert connected_matrix["result"]["structuredContent"]["tool"] == "connected_run_query_matrix"
-    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["status"] == "ok"
-    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["quality"]["ready"] is True
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["status"] == "partial"
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["quality"]["ready"] is False
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["quality"]["all_queries_have_graph_context"] is False
+    assert connected_matrix["result"]["structuredContent"]["query_matrix"]["quality"]["ready_query_count"] == 2
     assert connected_matrix["result"]["structuredContent"]["query_matrix"]["query_count"] == 2
     connected_status = handle_jsonrpc_message({
         "jsonrpc": "2.0",

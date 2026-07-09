@@ -349,7 +349,7 @@ def query_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture"
         results = query_hybrid_index(roots, query=query, run_id=run_id, limit=limit)
     else:
         raise ValueError(f"unsupported query mode: {mode}")
-    return _attach_refresh_hints(roots, results, query=query, run_id=run_id, mode=mode)
+    return _attach_refresh_hints(roots, results, query=query, run_id=run_id, limit=limit, mode=mode)
 
 
 def render_answer_packet(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5, mode: str = "keyword") -> dict[str, object]:
@@ -430,23 +430,42 @@ def lesson_graph_context(roots: StorageRoots, packet: dict[str, object], *, run_
                 }
             )
             continue
-        contexts.append(
-            {
-                "node_id": node_id,
-                "node_status": "ready" if graph.get("node") else "missing_node",
-                "evidence_id": evidence.get("evidence_id"),
-                "doc_id": evidence.get("doc_id"),
-                "lesson_id": evidence.get("lesson_id"),
-                "lesson_title": evidence.get("lesson_title"),
-                "graph": graph,
-            }
-        )
+        context = {
+            "node_id": node_id,
+            "node_status": "ready" if graph.get("node") else "missing_node",
+            "evidence_id": evidence.get("evidence_id"),
+            "doc_id": evidence.get("doc_id"),
+            "lesson_id": evidence.get("lesson_id"),
+            "lesson_title": evidence.get("lesson_title"),
+            "graph": graph,
+        }
+        contexts.append(context)
+        if not graph.get("node"):
+            missing.append(
+                {
+                    "node_id": node_id,
+                    "evidence_id": evidence.get("evidence_id"),
+                    "reason": "missing_node",
+                    "next_command": f"aoa-course build-graph --run {run_id}",
+                }
+            )
+    ready_contexts = [item for item in contexts if item.get("node_status") == "ready"]
+    status = (
+        "partial"
+        if ready_contexts and missing
+        else "ready"
+        if ready_contexts
+        else "missing_graph"
+        if missing
+        else "empty"
+    )
     return {
         "schema": "aoa_course_lesson_graph_context_v1",
         "run_id": run_id,
         "graph_limit": graph_limit,
-        "status": "ready" if contexts else "missing_graph" if missing else "empty",
+        "status": status,
         "context_count": len(contexts),
+        "ready_context_count": len(ready_contexts),
         "contexts": contexts,
         "missing": missing,
     }
@@ -579,12 +598,12 @@ def _temporal_version_item(node: dict[str, object], *, selected: bool) -> dict[s
     }
 
 
-def _attach_refresh_hints(roots: StorageRoots, results: list[dict[str, object]], *, query: str, run_id: str, mode: str) -> list[dict[str, object]]:
+def _attach_refresh_hints(roots: StorageRoots, results: list[dict[str, object]], *, query: str, run_id: str, limit: int, mode: str) -> list[dict[str, object]]:
     sources_by_id = _registry_sources_by_id(roots)
     return [
         {
             **result,
-            "refresh_hint": _refresh_hint(result, sources_by_id=sources_by_id, query=query, run_id=run_id, mode=mode),
+            "refresh_hint": _refresh_hint(result, sources_by_id=sources_by_id, query=query, run_id=run_id, limit=limit, mode=mode),
         }
         for result in results
     ]
@@ -611,6 +630,7 @@ def _refresh_hint(
     sources_by_id: dict[str, dict[str, object]],
     query: str,
     run_id: str,
+    limit: int,
     mode: str,
 ) -> dict[str, object]:
     source_id = str(result.get("source_id") or "")
@@ -625,9 +645,9 @@ def _refresh_hint(
         f"aoa-course build-graph --run {shlex.quote(run_id)}",
     ]
     local_query_commands = [
-        f"aoa-course answer {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {shlex.quote(mode)}",
-        f"aoa-course lesson-context {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {shlex.quote(mode)} --graph-limit 12",
-        f"aoa-course evidence inspect {shlex.quote(query)} --run {shlex.quote(run_id)} --mode {shlex.quote(mode)}",
+        f"aoa-course answer {shlex.quote(query)} --run {shlex.quote(run_id)} --limit {int(limit)} --mode {shlex.quote(mode)}",
+        f"aoa-course lesson-context {shlex.quote(query)} --run {shlex.quote(run_id)} --limit {int(limit)} --mode {shlex.quote(mode)} --graph-limit 12",
+        f"aoa-course evidence inspect {shlex.quote(query)} --run {shlex.quote(run_id)} --limit {int(limit)} --mode {shlex.quote(mode)}",
     ]
     source_refresh = _source_refresh_hint(
         source_id=source_id,

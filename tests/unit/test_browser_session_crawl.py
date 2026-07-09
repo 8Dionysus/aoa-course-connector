@@ -8,6 +8,7 @@ from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import crawl_browser_fixture, materialize_browser_snapshot
+from aoa_course_connector.normalize.browser_session import normalize_browser_snapshot
 from aoa_course_connector.query import query_keyword_index, render_answer_packet
 from aoa_course_connector.sources import upsert_source
 
@@ -114,6 +115,44 @@ def test_skillspace_browser_crawl_fixture_to_answer_packet(tmp_path: Path) -> No
     assert results[0]["platform"] == "skillspace"
     packet = render_answer_packet(storage, "Skillspace logcat bugreport evidence", run_id="skillspace-browser-crawl-fixture")
     assert packet["evidence_chain"]
+
+
+def test_index_only_snapshot_placeholders_are_discovery_evidence_without_crawler() -> None:
+    raw = {
+        "schema": "aoa_course_browser_snapshot_v1",
+        "platform": "getcourse",
+        "source": {
+            "source_id": "source:getcourse:index-only",
+            "platform": "getcourse",
+            "source_ref": "https://school.operator.edu/teach/control/stream",
+            "access_mode": "browser_session",
+            "title": "Index Only School",
+        },
+        "pages": [
+            {
+                "page_id": "index-only",
+                "kind": "course_index",
+                "url": "https://school.operator.edu/teach/control/stream",
+                "title": "Index Only School",
+                "html": """
+                <main>
+                  <a data-aoa-kind="lesson" href="/teach/control/lesson/view/id/777">
+                    Unfetched modem rollback lesson
+                  </a>
+                </main>
+                """,
+            }
+        ],
+    }
+
+    bundle = normalize_browser_snapshot(raw, run_id="index-only-direct")
+    lesson = bundle["courses"][0]["modules"][0]["lessons"][0]
+    step = lesson["steps"][0]
+
+    assert lesson["freshness_state"] == "discovered_not_fetched"
+    assert step["kind"] == "browser_discovered_link"
+    assert step["authority_tier"] == "discovered_link"
+    assert step["source_authority"] == "browser_course_index_link"
 
 
 def test_crawl_placeholder_links_remain_discovery_evidence_in_query_and_graph(tmp_path: Path) -> None:

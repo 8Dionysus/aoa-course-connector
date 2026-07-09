@@ -328,6 +328,7 @@ def test_browser_live_sync_preserves_registry_source_in_answer_refresh_hints(tmp
     hint = packet["results"][0]["refresh_hint"]
 
     assert captured["source"]["source_id"] == source["source_id"]
+    assert checkpoint["stable_identity"]["samples"]["source_ids"] == [source["source_id"]]
     assert packet["results"][0]["source_id"] == source["source_id"]
     assert packet["evidence_chain"][0]["source_id"] == source["source_id"]
     assert hint["registry_match"] is True
