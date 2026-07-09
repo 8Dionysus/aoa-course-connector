@@ -259,10 +259,11 @@ def connection_profile_run_plan(
     blocked_by: list[str] = []
     if not candidates:
         blocked_by.append("no connected plan matched the selected profile platform/source")
-    if len(ready_candidates) > 1:
-        blocked_by.append("multiple ready connected plans matched; select exactly one --platform or --source-id")
-    selected = ready_candidates[0] if len(ready_candidates) == 1 and not blocked_by else None
-    if not selected and candidates and not blocked_by:
+    if len(candidates) > 1:
+        blocked_by.append("multiple connected plans matched; select exactly one --platform or --source-id")
+        blocked_by.extend(_connected_plan_blockers([plan for plan in candidates if not plan.get("ready")]))
+    selected = ready_candidates[0] if len(candidates) == 1 and len(ready_candidates) == 1 and not blocked_by else None
+    if not selected and len(candidates) == 1 and not blocked_by:
         blocked_by.extend(_connected_plan_blockers(candidates))
     if not selected:
         return {

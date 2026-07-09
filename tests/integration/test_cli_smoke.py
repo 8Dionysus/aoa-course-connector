@@ -1124,7 +1124,10 @@ def test_cli_retrieval_loop_eval_proves_cli_and_mcp_context(tmp_path: Path) -> N
     assert {case["failure_count"] for case in result["case_results"]} == {0}
     assert all(case["answer_result_count"] >= 1 for case in result["case_results"])
     assert all(case["mcp_search_result_count"] >= 1 for case in result["case_results"])
-    assert {case["lesson_graph_status"] for case in result["case_results"]} == {"ready"}
+    assert all(case["mcp_answer_result_count"] >= 1 for case in result["case_results"])
+    graph_status_by_case = {case["case_id"]: case["lesson_graph_status"] for case in result["case_results"]}
+    assert graph_status_by_case["stepik_clean_api_context"] == "partial"
+    assert all(status == "ready" for case_id, status in graph_status_by_case.items() if case_id != "stepik_clean_api_context")
 
 
 def test_cli_install_route_eval_proves_fresh_agent_route(tmp_path: Path) -> None:

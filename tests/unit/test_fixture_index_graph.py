@@ -7,7 +7,7 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index, tokenize
 from aoa_course_connector.ingest import materialize_fixture
-from aoa_course_connector.query import graph_neighbors, query_hybrid_index, query_keyword_index, render_answer_packet
+from aoa_course_connector.query import graph_neighbors, lesson_graph_context, query_hybrid_index, query_keyword_index, render_answer_packet
 from aoa_course_connector.storage import run_data_dir
 
 
@@ -294,6 +294,21 @@ def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:
     kinds = {edge["kind"] for edge in packet["edges"]}
     assert "module_contains_lesson" in kinds
     assert "lesson_about_topic" in kinds
+
+
+def test_lesson_graph_context_reports_missing_node_as_unavailable(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    materialize_fixture(storage, run_id="test-run")
+    build_graph(storage, run_id="test-run")
+    packet = {"evidence_chain": [{"evidence_id": "evidence:missing", "lesson_id": "lesson:missing"}]}
+
+    context = lesson_graph_context(storage, packet, run_id="test-run")
+
+    assert context["status"] == "missing_graph"
+    assert context["ready_context_count"] == 0
+    assert context["contexts"][0]["node_status"] == "missing_node"
+    assert context["missing"][0]["reason"] == "missing_node"
+    assert "build-graph --run test-run" in context["missing"][0]["next_command"]
 
 
 def test_freshness_ranking_prefers_current_when_relevance_ties(tmp_path: Path) -> None:

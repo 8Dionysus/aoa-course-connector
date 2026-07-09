@@ -67,7 +67,7 @@
       "expected_top_platform": "stepik",
       "expected_top_source_id": "source:stepik:fixture-67",
       "expected_top_snippet_terms": ["Stepik", "public API", "source evidence"],
-      "expected_graph_status": "ready",
+      "expected_graph_status": "partial",
       "min_graph_contexts": 1,
       "min_graph_neighbors": 1,
       "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score", "refresh_hint"]

@@ -376,6 +376,7 @@ def _lessons_from_index(course_page: dict[str, Any], snapshot: object) -> list[d
                     "title": link.get("text") or link.get("title") or href,
                     "module_title": link.get("module") or "Browser Session Lessons",
                     "order": index,
+                    "freshness_state": "discovered_not_fetched",
                     "html": f"<article><h1>{link.get('text') or href}</h1><p>Discovered from course index. Fetch this lesson page for full content.</p></article>",
                 }
             )
