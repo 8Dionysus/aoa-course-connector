@@ -8,6 +8,8 @@ import types
 from argparse import Namespace
 from pathlib import Path
 
+import pytest
+
 import aoa_course_connector.cli as cli_module
 from aoa_course_connector.adapters import adapter_list
 from aoa_course_connector.auth import (
@@ -32,9 +34,16 @@ from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_fixture
-from aoa_course_connector.mcp.server import _sources_answer_matrix_top_result_refs, call_tool, handle_jsonrpc_message, tools_manifest
+from aoa_course_connector.mcp.server import (
+    _drop_source_refs,
+    _sources_answer_matrix_top_result_refs,
+    _sources_answer_next_commands,
+    call_tool,
+    handle_jsonrpc_message,
+    tools_manifest,
+)
 from aoa_course_connector.readiness import semantic_provider_preflight
-from aoa_course_connector.sources import load_registry, upsert_source
+from aoa_course_connector.sources import PLATFORMS, load_registry, upsert_source
 from aoa_course_connector.status import connected_query_run_catalog
 from aoa_course_connector.storage import run_data_dir
 from aoa_course_connector.sync.checkpoints import make_checkpoint, upsert_checkpoint
@@ -55,6 +64,49 @@ def _write_query_artifact_paths(storage: StorageRoots, run_id: str) -> dict[str,
         "semantic_index_path": str(semantic_path),
         "graph_path": str(graph_path),
     }
+
+
+def test_source_answer_redaction_removes_singular_and_plural_source_refs() -> None:
+    redacted = _drop_source_refs(
+        {
+            "source_ref": "https://school.example/private",
+            "source_refs": ["https://school.example/private/lesson"],
+            "nested": {
+                "source_refs": ["https://academy.example/private/lesson"],
+                "kept": "value",
+            },
+            "items": [{"source_ref": "https://stepik.org/private", "kept": True}],
+        }
+    )
+
+    rendered = json.dumps(redacted)
+    assert "source_ref" not in rendered
+    assert "source_refs" not in rendered
+    assert "https://school.example" not in rendered
+    assert redacted["nested"]["kept"] == "value"
+    assert redacted["items"][0]["kept"] is True
+
+
+def test_sources_answer_next_commands_preserve_kind_filters() -> None:
+    commands = _sources_answer_next_commands(
+        "Stepik public API evidence",
+        ["source:stepik:67"],
+        ["stepik"],
+        ["smoke"],
+        "hybrid",
+    )
+
+    assert "--kind smoke" in commands[0]
+    assert '"kinds":["smoke"]' in commands[1]
+
+
+def test_mcp_source_tools_advertise_every_registry_platform() -> None:
+    tools = {tool["name"]: tool for tool in tools_manifest()["tools"]}
+    expected = sorted(PLATFORMS)
+
+    for name in ["list_sources", "source_answer", "sources_answer"]:
+        enum = tools[name]["inputSchema"]["properties"]["platforms"]["items"]["enum"]
+        assert enum == expected
 
 
 def test_source_registry_and_browser_plan(tmp_path: Path) -> None:
@@ -608,6 +660,60 @@ def test_connected_query_run_catalog_counts_invalid_cached_answer_ready(tmp_path
     assert entry["answer_evidence_count"] == 0
     assert catalog["answer_ready_entry_count"] == 0
     assert catalog["invalid_answer_ready_entry_count"] == 1
+
+
+def test_connected_query_run_catalog_prefers_smoke_entries_before_slicing(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    receipt_dir = storage.artifact / "runs" / "same-time-connected" / "connected"
+    receipt_dir.mkdir(parents=True)
+    receipt_path = receipt_dir / "connected_calibration_receipt.json"
+    receipt_path.write_text(
+        json.dumps(
+            {
+                "run_id": "same-time-connected",
+                "status": "ok",
+                "started_at": "2026-07-08T12:00:00Z",
+                "completed_at": "2026-07-08T12:00:00Z",
+                "query_plan": {
+                    "entries": [
+                        {
+                            "source_id": "source:stepik:67",
+                            "platform": "stepik",
+                            "kind": "sync",
+                            "run_id": "stepik-sync-67",
+                            "query": "course-specific question",
+                            "query_mode": "keyword",
+                            "query_ready": True,
+                            "paths": _write_query_artifact_paths(storage, "stepik-sync-67"),
+                        },
+                        {
+                            "source_id": "source:stepik:67",
+                            "platform": "stepik",
+                            "kind": "smoke",
+                            "run_id": "stepik-smoke-67",
+                            "query": "Stepik public API evidence",
+                            "query_mode": "keyword",
+                            "query_ready": True,
+                            "paths": _write_query_artifact_paths(storage, "stepik-smoke-67"),
+                        },
+                    ]
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    catalog = connected_query_run_catalog(storage, receipt_limit=3, per_source_limit=1)
+    [entry] = catalog["by_source_id"]["source:stepik:67"]
+
+    assert entry["kind"] == "smoke"
+    assert entry["query"] == "Stepik public API evidence"
 
 
 def test_connected_query_run_catalog_preserves_entry_status_and_coverage_counts(tmp_path: Path) -> None:
@@ -1508,6 +1614,25 @@ def test_mcp_list_sources_returns_filtered_read_only_catalog(tmp_path: Path, mon
     assert '"source_ref"' not in json.dumps(ambiguous)
 
 
+def test_browser_registry_source_rejects_source_id_source_ref_mismatch(tmp_path: Path) -> None:
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    source, _, _ = upsert_source(storage.data, "getcourse", "https://school.example/teach/control/stream", "School")
+
+    with pytest.raises(ValueError, match="source_ref_mismatch"):
+        cli_module._browser_registry_source(
+            storage,
+            platform="getcourse",
+            source_ref="https://other.example/teach/control/stream",
+            source_id=str(source["source_id"]),
+        )
+
+
 def test_sources_answer_matrix_portfolio_mode_allows_relevant_source_coverage(tmp_path: Path, monkeypatch) -> None:
     monkeypatch.setenv("AOA_COURSE_DATA_ROOT", str(tmp_path / "data"))
     monkeypatch.setenv("AOA_COURSE_CACHE_ROOT", str(tmp_path / "cache"))
@@ -1683,6 +1808,48 @@ def test_source_registry_query_eval_blocks_external_semantic_provider_path_alias
 
     [failure] = cli_module._source_registry_external_semantic_provider_failures(catalog, "semantic")
 
+    assert failure["path"] == str(semantic_index)
+    assert failure["reason"] == "external_semantic_provider_requires_network"
+
+
+def test_source_registry_query_eval_reads_semantic_alias_from_source_entries(tmp_path: Path) -> None:
+    semantic_index = tmp_path / "semantic_index.json"
+    semantic_index.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_semantic_index_v1",
+                "provider": "http_json_v1",
+                "provider_config": {"provider": "http_json_v1", "endpoint_configured": True},
+                "docs": [],
+            }
+        ),
+        encoding="utf-8",
+    )
+    catalog = {
+        "connected_runs": {
+            "schema": "aoa_course_connected_query_run_catalog_v1",
+            "query_ready_entry_count": 1,
+        },
+        "sources": [
+            {
+                "source_id": "source:stepik:67",
+                "latest_connected_runs": [
+                    {
+                        "connected_run_id": "connected-stepik",
+                        "run_id": "stepik-smoke-67",
+                        "query_ready": True,
+                        "paths": {"semantic_index_path": str(semantic_index)},
+                    }
+                ],
+            }
+        ],
+    }
+
+    [failure] = cli_module._source_registry_external_semantic_provider_failures(catalog, "hybrid")
+
+    assert failure["surface"] == "sources.latest_connected_runs"
+    assert failure["source_id"] == "source:stepik:67"
+    assert failure["run_id"] == "stepik-smoke-67"
     assert failure["path"] == str(semantic_index)
     assert failure["reason"] == "external_semantic_provider_requires_network"
 

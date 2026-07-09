@@ -27,7 +27,7 @@ from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDE
 from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet, render_lesson_context_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
-from aoa_course_connector.sources import load_registry
+from aoa_course_connector.sources import PLATFORMS, load_registry
 from aoa_course_connector.stepik_options import (
     DEFAULT_MAX_STEP_SOURCES,
     DEFAULT_STEP_SOURCE_TIMEOUT,
@@ -71,14 +71,18 @@ def _run_schema() -> dict[str, object]:
     return _object_schema({"run": _string_schema("Connector run id.")})
 
 
+def _platforms_schema(description: str) -> dict[str, object]:
+    return {
+        "type": "array",
+        "items": {"type": "string", "enum": sorted(PLATFORMS)},
+        "description": description,
+    }
+
+
 def _list_sources_schema() -> dict[str, object]:
     return _object_schema(
         {
-            "platforms": {
-                "type": "array",
-                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
-                "description": "Optional platforms to select from the registry.",
-            },
+            "platforms": _platforms_schema("Optional platforms to select from the registry."),
             "source_ids": _source_ids_schema("Optional source ids to select from the registry."),
             "include_disabled": {"type": "boolean", "description": "Include disabled sources in the catalog."},
             "include_source_refs": {"type": "boolean", "description": "Include operator source refs in catalog sources. They are not secrets, but can be private runtime context."},
@@ -94,11 +98,7 @@ def _source_answer_schema() -> dict[str, object]:
         {
             "query": _string_schema("Course question to answer from the selected source's latest query-ready connected run."),
             "source_id": _string_schema("Optional source id to select exactly one configured source."),
-            "platforms": {
-                "type": "array",
-                "items": {"type": "string", "enum": ["getcourse", "skillspace", "stepik"]},
-                "description": "Optional platforms to narrow source selection.",
-            },
+            "platforms": _platforms_schema("Optional platforms to narrow source selection."),
             "kinds": {
                 "type": "array",
                 "items": {"type": "string", "enum": ["smoke", "sync"]},
@@ -794,7 +794,7 @@ def _call_sources_answer(roots: StorageRoots, args: dict[str, object]) -> dict[s
         "blocked_sources": blocked_sources,
         "failures": failures,
         "quality": quality,
-        "next_commands": _sources_answer_next_commands(str(query_value), source_ids, platforms, mode_value),
+        "next_commands": _sources_answer_next_commands(str(query_value), source_ids, platforms, kinds, mode_value),
     }
 
 
@@ -1217,16 +1217,24 @@ def _sources_answer_matrix_nested_items(query_packets: list[dict[str, object]], 
     return items
 
 
-def _sources_answer_next_commands(query: str, source_ids: list[str] | None, platforms: list[str] | None, mode: str | None) -> list[str]:
+def _sources_answer_next_commands(
+    query: str,
+    source_ids: list[str] | None,
+    platforms: list[str] | None,
+    kinds: list[str] | None,
+    mode: str | None,
+) -> list[str]:
     payload: dict[str, object] = {"query": query}
     if source_ids:
         payload["source_ids"] = source_ids
     if platforms:
         payload["platforms"] = platforms
+    if kinds:
+        payload["kinds"] = kinds
     if mode:
         payload["mode"] = mode
     return [
-        _sources_answer_cli_command(query, source_ids=source_ids, platforms=platforms, mode=mode),
+        _sources_answer_cli_command(query, source_ids=source_ids, platforms=platforms, kinds=kinds, mode=mode),
         f"aoa-course mcp call sources_answer {shlex.quote(json.dumps(payload, ensure_ascii=True, separators=(',', ':')))}",
         "aoa-course mcp call list_sources '{\"include_source_refs\":false,\"connected_run_limit\":5}'",
     ]
@@ -1397,7 +1405,7 @@ def _sources_answer_matrix_cli_command(
 
 def _drop_source_refs(value: object) -> object:
     if isinstance(value, dict):
-        return {key: _drop_source_refs(item) for key, item in value.items() if key != "source_ref"}
+        return {key: _drop_source_refs(item) for key, item in value.items() if key not in {"source_ref", "source_refs"}}
     if isinstance(value, list):
         return [_drop_source_refs(item) for item in value]
     return value

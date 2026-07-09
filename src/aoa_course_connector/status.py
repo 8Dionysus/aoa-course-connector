@@ -748,10 +748,12 @@ def _content_counts_from_stable_identity(stable_identity: dict[str, object]) -> 
     }
 
 
-def _connected_query_run_sort_key(item: dict[str, object]) -> tuple[str, str, str]:
+def _connected_query_run_sort_key(item: dict[str, object]) -> tuple[str, str, int, str]:
+    kind_priority = 1 if str(item.get("kind") or "") == "smoke" else 0
     return (
         str(item.get("connected_completed_at") or ""),
         str(item.get("connected_started_at") or ""),
+        kind_priority,
         str(item.get("connected_run_id") or ""),
     )
 
