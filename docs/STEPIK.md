@@ -91,6 +91,13 @@ checkpoints include `stable_identity.fingerprint`, which should stay stable
 across repeat sync runs for the same Stepik course while fresh artifacts receive
 their own child `run_id`.
 
+Stepik raw payloads, receipts, and checkpoints also carry
+`aoa_course_ingest_coverage_v1`. It compares referenced and fetched sections,
+units, lessons, and steps, so `--full-course` can prove exhaustion of the
+ordinary API tree. Teacher-only `step-sources` are reported as a separate
+enrichment lane (`complete`, `bounded`, `partial`, `unavailable`, or
+`not_requested`) and do not hide whether the core course tree is complete.
+
 ## Account Discovery Route
 
 When the connected account can expose enrolled courses, discover those course

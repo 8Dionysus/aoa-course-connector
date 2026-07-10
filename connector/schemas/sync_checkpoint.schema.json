@@ -20,6 +20,32 @@
     "index_path": {"type": "string"},
     "semantic_index_path": {"type": "string"},
     "graph_path": {"type": "string"},
+    "coverage": {
+      "type": "object",
+      "required": ["schema", "status", "complete_for_scope", "inventory_exhausted", "counts", "gaps"],
+      "properties": {
+        "schema": {"const": "aoa_course_ingest_coverage_v1"},
+        "status": {"enum": ["complete", "bounded", "partial", "indeterminate"]},
+        "complete_for_scope": {"type": "boolean"},
+        "inventory_exhausted": {"type": "boolean"},
+        "counts": {"type": "object"},
+        "gaps": {"type": "array"}
+      },
+      "additionalProperties": true
+    },
+    "identity_continuity": {
+      "type": "object",
+      "required": ["schema", "status", "stable_retention_rate", "added_id_count", "removed_id_count", "history_preserved"],
+      "properties": {
+        "schema": {"const": "aoa_course_identity_continuity_v1"},
+        "status": {"enum": ["initial", "stable", "changed", "unavailable"]},
+        "stable_retention_rate": {"type": "number", "minimum": 0, "maximum": 1},
+        "added_id_count": {"type": "integer", "minimum": 0},
+        "removed_id_count": {"type": "integer", "minimum": 0},
+        "history_preserved": {"type": "boolean"}
+      },
+      "additionalProperties": true
+    },
     "stable_identity": {
       "type": "object",
       "required": ["schema", "available", "fingerprint", "counts", "samples"],

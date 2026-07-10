@@ -1611,6 +1611,8 @@ def _sync_query_plan_entries(payload: dict[str, object], action: dict[str, objec
                 evidence_count=0,
                 paths=paths,
                 stable_identity=checkpoint.get("stable_identity") if isinstance(checkpoint.get("stable_identity"), dict) else None,
+                coverage=checkpoint.get("coverage") if isinstance(checkpoint.get("coverage"), dict) else None,
+                identity_continuity=checkpoint.get("identity_continuity") if isinstance(checkpoint.get("identity_continuity"), dict) else None,
             )
         )
     return entries
@@ -1660,6 +1662,8 @@ def _query_plan_entry(
     evidence_count: int,
     paths: dict[str, str],
     stable_identity: dict[str, object] | None = None,
+    coverage: dict[str, object] | None = None,
+    identity_continuity: dict[str, object] | None = None,
 ) -> dict[str, object]:
     query_text = query or "<course-specific question>"
     index_ready = bool(paths.get("index_path"))
@@ -1703,6 +1707,10 @@ def _query_plan_entry(
     }
     if stable_identity is not None:
         entry["stable_identity"] = stable_identity
+    if coverage is not None:
+        entry["coverage"] = coverage
+    if identity_continuity is not None:
+        entry["identity_continuity"] = identity_continuity
     return entry
 
 

@@ -29,6 +29,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public 
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
+PYTHONPATH=src python -m aoa_course_connector.cli eval ingest-coverage
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
@@ -56,6 +57,13 @@ query/path alignment rather than incomparable run-local scores, and that an
 unrelated query is not reported as a confident match. Pass `--suite` with a
 gitignored runtime suite and `--skip-prepare` to apply the same contract to
 already connected operator sources without touching the network.
+
+`eval ingest-coverage` is the fixture-safe structural completeness and refresh
+continuity gate. It proves that source inventories are exhausted for the
+selected scope, limits and fetch gaps are explicit, canonical IDs remain
+stable, and previous snapshots survive refresh. Its bounded probe must report
+truncation instead of presenting omitted lessons as source deletions. Use
+`--skip-prepare` with platform/source filters to audit existing checkpoints.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,

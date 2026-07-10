@@ -948,6 +948,79 @@ def test_cli_connected_portfolio_eval_checks_top_source_path_and_negative_confid
     assert all("source_ref" not in json.dumps(case) for case in result["case_results"])
 
 
+def test_cli_ingest_coverage_eval_proves_complete_sources_and_bounded_refresh_protection(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "eval", "ingest-coverage")
+
+    assert result["schema"] == "aoa_course_eval_ingest_coverage_v1"
+    assert result["status"] == "ok"
+    assert result["network_touched"] is False
+    assert result["preparation"]["isolated_storage"] is True
+    assert result["metrics"]["source_count"] >= 3
+    assert result["metrics"]["complete_source_count"] == result["metrics"]["source_count"]
+    assert result["metrics"]["coverage_gap_source_count"] == 0
+    assert result["metrics"]["platform_count"] == 3
+    assert all(checkpoint["coverage"]["complete_for_scope"] for checkpoint in result["checkpoints"])
+    assert all(checkpoint["identity_continuity"]["removed_id_count"] == 0 for checkpoint in result["checkpoints"])
+    assert result["bounded_probe"]["coverage"]["status"] == "bounded"
+    assert result["bounded_probe"]["coverage"]["complete_for_scope"] is False
+    assert result["bounded_probe"]["identity_continuity"]["removed_id_count"] > 0
+    assert result["bounded_probe"]["identity_continuity"]["removal_assessment"] == "inconclusive_incomplete_ingest"
+    assert "source_ref" not in json.dumps(result)
+    assert not (tmp_path / "data/sources/course_sources.json").exists()
+
+
+def test_cli_ingest_coverage_eval_rejects_newer_failed_checkpoint(tmp_path: Path) -> None:
+    source = run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "https://school.operator.edu/teach/control/stream",
+        "--platform",
+        "getcourse",
+        "--title",
+        "School",
+    )["source"]
+    run_cli(
+        tmp_path,
+        "sync",
+        "browser-fixture",
+        "--run",
+        "coverage-ok",
+        "--source-id",
+        str(source["source_id"]),
+    )
+    checkpoint_path = tmp_path / "data/sync/sync_checkpoints.json"
+    store = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    store["checkpoints"].append(
+        {
+            "schema": "aoa_course_sync_checkpoint_v1",
+            "checkpoint_id": f"checkpoint:coverage-error:{source['source_id']}",
+            "source_id": source["source_id"],
+            "platform": "getcourse",
+            "sync_run_id": "coverage-error",
+            "run_id": "coverage-error-source",
+            "status": "error",
+            "error": "fixture failure",
+            "updated_at": "2099-01-01T00:00:00Z",
+        }
+    )
+    checkpoint_path.write_text(json.dumps(store), encoding="utf-8")
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "aoa_course_connector.cli", "eval", "ingest-coverage", "--skip-prepare", "--platform", "getcourse"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=cli_env(tmp_path),
+    )
+    result = json.loads(completed.stdout)
+
+    assert completed.returncode == 1
+    assert result["status"] == "error"
+    assert result["checkpoints"][0]["run_id"] == "coverage-error-source"
+    assert "checkpoint_status" in result["checkpoints"][0]["failure_fields"]
+
+
 def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     receipt = run_cli(
         tmp_path,

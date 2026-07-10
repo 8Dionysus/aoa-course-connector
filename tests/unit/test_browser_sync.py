@@ -57,6 +57,10 @@ def test_browser_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path) -
     assert materialize_receipt["content_counts"]["lesson_count"] == stable_identity["counts"]["lesson_ids"]
     assert materialize_receipt["content_counts"]["step_count"] == stable_identity["counts"]["step_ids"]
     assert materialize_receipt["content_counts"]["evidence_count"] == materialize_receipt["evidence_count"]
+    assert checkpoint["coverage"] == materialize_receipt["coverage"]
+    assert checkpoint["coverage"]["schema"] == "aoa_course_ingest_coverage_v1"
+    assert checkpoint["coverage"]["status"] == "complete"
+    assert checkpoint["coverage"]["complete_for_scope"] is True
     status = load_sync_status(storage, sync_run_id="browser-sync-fixture", platform="getcourse")
     assert status["ok_count"] == 1
     packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=checkpoint["run_id"])
@@ -108,6 +112,24 @@ def test_browser_fixture_sync_preserves_stable_identity_across_refreshes(tmp_pat
     assert first_checkpoint["stable_identity"]["fingerprint"] == second_checkpoint["stable_identity"]["fingerprint"]
     assert first_checkpoint["stable_identity"]["samples"] == second_checkpoint["stable_identity"]["samples"]
     assert first_checkpoint["stable_identity"]["counts"] == second_checkpoint["stable_identity"]["counts"]
+    assert first_checkpoint["identity_continuity"]["status"] == "initial"
+    assert second_checkpoint["identity_continuity"]["status"] == "stable"
+    assert second_checkpoint["identity_continuity"]["previous_run_id"] == first_checkpoint["run_id"]
+    assert second_checkpoint["identity_continuity"]["stable_retention_rate"] == 1.0
+    assert second_checkpoint["identity_continuity"]["added_id_count"] == 0
+    assert second_checkpoint["identity_continuity"]["removed_id_count"] == 0
+
+    bounded = sync_browser_fixture_sources(
+        storage,
+        sync_run_id="browser-stable-refresh-bounded",
+        platforms=["getcourse"],
+        source_ids=[str(source["source_id"])],
+        max_lessons=1,
+    )["synced_sources"][0]
+    assert bounded["coverage"]["status"] == "bounded"
+    assert bounded["identity_continuity"]["status"] == "changed"
+    assert bounded["identity_continuity"]["removed_id_count"] > 0
+    assert bounded["identity_continuity"]["removal_assessment"] == "inconclusive_incomplete_ingest"
 
     first_packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=str(first_checkpoint["run_id"]), mode="hybrid")
     second_packet = render_answer_packet(storage, "GetCourse bootloader rollback evidence", run_id=str(second_checkpoint["run_id"]), mode="hybrid")

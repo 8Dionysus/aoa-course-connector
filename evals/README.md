@@ -34,6 +34,11 @@ features, and low-confidence handling for unrelated questions. Operator
 benchmarks stay in gitignored runtime artifact storage and use the same CLI
 runner with `--suite ... --skip-prepare`.
 
+The ingest-coverage suite checks structural source exhaustion and refresh
+continuity rather than retrieval relevance. It requires explicit inventory,
+limit and fetch-gap counts, preserved previous snapshots, stable canonical IDs,
+and a bounded probe that must classify omitted lessons as truncation.
+
 The freshness-ranking suite checks the ordering-specific conflict case: when
 current and stale course items have equal base relevance, the current item must
 rank higher while the packet still exposes the base `score`, adjusted

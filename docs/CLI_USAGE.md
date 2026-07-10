@@ -166,6 +166,21 @@ aoa-course eval connected-portfolio \
 Each positive case can require `expected_top_source_id`,
 `expected_top_platform`, `expected_top_path_terms`, and proof fields. A
 negative case sets `expect_no_confident_match: true`.
+Use `eval ingest-coverage` after sync when the agent must prove that the
+queryable corpus is structurally complete for the adapter's declared scope:
+
+```bash
+aoa-course eval ingest-coverage
+aoa-course eval ingest-coverage --skip-prepare --platform getcourse --platform stepik
+```
+
+The default run uses isolated fixture storage and emits
+`aoa_course_eval_ingest_coverage_v1`. Existing-state mode is read-only. Each
+checkpoint carries `coverage` with inventory, selected/fetched and truncated
+counts plus explicit gaps, and `identity_continuity` with previous-run
+retention, additions/removals, history preservation, and removal assessment.
+Stepik reports optional `step_sources` enrichment separately from completion
+of the ordinary course API tree.
 `answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before

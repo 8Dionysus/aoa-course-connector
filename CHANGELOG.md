@@ -7,6 +7,9 @@
 - Added comparable cross-source portfolio reranking and
   `eval connected-portfolio` with expected Top-1 source/path, collision,
   confidence, and negative-query checks for fixture and runtime suites.
+- Added structural ingest coverage and canonical-ID continuity to browser and
+  Stepik raw/receipt/checkpoint/catalog surfaces, plus `eval ingest-coverage`
+  with isolated completeness and bounded-refresh probes.
 - Added keyword index, graph builder, answer packet, CLI, MCP skeleton, and
   validation route.
 - Added Stepik clean API adapter with fixture and bounded live materialization.

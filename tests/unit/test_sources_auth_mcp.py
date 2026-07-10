@@ -811,6 +811,25 @@ def test_connected_query_run_catalog_preserves_entry_status_and_coverage_counts(
                                     "evidence_ids": 203,
                                 },
                             },
+                            "coverage": {
+                                "schema": "aoa_course_ingest_coverage_v1",
+                                "platform": "stepik",
+                                "inventory_scope": "course_api_tree",
+                                "status": "complete",
+                                "complete_for_scope": True,
+                                "inventory_exhausted": True,
+                                "limits_applied": False,
+                                "counts": {"fetched_lesson_count": 28},
+                                "gaps": [],
+                            },
+                            "identity_continuity": {
+                                "schema": "aoa_course_identity_continuity_v1",
+                                "status": "stable",
+                                "stable_retention_rate": 1.0,
+                                "added_id_count": 0,
+                                "removed_id_count": 0,
+                                "history_preserved": True,
+                            },
                         }
                     ]
                 },
@@ -836,6 +855,10 @@ def test_connected_query_run_catalog_preserves_entry_status_and_coverage_counts(
     }
     assert entry["stable_identity"]["fingerprint"] == "sha256:123"
     assert "samples" not in entry["stable_identity"]
+    assert entry["coverage"]["status"] == "complete"
+    assert entry["coverage"]["counts"] == {"fetched_lesson_count": 28}
+    assert entry["identity_continuity"]["status"] == "stable"
+    assert entry["identity_continuity"]["stable_retention_rate"] == 1.0
 
 
 def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> None:
