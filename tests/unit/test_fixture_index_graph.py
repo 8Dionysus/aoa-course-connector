@@ -103,7 +103,7 @@ def test_keyword_index_preserves_item_timestamp_before_fetch_timestamp(tmp_path:
 
 
 def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path: Path) -> None:
-    assert tokenize("PRO C#. Основы программирования")[:3] == ["pro", "c#", "основы"]
+    assert tokenize("LAB C#. Основы программирования")[:3] == ["lab", "c#", "основы"]
 
     storage = roots(tmp_path)
     run_id = "csharp-title-fixture"
@@ -117,23 +117,23 @@ def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path
                     {
                         "course_id": "course:csharp",
                         "source_id": "source:stepik:csharp",
-                        "title": "PRO C#. Основы программирования",
-                        "url": "https://stepik.org/course/5482",
+                        "title": "LAB C#. Основы программирования",
+                        "url": "https://stepik.org/course/900001",
                         "platform": "stepik",
                         "modules": [
                             {
                                 "module_id": "module:intro",
-                                "title": "Общая информация о курсе",
+                                "title": "Вводная лаборатория",
                                 "lessons": [
                                     {
                                         "lesson_id": "lesson:welcome",
                                         "title": "Добро пожаловать",
-                                        "url": "https://stepik.org/lesson/1263653",
+                                        "url": "https://stepik.org/lesson/900101",
                                         "freshness_state": "current",
                                         "evidence": {
                                             "evidence_id": "evidence:csharp:welcome",
-                                            "source_url": "https://stepik.org/lesson/1263653",
-                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                            "source_url": "https://stepik.org/lesson/900101",
+                                            "fetched_at": "2026-01-15T12:00:00Z",
                                         },
                                         "steps": [
                                             {
@@ -155,7 +155,7 @@ def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path
                         "modules": [
                             {
                                 "module_id": "module:python-basics",
-                                "title": "Заключение",
+                                "title": "Итоги курса",
                                 "lessons": [
                                     {
                                         "lesson_id": "lesson:python-finish",
@@ -165,7 +165,7 @@ def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path
                                         "evidence": {
                                             "evidence_id": "evidence:python:finish",
                                             "source_url": "https://stepik.org/lesson/7630",
-                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                            "fetched_at": "2026-01-15T12:00:00Z",
                                         },
                                         "steps": [
                                             {
@@ -191,12 +191,12 @@ def test_symbolic_course_title_terms_match_without_sentence_punctuation(tmp_path
     results = query_keyword_index(storage, "C#", run_id=run_id)
 
     assert results
-    assert results[0]["course_title"] == "PRO C#. Основы программирования"
+    assert results[0]["course_title"] == "LAB C#. Основы программирования"
     assert results[0]["evidence_id"] == "evidence:csharp:welcome"
 
     hybrid_results = query_hybrid_index(storage, "C# основы программирования", run_id=run_id)
 
-    assert hybrid_results[0]["course_title"] == "PRO C#. Основы программирования"
+    assert hybrid_results[0]["course_title"] == "LAB C#. Основы программирования"
     assert hybrid_results[0]["rank_features"]["place_match_count"] == 3
     assert set(hybrid_results[0]["rank_features"]["place_matches"]) == {"c#", "основы", "программирования"}
     assert hybrid_results[0]["rank_features"]["place_boost"] > hybrid_results[1]["rank_features"]["place_boost"]
@@ -213,30 +213,30 @@ def test_single_course_title_match_beats_cross_source_semantic_noise(tmp_path: P
                 "schema": "aoa_course_bundle_v1",
                 "courses": [
                     {
-                        "course_id": "course:philosophy",
-                        "source_id": "source:stepik:philosophy",
-                        "title": "Философия",
-                        "url": "https://stepik.org/course/6667",
+                        "course_id": "course:astronomy",
+                        "source_id": "source:stepik:astronomy",
+                        "title": "Астрономия",
+                        "url": "https://stepik.org/course/900002",
                         "platform": "stepik",
                         "modules": [
                             {
-                                "module_id": "module:philosophy-intro",
+                                "module_id": "module:astronomy-intro",
                                 "title": "Введение",
                                 "lessons": [
                                     {
-                                        "lesson_id": "lesson:philosophy-short",
-                                        "title": "КРАТКО: чем философия отличается от науки, религии и искусства?",
-                                        "url": "https://stepik.org/lesson/459388",
+                                        "lesson_id": "lesson:astronomy-short",
+                                        "title": "Как различать астрономию, космологию и наблюдения?",
+                                        "url": "https://stepik.org/lesson/900201",
                                         "freshness_state": "current",
                                         "evidence": {
-                                            "evidence_id": "evidence:philosophy:short",
-                                            "source_url": "https://stepik.org/lesson/459388",
-                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                            "evidence_id": "evidence:astronomy:short",
+                                            "source_url": "https://stepik.org/lesson/900201",
+                                            "fetched_at": "2026-01-15T12:00:00Z",
                                         },
                                         "steps": [
                                             {
-                                                "step_id": "step:philosophy-short",
-                                                "text": "Философия помогает понять основания знания, ценностей и искусства.",
+                                                "step_id": "step:astronomy-short",
+                                                "text": "Астрономия помогает изучать звезды, планеты и наблюдаемую Вселенную.",
                                             }
                                         ],
                                     }
@@ -247,23 +247,23 @@ def test_single_course_title_match_beats_cross_source_semantic_noise(tmp_path: P
                     {
                         "course_id": "course:bot",
                         "source_id": "source:stepik:bot",
-                        "title": "Telegram-бот на Python за вечер",
-                        "url": "https://stepik.org/course/268845",
+                        "title": "Python-бот: практикум",
+                        "url": "https://stepik.org/course/900003",
                         "platform": "stepik",
                         "modules": [
                             {
                                 "module_id": "module:bot-bonus",
-                                "title": "Бонус",
+                                "title": "Дополнительная практика",
                                 "lessons": [
                                     {
                                         "lesson_id": "lesson:bot-business",
-                                        "title": "Бот-визитка репетитора",
-                                        "url": "https://stepik.org/lesson/1592972",
+                                        "title": "Автоматизация записи клиента",
+                                        "url": "https://stepik.org/lesson/900301",
                                         "freshness_state": "current",
                                         "evidence": {
                                             "evidence_id": "evidence:bot:business",
-                                            "source_url": "https://stepik.org/lesson/1592972",
-                                            "fetched_at": "2026-07-08T23:09:17Z",
+                                            "source_url": "https://stepik.org/lesson/900301",
+                                            "fetched_at": "2026-01-15T12:00:00Z",
                                         },
                                         "steps": [
                                             {
@@ -286,10 +286,10 @@ def test_single_course_title_match_beats_cross_source_semantic_noise(tmp_path: P
     build_keyword_index(storage, run_id=run_id)
     build_semantic_index(storage, run_id=run_id)
 
-    hybrid_results = query_hybrid_index(storage, "философия зачем нужна", run_id=run_id, limit=2)
+    hybrid_results = query_hybrid_index(storage, "астрономия зачем нужна", run_id=run_id, limit=2)
 
-    assert [result["course_title"] for result in hybrid_results] == ["Философия", "Telegram-бот на Python за вечер"]
-    assert hybrid_results[0]["rank_features"]["place_matches"] == ["философия"]
+    assert [result["course_title"] for result in hybrid_results] == ["Астрономия", "Python-бот: практикум"]
+    assert hybrid_results[0]["rank_features"]["place_matches"] == ["астрономия"]
     assert hybrid_results[0]["rank_features"]["place_boost"] > hybrid_results[1]["rank_features"]["place_boost"]
 
 
@@ -298,7 +298,7 @@ def test_portfolio_rank_matches_compound_and_inflected_native_path_terms() -> No
     relevant = portfolio_rank_features(
         query,
         {
-            "path": ["Марафон Точка Старта", "Уроки", "Старт запуска вашей онлайн-школы"],
+            "path": ["Launch Lab", "Практика", "Запуск вашей онлайн-школы"],
             "text": "Первый урок о запуске онлайн-школы.",
             "rank_score": 0.59,
             "score_components": {"semantic": 0.12},
@@ -308,7 +308,7 @@ def test_portfolio_rank_matches_compound_and_inflected_native_path_terms() -> No
     noise = portfolio_rank_features(
         query,
         {
-            "path": ["Философия", "Мир и познание", "Пространство и время"],
+            "path": ["История идей", "Познание мира", "Пространство и время"],
             "text": "Исторические формы понимания пространства и времени.",
             "rank_score": 0.68,
             "score_components": {"semantic": 0.33},

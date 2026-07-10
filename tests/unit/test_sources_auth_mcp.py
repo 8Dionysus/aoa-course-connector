@@ -885,7 +885,7 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                             },
                             {
                                 "doc_id": "step:online-school",
-                                "path": ["Точка Старта", "Уроки", "Старт запуска вашей онлайн-школы"],
+                                "path": ["Launch Lab", "Практика", "Запуск вашей онлайн-школы"],
                                 "text": "Первый урок о запуске онлайн-школы.",
                                 "score": 0.51,
                                 "rank_score": 0.59,
@@ -923,7 +923,7 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                         "results": [
                             {
                                 "doc_id": "step:philosophy",
-                                "path": ["Философия", "Мир и познание", "Пространство и время"],
+                                "path": ["История идей", "Познание мира", "Пространство и время"],
                                 "text": "Исторические формы понимания пространства и времени.",
                                 "score": 0.58,
                                 "rank_score": 0.68,
@@ -939,7 +939,7 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                                 "doc_id": "step:philosophy",
                                 "score": 0.58,
                                 "rank_score": 0.68,
-                                "path": ["Философия", "Мир и познание", "Пространство и время"],
+                                "path": ["История идей", "Познание мира", "Пространство и время"],
                                 "fetched_at": "2026-07-08T00:00:00Z",
                                 "freshness_state": "current",
                             }

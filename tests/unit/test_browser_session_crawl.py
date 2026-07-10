@@ -82,21 +82,21 @@ def test_getcourse_crawler_extracts_embedded_lesson_urls_without_stream_noise() 
       <a href="/teach/control/stream/index">Training list</a>
       <script>
         window.gcLessons = [
-          "/teach/control/lesson/view/id/334953645",
-          "\\/teach\\/control\\/lesson\\/view\\/id\\/334953653",
-          "/teach/control/lesson/view/id/334953645"
+          "/teach/control/lesson/view/id/900000101",
+          "\\/teach\\/control\\/lesson\\/view\\/id\\/900000102",
+          "/teach/control/lesson/view/id/900000101"
         ];
       </script>
-      <div data-url="/teach/control/lesson/view/id/334953661">locked lesson</div>
+      <div data-url="/teach/control/lesson/view/id/900000103">locked lesson</div>
     </main>
     """
 
-    links = discover_lesson_links(html, "https://getcourse.ru/teach/control/stream/view/id/911642804", platform="getcourse", max_lessons=10)
+    links = discover_lesson_links(html, "https://getcourse.ru/teach/control/stream/view/id/900000001", platform="getcourse", max_lessons=10)
 
     assert [link["href"] for link in links] == [
-        "https://getcourse.ru/teach/control/lesson/view/id/334953645",
-        "https://getcourse.ru/teach/control/lesson/view/id/334953653",
-        "https://getcourse.ru/teach/control/lesson/view/id/334953661",
+        "https://getcourse.ru/teach/control/lesson/view/id/900000101",
+        "https://getcourse.ru/teach/control/lesson/view/id/900000102",
+        "https://getcourse.ru/teach/control/lesson/view/id/900000103",
     ]
 
 
