@@ -8,6 +8,7 @@ from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index, tokenize
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.query import (
+    _rank_features,
     graph_neighbors,
     lesson_graph_context,
     portfolio_rank_features,
@@ -336,6 +337,28 @@ def test_portfolio_rank_matches_compound_and_inflected_native_path_terms() -> No
     )
     assert "привязать" not in false_prefix["lexical_matches"]
     assert false_prefix["lexical_coverage"] < 1.0
+
+    machine_doc = {
+        "path": ["Firmware Audit", "Bugreport lesson", "skillspace:lesson:ss-lesson-bugreport:assignment:1"],
+        "text": "Attach bugreport evidence.",
+        "rank_score": 0.74,
+        "score_components": {"semantic": 0.17},
+        "semantic_provider": "local_hashing_v1",
+    }
+    machine_path = portfolio_rank_features("Skillspace logcat bugreport evidence", machine_doc)
+    native_path = portfolio_rank_features(
+        "Skillspace logcat bugreport evidence",
+        {
+            "path": ["Firmware Audit", "Mobile Debugging", "Logcat lesson"],
+            "text": "Use Skillspace logcat to inspect the bugreport evidence.",
+            "rank_score": 0.70,
+            "score_components": {"semantic": 0.20},
+            "semantic_provider": "local_hashing_v1",
+        },
+    )
+    assert "skillspace" not in machine_path["path_lexical_matches"]
+    assert "skillspace" not in _rank_features(machine_doc, tokenize("Skillspace logcat bugreport evidence"))["place_matches"]
+    assert native_path["portfolio_rank_score"] > machine_path["portfolio_rank_score"]
 
 
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:

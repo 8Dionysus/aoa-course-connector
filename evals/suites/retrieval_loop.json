@@ -31,7 +31,7 @@
       "min_results": 2,
       "expected_top_platform": "getcourse",
       "expected_top_source_id": "source:getcourse:fixture",
-      "expected_top_snippet_terms": ["connected account", "rollback", "vendor boot"],
+      "expected_top_snippet_terms": ["mentor", "anti-rollback", "vendor boot"],
       "expected_graph_status": "ready",
       "min_graph_contexts": 1,
       "min_graph_neighbors": 1,

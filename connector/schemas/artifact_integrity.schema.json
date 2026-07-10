@@ -33,6 +33,7 @@
         "evidence_attribution",
         "lexical_retrievability",
         "semantic_vector_coverage",
+        "bm25_contract",
         "dangling_graph_edge_count",
         "invalid_inverted_posting_count"
       ],
@@ -51,6 +52,8 @@
         "hit_count",
         "exact_hit_count",
         "place_hit_count",
+        "native_id_hit_count",
+        "hierarchy_path_hit_count",
         "miss_count",
         "query_error_count",
         "recall_at_k",

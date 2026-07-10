@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import shlex
 from datetime import UTC, datetime
@@ -307,12 +308,10 @@ def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-
     index_path = run_artifact_dir(roots, run_id) / "indexes" / "keyword_index.json"
     index = json.loads(index_path.read_text(encoding="utf-8"))
     docs = {str(doc["doc_id"]): doc for doc in index.get("docs", [])}
-    query_terms = query_lookup_tokens(query)
-    scores: dict[str, float] = {}
-    for term in query_terms:
-        for hit in index.get("inverted", {}).get(term, []):
-            doc_id = str(hit["doc_id"])
-            scores[doc_id] = scores.get(doc_id, 0.0) + float(hit.get("count", 1))
+    scoring = index.get("scoring") if isinstance(index.get("scoring"), dict) else {}
+    score_mode = "bm25" if scoring.get("schema") == "aoa_course_bm25_scoring_v1" and scoring.get("algorithm") == "bm25" else "legacy_tf"
+    query_terms = _keyword_query_terms(query, score_mode=score_mode)
+    scores = _keyword_scores(index, docs, query_terms, scoring=scoring, score_mode=score_mode)
     ranked = []
     for doc_id, score in sorted(scores.items(), key=lambda item: (-item[1], item[0])):
         doc = docs.get(doc_id)
@@ -322,13 +321,63 @@ def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-
         ranked.append(
             {
                 **doc,
-                "score": score,
+                "score": round(score, 6),
+                "score_mode": score_mode,
                 "rank_score": _rank_score(score, rank_features),
                 "rank_features": rank_features,
                 "snippet": _snippet(str(doc.get("text") or ""), query_terms),
             }
         )
     return sorted(ranked, key=_result_sort_key)[:limit]
+
+
+def _keyword_query_terms(query: str, *, score_mode: str) -> list[str]:
+    terms = query_lookup_tokens(query)
+    if score_mode != "bm25":
+        return terms
+    content_terms = [term for term in terms if term not in QUERY_STOP_TERMS]
+    return content_terms or terms
+
+
+def _keyword_scores(
+    index: dict[str, object],
+    docs: dict[str, dict[str, object]],
+    query_terms: list[str],
+    *,
+    scoring: dict[str, object],
+    score_mode: str,
+) -> dict[str, float]:
+    scores: dict[str, float] = {}
+    inverted = index.get("inverted") if isinstance(index.get("inverted"), dict) else {}
+    if score_mode != "bm25":
+        for term in query_terms:
+            for hit in inverted.get(term, []):
+                if isinstance(hit, dict) and hit.get("doc_id"):
+                    doc_id = str(hit["doc_id"])
+                    scores[doc_id] = scores.get(doc_id, 0.0) + float(hit.get("count", 1))
+        return scores
+    document_count = max(1, len(docs))
+    k1 = max(0.01, float(scoring.get("k1") or 1.2))
+    b = min(1.0, max(0.0, float(scoring.get("b") if scoring.get("b") is not None else 0.75)))
+    avg_document_length = max(0.01, float(scoring.get("avg_document_length") or 1.0))
+    length_field = str(scoring.get("document_length_field") or "keyword_token_count")
+    for term in query_terms:
+        postings = [hit for hit in inverted.get(term, []) if isinstance(hit, dict) and hit.get("doc_id")]
+        document_frequency = len({str(hit["doc_id"]) for hit in postings if str(hit["doc_id"]) in docs})
+        if document_frequency <= 0:
+            continue
+        idf = math.log1p((document_count - document_frequency + 0.5) / (document_frequency + 0.5))
+        for hit in postings:
+            doc_id = str(hit["doc_id"])
+            doc = docs.get(doc_id)
+            if not doc:
+                continue
+            term_frequency = max(0.0, float(hit.get("count") or 0.0))
+            document_length = max(0.0, float(doc.get(length_field) or avg_document_length))
+            denominator = term_frequency + (k1 * (1.0 - b + (b * document_length / avg_document_length)))
+            if denominator > 0:
+                scores[doc_id] = scores.get(doc_id, 0.0) + (idf * term_frequency * (k1 + 1.0) / denominator)
+    return scores
 
 
 def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
@@ -376,7 +425,7 @@ def query_semantic_index(roots: StorageRoots, query: str, run_id: str = "starter
 
 
 def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
-    search_limit = max(limit * 3, 12)
+    search_limit = max(limit * 10, 50)
     keyword_hits = query_keyword_index(roots, query, run_id=run_id, limit=search_limit)
     semantic_hits = query_semantic_index(roots, query, run_id=run_id, limit=search_limit)
     max_keyword = max((float(hit.get("score") or 0.0) for hit in keyword_hits), default=1.0) or 1.0
@@ -412,7 +461,19 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
             if keyword_fallback > 0:
                 keyword_score = keyword_fallback
                 components["keyword_fallback"] = round(keyword_fallback, 6)
-        score = (0.45 * keyword_score) + (0.55 * semantic_score)
+        lexical_alignment = float(rank_features.get("lexical_coverage") or 0.0)
+        place_alignment = float(rank_features.get("path_coverage") or 0.0)
+        full_lexical_alignment = 1.0 if int(rank_features.get("query_term_count") or 0) >= 2 and lexical_alignment >= 1.0 else 0.0
+        score = (
+            (0.25 * keyword_score)
+            + (0.20 * semantic_score)
+            + (0.20 * lexical_alignment)
+            + (0.10 * place_alignment)
+            + (0.25 * full_lexical_alignment)
+        )
+        components["lexical_alignment"] = round(lexical_alignment, 6)
+        components["place_alignment"] = round(place_alignment, 6)
+        components["full_lexical_alignment"] = full_lexical_alignment
         components["freshness"] = round(float(rank_features.get("freshness_boost") or 0.0), 6)
         components["authority"] = round(float(rank_features.get("authority_boost") or 0.0), 6)
         components["intent"] = round(float(rank_features.get("intent_boost") or 0.0), 6)
@@ -1182,6 +1243,7 @@ def _temporal_boost(query_intents: set[str], freshness_state: str, *, intent_cla
 
 def _place_features(doc: dict[str, object], query_terms: list[str], query_intents: set[str]) -> dict[str, object]:
     path = doc.get("path") if isinstance(doc.get("path"), list) else []
+    native_path = " ".join(_native_path_parts(path))
     place_complete = bool(path) and bool(doc.get("platform")) and bool(doc.get("source_id")) and bool(doc.get("source_url"))
     primary_place_text = " ".join(
         str(part)
@@ -1192,7 +1254,7 @@ def _place_features(doc: dict[str, object], query_terms: list[str], query_intent
             doc.get("item_title"),
             doc.get("thread_title"),
             doc.get("author_label"),
-            " ".join(str(item) for item in path if item),
+            native_path,
         ]
         if part
     )
@@ -1240,6 +1302,7 @@ def _place_features(doc: dict[str, object], query_terms: list[str], query_intent
 
 def _lexical_alignment_features(doc: dict[str, object], query_terms: list[str]) -> dict[str, object]:
     content_query_terms = _content_query_terms(query_terms)
+    native_path = " ".join(_native_path_parts(doc.get("path")))
     path_text = " ".join(
         str(part)
         for part in [
@@ -1248,7 +1311,7 @@ def _lexical_alignment_features(doc: dict[str, object], query_terms: list[str]) 
             doc.get("lesson_title"),
             doc.get("item_title"),
             doc.get("thread_title"),
-            " ".join(str(item) for item in doc.get("path", []) if item) if isinstance(doc.get("path"), list) else "",
+            native_path,
         ]
         if part
     )
@@ -1273,6 +1336,21 @@ def _lexical_alignment_features(doc: dict[str, object], query_terms: list[str]) 
         "lexical_span": lexical_span,
         "lexical_proximity": round(query_term_count / lexical_span, 6) if lexical_span and query_term_count else 0.0,
     }
+
+
+def _native_path_parts(value: object) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    parts = []
+    for item in value:
+        part = str(item or "").strip()
+        lowered = part.casefold()
+        if not part or "://" in lowered:
+            continue
+        if ":" in part and not any(character.isspace() for character in part):
+            continue
+        parts.append(part)
+    return parts
 
 
 def _content_query_terms(query_terms: list[str]) -> list[str]:

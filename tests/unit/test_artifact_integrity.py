@@ -7,7 +7,7 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import materialize_stepik_fixture
-from aoa_course_connector.integrity import audit_run_artifacts
+from aoa_course_connector.integrity import _canonical_probe_candidates, audit_run_artifacts
 
 
 def roots(tmp_path: Path) -> StorageRoots:
@@ -44,9 +44,32 @@ def test_artifact_integrity_matches_canonical_items_across_indexes_graph_and_evi
     assert audit["integrity"]["graph_coverage"] == 1.0
     assert audit["integrity"]["evidence_attribution"] == 1.0
     assert audit["integrity"]["lexical_retrievability"] == 1.0
+    assert audit["integrity"]["bm25_contract"] == 1.0
     assert audit["integrity"]["dangling_graph_edge_count"] == 0
     assert audit["probes"]["recall_at_k"] == 1.0
+    assert audit["probes"]["relevance_contract"] == "exact_doc_or_native_id_or_hierarchy_path_v2"
+    assert audit["probes"]["hierarchy_path_hit_count"] > 0
     assert audit["failures"] == []
+
+
+def test_integrity_probe_query_preserves_hierarchy_context_and_native_lesson_title() -> None:
+    [(probe, query)] = _canonical_probe_candidates(
+        [
+            {
+                "doc_id": "asset:fixture",
+                "kind": "asset",
+                "item_text": "Stepik video metadata_only",
+                "context_text": "Философия Мир и познание КРАТКО Каким образом можно узнать истину",
+                "place_text": "КРАТКО Каким образом можно узнать истину",
+                "place_field": "lesson_id",
+                "place_id": "lesson:functions",
+            }
+        ]
+    )
+
+    assert probe["doc_id"] == "asset:fixture"
+    assert {"кратко", "каким", "узнать", "истину"} <= set(query.split())
+    assert set(query.split()) & {"философия", "мир", "познание"}
 
 
 def test_artifact_integrity_fails_for_missing_graph_and_semantic_items(tmp_path: Path) -> None:
@@ -99,3 +122,18 @@ def test_artifact_integrity_does_not_probe_external_semantic_provider(tmp_path: 
     assert audit["network_touched"] is False
     assert audit["probes"]["status"] == "unavailable"
     assert audit["probes"]["reason"] == "external_semantic_provider_requires_network"
+
+
+def test_artifact_integrity_rejects_broken_bm25_document_lengths(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    prepare_run(storage)
+    keyword_path = storage.artifact / "runs/integrity-stepik/indexes/keyword_index.json"
+    keyword = json.loads(keyword_path.read_text(encoding="utf-8"))
+    keyword["docs"][0]["keyword_token_count"] = 0
+    keyword_path.write_text(json.dumps(keyword), encoding="utf-8")
+
+    audit = audit_run_artifacts(storage, "integrity-stepik")
+
+    assert audit["status"] == "error"
+    assert audit["integrity"]["bm25_contract"] == 0.0
+    assert any(failure["surface"] == "keyword_scoring" for failure in audit["failures"])

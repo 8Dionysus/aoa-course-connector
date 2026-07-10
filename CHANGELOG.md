@@ -2,6 +2,15 @@
 
 ## 0.1.0 - Unreleased
 
+- Replaced raw term-frequency keyword ordering with a versioned BM25 contract,
+  body-text length normalization, IDF, content-aware query stop-term handling,
+  legacy-index read compatibility, and corpus-integrity validation.
+- Deepened hybrid candidate retrieval and reranking with explicit lexical,
+  full-query, and native-path alignment; machine path IDs no longer act as
+  human breadcrumb matches.
+- Strengthened place-grounded retrieval probes to preserve course/module/lesson
+  query context and recognize equivalent native hierarchy paths while keeping
+  exact-document recall as a separate diagnostic.
 - Added `aoa_course_artifact_integrity_v1`, CLI `eval corpus-integrity`, and MCP
   `artifact_integrity` to cross-check canonical normalized objects against
   keyword/semantic indexes, vectors, postings, evidence, graph records, and
