@@ -10,7 +10,7 @@ from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, build_keyword_index, build_semantic_index, query_lookup_tokens
 from aoa_course_connector.ingest import materialize_fixture
 from aoa_course_connector.mcp.server import call_tool
-from aoa_course_connector.query import query_hybrid_index, query_semantic_index, render_answer_packet
+from aoa_course_connector.query import query_hybrid_index, query_keyword_index, query_semantic_index, render_answer_packet
 
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -49,7 +49,127 @@ def test_keyword_index_records_tokenizer_contract_and_queries_legacy_terms(tmp_p
 
     assert payload["feature_contract"]["tokenizer_contract"] == "course_tokenizer_v2_strip_edge_punctuation"
     assert "course_tokenizer_v1_raw_regex" in payload["feature_contract"]["legacy_query_tokenizer_compatibility"]
+    assert payload["scoring"]["schema"] == "aoa_course_bm25_scoring_v1"
+    assert payload["scoring"]["algorithm"] == "bm25"
+    assert payload["scoring"]["k1"] == 1.2
+    assert payload["scoring"]["b"] == 0.75
+    assert payload["scoring"]["avg_document_length"] > 0
+    assert payload["scoring"]["document_length_basis"] == "body_text_tokens"
+    assert payload["scoring"]["query_stopword_policy"] == "drop_when_content_terms_exist"
+    assert payload["scoring"]["query_stop_terms_version"] == "aoa_course_query_stop_terms_v1"
+    assert all(doc["keyword_token_count"] > 0 for doc in payload["docs"])
     assert query_lookup_tokens("C#.") == ["c#", "c#."]
+
+
+def test_bm25_prefers_short_exact_document_over_long_tf_heavy_document(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    index_path = storage.artifact / "runs/bm25/indexes/keyword_index.json"
+    index_path.parent.mkdir(parents=True)
+    docs = [
+        {"doc_id": "target", "text": "specific target", "keyword_token_count": 2},
+        {"doc_id": "long", "text": "specific target", "keyword_token_count": 1000},
+        *[
+            {"doc_id": f"background:{index}", "text": "background", "keyword_token_count": 2}
+            for index in range(18)
+        ],
+    ]
+    index_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_keyword_index_v1",
+                "run_id": "bm25",
+                "doc_count": len(docs),
+                "docs": docs,
+                "inverted": {
+                    "specific": [{"doc_id": "target", "count": 1}, {"doc_id": "long", "count": 20}],
+                    "target": [{"doc_id": "target", "count": 1}, {"doc_id": "long", "count": 20}],
+                },
+                "scoring": {
+                    "schema": "aoa_course_bm25_scoring_v1",
+                    "algorithm": "bm25",
+                    "k1": 1.2,
+                    "b": 0.75,
+                    "avg_document_length": 51.9,
+                    "document_length_field": "keyword_token_count",
+                    "document_length_basis": "body_text_tokens",
+                    "query_stopword_policy": "drop_when_content_terms_exist",
+                    "query_stop_terms_version": "aoa_course_query_stop_terms_v1",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    results = query_keyword_index(storage, "specific target", run_id="bm25", limit=2)
+
+    assert [result["doc_id"] for result in results] == ["target", "long"]
+    assert results[0]["score_mode"] == "bm25"
+    assert results[0]["score"] > results[1]["score"]
+
+
+def test_bm25_drops_stopwords_when_content_terms_exist(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    index_path = storage.artifact / "runs/bm25-stopwords/indexes/keyword_index.json"
+    index_path.parent.mkdir(parents=True)
+    docs = [
+        {"doc_id": "target", "text": "привязать telegram к профилю", "keyword_token_count": 4},
+        {"doc_id": "noise", "text": "как как как как", "keyword_token_count": 4},
+    ]
+    index_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_keyword_index_v1",
+                "run_id": "bm25-stopwords",
+                "doc_count": len(docs),
+                "docs": docs,
+                "inverted": {
+                    "как": [{"doc_id": "noise", "count": 4}],
+                    "привязать": [{"doc_id": "target", "count": 1}],
+                    "telegram": [{"doc_id": "target", "count": 1}],
+                    "профилю": [{"doc_id": "target", "count": 1}],
+                },
+                "scoring": {
+                    "schema": "aoa_course_bm25_scoring_v1",
+                    "algorithm": "bm25",
+                    "k1": 1.2,
+                    "b": 0.75,
+                    "avg_document_length": 4.0,
+                    "document_length_field": "keyword_token_count",
+                    "document_length_basis": "body_text_tokens",
+                    "query_stopword_policy": "drop_when_content_terms_exist",
+                    "query_stop_terms_version": "aoa_course_query_stop_terms_v1",
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    results = query_keyword_index(storage, "как привязать Telegram к профилю", run_id="bm25-stopwords", limit=2)
+
+    assert [result["doc_id"] for result in results] == ["target"]
+
+
+def test_keyword_query_reads_legacy_tf_index_without_bm25_metadata(tmp_path: Path) -> None:
+    storage = roots(tmp_path)
+    index_path = storage.artifact / "runs/legacy/indexes/keyword_index.json"
+    index_path.parent.mkdir(parents=True)
+    index_path.write_text(
+        json.dumps(
+            {
+                "schema": "aoa_course_keyword_index_v1",
+                "run_id": "legacy",
+                "doc_count": 2,
+                "docs": [{"doc_id": "short", "text": "term"}, {"doc_id": "repeated", "text": "term term"}],
+                "inverted": {"term": [{"doc_id": "short", "count": 1}, {"doc_id": "repeated", "count": 2}]},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    results = query_keyword_index(storage, "term", run_id="legacy", limit=2)
+
+    assert [result["doc_id"] for result in results] == ["repeated", "short"]
+    assert {result["score_mode"] for result in results} == {"legacy_tf"}
 
 
 def test_semantic_index_uses_http_json_embedding_provider(tmp_path: Path, monkeypatch) -> None:
@@ -175,6 +295,32 @@ def test_hybrid_search_keeps_lexically_exact_semantic_candidate_outside_keyword_
     assert results[0]["score_components"]["keyword_fallback"] == 1.0
 
 
+def test_hybrid_search_prefers_full_query_alignment_over_partial_bm25_leader(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import aoa_course_connector.query as query_module
+
+    storage = roots(tmp_path)
+    partial = {"doc_id": "partial", "text": "specific", "path": ["Other lesson"], "score": 100.0}
+    target = {"doc_id": "target", "text": "specific target", "path": ["Target lesson"], "score": 10.0}
+    monkeypatch.setattr(query_module, "query_keyword_index", lambda *_args, **_kwargs: [partial, target])
+    monkeypatch.setattr(
+        query_module,
+        "query_semantic_index",
+        lambda *_args, **_kwargs: [
+            {**partial, "score": 0.5, "semantic_provider": "local_hashing_v1"},
+            {**target, "score": 0.2, "semantic_provider": "local_hashing_v1"},
+        ],
+    )
+
+    results = query_module.query_hybrid_index(storage, "specific target", limit=2)
+
+    assert [result["doc_id"] for result in results] == ["target", "partial"]
+    assert results[0]["score_components"]["full_lexical_alignment"] == 1.0
+    assert results[1]["score_components"]["full_lexical_alignment"] == 0.0
+
+
 def test_index_manifest_schema_keeps_kind_specific_required_fields() -> None:
     schema = json.loads((REPO_ROOT / "connector" / "schemas" / "index_manifest.schema.json").read_text(encoding="utf-8"))
     variants = {
@@ -182,7 +328,7 @@ def test_index_manifest_schema_keeps_kind_specific_required_fields() -> None:
         for variant in schema["oneOf"]
     }
 
-    assert variants["aoa_course_keyword_index_v1"] >= {"schema", "run_id", "doc_count", "term_count", "feature_contract"}
+    assert variants["aoa_course_keyword_index_v1"] >= {"schema", "run_id", "doc_count", "term_count", "feature_contract", "scoring"}
     assert variants["aoa_course_semantic_index_v1"] >= {
         "schema",
         "run_id",

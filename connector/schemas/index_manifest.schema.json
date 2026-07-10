@@ -35,6 +35,35 @@
     },
     "feature_contract": {
       "type": "object"
+    },
+    "scoring": {
+      "type": "object",
+      "required": [
+        "schema",
+        "algorithm",
+        "k1",
+        "b",
+        "avg_document_length",
+        "document_length_field",
+        "document_length_basis",
+        "document_frequency_source",
+        "idf_formula",
+        "query_stopword_policy",
+        "query_stop_terms_version"
+      ],
+      "properties": {
+        "schema": {"const": "aoa_course_bm25_scoring_v1"},
+        "algorithm": {"const": "bm25"},
+        "k1": {"type": "number", "exclusiveMinimum": 0},
+        "b": {"type": "number", "minimum": 0, "maximum": 1},
+        "avg_document_length": {"type": "number", "minimum": 0},
+        "document_length_field": {"const": "keyword_token_count"},
+        "document_length_basis": {"const": "body_text_tokens"},
+        "document_frequency_source": {"const": "inverted_posting_count"},
+        "idf_formula": {"type": "string"},
+        "query_stopword_policy": {"const": "drop_when_content_terms_exist"},
+        "query_stop_terms_version": {"const": "aoa_course_query_stop_terms_v1"}
+      }
     }
   },
   "oneOf": [
@@ -49,7 +78,8 @@
         "run_id",
         "doc_count",
         "term_count",
-        "feature_contract"
+        "feature_contract",
+        "scoring"
       ]
     },
     {

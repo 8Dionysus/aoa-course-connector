@@ -23,7 +23,7 @@
       "expected_top_platform": "getcourse",
       "expected_top_source_id": "source:getcourse:fixture",
       "expected_top_path_terms": ["GetCourse Browser Fixture", "Firmware Recovery", "Bootloader recovery lesson"],
-      "expected_top_snippet_terms": ["connected account", "rollback", "vendor boot"],
+      "expected_top_snippet_terms": ["mentor", "anti-rollback", "vendor boot"],
       "must_include_kind": "comment",
       "expected_freshness_states": ["current"],
       "required_evidence_fields": ["evidence_id", "source_id", "source_url", "fetched_at", "platform", "path", "freshness_state", "authority_tier", "rank_score"]

@@ -37,7 +37,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 The starter path creates:
 
 - normalized course objects from a safe fixture;
-- a local keyword index;
+- a versioned local BM25 keyword index;
 - a deterministic local semantic/vector index (`local_hashing_v1`);
 - an optional HTTP JSON semantic provider (`http_json_v1`) for
   operator-configured embedding endpoints;
@@ -67,11 +67,12 @@ truncation instead of presenting omitted lessons as source deletions. Use
 `--skip-prepare` with platform/source filters to audit existing checkpoints.
 
 `eval corpus-integrity` independently compares normalized canonical objects
-with keyword and semantic documents, vectors, inverted postings, evidence, and
-graph nodes/edges. Deterministic probes report strict exact-document Recall@K
-and place-grounded Recall@K for the correct course or lesson. The default run
-uses isolated fixtures; `--skip-prepare` audits the latest selected source
-checkpoints without touching the network or returning source URLs.
+with BM25 and semantic documents, scoring metadata, vectors, inverted postings,
+evidence, and graph nodes/edges. Deterministic probes report strict
+exact-document Recall@K and place-grounded Recall@K against native IDs or the
+same course/module/lesson hierarchy. The default run uses isolated fixtures;
+`--skip-prepare` audits the latest selected source checkpoints without touching
+the network or returning source URLs.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,

@@ -117,7 +117,7 @@ This proves:
   `aoa_course_eval_corpus_integrity_v1` and selects the latest checkpoint for
   each source, including failures. Its independent normalized-object inventory
   rejects missing or duplicate index/graph records, dangling edges, invalid
-  vectors/postings, evidence gaps, stale artifact metadata, and retrieval
+  vectors/postings, invalid BM25 scoring metadata, evidence gaps, stale artifact metadata, and retrieval
   misses. The isolated fixture proof passes 7/7 GetCourse, Skillspace, and
   Stepik sources with place-grounded Recall@5 of 1.0.
 - MCP `artifact_integrity` exposes the same per-run
@@ -125,13 +125,19 @@ This proves:
   external semantic provider during audit, preserving `network_touched: false`.
 - The current private runtime proof passes 6/6 latest connected GetCourse and
   Stepik sources: 2,854 keyword/semantic documents, 3,286 graph nodes, complete
-  evidence and graph coverage, zero dangling edges/posting failures, and 72/72
-  deterministic correct-course/lesson retrieval probes. Runtime reports and
-  source data remain gitignored.
-- Hybrid ranking preserves lexical coverage for semantic candidates outside the
-  bounded raw keyword pool through `score_components.keyword_fallback`; a
-  regression test proves exact short matches survive long common-text
-  distractors.
+  evidence and graph coverage, zero dangling edges/posting failures, valid BM25
+  contracts, and 521/521 deterministic place-grounded Recall@5 probes. Strict
+  exact-document Recall@5 remains a separate 0.775432 diagnostic for duplicate
+  records inside the correct native hierarchy. Runtime reports and source data
+  remain gitignored.
+- Keyword artifacts now carry a validated BM25 contract with body-text length
+  normalization, IDF, and a content-aware query stop-term gate. Legacy TF
+  artifacts remain query-readable but do not satisfy corpus integrity until
+  rebuilt.
+- Hybrid ranking uses a deeper candidate pool and transparent BM25, semantic,
+  lexical, full-query, and native-path alignment components. Technical IDs do
+  not count as human breadcrumbs; regression tests prove exact short matches
+  and all-term candidates survive long or partially matching distractors.
 - CLI `eval source-registry-query` returns
   `aoa_course_eval_source_registry_query_v1`, a read-only gate over the current
   source registry that uses explicit operator queries or non-placeholder saved

@@ -72,6 +72,7 @@ def audit_run_artifacts(
     missing_semantic = sorted(keyword_id_set - semantic_id_set)
     unexpected_semantic = sorted(semantic_id_set - keyword_id_set)
     duplicate_semantic = sorted(doc_id for doc_id, count in Counter(semantic_ids).items() if count > 1)
+    keyword_scoring_issues = _keyword_scoring_issues(keyword, keyword_docs)
     invalid_vectors = _invalid_semantic_vectors(semantic_docs, semantic)
     missing_graph = sorted(expected_graph_ids - graph_ids)
     duplicate_graph_nodes = sorted(node_id for node_id, count in Counter(graph_id_list).items() if count > 1)
@@ -108,6 +109,8 @@ def audit_run_artifacts(
     failures.extend(metadata_failures)
     _append_failure(failures, "keyword_docs", missing_keyword, unexpected_keyword, duplicate_keyword)
     _append_failure(failures, "semantic_docs", missing_semantic, unexpected_semantic, duplicate_semantic)
+    if keyword_scoring_issues:
+        failures.append(_failure("keyword_scoring", keyword_scoring_issues))
     if invalid_vectors:
         failures.append(_failure("semantic_vectors", invalid_vectors))
     if missing_graph:
@@ -167,6 +170,7 @@ def audit_run_artifacts(
             "evidence_attribution": _coverage(len(keyword_ids) - len(invalid_evidence_docs), len(keyword_ids)),
             "lexical_retrievability": _coverage(len(keyword_id_set) - len(lexically_unretrievable), len(keyword_id_set)),
             "semantic_vector_coverage": _coverage(len(semantic_ids) - len(invalid_vectors), len(semantic_ids)),
+            "bm25_contract": 1.0 if not keyword_scoring_issues else 0.0,
             "dangling_graph_edge_count": len(dangling_edges),
             "invalid_inverted_posting_count": len(invalid_posting_refs),
         },
@@ -347,6 +351,8 @@ def _run_probes(
     misses = []
     place_hits = 0
     exact_hits = 0
+    native_id_hits = 0
+    hierarchy_path_hits = 0
     query_error_count = 0
     for doc, query in selected:
         try:
@@ -359,13 +365,19 @@ def _run_probes(
         exact_hit = doc_id in result_ids
         place_field = str(doc.get("place_field") or "")
         place_id = str(doc.get("place_id") or "")
-        place_hit = exact_hit or bool(
+        native_id_hit = bool(
             place_field
             and place_id
             and any(str(result.get(place_field) or "") == place_id for result in results)
         )
+        hierarchy_path_hit = any(_same_canonical_place(doc, result) for result in results)
+        place_hit = exact_hit or native_id_hit or hierarchy_path_hit
         if exact_hit:
             exact_hits += 1
+        if native_id_hit:
+            native_id_hits += 1
+        if hierarchy_path_hit:
+            hierarchy_path_hits += 1
         if place_hit:
             place_hits += 1
         else:
@@ -380,14 +392,33 @@ def _run_probes(
         "hit_count": place_hits,
         "exact_hit_count": exact_hits,
         "place_hit_count": place_hits,
+        "native_id_hit_count": native_id_hits,
+        "hierarchy_path_hit_count": hierarchy_path_hits,
         "miss_count": len(misses),
         "query_error_count": query_error_count,
         "recall_at_k": _coverage(place_hits, evaluated),
         "exact_recall_at_k": _coverage(exact_hits, evaluated),
         "place_grounded_recall_at_k": _coverage(place_hits, evaluated),
-        "relevance_contract": "exact_doc_or_canonical_place_v1",
+        "relevance_contract": "exact_doc_or_native_id_or_hierarchy_path_v2",
         "misses": misses,
     }
+
+
+def _same_canonical_place(probe: dict[str, object], result: dict[str, object]) -> bool:
+    expected = tuple(tokenize(str(probe.get("context_text") or "")))
+    path = result.get("path") if isinstance(result.get("path"), list) else []
+    native_parts = []
+    for item in path:
+        part = str(item or "").strip()
+        if not part:
+            continue
+        if ":" in part and not any(character.isspace() for character in part):
+            continue
+        native_parts.append(part)
+        if len(native_parts) >= 3:
+            break
+    actual = tuple(tokenize(" ".join(native_parts)))
+    return bool(expected and actual and expected == actual)
 
 
 def _canonical_probe_candidates(
@@ -408,14 +439,23 @@ def _canonical_probe_candidates(
         doc_id = str(doc.get("doc_id") or "")
         item_terms, context_terms = tokens_by_doc.get(doc_id, (set(), set()))
         meaningful_item_terms = item_terms - PROBE_FILLER_TERMS - PROBE_METADATA_TERMS
-        place_text = str(doc.get("place_text") or "")
-        place_terms = _probe_terms(place_text) - PROBE_FILLER_TERMS
-        place_query = _ordered_probe_query(
-            place_text,
-            place_terms,
+        context_text = str(doc.get("context_text") or "")
+        native_place_text = str(doc.get("place_text") or "")
+        native_place_terms = _probe_terms(native_place_text) - PROBE_FILLER_TERMS
+        context_place_terms = context_terms - native_place_terms - PROBE_FILLER_TERMS
+        context_query = _ordered_probe_query(
+            context_text,
+            context_place_terms,
             document_frequency,
             max_terms=3,
         )
+        native_place_query = _ordered_probe_query(
+            native_place_text,
+            native_place_terms,
+            document_frequency,
+            max_terms=6,
+        )
+        place_query = " ".join(part for part in [context_query, native_place_query] if part)
         if meaningful_item_terms:
             item_query = _ordered_probe_query(
                 str(doc.get("item_text") or ""),
@@ -426,7 +466,7 @@ def _canonical_probe_candidates(
             query = " ".join(part for part in [item_query, place_query] if part)
         else:
             query = place_query or _ordered_probe_query(
-                str(doc.get("context_text") or ""),
+                context_text,
                 context_terms - PROBE_FILLER_TERMS,
                 document_frequency,
                 max_terms=4,
@@ -464,12 +504,14 @@ def _empty_probe_report(mode: str, recall_k: int, probe_limit: int, *, status: s
         "hit_count": 0,
         "exact_hit_count": 0,
         "place_hit_count": 0,
+        "native_id_hit_count": 0,
+        "hierarchy_path_hit_count": 0,
         "miss_count": 0,
         "query_error_count": 0,
         "recall_at_k": 0.0,
         "exact_recall_at_k": 0.0,
         "place_grounded_recall_at_k": 0.0,
-        "relevance_contract": "exact_doc_or_canonical_place_v1",
+        "relevance_contract": "exact_doc_or_native_id_or_hierarchy_path_v2",
         "misses": [],
     }
 
@@ -569,6 +611,46 @@ def _invalid_semantic_vectors(
         if not vector_valid or len(indexes) != len(set(indexes)):
             invalid.append(doc_id)
     return sorted(invalid)
+
+
+def _keyword_scoring_issues(
+    keyword: dict[str, object],
+    docs: list[dict[str, object]],
+) -> list[str]:
+    scoring = keyword.get("scoring") if isinstance(keyword.get("scoring"), dict) else {}
+    issues = []
+    if scoring.get("schema") != "aoa_course_bm25_scoring_v1":
+        issues.append("schema")
+    if scoring.get("algorithm") != "bm25":
+        issues.append("algorithm")
+    try:
+        k1 = float(scoring.get("k1"))
+        b = float(scoring.get("b"))
+        avg_document_length = float(scoring.get("avg_document_length"))
+    except (TypeError, ValueError):
+        issues.append("parameters")
+        k1, b, avg_document_length = 0.0, -1.0, -1.0
+    if k1 <= 0 or not 0 <= b <= 1 or avg_document_length < 0:
+        issues.append("parameter_range")
+    if scoring.get("document_length_field") != "keyword_token_count":
+        issues.append("document_length_field")
+    if scoring.get("document_length_basis") != "body_text_tokens":
+        issues.append("document_length_basis")
+    if scoring.get("query_stopword_policy") != "drop_when_content_terms_exist":
+        issues.append("query_stopword_policy")
+    if scoring.get("query_stop_terms_version") != "aoa_course_query_stop_terms_v1":
+        issues.append("query_stop_terms_version")
+    lengths = []
+    for doc in docs:
+        length = _safe_int(doc.get("keyword_token_count"), default=-1)
+        if length <= 0:
+            issues.append(f"document_length:{doc.get('doc_id') or 'unknown'}")
+        else:
+            lengths.append(length)
+    expected_average = round(sum(lengths) / len(lengths), 6) if lengths else 0.0
+    if lengths and not math.isclose(avg_document_length, expected_average, rel_tol=0.0, abs_tol=0.000001):
+        issues.append("avg_document_length")
+    return sorted(set(issues))
 
 
 def _safe_int(value: object, *, default: int) -> int:

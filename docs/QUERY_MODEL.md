@@ -20,19 +20,25 @@ Answers should be built from query results rather than free-floating summaries.
 
 ## Index Modes
 
-- `keyword`: deterministic inverted-index search over normalized course
-  knowledge items.
+- `keyword`: deterministic BM25 search over normalized course knowledge items.
+  The index records `k1`, `b`, average body-text length, per-document body-text
+  length, IDF formula, and query stop-term policy. Stop terms are dropped only
+  when the query also has content terms; an all-stop-term query remains
+  searchable. Indexes created before the BM25 contract remain readable through
+  `legacy_tf`, but must be rebuilt to pass artifact integrity.
 - `semantic`: sparse vector search using the semantic provider declared by the
   index artifact. The default `local_hashing_v1` provider hashes text tokens,
   title/path tokens, adjacent bigrams, kind, platform, and authority tier
   features into normalized vectors. The optional `http_json_v1` provider calls
   an operator-configured JSON embedding endpoint for both document indexing and
   query vectors.
-- `hybrid`: combines normalized keyword score and semantic vector score while
-  preserving the same evidence-bearing result shape. A semantic Top-K
-  candidate outside the bounded raw keyword pool receives an explicit
-  `keyword_fallback` from independent lexical coverage, so long common
-  documents cannot erase a shorter exact match merely through raw term count.
+- `hybrid`: combines normalized BM25 score, semantic vector score, lexical
+  coverage, native-path coverage, and an explicit multi-term full-alignment
+  signal while preserving the same evidence-bearing result shape. It retrieves
+  a deeper candidate pool before reranking. A semantic candidate without a
+  BM25 candidate receives an explicit `keyword_fallback` from independent
+  lexical coverage, so long common documents cannot erase a shorter exact
+  match merely through term frequency.
 
 ## Ranking
 
@@ -56,8 +62,10 @@ can report the access state first.
 Each result exposes `rank_features`, including `freshness_state`,
 `freshness_boost`, `authority_tier`, `authority_boost`, `intent`,
 `intent_boost`, `provenance_boost`, and `provenance_complete`. Hybrid results
-also expose these factors in
-`score_components`.
+also expose these factors in `score_components`, together with normalized
+`keyword`, `semantic`, `lexical_alignment`, `place_alignment`, and
+`full_lexical_alignment` contributions when available. Technical IDs and URLs
+inside stored paths are excluded from human path-alignment features.
 
 Each result also exposes `refresh_hint`. This is read-only plan metadata, not
 a network action. It always includes `local_rebuild_commands` for
@@ -131,8 +139,11 @@ rank above learner comments when base relevance is tied.
 `aoa-course eval adapter-authority` checks that adapter-derived authority
 metadata from browser-session and Stepik fixtures survives normalization,
 indexing, and query packets.
-`aoa-course eval corpus-integrity` checks cross-artifact coverage and runs
-deterministic exact/place-grounded Recall@K probes from normalized objects.
+`aoa-course eval corpus-integrity` checks cross-artifact coverage, validates the
+BM25 scoring contract, and runs deterministic exact/place-grounded Recall@K
+probes from normalized objects. Place grounding accepts the exact document,
+its native place ID, or the same normalized course/module/lesson hierarchy;
+exact-document recall remains a separate diagnostic for duplicate records.
 
 Commands:
 

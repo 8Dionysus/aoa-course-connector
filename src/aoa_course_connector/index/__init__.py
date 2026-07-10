@@ -24,6 +24,9 @@ LEGACY_TOKENIZER_CONTRACT = "course_tokenizer_v1_raw_regex"
 DEFAULT_VECTOR_DIMENSIONS = 256
 LOCAL_HASHING_PROVIDER = "local_hashing_v1"
 HTTP_JSON_PROVIDER = "http_json_v1"
+BM25_SCORING_SCHEMA = "aoa_course_bm25_scoring_v1"
+BM25_K1 = 1.2
+BM25_B = 0.75
 KNOWN_AUTHORITY_TIERS = {
     "official_lesson",
     "official_assignment",
@@ -43,12 +46,20 @@ KNOWN_AUTHORITY_TIERS = {
 def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
     bundle_path = run_data_dir(roots, run_id) / "normalized" / "course_bundle.json"
     bundle = json.loads(bundle_path.read_text(encoding="utf-8"))
-    docs = list(_iter_docs(bundle))
+    source_docs = list(_iter_docs(bundle))
+    docs = []
     inverted: dict[str, list[dict[str, object]]] = defaultdict(list)
-    for doc in docs:
-        counts = Counter(tokenize(_keyword_text_for_doc(doc)))
+    document_lengths = []
+    for source_doc in source_docs:
+        tokens = tokenize(_keyword_text_for_doc(source_doc))
+        document_length = max(1, int(source_doc.get("tokens") or 0))
+        doc = {**source_doc, "keyword_token_count": document_length}
+        docs.append(doc)
+        document_lengths.append(document_length)
+        counts = Counter(tokens)
         for term, count in sorted(counts.items()):
             inverted[term].append({"doc_id": doc["doc_id"], "count": count})
+    avg_document_length = round(sum(document_lengths) / len(document_lengths), 6) if document_lengths else 0.0
     output_dir = run_artifact_dir(roots, run_id) / "indexes"
     output_dir.mkdir(parents=True, exist_ok=True)
     path = output_dir / "keyword_index.json"
@@ -58,6 +69,7 @@ def build_keyword_index(roots: StorageRoots, run_id: str = "starter-fixture") ->
         "built_at": _now(),
         "unit": "course_knowledge_item",
         "feature_contract": _keyword_feature_contract(),
+        "scoring": _keyword_scoring_contract(avg_document_length),
         "doc_count": len(docs),
         "term_count": len(inverted),
         "docs": docs,
@@ -249,6 +261,25 @@ def _keyword_feature_contract() -> dict[str, object]:
         "legacy_query_tokenizer_compatibility": [LEGACY_TOKENIZER_CONTRACT],
         "text_tokens": True,
         "title_path_tokens": True,
+        "ranking_algorithm": "bm25_v1",
+        "document_length_normalization": True,
+        "inverse_document_frequency": True,
+    }
+
+
+def _keyword_scoring_contract(avg_document_length: float) -> dict[str, object]:
+    return {
+        "schema": BM25_SCORING_SCHEMA,
+        "algorithm": "bm25",
+        "k1": BM25_K1,
+        "b": BM25_B,
+        "avg_document_length": avg_document_length,
+        "document_length_field": "keyword_token_count",
+        "document_length_basis": "body_text_tokens",
+        "document_frequency_source": "inverted_posting_count",
+        "idf_formula": "log(1 + (N - df + 0.5) / (df + 0.5))",
+        "query_stopword_policy": "drop_when_content_terms_exist",
+        "query_stop_terms_version": "aoa_course_query_stop_terms_v1",
     }
 
 
