@@ -932,6 +932,22 @@ def test_cli_sources_answer_uses_stepik_sync_checkpoint(tmp_path: Path) -> None:
     assert "--coverage-mode portfolio" in matrix["next_commands"][0]
 
 
+def test_cli_connected_portfolio_eval_checks_top_source_path_and_negative_confidence(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "eval", "connected-portfolio")
+
+    assert result["schema"] == "aoa_course_eval_connected_portfolio_v1"
+    assert result["status"] == "ok"
+    assert result["network_touched"] is False
+    assert result["preparation"]["mode"] == "fixture"
+    assert result["metrics"]["top_1_source_accuracy"] == 1.0
+    assert result["metrics"]["top_1_path_accuracy"] == 1.0
+    assert result["metrics"]["positive_confidence_rate"] == 1.0
+    assert result["metrics"]["negative_abstention_rate"] == 1.0
+    assert result["failures"] == []
+    assert any(case["case_type"] == "negative" and case["passed"] for case in result["case_results"])
+    assert all("source_ref" not in json.dumps(case) for case in result["case_results"])
+
+
 def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     receipt = run_cli(
         tmp_path,

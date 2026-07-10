@@ -85,6 +85,8 @@ REQUIRED_FILES = [
     "evals/suites/adapter_authority_metadata.json",
     "evals/suites/live-calibration.suite.md",
     "evals/suites/live_calibration_packet.json",
+    "evals/suites/connected-portfolio.suite.md",
+    "evals/suites/connected_portfolio.json",
     "evals/suites/browser-transcripts.suite.md",
     "evals/suites/browser_transcripts_answer_packets.json",
     "evals/suites/starter_course_answer_packets.json",

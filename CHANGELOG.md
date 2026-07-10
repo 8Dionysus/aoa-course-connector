@@ -4,6 +4,9 @@
 
 - Initial public-ready repository skeleton.
 - Added offline course fixture ingestion.
+- Added comparable cross-source portfolio reranking and
+  `eval connected-portfolio` with expected Top-1 source/path, collision,
+  confidence, and negative-query checks for fixture and runtime suites.
 - Added keyword index, graph builder, answer packet, CLI, MCP skeleton, and
   validation route.
 - Added Stepik clean API adapter with fixture and bounded live materialization.

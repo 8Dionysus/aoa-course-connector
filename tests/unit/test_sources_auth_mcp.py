@@ -841,19 +841,44 @@ def test_connected_query_run_catalog_preserves_entry_status_and_coverage_counts(
 def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> None:
     refs = _sources_answer_matrix_top_result_refs(
         {
+            "query": "как запустить онлайн-школу",
             "responses": [
                 {
-                    "source_id": "source:stepik:python",
-                    "platform": "stepik",
+                    "source_id": "source:getcourse:school",
+                    "platform": "getcourse",
                     "connected_run_id": "run",
                     "answer_packet": {
+                        "results": [
+                            {
+                                "doc_id": "step:getcourse-noise",
+                                "path": ["Точка Старта", "Общее"],
+                                "text": "Организационная информация марафона.",
+                                "score": 0.62,
+                                "rank_score": 0.72,
+                                "score_components": {"semantic": 0.25},
+                                "semantic_provider": "local_hashing_v1",
+                                "fetched_at": "2026-07-08T00:00:00Z",
+                                "freshness_state": "current",
+                            },
+                            {
+                                "doc_id": "step:online-school",
+                                "path": ["Точка Старта", "Уроки", "Старт запуска вашей онлайн-школы"],
+                                "text": "Первый урок о запуске онлайн-школы.",
+                                "score": 0.51,
+                                "rank_score": 0.59,
+                                "score_components": {"semantic": 0.12},
+                                "semantic_provider": "local_hashing_v1",
+                                "fetched_at": "2026-07-08T00:00:00Z",
+                                "freshness_state": "current",
+                            }
+                        ],
                         "quality": {
                             "ready": True,
                             "top_result": {
-                                "doc_id": "step:python",
-                                "score": 0.51,
-                                "rank_score": 0.59,
-                                "path": ["Python"],
+                                "doc_id": "step:getcourse-noise",
+                                "score": 0.62,
+                                "rank_score": 0.72,
+                                "path": ["Точка Старта", "Общее"],
                                 "fetched_at": "2026-07-08T00:00:00Z",
                                 "freshness_state": "current",
                             }
@@ -868,17 +893,30 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
                     "answer_packet": {"quality": {"top_result": {}}},
                 },
                 {
-                    "source_id": "source:stepik:csharp",
+                    "source_id": "source:stepik:philosophy",
                     "platform": "stepik",
                     "connected_run_id": "run",
                     "answer_packet": {
+                        "results": [
+                            {
+                                "doc_id": "step:philosophy",
+                                "path": ["Философия", "Мир и познание", "Пространство и время"],
+                                "text": "Исторические формы понимания пространства и времени.",
+                                "score": 0.58,
+                                "rank_score": 0.68,
+                                "score_components": {"semantic": 0.33},
+                                "semantic_provider": "local_hashing_v1",
+                                "fetched_at": "2026-07-08T00:00:00Z",
+                                "freshness_state": "current",
+                            }
+                        ],
                         "quality": {
                             "ready": True,
                             "top_result": {
-                                "doc_id": "step:csharp",
-                                "score": 0.45,
-                                "rank_score": 0.63,
-                                "path": ["PRO C#"],
+                                "doc_id": "step:philosophy",
+                                "score": 0.58,
+                                "rank_score": 0.68,
+                                "path": ["Философия", "Мир и познание", "Пространство и время"],
                                 "fetched_at": "2026-07-08T00:00:00Z",
                                 "freshness_state": "current",
                             }
@@ -907,9 +945,14 @@ def test_sources_answer_matrix_portfolio_refs_are_grounded_and_rank_sorted() -> 
         grounded_only=True,
     )
 
-    assert [ref["doc_id"] for ref in refs] == ["step:csharp", "step:python"]
+    assert refs[0]["doc_id"] == "step:online-school"
+    assert {ref["doc_id"] for ref in refs[1:]} == {"step:philosophy", "step:getcourse-noise"}
     assert all(ref.get("doc_id") for ref in refs)
-    assert refs[0]["rank_score"] > refs[1]["rank_score"]
+    assert refs[0]["rank_score"] < refs[1]["rank_score"]
+    assert refs[0]["source_result_rank"] == 2
+    assert refs[0]["portfolio_rank_score"] > refs[1]["portfolio_rank_score"]
+    assert refs[0]["portfolio_rank_features"]["confidence"] == "high"
+    assert refs[1]["portfolio_rank_features"]["confidence"] == "none"
 
 
 def test_connected_query_run_catalog_reports_unreadable_sync_checkpoint_store(tmp_path: Path) -> None:

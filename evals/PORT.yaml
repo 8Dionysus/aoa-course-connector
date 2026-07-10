@@ -22,6 +22,9 @@ suites:
   - evals/suites/browser_crawl_answer_packets.json
   - evals/suites/answer_quality_packets.json
   - evals/suites/freshness_ranking.json
+  - evals/suites/place_ranking.json
   - evals/suites/authority_ranking.json
   - evals/suites/adapter_authority_metadata.json
   - evals/suites/live_calibration_packet.json
+  - evals/suites/retrieval_loop.json
+  - evals/suites/connected_portfolio.json

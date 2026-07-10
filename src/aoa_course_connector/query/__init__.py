@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 import shlex
 from datetime import UTC, datetime
 from pathlib import Path
@@ -195,6 +196,111 @@ PLACE_INTENT_TERMS = {
     "урок",
     "уроке",
 }
+QUERY_STOP_TERMS = {
+    "a",
+    "an",
+    "and",
+    "for",
+    "how",
+    "in",
+    "is",
+    "of",
+    "on",
+    "the",
+    "to",
+    "what",
+    "where",
+    "why",
+    "а",
+    "без",
+    "в",
+    "во",
+    "где",
+    "для",
+    "до",
+    "зачем",
+    "и",
+    "из",
+    "или",
+    "как",
+    "к",
+    "ли",
+    "на",
+    "о",
+    "об",
+    "от",
+    "по",
+    "почему",
+    "при",
+    "с",
+    "со",
+    "у",
+    "что",
+    "это",
+}
+LEXICAL_SPLIT_RE = re.compile(r"[-_/]+")
+CYRILLIC_TERM_RE = re.compile(r"^[а-яё]+$", re.IGNORECASE)
+RUSSIAN_INFLECTION_SUFFIXES = tuple(
+    sorted(
+        {
+            "иями",
+            "ами",
+            "ями",
+            "ого",
+            "ему",
+            "ому",
+            "ими",
+            "ыми",
+            "ать",
+            "ять",
+            "еть",
+            "ить",
+            "уть",
+            "ите",
+            "ете",
+            "ают",
+            "яют",
+            "уют",
+            "ах",
+            "ях",
+            "ов",
+            "ев",
+            "ей",
+            "ам",
+            "ям",
+            "ом",
+            "ем",
+            "ою",
+            "ею",
+            "ую",
+            "юю",
+            "ая",
+            "яя",
+            "ое",
+            "ее",
+            "ые",
+            "ие",
+            "ый",
+            "ий",
+            "ой",
+            "ых",
+            "их",
+            "ть",
+            "ти",
+            "а",
+            "я",
+            "ы",
+            "и",
+            "у",
+            "ю",
+            "е",
+            "о",
+            "ь",
+        },
+        key=len,
+        reverse=True,
+    )
+)
 
 
 def query_keyword_index(roots: StorageRoots, query: str, run_id: str = "starter-fixture", limit: int = 5) -> list[dict[str, object]]:
@@ -291,6 +397,8 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
         components = entry["score_components"] if isinstance(entry.get("score_components"), dict) else {}
         components["semantic"] = round(float(hit.get("score") or 0.0), 6)
         entry["score_components"] = components
+        if hit.get("semantic_provider"):
+            entry["semantic_provider"] = hit.get("semantic_provider")
         if not entry.get("snippet"):
             entry["snippet"] = hit.get("snippet")
     ranked = []
@@ -305,6 +413,7 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
         components["intent"] = round(float(rank_features.get("intent_boost") or 0.0), 6)
         components["temporal"] = round(float(rank_features.get("temporal_boost") or 0.0), 6)
         components["place"] = round(float(rank_features.get("place_boost") or 0.0), 6)
+        components["lexical"] = round(float(rank_features.get("lexical_boost") or 0.0), 6)
         components["provenance"] = round(float(rank_features.get("provenance_boost") or 0.0), 6)
         ranked.append(
             {
@@ -317,6 +426,37 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
             }
         )
     return sorted(ranked, key=_result_sort_key)[:limit]
+
+
+def portfolio_rank_features(query: str, result: dict[str, object]) -> dict[str, object]:
+    """Return a cross-run relevance score that is comparable across sources."""
+
+    alignment = _lexical_alignment_features(result, tokenize(query))
+    base_rank_score = max(0.0, min(1.0, float(result.get("rank_score") or result.get("score") or 0.0)))
+    score_components = result.get("score_components") if isinstance(result.get("score_components"), dict) else {}
+    semantic_score = max(0.0, min(1.0, float(score_components.get("semantic") or 0.0)))
+    portfolio_rank_score = round(
+        (0.20 * base_rank_score)
+        + (0.25 * float(alignment["path_coverage"]))
+        + (0.15 * float(alignment["lexical_coverage"]))
+        + (0.35 * float(alignment["lexical_proximity"]))
+        + (0.05 * semantic_score),
+        6,
+    )
+    confidence = _portfolio_confidence(
+        alignment,
+        semantic_provider=str(result.get("semantic_provider") or ""),
+        semantic_score=semantic_score,
+    )
+    return {
+        **alignment,
+        "base_rank_score": round(base_rank_score, 6),
+        "semantic_score": round(semantic_score, 6),
+        "semantic_provider": str(result.get("semantic_provider") or ""),
+        "portfolio_rank_score": portfolio_rank_score,
+        "confidence": confidence,
+        "confident": confidence in {"high", "medium"},
+    }
 
 
 def graph_neighbors(roots: StorageRoots, node_id: str, run_id: str = "starter-fixture", limit: int = 20) -> dict[str, object]:
@@ -825,6 +965,13 @@ def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None)
     freshness_boost = round(base_freshness_boost * recency_gate, 6)
     temporal_boost = _temporal_boost(query_intents, state, intent_class=intent_class)
     place_features = _place_features(doc, terms, query_intents)
+    lexical_features = _lexical_alignment_features(doc, terms)
+    lexical_boost = round(
+        (0.34 * float(lexical_features["path_coverage"]))
+        + (0.14 * float(lexical_features["lexical_coverage"]))
+        + (0.18 * float(lexical_features["lexical_proximity"])),
+        6,
+    )
     evidence_fields = ["source_id", "source_url", "fetched_at", "evidence_id"]
     provenance_complete = all(doc.get(field) for field in evidence_fields)
     return {
@@ -841,6 +988,8 @@ def _rank_features(doc: dict[str, object], query_terms: list[str] | None = None)
         "temporal_boost": temporal_boost,
         "access_boost": access_boost,
         **place_features,
+        **lexical_features,
+        "lexical_boost": lexical_boost,
         "provenance_boost": 0.03 if provenance_complete else 0.0,
         "provenance_complete": provenance_complete,
     }
@@ -853,6 +1002,7 @@ def _rank_score(score: float, features: dict[str, object]) -> float:
         + float(features.get("authority_boost") or 0.0)
         + float(features.get("temporal_boost") or 0.0)
         + float(features.get("place_boost") or 0.0)
+        + float(features.get("lexical_boost") or 0.0)
         + float(features.get("provenance_boost") or 0.0)
     )
     adjusted = (score * multiplier) + float(features.get("intent_boost") or 0.0)
@@ -1081,6 +1231,143 @@ def _place_features(doc: dict[str, object], query_terms: list[str], query_intent
         "place_primary_match_count": len(primary_matches),
         "place_boost": round(path_boost + requested_boost, 6),
     }
+
+
+def _lexical_alignment_features(doc: dict[str, object], query_terms: list[str]) -> dict[str, object]:
+    content_query_terms = _content_query_terms(query_terms)
+    path_text = " ".join(
+        str(part)
+        for part in [
+            doc.get("course_title"),
+            doc.get("module_title"),
+            doc.get("lesson_title"),
+            doc.get("item_title"),
+            doc.get("thread_title"),
+            " ".join(str(item) for item in doc.get("path", []) if item) if isinstance(doc.get("path"), list) else "",
+        ]
+        if part
+    )
+    body_text = " ".join(str(part) for part in [path_text, doc.get("text"), doc.get("snippet")] if part)
+    path_sequence = _expanded_lexical_sequence(tokenize(path_text))
+    body_sequence = _expanded_lexical_sequence(tokenize(body_text))
+    path_terms = list(dict.fromkeys(path_sequence))
+    body_terms = list(dict.fromkeys(body_sequence))
+    path_matches = _matched_query_terms(content_query_terms, path_terms)
+    lexical_matches = _matched_query_terms(content_query_terms, body_terms)
+    query_term_count = len(content_query_terms)
+    lexical_span = _minimum_lexical_span(content_query_terms, body_sequence) if query_term_count and len(lexical_matches) == query_term_count else 0
+    return {
+        "query_terms": content_query_terms,
+        "query_term_count": query_term_count,
+        "path_lexical_matches": path_matches,
+        "path_lexical_match_count": len(path_matches),
+        "path_coverage": _coverage(len(path_matches), query_term_count),
+        "lexical_matches": lexical_matches,
+        "lexical_match_count": len(lexical_matches),
+        "lexical_coverage": _coverage(len(lexical_matches), query_term_count),
+        "lexical_span": lexical_span,
+        "lexical_proximity": round(query_term_count / lexical_span, 6) if lexical_span and query_term_count else 0.0,
+    }
+
+
+def _content_query_terms(query_terms: list[str]) -> list[str]:
+    expanded = _expanded_lexical_terms(query_terms)
+    ignored = QUERY_STOP_TERMS | ACCESS_INTENT_TERMS | FRESH_INTENT_TERMS | HISTORICAL_INTENT_TERMS | PLACE_INTENT_TERMS
+    return list(dict.fromkeys(term for term in expanded if term not in ignored and len(term) > 1))
+
+
+def _expanded_lexical_terms(terms: list[str]) -> list[str]:
+    return list(dict.fromkeys(_expanded_lexical_sequence(terms)))
+
+
+def _expanded_lexical_sequence(terms: list[str]) -> list[str]:
+    expanded: list[str] = []
+    for term in terms:
+        normalized = str(term or "").casefold().strip()
+        if not normalized:
+            continue
+        parts = [part for part in LEXICAL_SPLIT_RE.split(normalized) if part]
+        expanded.extend(parts if len(parts) > 1 else [normalized])
+    return expanded
+
+
+def _matched_query_terms(query_terms: list[str], document_terms: list[str]) -> list[str]:
+    return [query_term for query_term in query_terms if any(_lexical_terms_match(query_term, doc_term) for doc_term in document_terms)]
+
+
+def _lexical_terms_match(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    if CYRILLIC_TERM_RE.fullmatch(left) and CYRILLIC_TERM_RE.fullmatch(right) and min(len(left), len(right)) >= 5:
+        left_stem = _russian_stem(left)
+        right_stem = _russian_stem(right)
+        if left_stem == right_stem:
+            return True
+        common_prefix = 0
+        for left_char, right_char in zip(left_stem, right_stem):
+            if left_char != right_char:
+                break
+            common_prefix += 1
+        return common_prefix >= 5
+    if left.isascii() and right.isascii() and min(len(left), len(right)) >= 4:
+        return left.rstrip("s") == right.rstrip("s")
+    return False
+
+
+def _russian_stem(term: str) -> str:
+    for suffix in RUSSIAN_INFLECTION_SUFFIXES:
+        if term.endswith(suffix) and len(term) - len(suffix) >= 4:
+            return term[: -len(suffix)]
+    return term
+
+
+def _minimum_lexical_span(query_terms: list[str], document_terms: list[str]) -> int:
+    if not query_terms or not document_terms:
+        return 0
+    counts = [0] * len(query_terms)
+    covered = 0
+    left_event = 0
+    minimum = 0
+    events: list[tuple[int, list[int]]] = []
+    for right, document_term in enumerate(document_terms):
+        matches = [index for index, query_term in enumerate(query_terms) if _lexical_terms_match(query_term, document_term)]
+        if not matches:
+            continue
+        events.append((right, matches))
+        for index in matches:
+            if counts[index] == 0:
+                covered += 1
+            counts[index] += 1
+        while covered == len(query_terms) and left_event < len(events):
+            left_position, left_matches = events[left_event]
+            span = right - left_position + 1
+            minimum = span if minimum == 0 else min(minimum, span)
+            for index in left_matches:
+                counts[index] -= 1
+                if counts[index] == 0:
+                    covered -= 1
+            left_event += 1
+    return minimum
+
+
+def _portfolio_confidence(alignment: dict[str, object], *, semantic_provider: str, semantic_score: float) -> str:
+    path_coverage = float(alignment.get("path_coverage") or 0.0)
+    lexical_coverage = float(alignment.get("lexical_coverage") or 0.0)
+    lexical_proximity = float(alignment.get("lexical_proximity") or 0.0)
+    match_count = int(alignment.get("lexical_match_count") or 0)
+    if (path_coverage >= 0.66 and match_count >= 2) or (lexical_coverage >= 1.0 and match_count >= 2 and lexical_proximity >= 0.35):
+        return "high"
+    if path_coverage >= 0.34 or lexical_coverage >= 0.66:
+        return "medium"
+    if semantic_provider and semantic_provider != LOCAL_HASHING_PROVIDER and semantic_score >= 0.60:
+        return "medium"
+    if match_count > 0 or semantic_score >= 0.35:
+        return "low"
+    return "none"
+
+
+def _coverage(matches: int, total: int) -> float:
+    return round(matches / total, 6) if total else 0.0
 
 
 def _access_intent_boost(query_terms: list[str], freshness_state: str, authority_tier: str, source_authority: str) -> float:

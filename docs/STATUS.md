@@ -15,6 +15,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
@@ -83,6 +84,17 @@ This proves:
   across the selected source set. This prevents broad live-source matrices from
   looking failed only because unrelated but query-ready sources had no matching
   evidence for a specific question.
+- Cross-source summaries now rerank per-source winners with comparable
+  `portfolio_rank_score` and expose lexical/path coverage, term proximity, and
+  `portfolio_confidence`. Portfolio mode compares each source's local Top-K
+  candidates while retaining `source_result_rank`. Compound and inflected terms such as
+  `онлайн-школу` versus `онлайн-школы` no longer lose to unrelated run-local
+  semantic scores, while low-confidence unrelated queries remain visible as
+  abstentions.
+- CLI `eval connected-portfolio` returns
+  `aoa_course_eval_connected_portfolio_v1`. Its public fixture suite checks
+  GetCourse, Skillspace, Stepik, a cross-source collision, Top-1 native paths,
+  source/freshness fields, and one negative query without network access.
 - CLI `eval source-registry-query` returns
   `aoa_course_eval_source_registry_query_v1`, a read-only gate over the current
   source registry that uses explicit operator queries or non-placeholder saved
@@ -419,6 +431,12 @@ This proves:
   `connected_run_query_matrix` answered the same 3/3 questions with
   `network_touched: false`, 55 evidence items, 57 results, all 6 source ids,
   and graph context for every query.
+- A runtime-only connected-portfolio suite has been exercised across the same
+  two GetCourse and four Stepik sources. Eleven subject, exact-path,
+  morphology, collision, and negative cases passed with Top-1 source accuracy
+  `1.0`, Top-1 path accuracy `1.0`, positive confidence rate `1.0`, negative
+  abstention rate `1.0`, and `network_touched: false`. The benchmark file and
+  operator source ids remain under gitignored runtime artifact storage.
 - Operator-owned GetCourse live connected-run has been exercised locally with
   runtime-only artifacts: preflight, live sync, smoke, calibration packet,
   intake, CLI `calibration query`, and MCP `connected_run_query` returned `ok`;

@@ -141,6 +141,15 @@ Its default `coverage_mode: "all-sources"` is a strict source-scoped gate. Use
 `coverage_mode: "portfolio"` when the agent needs to know whether every query
 has at least one source-backed evidence chain somewhere in the selected source
 portfolio, without treating unrelated sources as retrieval failures.
+In portfolio mode each query summary also carries `portfolio_top_result`,
+`portfolio_confidence`, `portfolio_confident`, and ranked `top_result_refs`.
+Their `portfolio_rank_score` is comparable across connected runs because it
+combines native-path coverage, lexical coverage and proximity, semantic score,
+and bounded run-local rank. Portfolio reranking considers each source's local
+Top-K candidates and preserves `source_result_rank`, so a globally relevant
+lesson can win even when it was not that source's local Top-1. Agents should
+treat `low` or `none` as an abstention signal even when a weak source-backed
+candidate exists.
 For shell-side use, the equivalent local command is
 `aoa-course sources answer "<query>" --platform stepik --mode hybrid`;
 it returns the same `aoa_course_sources_answer_packet_v1` without requiring a

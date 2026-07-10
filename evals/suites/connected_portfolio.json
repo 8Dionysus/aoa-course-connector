@@ -1,0 +1,57 @@
+{
+  "schema": "aoa_course_connected_portfolio_eval_suite_v1",
+  "suite_id": "connected-portfolio",
+  "preparation": {
+    "mode": "fixture",
+    "connected_run": "connected-portfolio-fixture",
+    "platforms": ["getcourse", "skillspace", "stepik"]
+  },
+  "selection": {
+    "platforms": ["getcourse", "skillspace", "stepik"],
+    "kinds": ["sync"],
+    "mode": "hybrid",
+    "limit": 5,
+    "source_limit": 10,
+    "connected_run_limit": 3,
+    "connected_receipt_limit": 20
+  },
+  "cases": [
+    {
+      "case_type": "positive",
+      "query": "GetCourse bootloader rollback evidence",
+      "expected_top_platform": "getcourse",
+      "expected_top_path_terms": ["Kernel Evidence Workshop", "Bootloader recovery lesson"],
+      "required_top_fields": ["source_id", "platform", "doc_id", "path", "fetched_at", "freshness_state", "portfolio_rank_score", "portfolio_confidence"],
+      "require_confident": true
+    },
+    {
+      "case_type": "positive",
+      "query": "Skillspace logcat bugreport evidence",
+      "expected_top_platform": "skillspace",
+      "expected_top_path_terms": ["Firmware Audit", "Logcat lesson"],
+      "required_top_fields": ["source_id", "platform", "doc_id", "path", "fetched_at", "freshness_state", "portfolio_rank_score", "portfolio_confidence"],
+      "require_confident": true
+    },
+    {
+      "case_type": "positive",
+      "query": "Stepik public API evidence",
+      "expected_top_platform": "stepik",
+      "expected_top_path_terms": ["Stepik Public API Fixture", "Clean API Section", "Stepik Lesson From API"],
+      "required_top_fields": ["source_id", "platform", "doc_id", "path", "fetched_at", "freshness_state", "portfolio_rank_score", "portfolio_confidence"],
+      "require_confident": true
+    },
+    {
+      "case_type": "collision",
+      "query": "bootloader rollback evidence",
+      "expected_top_platform": "getcourse",
+      "expected_top_path_terms": ["Kernel Evidence Workshop", "Bootloader recovery lesson"],
+      "required_top_fields": ["source_id", "platform", "doc_id", "path", "fetched_at", "freshness_state", "portfolio_rank_score", "portfolio_confidence"],
+      "require_confident": true
+    },
+    {
+      "case_type": "negative",
+      "query": "quasar zebrafish orbital calculus",
+      "expect_no_confident_match": true
+    }
+  ]
+}

@@ -149,6 +149,23 @@ from recent query-ready connected-run receipts. It emits
 `aoa_course_eval_source_registry_query_v1`, requires source-registry
 `sources_answer_matrix` quality, evidence, ready-query breadth, and keeps
 `source_ref` values out of the packet.
+Use `eval connected-portfolio` for semantic Top-K correctness across several
+query-ready sources. The default fixture suite prepares GetCourse, Skillspace,
+and Stepik, checks expected Top-1 platform/path selection, a cross-source
+collision, evidence/freshness fields, and negative-query abstention. It emits
+`aoa_course_eval_connected_portfolio_v1` with source/path accuracy,
+confidence, per-case failures, and `network_touched: false`. For connected
+operator data, keep a suite under gitignored artifact storage and run:
+
+```bash
+aoa-course eval connected-portfolio \
+  --suite "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/evals/operator.portfolio.json" \
+  --skip-prepare
+```
+
+Each positive case can require `expected_top_source_id`,
+`expected_top_platform`, `expected_top_path_terms`, and proof fields. A
+negative case sets `expect_no_confident_match: true`.
 `answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before

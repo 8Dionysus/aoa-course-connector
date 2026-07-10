@@ -27,6 +27,13 @@ fixture runs, builds keyword/semantic indexes and graphs, then checks CLI
 answer, CLI lesson-context, MCP search, MCP lesson_context, and MCP
 evidence_report in one fixture-safe route.
 
+The connected-portfolio suite checks the layer that source-registry breadth
+alone cannot prove: expected Top-1 source and native path across independent
+connected runs, cross-source collision ordering, comparable portfolio rank
+features, and low-confidence handling for unrelated questions. Operator
+benchmarks stay in gitignored runtime artifact storage and use the same CLI
+runner with `--suite ... --skip-prepare`.
+
 The freshness-ranking suite checks the ordering-specific conflict case: when
 current and stale course items have equal base relevance, the current item must
 rank higher while the packet still exposes the base `score`, adjusted
