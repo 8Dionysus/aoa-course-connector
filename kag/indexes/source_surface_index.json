@@ -60,7 +60,7 @@
   },
   "index_identity": {
     "artifact_kind": "source_surface_index",
-    "content_digest": "643ac2a73b828b6f1633cc4e04767122b647cff2aa90c9ffa7143b6a2e0ced81",
+    "content_digest": "8a674d5ddbb1530c2009102216c3dd1e1bd837bb69c4f026c486af722c75abb9",
     "local_id": "index:repo-local:source-surfaces",
     "schema_ref": "aoa-kag:schemas/repo-local-kag-index.schema.json"
   },
@@ -720,13 +720,13 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "928db1d6564c814c82b81fc4056a408cdf77cb427d561770c091b53e65a34c7a",
+        "content_hash": "dc081247e10407272eca2900cfe32e0b0d30a2880022c13c5fc824128a6bcab8",
         "git_ref": "git-index-source-tree",
         "id": "file:.github/workflows/validate.yml:a5c0f08bc4",
         "mime": "application/yaml",
         "path": ".github/workflows/validate.yml",
         "repo": "aoa-course-connector",
-        "size_bytes": 3759
+        "size_bytes": 3917
       },
       "mechanics_role": "none",
       "observed_form": "file",
@@ -759,7 +759,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "928db1d6564c814c82b81fc4056a408cdf77cb427d561770c091b53e65a34c7a",
+        "digest": "dc081247e10407272eca2900cfe32e0b0d30a2880022c13c5fc824128a6bcab8",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
