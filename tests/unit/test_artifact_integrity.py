@@ -59,7 +59,7 @@ def test_integrity_probe_query_preserves_hierarchy_context_and_native_lesson_tit
                 "doc_id": "asset:fixture",
                 "kind": "asset",
                 "item_text": "Stepik video metadata_only",
-                "context_text": "Философия Мир и познание КРАТКО Каким образом можно узнать истину",
+                "context_text": "История идей Познание мира КРАТКО Каким образом можно узнать истину",
                 "place_text": "КРАТКО Каким образом можно узнать истину",
                 "place_field": "lesson_id",
                 "place_id": "lesson:functions",
@@ -69,7 +69,7 @@ def test_integrity_probe_query_preserves_hierarchy_context_and_native_lesson_tit
 
     assert probe["doc_id"] == "asset:fixture"
     assert {"кратко", "каким", "узнать", "истину"} <= set(query.split())
-    assert set(query.split()) & {"философия", "мир", "познание"}
+    assert set(query.split()) & {"история", "идей", "познание", "мира"}
 
 
 def test_artifact_integrity_fails_for_missing_graph_and_semantic_items(tmp_path: Path) -> None:

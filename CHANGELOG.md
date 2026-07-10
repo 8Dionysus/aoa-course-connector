@@ -134,9 +134,8 @@
   instead of silently looking healthy.
 - Hardened fixture, Stepik, browser materialize, and browser source-sync
   receipts with explicit `content_counts` for course/module/lesson/step and
-  related content totals, then exercised a Stepik course `268845` full-course
-  sync with 15 lessons, 101 steps, 81 assignments, 117 evidence items, and
-  local CLI/MCP answer-matrix retrieval proof.
+  related content totals, then exercised an authorized Stepik full-course sync
+  with local CLI/MCP answer-matrix retrieval proof.
 - Added transcript/caption health diagnostics to live calibration packets,
   including transcript source-authority counts, caption sidecar totals, browser
   reports with transcripts, and caption-resource error failures.

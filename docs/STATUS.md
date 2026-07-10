@@ -431,93 +431,21 @@ This proves:
   produced an `ok` connected-source plan, live sync, live smoke, calibration
   packet, and intake with source-backed answer evidence, timestamps, and clean
   raw/secret privacy guards.
-- A runtime-only Stepik full-course sync for course `268845` has been exercised
-  locally through source `source:stepik:2df698200b`: sync run
-  `stepik-full-course-telegram-counts-20260708` completed `ok` at
-  `2026-07-08T08:45:45Z`, produced 1 course, 4 modules, 15 lessons, 101 steps,
-  81 assignments, 117 evidence items, keyword/semantic/graph artifacts, and a
-  materialization receipt with matching `content_counts`. CLI
-  `sources answer-matrix` answered 4/4 aiogram/Telegram-bot questions with 20
-  total evidence items, and MCP `sources_answer_matrix` answered 3/3 with 15
-  total evidence items; both retrieval checks used the local indexes/graphs
-  with `network_touched: false` and top results from the same fresh sync run.
-- A runtime-only Stepik full-course connected run for course `6667`
-  (`source:stepik:9b777d98bf`) has been exercised locally through
-  `calibration connected-run --mode live --allow-network --live-scope
-  full-course --include-step-sources`: run
-  `stepik-full-course-live-nosmoke-refetch-20260708` completed `ok` at
-  `2026-07-08T09:39:28Z`, produced 1 course, 5 modules, 60 lessons, 556 steps,
-  401 assignments, 71 assets, 617 evidence items, keyword/semantic/graph
-  artifacts, and stable identity fingerprint
-  `sha256:6edf0c0d75042b94ed86632c55f5d2d342f4546dddf9432e19391980e7c29494`.
-  The Stepik smoke stage reused the completed sync receipt
-  (`source_mode: stepik_live_smoke_from_sync`) and stayed
-  `network_touched: false`, avoiding a second live Stepik traversal after sync.
-  CLI `calibration query-matrix` and MCP `connected_run_query_matrix` each
-  answered 2/2 philosophy-course questions from local indexes/graphs with 20
-  total evidence items, graph context for every query, and
-  `network_touched: false`. Step-source enrichment is now budgeted: this run
-  attempted 10 step-source payloads, skipped 546 by `max_step_sources`, and
-  recorded the effective limits plus diagnostics in the raw Stepik payload. The
-  same budget now flows through CLI/MCP `readiness`, `connected_source_plan`,
-  connection profiles, and MCP `connected_run` arguments instead of only the
-  direct CLI live command.
-- A runtime-only multi-source GetCourse plus Stepik connected run has been
-  exercised locally: run `connected-ready-getcourse-stepik-20260708` completed
-  `ok` at `2026-07-08T08:54:25Z` across 6 ready sources
-  (two runtime-local GetCourse sources and four Stepik sources). It produced
-  healthy live sync, live smoke, calibration
-  packet, and intake stages, 0 repair lanes, clean raw/secret privacy flags, 2
-  healthy browser snapshot audits, 14 visible transcripts, and 21 source-backed
-  smoke evidence items. CLI `calibration query-matrix` then answered 3/3
-  operator questions from local indexes/graphs with `network_touched: false`,
-  41 evidence items, 43 results, and graph context for every query. MCP
-  `connected_run_query_matrix` answered the same 3/3 questions with
-  `network_touched: false`, 55 evidence items, 57 results, all 6 source ids,
-  and graph context for every query.
-- A runtime-only connected-portfolio suite has been exercised across the same
-  two GetCourse and four Stepik sources. Eleven subject, exact-path,
-  morphology, collision, and negative cases passed with Top-1 source accuracy
-  `1.0`, Top-1 path accuracy `1.0`, positive confidence rate `1.0`, negative
-  abstention rate `1.0`, and `network_touched: false`. The benchmark file and
-  operator source ids remain under gitignored runtime artifact storage.
-- A fresh runtime-only completeness refresh has been exercised across the same
-  two GetCourse and four Stepik sources. `eval ingest-coverage --skip-prepare`
-  passed 6/6 sources with zero structural coverage gaps. The primary
-  GetCourse course exhausted 7/7 visible lessons; the four Stepik API trees
-  exhausted 21 sections, 173 lessons, and 1,428 steps with stable retention
-  `1.0`. One GetCourse source retained `0.990741` after a dynamic comment-id
-  change while preserving its previous snapshot. Stepik `step_sources`
-  enrichment remains explicitly bounded on all four sources after permission
-  errors, while ordinary block text, assignments, indexes, graphs, and evidence
-  remain complete. The 11-case connected-portfolio suite still passed with all
-  four quality rates `1.0` on the refreshed runs.
-- Operator-owned GetCourse live connected-run has been exercised locally with
-  runtime-only artifacts: preflight, live sync, smoke, calibration packet,
-  intake, CLI `calibration query`, and MCP `connected_run_query` returned `ok`;
-  answer evidence and refresh hints preserved the registered source id with
-  `registry_match: true` and no raw payloads or secret values in shareable
-  packets.
-- A runtime-only operator GetCourse access-state proof has been exercised
-  locally: one bounded live run produced one visible/current lesson and six
-  `access_denied` lesson notices, kept raw/secret privacy guards clean, passed
-  CLI and MCP `calibration query-matrix` for three course questions from local
-  indexes/graphs, and ranked an access-intent query first to
-  `access_notice`/`browser_access_denied` without touching the network during
-  retrieval.
-- A runtime-only ready-subset GetCourse proof has been exercised locally: a
-  default connected-source plan stayed `partial` because Skillspace auth and
-  Stepik token state were not ready, but exposed a `scope: ready_subset`
-  `connected_run_plan` for two ready GetCourse source ids. The gated live run
-  returned `ok`, selected both sources, produced no repair lanes, kept
-  raw/secret privacy guards clean, and CLI/MCP `connected_run_query_matrix`
-  answered two questions across both sync runs with evidence, graph context,
-  and `network_touched: false`.
-- A runtime-only GetCourse Chatium/student-app discovery proof has been
-  exercised locally: `/user/my/profile` still exposed no course links, while
-  `/c/s/index` returned two registered training sources through the app-proxy
-  JSON route and no raw secrets were printed. The newly expected free-course
-  source was not visible in the connected account during this bounded check.
+- Private runtime validation has exercised multiple authorized GetCourse and
+  Stepik sources through discovery, full-course sync, stable refresh, local
+  keyword/semantic/graph builds, access-state handling, and CLI/MCP query
+  matrices. Retrieval remained local after ingest (`network_touched: false`),
+  and the shareable proof exposed no raw payloads or secret values.
+- The anonymized connected-source gate passed six sources, 2,854 index
+  documents, 3,286 graph nodes, 521/521 place-grounded Recall@5 probes, and
+  11/11 subject/path/morphology/collision/negative portfolio cases. Operator
+  source references, source IDs, course titles, run names, timestamps,
+  fingerprints, and benchmark inputs remain only in gitignored runtime
+  storage.
+- Stepik full-course smoke can reuse a completed sync instead of traversing the
+  source twice. Optional step-source enrichment is explicitly budgeted and the
+  selected limits flow through CLI/MCP readiness, connected plans, connection
+  profiles, and connected-run execution.
 - Connected-run receipts are inspectable through CLI `calibration status` and
   MCP `connected_run_status`, giving agents read-only access to stage summaries,
   packet quality, `snapshot_audit`, privacy flags, failures, next steps,
@@ -549,38 +477,11 @@ This proves:
   answer multiple real questions from local indexes and graphs instead of only
   replaying a single smoke query.
 
-## Remaining Connector Work
+## Known Platform Gap
 
-The next layer is broader live connected-source work:
-
-- connect a Skillspace account/source into
-  `${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/skillspace/account.storage-state.json`
-  and the source registry, then run the same gated live sync, smoke,
-  calibration, CLI query-matrix, and MCP query-matrix route that is now proven
-  for the GetCourse plus Stepik ready subset;
-- run gated live smoke with additional operator-owned GetCourse courses to
-  calibrate real login redirects, theme selectors, and pagination behavior
-  after `preflight connected-plan` reports ready local auth/source state and
-  emits the runtime smoke/calibration commands;
-- broader live selector coverage for real GetCourse and Skillspace themes where
-  progress, comment, transcript, caption, and caption-sidecar resources use
-  unusual markup or protected text-resource behavior;
-- additional gated live full-course Stepik runs against operator-selected
-  authenticated courses, including deliberately wider `--max-step-sources`
-  budgets where needed, to calibrate course size variance, permissions, and
-  source enrichment beyond the currently proven courses;
-- broader Stepik live smoke calibration against operator-selected authenticated
-  courses, account discovery output, and full-course source-registry runs after
-  `preflight live --platform stepik` confirms token/source readiness;
-- collect connected-source live calibration packets from real GetCourse,
-  Skillspace, and Stepik accounts; run `calibration query-matrix`/MCP
-  `connected_run_query_matrix` over multiple operator questions; and run
-  `calibration intake` against partial packets to drive selector, sync,
-  retrieval, privacy, and eval-intake follow-up work;
-- live calibration of operator-selected external embedding endpoints beyond the
-  local CI `http_json_v1` contract proof, using `preflight semantic-provider`
-  first and then `build-semantic-index --provider http_json_v1` against the
-  connected run;
-- live-calibrated authority tiers from adapter/source metadata beyond current
-  fixture-proven browser-role and Stepik official API signals;
-- richer live smoke routes gated away from CI secrets.
+Live Skillspace validation still requires an authorized operator account and
+source. The repository already contains the fixture-proven hard adapter,
+storage-state capture/import route, discovery and sync contracts, local
+index/graph/query path, gated live commands, and manual validation guide needed
+to exercise that final platform-specific route without another architecture
+slice.

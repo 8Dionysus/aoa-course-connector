@@ -101,7 +101,7 @@ def test_skillspace_catalog_discovery_registers_sources(tmp_path: Path) -> None:
 def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> None:
     raw = {
         "platform": "getcourse",
-        "captured_at": "2026-07-08T08:10:00Z",
+        "captured_at": "2026-01-15T12:00:00Z",
         "pages": [
             {
                 "url": "https://getcourse.ru/c/s/index",
@@ -117,17 +117,17 @@ def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> No
                                 "blocks": [
                                     {
                                         "type": "screen",
-                                        "id": "116/training/911642804",
-                                        "title": "Марафон «Точка Старта»",
+                                        "id": "116/training/900000001",
+                                        "title": "Fixture Launch Lab",
                                         "onClick": {
                                             "type": "navigate",
-                                            "url": "https://getcourse.ru/teach/control/stream/view/id/911642804",
+                                            "url": "https://getcourse.ru/teach/control/stream/view/id/900000001",
                                         },
                                     },
                                     {
                                         "type": "screen",
-                                        "id": "116/training/659592",
-                                        "title": "Помощь",
+                                        "id": "116/training/900000002",
+                                        "title": "Fixture Help",
                                         "onClick": {"type": "navigate", "url": "https://getcourse.ru/menublog"},
                                     },
                                 ]
@@ -142,10 +142,10 @@ def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> No
     discovery = build_browser_catalog_discovery(raw, platform="getcourse")
 
     assert discovery["course_count"] == 2
-    assert [course["title"] for course in discovery["courses"]] == ["Марафон «Точка Старта»", "Помощь"]
+    assert [course["title"] for course in discovery["courses"]] == ["Fixture Launch Lab", "Fixture Help"]
     assert [course["source_ref"] for course in discovery["courses"]] == [
-        "https://getcourse.ru/teach/control/stream/view/id/911642804",
-        "https://getcourse.ru/teach/control/stream/view/id/659592",
+        "https://getcourse.ru/teach/control/stream/view/id/900000001",
+        "https://getcourse.ru/teach/control/stream/view/id/900000002",
     ]
     assert discovery["courses"][0]["source_kind"] == "training"
 
@@ -153,7 +153,7 @@ def test_getcourse_catalog_discovery_reads_chatium_proxy_training_blocks() -> No
 def test_getcourse_catalog_discovery_reads_canonical_onclick_stream_view_url() -> None:
     raw = {
         "platform": "getcourse",
-        "captured_at": "2026-07-08T08:10:00Z",
+        "captured_at": "2026-01-15T12:00:00Z",
         "pages": [
             {
                 "url": "https://getcourse.ru/c/s/index",
@@ -172,7 +172,7 @@ def test_getcourse_catalog_discovery_reads_canonical_onclick_stream_view_url() -
                                         "title": "Курс из onClick",
                                         "onClick": {
                                             "type": "navigate",
-                                            "url": "https://getcourse.ru/teach/control/stream/view/id/911642804",
+                                            "url": "https://getcourse.ru/teach/control/stream/view/id/900000001",
                                         },
                                     }
                                 ]
@@ -187,7 +187,7 @@ def test_getcourse_catalog_discovery_reads_canonical_onclick_stream_view_url() -
     discovery = build_browser_catalog_discovery(raw, platform="getcourse")
 
     assert discovery["course_count"] == 1
-    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/911642804"
+    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/900000001"
     assert discovery["courses"][0]["title"] == "Курс из onClick"
 
 
@@ -209,11 +209,11 @@ def test_getcourse_catalog_discovery_preserves_absolute_onclick_url_before_train
                                 "blocks": [
                                     {
                                         "type": "screen",
-                                        "id": "116/training/911642804",
+                                        "id": "116/training/900000001",
                                         "title": "Canonical host",
                                         "onClick": {
                                             "type": "navigate",
-                                            "url": "https://getcourse.ru/teach/control/stream/view/id/911642804",
+                                            "url": "https://getcourse.ru/teach/control/stream/view/id/900000001",
                                         },
                                     }
                                 ]
@@ -232,7 +232,7 @@ def test_getcourse_catalog_discovery_preserves_absolute_onclick_url_before_train
     )
 
     assert discovery["course_count"] == 1
-    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/911642804"
+    assert discovery["courses"][0]["source_ref"] == "https://getcourse.ru/teach/control/stream/view/id/900000001"
 
 
 def test_skillspace_catalog_discovery_reads_student_course_list_payload() -> None:
