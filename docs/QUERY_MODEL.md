@@ -29,7 +29,10 @@ Answers should be built from query results rather than free-floating summaries.
   an operator-configured JSON embedding endpoint for both document indexing and
   query vectors.
 - `hybrid`: combines normalized keyword score and semantic vector score while
-  preserving the same evidence-bearing result shape.
+  preserving the same evidence-bearing result shape. A semantic Top-K
+  candidate outside the bounded raw keyword pool receives an explicit
+  `keyword_fallback` from independent lexical coverage, so long common
+  documents cannot erase a shorter exact match merely through raw term count.
 
 ## Ranking
 
@@ -128,6 +131,8 @@ rank above learner comments when base relevance is tied.
 `aoa-course eval adapter-authority` checks that adapter-derived authority
 metadata from browser-session and Stepik fixtures survives normalization,
 indexing, and query packets.
+`aoa-course eval corpus-integrity` checks cross-artifact coverage and runs
+deterministic exact/place-grounded Recall@K probes from normalized objects.
 
 Commands:
 
@@ -149,6 +154,7 @@ aoa-course build-index --run authority-ranking-fixture
 aoa-course build-semantic-index --run authority-ranking-fixture
 aoa-course eval authority-ranking
 aoa-course eval adapter-authority
+aoa-course eval corpus-integrity
 aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 ```

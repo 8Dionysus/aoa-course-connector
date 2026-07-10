@@ -1,0 +1,66 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aoa_course_artifact_integrity.schema.json",
+  "title": "ArtifactIntegrity",
+  "type": "object",
+  "required": [
+    "schema",
+    "status",
+    "run_id",
+    "network_touched",
+    "counts",
+    "integrity",
+    "missing",
+    "unexpected",
+    "probes",
+    "failures"
+  ],
+  "properties": {
+    "schema": {"const": "aoa_course_artifact_integrity_v1"},
+    "status": {"enum": ["ok", "error"]},
+    "run_id": {"type": "string"},
+    "network_touched": {"const": false},
+    "counts": {
+      "type": "object",
+      "additionalProperties": {"type": "integer", "minimum": 0}
+    },
+    "integrity": {
+      "type": "object",
+      "required": [
+        "keyword_coverage",
+        "semantic_alignment",
+        "graph_coverage",
+        "evidence_attribution",
+        "lexical_retrievability",
+        "semantic_vector_coverage",
+        "dangling_graph_edge_count",
+        "invalid_inverted_posting_count"
+      ],
+      "additionalProperties": {"type": "number", "minimum": 0}
+    },
+    "missing": {"type": "object"},
+    "unexpected": {"type": "object"},
+    "probes": {
+      "type": "object",
+      "required": [
+        "status",
+        "mode",
+        "k",
+        "requested_limit",
+        "evaluated_count",
+        "hit_count",
+        "exact_hit_count",
+        "place_hit_count",
+        "miss_count",
+        "query_error_count",
+        "recall_at_k",
+        "exact_recall_at_k",
+        "place_grounded_recall_at_k",
+        "relevance_contract",
+        "misses"
+      ]
+    },
+    "failures": {"type": "array", "items": {"type": "object"}}
+  },
+  "additionalProperties": true
+}

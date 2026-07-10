@@ -17,6 +17,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query 
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
 PYTHONPATH=src python -m aoa_course_connector.cli eval ingest-coverage
+PYTHONPATH=src python -m aoa_course_connector.cli eval corpus-integrity
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
@@ -36,7 +37,8 @@ This proves:
   presence plus `http_json_v1` endpoint/model/token-env readiness before any
   network call, and keeps `token_value_logged: false` and
   `network_touched: false`;
-- graph construction for course/module/lesson/step/asset/topic/entity;
+- graph construction for course/module/lesson/step/asset/transcript/assignment/
+  discussion/topic/entity objects;
 - answer packets with evidence chains and freshness timestamps;
 - CLI `lesson-context` returns one `aoa_course_lesson_context_packet_v1` with
   source-backed answer evidence plus nearby graph context for each distinct
@@ -111,6 +113,25 @@ This proves:
   GetCourse, Skillspace, and Stepik, stable refresh history, and a deliberate
   bounded-browser probe. `--skip-prepare` applies the same read-only gate to
   operator checkpoints.
+- CLI `eval corpus-integrity` returns
+  `aoa_course_eval_corpus_integrity_v1` and selects the latest checkpoint for
+  each source, including failures. Its independent normalized-object inventory
+  rejects missing or duplicate index/graph records, dangling edges, invalid
+  vectors/postings, evidence gaps, stale artifact metadata, and retrieval
+  misses. The isolated fixture proof passes 7/7 GetCourse, Skillspace, and
+  Stepik sources with place-grounded Recall@5 of 1.0.
+- MCP `artifact_integrity` exposes the same per-run
+  `aoa_course_artifact_integrity_v1` read-only contract. It does not invoke an
+  external semantic provider during audit, preserving `network_touched: false`.
+- The current private runtime proof passes 6/6 latest connected GetCourse and
+  Stepik sources: 2,854 keyword/semantic documents, 3,286 graph nodes, complete
+  evidence and graph coverage, zero dangling edges/posting failures, and 72/72
+  deterministic correct-course/lesson retrieval probes. Runtime reports and
+  source data remain gitignored.
+- Hybrid ranking preserves lexical coverage for semantic candidates outside the
+  bounded raw keyword pool through `score_components.keyword_fallback`; a
+  regression test proves exact short matches survive long common-text
+  distractors.
 - CLI `eval source-registry-query` returns
   `aoa_course_eval_source_registry_query_v1`, a read-only gate over the current
   source registry that uses explicit operator queries or non-placeholder saved
@@ -156,7 +177,8 @@ This proves:
   the fresh-agent install path without network access: route docs, storage
   roots, bootstrap, readiness, CLI hybrid answer, MCP answer, connected-run
   status, query-plan readiness, source registry setup, and CLI/MCP
-  source-scoped `sources_answer` retrieval;
+  source-scoped `sources_answer` retrieval. Its fixture state is isolated, so
+  the operator source registry and checkpoints remain byte-identical;
 - `scripts/verify_agent_install_route.py --skip-pytest` copies the repo into a
   temporary install-like workspace and verifies the same offline route plus MCP
   stdio direct `answer`, `connected_run_query`, and `sources_answer` packets

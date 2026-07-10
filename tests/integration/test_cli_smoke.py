@@ -157,6 +157,17 @@ def test_cli_starter_flow(tmp_path: Path) -> None:
     assert ingest["result"]["status"] == "ready"
     assert ingest["result"]["readiness"]["agent_query_ready"] is True
     assert ingest["result"]["normalized"]["counts"]["lessons"] >= 1
+    run_cli(tmp_path, "build-semantic-index", "--run", "starter-fixture")
+    integrity = run_cli(
+        tmp_path,
+        "mcp",
+        "call",
+        "artifact_integrity",
+        '{"run":"starter-fixture","probe_limit":4,"recall_k":5}',
+    )
+    assert integrity["result"]["status"] == "ok"
+    assert integrity["result"]["probes"]["place_grounded_recall_at_k"] == 1.0
+    assert integrity["result"]["network_touched"] is False
     graph = run_cli(tmp_path, "mcp", "call", "graph_neighbors", '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}')
     assert graph["result"]["graph"]["node"]["node_id"] == "lesson:starter:unlock-risk"
     freshness = run_cli(tmp_path, "mcp", "call", "freshness_report", '{"run":"starter-fixture"}')
@@ -1021,6 +1032,78 @@ def test_cli_ingest_coverage_eval_rejects_newer_failed_checkpoint(tmp_path: Path
     assert "checkpoint_status" in result["checkpoints"][0]["failure_fields"]
 
 
+def test_cli_corpus_integrity_eval_proves_all_fixture_artifacts_and_recall(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "eval", "corpus-integrity")
+
+    assert result["schema"] == "aoa_course_eval_corpus_integrity_v1"
+    assert result["status"] == "ok"
+    assert result["network_touched"] is False
+    assert result["preparation"]["isolated_storage"] is True
+    assert result["metrics"]["source_count"] >= 3
+    assert result["metrics"]["passed_source_count"] == result["metrics"]["source_count"]
+    assert result["metrics"]["failed_source_count"] == 0
+    assert result["metrics"]["platform_count"] == 3
+    assert result["metrics"]["recall_at_k"] == 1.0
+    assert all(source["audit"]["integrity"]["graph_coverage"] == 1.0 for source in result["sources"])
+    assert all(source["audit"]["probes"]["recall_at_k"] == 1.0 for source in result["sources"])
+    assert "source_ref" not in json.dumps(result)
+    assert not (tmp_path / "data/sources/course_sources.json").exists()
+
+
+def test_cli_corpus_integrity_eval_rejects_newer_failed_checkpoint(tmp_path: Path) -> None:
+    source = run_cli(
+        tmp_path,
+        "sources",
+        "add",
+        "https://school.operator.edu/teach/control/stream",
+        "--platform",
+        "getcourse",
+        "--title",
+        "School",
+    )["source"]
+    run_cli(
+        tmp_path,
+        "sync",
+        "browser-fixture",
+        "--run",
+        "integrity-ok",
+        "--source-id",
+        str(source["source_id"]),
+        "--build-artifacts",
+    )
+    checkpoint_path = tmp_path / "data/sync/sync_checkpoints.json"
+    store = json.loads(checkpoint_path.read_text(encoding="utf-8"))
+    store["checkpoints"].append(
+        {
+            "schema": "aoa_course_sync_checkpoint_v1",
+            "checkpoint_id": f"checkpoint:integrity-error:{source['source_id']}",
+            "source_id": source["source_id"],
+            "platform": "getcourse",
+            "sync_run_id": "integrity-error",
+            "run_id": "integrity-error-source",
+            "status": "error",
+            "error": "fixture failure",
+            "updated_at": "2099-01-01T00:00:00Z",
+        }
+    )
+    checkpoint_path.write_text(json.dumps(store), encoding="utf-8")
+
+    completed = subprocess.run(
+        [sys.executable, "-m", "aoa_course_connector.cli", "eval", "corpus-integrity", "--skip-prepare", "--platform", "getcourse"],
+        check=False,
+        capture_output=True,
+        text=True,
+        env=cli_env(tmp_path),
+    )
+    result = json.loads(completed.stdout)
+
+    assert completed.returncode == 1
+    assert result["status"] == "error"
+    assert result["sources"][0]["run_id"] == "integrity-error-source"
+    assert result["sources"][0]["checkpoint_status"] == "error"
+    assert result["sources"][0]["audit"]["status"] == "error"
+
+
 def test_cli_stepik_account_fixture_discovery(tmp_path: Path) -> None:
     receipt = run_cli(
         tmp_path,
@@ -1225,6 +1308,7 @@ def test_cli_install_route_eval_proves_fresh_agent_route(tmp_path: Path) -> None
     assert result["schema"] == "aoa_course_eval_install_route_v1"
     assert result["status"] == "ok"
     assert result["network_touched"] is False
+    assert result["isolated_storage"] is True
     assert result["failures"] == []
     assert result["storage"]["exists"] == {"artifact": True, "auth": True, "cache": True, "data": True}
     assert result["bootstrap"]["status"] == "ok"
@@ -1240,6 +1324,7 @@ def test_cli_install_route_eval_proves_fresh_agent_route(tmp_path: Path) -> None
     assert result["connected_status"]["status"] == "ok"
     assert result["connected_status"]["query_plan_ready_count"] >= 1
     assert result["source_registry"]["source_count"] >= 1
+    assert not (tmp_path / "data/sources/course_sources.json").exists()
     assert result["sources_answer"]["tool"] == "sources_answer"
     assert result["sources_answer"]["schema"] == "aoa_course_sources_answer_packet_v1"
     assert result["sources_answer"]["status"] == "ok"

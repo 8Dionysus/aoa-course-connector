@@ -24,6 +24,7 @@ from aoa_course_connector.calibration.connected_run import (
 )
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
+from aoa_course_connector.integrity import audit_run_artifacts
 from aoa_course_connector.query import freshness_report, graph_neighbors, portfolio_rank_features, query_index, render_answer_packet, render_lesson_context_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
@@ -69,6 +70,19 @@ def _lesson_context_schema() -> dict[str, object]:
 
 def _run_schema() -> dict[str, object]:
     return _object_schema({"run": _string_schema("Connector run id.")})
+
+
+def _artifact_integrity_schema() -> dict[str, object]:
+    return _object_schema(
+        {
+            "run": _string_schema("Connector run id."),
+            "probe_limit": _integer_schema("Maximum deterministic retrieval probes.", 0),
+            "recall_k": _integer_schema("Top-K depth for retrieval probes.", 1),
+            "min_recall": _number_schema("Minimum accepted Recall@K.", 0.0),
+            "mode": {"type": "string", "enum": ["keyword", "semantic", "hybrid"], "description": "Probe query mode."},
+        },
+        required=["run"],
+    )
 
 
 def _platforms_schema(description: str) -> dict[str, object]:
@@ -385,6 +399,7 @@ TOOLS = [
     {"name": "sources_answer_matrix", "description": "Answer several course questions across selected query-ready sources and return aggregate source-scoped retrieval quality without touching the network.", "inputSchema": _sources_answer_matrix_schema()},
     {"name": "connector_readiness", "description": "Inspect install, storage, source, run, connected-run, and MCP readiness without touching the network.", "inputSchema": _connector_readiness_schema()},
     {"name": "ingest_status", "description": "Inspect local ingest run status.", "inputSchema": _run_schema()},
+    {"name": "artifact_integrity", "description": "Audit one normalized run against its indexes, evidence, graph, and deterministic Recall@K probes without touching the network.", "inputSchema": _artifact_integrity_schema()},
     {"name": "sync_status", "description": "Inspect source sync checkpoints.", "inputSchema": _object_schema({"sync_run": _string_schema("Sync run id."), "platform": _string_schema("Optional platform filter.")})},
     {"name": "live_preflight", "description": "Inspect connected-source readiness without touching the network or printing secrets.", "inputSchema": _live_preflight_schema()},
     {"name": "connected_source_plan", "description": "Plan connected-source preflight, sync, smoke, connected-run, and calibration commands without touching the network.", "inputSchema": _connected_source_plan_schema()},
@@ -450,6 +465,15 @@ def call_tool(
         return _call_connector_readiness(roots, args)
     if name == "ingest_status":
         return ingest_status(roots, run_id)
+    if name == "artifact_integrity":
+        return audit_run_artifacts(
+            roots,
+            run_id,
+            probe_limit=max(0, int(args.get("probe_limit") or 0)),
+            recall_k=max(1, int(args.get("recall_k") or 5)),
+            min_recall=float(args.get("min_recall") if args.get("min_recall") is not None else 1.0),
+            mode=str(args.get("mode") or "hybrid"),
+        )
     if name == "sync_status":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sync": load_sync_status(roots, sync_run_id=str(args.get("sync_run") or ""), platform=str(args.get("platform") or ""))}
     if name == "live_preflight":

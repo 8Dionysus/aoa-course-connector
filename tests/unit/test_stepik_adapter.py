@@ -34,7 +34,16 @@ def test_stepik_fixture_to_answer_packet(tmp_path: Path) -> None:
     assert lesson["assignments"][0]["authority_tier"] == "official_assignment"
     assert lesson["assignments"][0]["source_authority"] == "stepik_step_api"
     build_keyword_index(storage, run_id="stepik-fixture")
-    build_graph(storage, run_id="stepik-fixture")
+    graph_path = build_graph(storage, run_id="stepik-fixture")
+    graph = json.loads(graph_path.read_text(encoding="utf-8"))
+    assignment_id = lesson["assignments"][0]["assignment_id"]
+    assert any(node["node_id"] == assignment_id and node["kind"] == "assignment" for node in graph["nodes"])
+    assert any(
+        edge["kind"] == "lesson_has_assignment"
+        and edge["from_node"] == lesson["lesson_id"]
+        and edge["to_node"] == assignment_id
+        for edge in graph["edges"]
+    )
     results = query_keyword_index(storage, "Stepik public API evidence", run_id="stepik-fixture")
     assert results
     assert results[0]["platform"] == "stepik"

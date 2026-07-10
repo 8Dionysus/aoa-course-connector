@@ -33,6 +33,7 @@ jobs:
       - run: aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
       - run: aoa-course sources list
       - run: aoa-course eval install-route
+      - run: aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
       - run: aoa-course sources answer "Stepik public API evidence" --platform stepik --mode hybrid
       - run: aoa-course eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
       - run: aoa-course eval browser-discovery

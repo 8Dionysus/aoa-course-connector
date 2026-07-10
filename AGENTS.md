@@ -64,6 +64,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run step
 PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --source-id "source:stepik:..." --build-artifacts
 PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-fixture --platform stepik
 PYTHONPATH=src python -m aoa_course_connector.cli eval ingest-coverage
+PYTHONPATH=src python -m aoa_course_connector.cli eval corpus-integrity
 PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
 PYTHONPATH=src python -m aoa_course_connector.cli smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
 PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
@@ -153,6 +154,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_query '
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_query_matrix '{"run":"connected-fixture-proof","kinds":["smoke"],"queries":["GetCourse bootloader rollback evidence","Skillspace logcat bugreport evidence","Stepik public API evidence"],"entry_limit":3}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call connector_readiness '{"runs":["starter-fixture"],"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
+PYTHONPATH=src python -m aoa_course_connector.cli mcp call artifact_integrity '{"run":"starter-fixture","probe_limit":12,"recall_k":5}'
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-agent","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | PYTHONPATH=src python -m aoa_course_connector.mcp.server
 ```

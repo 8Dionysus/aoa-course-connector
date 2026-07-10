@@ -404,10 +404,15 @@ def query_hybrid_index(roots: StorageRoots, query: str, run_id: str = "starter-f
     ranked = []
     for entry in by_doc.values():
         components = entry.get("score_components") if isinstance(entry.get("score_components"), dict) else {}
+        rank_features = _rank_features(entry, tokenize(query))
         keyword_score = float(components.get("keyword") or 0.0)
         semantic_score = float(components.get("semantic") or 0.0)
+        if keyword_score <= 0 and semantic_score > 0:
+            keyword_fallback = float(rank_features.get("lexical_coverage") or 0.0)
+            if keyword_fallback > 0:
+                keyword_score = keyword_fallback
+                components["keyword_fallback"] = round(keyword_fallback, 6)
         score = (0.45 * keyword_score) + (0.55 * semantic_score)
-        rank_features = _rank_features(entry, tokenize(query))
         components["freshness"] = round(float(rank_features.get("freshness_boost") or 0.0), 6)
         components["authority"] = round(float(rank_features.get("authority_boost") or 0.0), 6)
         components["intent"] = round(float(rank_features.get("intent_boost") or 0.0), 6)

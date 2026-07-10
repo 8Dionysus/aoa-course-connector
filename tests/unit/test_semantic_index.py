@@ -143,6 +143,38 @@ def test_semantic_query_rejects_hash_collision_only_matches(tmp_path: Path) -> N
     assert query_hybrid_index(storage, query, run_id="starter-fixture") == []
 
 
+def test_hybrid_search_keeps_lexically_exact_semantic_candidate_outside_keyword_pool(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    import aoa_course_connector.query as query_module
+
+    storage = roots(tmp_path)
+    distractors = [
+        {
+            "doc_id": f"distractor:{index}",
+            "text": "specific",
+            "path": ["Other lesson"],
+            "score": 100.0,
+        }
+        for index in range(20)
+    ]
+    target = {
+        "doc_id": "target",
+        "text": "specific target",
+        "path": ["Target lesson"],
+        "score": 0.4,
+        "semantic_provider": "local_hashing_v1",
+    }
+    monkeypatch.setattr(query_module, "query_keyword_index", lambda *_args, **kwargs: distractors[: int(kwargs["limit"])])
+    monkeypatch.setattr(query_module, "query_semantic_index", lambda *_args, **_kwargs: [target])
+
+    results = query_module.query_hybrid_index(storage, "specific target", limit=5)
+
+    assert results[0]["doc_id"] == "target"
+    assert results[0]["score_components"]["keyword_fallback"] == 1.0
+
+
 def test_index_manifest_schema_keeps_kind_specific_required_fields() -> None:
     schema = json.loads((REPO_ROOT / "connector" / "schemas" / "index_manifest.schema.json").read_text(encoding="utf-8"))
     variants = {
