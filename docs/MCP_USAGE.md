@@ -10,6 +10,7 @@ Initial tools:
 - `sources_answer_matrix`
 - `connector_readiness`
 - `ingest_status`
+- `artifact_integrity`
 - `sync_status`
 - `live_preflight`
 - `connected_source_plan`
@@ -47,6 +48,7 @@ aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
 aoa-course mcp call answer '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'
 aoa-course mcp call connector_readiness '{"runs":["starter-fixture"]}'
 aoa-course mcp call ingest_status '{"run":"starter-fixture"}'
+aoa-course mcp call artifact_integrity '{"run":"starter-fixture","probe_limit":12,"recall_k":5,"mode":"hybrid"}'
 aoa-course mcp call lesson_context '{"query":"mentor anti-rollback vendor boot","run":"getcourse-browser-fixture","graph_limit":12}'
 aoa-course mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
 aoa-course mcp call freshness_report '{"run":"starter-fixture"}'
@@ -94,6 +96,14 @@ not include raw HTML or caption text in `structuredContent`.
 bundle counts, materialization receipt summaries, keyword/semantic index
 metadata, graph node/edge counts, `agent_query_ready`, and next build/query
 commands without reading private raw payloads into `structuredContent`.
+
+`artifact_integrity` returns `aoa_course_artifact_integrity_v1` for one local
+run. It cross-checks normalized IDs against keyword/semantic indexes, vectors,
+postings, evidence and graph records, then optionally runs deterministic
+Recall@K probes. It never refreshes a source. Hybrid or semantic probes are
+reported unavailable for an external embedding provider because those queries
+would require a network call; use keyword probes or run the provider query
+through its explicitly connected route.
 
 `list_sources` is the read-only source catalog for MCP-side agents. It returns
 `catalog.schema: aoa_course_source_registry_list_v1`, registry path, total and

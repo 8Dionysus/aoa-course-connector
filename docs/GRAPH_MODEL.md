@@ -33,6 +33,9 @@ Required edges:
 - lesson_contains_step;
 - lesson_has_asset;
 - lesson_has_transcript;
+- lesson_has_assignment;
+- lesson_has_comment_thread;
+- thread_has_comment;
 - step_mentions_entity;
 - lesson_about_topic.
 - version_group_has_snapshot;

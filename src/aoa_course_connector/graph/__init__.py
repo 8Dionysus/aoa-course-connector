@@ -84,6 +84,18 @@ def build_graph(roots: StorageRoots, run_id: str = "starter-fixture") -> Path:
                         transcript_temporal = _temporal_metadata(transcript, transcript.get("evidence"), indexed_at=built_at, inherited=lesson_temporal)
                         nodes[transcript_id] = {**_node(transcript_id, "transcript", transcript.get("language") or transcript_id, [lesson_url]), **transcript_temporal}
                         _edge(edges, "lesson_has_transcript", lesson_id, transcript_id, lesson_url, 0.9, transcript_temporal)
+                for assignment in lesson.get("assignments", []):
+                    if isinstance(assignment, dict):
+                        assignment_id = str(assignment["assignment_id"])
+                        assignment_temporal = _temporal_metadata(assignment, assignment.get("evidence"), indexed_at=built_at, inherited=lesson_temporal)
+                        assignment_label = assignment.get("title") or str(assignment.get("prompt") or "")[:80] or assignment_id
+                        nodes[assignment_id] = {
+                            **_node(assignment_id, "assignment", assignment_label, [lesson_url]),
+                            "authority_tier": str(assignment.get("authority_tier") or ""),
+                            "source_authority": str(assignment.get("source_authority") or ""),
+                            **assignment_temporal,
+                        }
+                        _edge(edges, "lesson_has_assignment", lesson_id, assignment_id, lesson_url, 0.9, assignment_temporal)
                 for thread in lesson.get("comment_threads", []):
                     if isinstance(thread, dict):
                         thread_id = str(thread["thread_id"])

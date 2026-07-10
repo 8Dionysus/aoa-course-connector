@@ -2,6 +2,19 @@
 
 ## 0.1.0 - Unreleased
 
+- Added `aoa_course_artifact_integrity_v1`, CLI `eval corpus-integrity`, and MCP
+  `artifact_integrity` to cross-check canonical normalized objects against
+  keyword/semantic indexes, vectors, postings, evidence, graph records, and
+  deterministic exact/place-grounded Recall@K without touching the network.
+- Added assignment graph nodes and `lesson_has_assignment` edges; the new gate
+  exposed and repaired missing assignment coverage across existing Stepik
+  corpora while preserving diagnostic exact-document ambiguity separately from
+  correct course/lesson retrieval.
+- Isolated `eval install-route` from operator storage so repeated fresh-install
+  proofs cannot add fixture sources or checkpoints to a connected registry.
+- Fixed hybrid candidate pooling so a lexically exact semantic candidate keeps
+  an explicit `keyword_fallback` even when raw term frequency places it just
+  outside the bounded keyword pool.
 - Initial public-ready repository skeleton.
 - Added offline course fixture ingestion.
 - Added comparable cross-source portfolio reranking and

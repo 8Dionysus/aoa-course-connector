@@ -84,6 +84,7 @@ aoa-course graph neighbors lesson:starter:unlock-risk --run starter-fixture
 aoa-course evidence inspect "rollback" --run starter-fixture --mode hybrid
 aoa-course eval install-route
 aoa-course eval answer-quality
+aoa-course eval corpus-integrity
 aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
 aoa-course build-index --run freshness-ranking-fixture
 aoa-course build-semantic-index --run freshness-ranking-fixture
@@ -181,6 +182,22 @@ counts plus explicit gaps, and `identity_continuity` with previous-run
 retention, additions/removals, history preservation, and removal assessment.
 Stepik reports optional `step_sources` enrichment separately from completion
 of the ordinary course API tree.
+
+Use `eval corpus-integrity` after artifact builds to prove that normalized
+searchable objects have matching keyword and semantic documents, vectors,
+postings, evidence records, and graph nodes without dangling edges:
+
+```bash
+aoa-course eval corpus-integrity
+aoa-course eval corpus-integrity --skip-prepare --platform getcourse --platform stepik --probe-limit 12 --recall-k 5
+```
+
+The isolated default covers GetCourse, Skillspace, and Stepik fixtures. The
+existing-state form selects the latest checkpoint for every enabled source,
+including a newer failed checkpoint, and remains read-only and network-free.
+It reports both exact-document recall and the primary place-grounded recall,
+where a result from the target canonical course/lesson is relevant even when
+several technical records contain indistinguishable metadata.
 `answer`, `lesson-context`, MCP `answer`, and MCP `evidence_report` expose
 `aoa_course_answer_quality_summary_v1` under `quality`; check `ready`,
 `blockers`, provenance counts, refresh-hint counts, and `top_result` before

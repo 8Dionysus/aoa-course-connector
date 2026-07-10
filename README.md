@@ -30,6 +30,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query 
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
 PYTHONPATH=src python -m aoa_course_connector.cli eval ingest-coverage
+PYTHONPATH=src python -m aoa_course_connector.cli eval corpus-integrity
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
@@ -65,6 +66,13 @@ stable, and previous snapshots survive refresh. Its bounded probe must report
 truncation instead of presenting omitted lessons as source deletions. Use
 `--skip-prepare` with platform/source filters to audit existing checkpoints.
 
+`eval corpus-integrity` independently compares normalized canonical objects
+with keyword and semantic documents, vectors, inverted postings, evidence, and
+graph nodes/edges. Deterministic probes report strict exact-document Recall@K
+and place-grounded Recall@K for the correct course or lesson. The default run
+uses isolated fixtures; `--skip-prepare` audits the latest selected source
+checkpoints without touching the network or returning source URLs.
+
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,
 runs fixture connected-source calibration for GetCourse, Skillspace, and Stepik,
@@ -73,6 +81,8 @@ and returns the final readiness packet without touching the network.
 checks route docs, storage roots, bootstrap, readiness, CLI hybrid answer, MCP
 answer, CLI/MCP source-scoped `sources_answer`, connected-run status,
 query-plan readiness, and source registry setup with `network_touched: false`.
+It uses isolated temporary storage and does not add fixture sources or
+checkpoints to the operator registry.
 `connect profile` turns those operator inputs into a local runtime JSON
 contract, `aoa_course_connection_profile_v1`. It stores source refs, state-file
 paths, token env names, and semantic-provider settings under artifact storage,

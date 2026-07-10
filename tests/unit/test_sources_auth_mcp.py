@@ -1357,6 +1357,7 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert any(tool["name"] == "connector_readiness" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "search" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "sync_status" for tool in tools_manifest()["tools"])
+    assert any(tool["name"] == "artifact_integrity" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "list_sources" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "live_preflight" for tool in tools_manifest()["tools"])
     assert any(tool["name"] == "connected_source_plan" for tool in tools_manifest()["tools"])
@@ -1384,6 +1385,14 @@ def test_mcp_tools_and_search(tmp_path: Path, monkeypatch) -> None:
     assert ingest["graph"]["node_count"] >= 1
     assert ingest["receipts"][0]["schema"] == "aoa_course_materialize_receipt_v1"
     assert any(command == "aoa-course build-semantic-index --run starter-fixture" for command in ingest["next_commands"])
+    missing_semantic_integrity = call_tool("artifact_integrity", {"run": "starter-fixture", "probe_limit": 2})
+    assert missing_semantic_integrity["status"] == "error"
+    build_semantic_index(storage, run_id="starter-fixture")
+    integrity = call_tool("artifact_integrity", {"run": "starter-fixture", "probe_limit": 4, "recall_k": 5})
+    assert integrity["schema"] == "aoa_course_artifact_integrity_v1"
+    assert integrity["status"] == "ok"
+    assert integrity["network_touched"] is False
+    assert integrity["probes"]["recall_at_k"] == 1.0
     missing_ingest = call_tool("ingest_status", {"run": "missing-run"})
     assert missing_ingest["status"] == "missing"
     assert missing_ingest["readiness"]["agent_query_ready"] is False

@@ -39,6 +39,12 @@ continuity rather than retrieval relevance. It requires explicit inventory,
 limit and fetch-gap counts, preserved previous snapshots, stable canonical IDs,
 and a bounded probe that must classify omitted lessons as truncation.
 
+The corpus-integrity suite checks that the complete normalized searchable
+inventory survives into keyword/semantic indexes, evidence, and graph records.
+Its deterministic source-derived probes separate exact-document recall from
+place-grounded course/lesson recall so duplicate technical metadata does not
+hide either artifact loss or useful retrieval behavior.
+
 The freshness-ranking suite checks the ordering-specific conflict case: when
 current and stale course items have equal base relevance, the current item must
 rank higher while the packet still exposes the base `score`, adjusted

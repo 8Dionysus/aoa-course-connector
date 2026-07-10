@@ -64,6 +64,7 @@ from aoa_course_connector.ingest import (
     materialize_stepik_fixture,
     materialize_stepik_live,
 )
+from aoa_course_connector.integrity import audit_run_artifacts
 from aoa_course_connector.mcp.server import call_tool, tools_manifest
 from aoa_course_connector.query import graph_neighbors, query_index, render_answer_packet, render_lesson_context_packet, write_answer_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
@@ -769,6 +770,16 @@ def build_parser() -> argparse.ArgumentParser:
     ingest_coverage.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
     ingest_coverage.add_argument("--source-id", action="append")
     ingest_coverage.set_defaults(func=cmd_eval_ingest_coverage)
+    corpus_integrity = eval_sub.add_parser("corpus-integrity")
+    corpus_integrity.add_argument("--suite", type=Path)
+    corpus_integrity.add_argument("--skip-prepare", action="store_true")
+    corpus_integrity.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    corpus_integrity.add_argument("--source-id", action="append")
+    corpus_integrity.add_argument("--probe-limit", type=int)
+    corpus_integrity.add_argument("--recall-k", type=int)
+    corpus_integrity.add_argument("--min-recall", type=float)
+    corpus_integrity.add_argument("--mode", choices=["keyword", "semantic", "hybrid"])
+    corpus_integrity.set_defaults(func=cmd_eval_corpus_integrity)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("place-ranking").set_defaults(func=cmd_eval_place_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
@@ -2047,7 +2058,17 @@ def cmd_refresh_query(args: argparse.Namespace) -> int:
 
 def cmd_eval_install_route(_args: argparse.Namespace) -> int:
     repo_root = find_repo_root()
-    roots = StorageRoots.from_env(repo_root)
+    operator_roots = StorageRoots.from_env(repo_root)
+    operator_roots.cache.mkdir(parents=True, exist_ok=True)
+    temporary_storage = tempfile.TemporaryDirectory(prefix="install-route-", dir=operator_roots.cache)
+    temporary_root = Path(temporary_storage.name)
+    roots = StorageRoots(
+        data=temporary_root / "data",
+        cache=temporary_root / "cache",
+        auth=temporary_root / "auth",
+        artifact=temporary_root / "artifacts",
+        mode="isolated_install_route_eval",
+    )
     tools = {str(tool.get("name")) for tool in tools_manifest().get("tools", []) if isinstance(tool, dict)}
     connected_run = "connected-calibration"
     bootstrap = bootstrap_fixture(
@@ -2066,13 +2087,14 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
         mcp_tool_names=tools,
     )
     answer_packet = render_answer_packet(roots, "bootloader rollback", DEFAULT_RUN, 5, "hybrid")
-    mcp_answer = call_tool("answer", {"query": "bootloader rollback", "run": DEFAULT_RUN, "mode": "hybrid"})
-    mcp_readiness = call_tool("connector_readiness", {"runs": [DEFAULT_RUN], "connected_run": connected_run})
+    mcp_answer = call_tool("answer", {"query": "bootloader rollback", "run": DEFAULT_RUN, "mode": "hybrid"}, roots=roots)
+    mcp_readiness = call_tool("connector_readiness", {"runs": [DEFAULT_RUN], "connected_run": connected_run}, roots=roots)
     connected_status = load_connected_calibration_status(roots, run_id=connected_run)
-    sources = call_tool("list_sources", {})
+    sources = call_tool("list_sources", {}, roots=roots)
     sources_answer = call_tool(
         "sources_answer",
         {"platforms": ["stepik"], "query": "Stepik public API evidence", "mode": "hybrid"},
+        roots=roots,
     )
     sources_answer_matrix = call_tool(
         "sources_answer_matrix",
@@ -2081,6 +2103,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
             "queries": ["Stepik public API evidence", "canonical course objects"],
             "mode": "hybrid",
         },
+        roots=roots,
     )
     doc_paths = [
         "README.md",
@@ -2115,6 +2138,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
             "schema": "aoa_course_eval_install_route_v1",
             "status": "ok" if not failures else "error",
             "network_touched": False,
+            "isolated_storage": True,
             "run_id": DEFAULT_RUN,
             "connected_run": connected_run,
             "proof_commands": [
@@ -2169,6 +2193,7 @@ def cmd_eval_install_route(_args: argparse.Namespace) -> int:
             "failures": failures,
         }
     )
+    temporary_storage.cleanup()
     return 0 if not failures else 1
 
 
@@ -2685,6 +2710,183 @@ def cmd_eval_ingest_coverage(args: argparse.Namespace) -> int:
     if temporary_storage is not None:
         temporary_storage.cleanup()
     return 0 if not failures else 1
+
+
+def cmd_eval_corpus_integrity(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    suite_path = args.suite or (repo_root / "evals" / "suites" / "corpus_integrity.json")
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    requirements = suite.get("requirements") if isinstance(suite.get("requirements"), dict) else {}
+    probe_limit = max(0, int(args.probe_limit if args.probe_limit is not None else requirements.get("probe_limit") or 0))
+    recall_k = max(1, int(args.recall_k if args.recall_k is not None else requirements.get("recall_k") or 5))
+    min_recall = float(args.min_recall if args.min_recall is not None else requirements.get("min_recall_at_k") or 1.0)
+    mode = str(args.mode or requirements.get("mode") or "hybrid")
+    eval_roots = roots
+    temporary_storage: tempfile.TemporaryDirectory[str] | None = None
+    preparation: dict[str, object] = {"mode": "existing", "network_touched": False}
+    if not args.skip_prepare:
+        roots.cache.mkdir(parents=True, exist_ok=True)
+        temporary_storage = tempfile.TemporaryDirectory(prefix="corpus-integrity-", dir=roots.cache)
+        temporary_root = Path(temporary_storage.name)
+        eval_roots = StorageRoots(
+            data=temporary_root / "data",
+            cache=temporary_root / "cache",
+            auth=temporary_root / "auth",
+            artifact=temporary_root / "artifacts",
+            mode="isolated_corpus_integrity_eval",
+        )
+        connected = run_connected_calibration(eval_roots, run_id="corpus-integrity-fixture", mode="fixture")
+        preparation = {
+            "mode": "fixture",
+            "status": connected.get("status"),
+            "connected_run_id": connected.get("run_id"),
+            "network_touched": bool(connected.get("network_touched")),
+            "isolated_storage": True,
+        }
+
+    checkpoints = [item for item in load_sync_status(eval_roots).get("checkpoints", []) if isinstance(item, dict)]
+    if args.platform:
+        wanted_platforms = set(args.platform)
+        checkpoints = [item for item in checkpoints if item.get("platform") in wanted_platforms]
+    if args.source_id:
+        wanted_source_ids = set(args.source_id)
+        checkpoints = [item for item in checkpoints if item.get("source_id") in wanted_source_ids]
+    latest = _latest_source_checkpoints(checkpoints)
+    failures: list[dict[str, object]] = []
+    if not args.skip_prepare and (preparation.get("status") != "ok" or preparation.get("network_touched") is not False):
+        failures.append({"surface": "preparation", "status": preparation.get("status"), "network_touched": preparation.get("network_touched")})
+
+    registry = load_registry(eval_roots.data)
+    selected_sources = [
+        source
+        for source in registry.get("sources", [])
+        if isinstance(source, dict)
+        and source.get("enabled", True)
+        and (not args.platform or source.get("platform") in set(args.platform))
+        and (not args.source_id or source.get("source_id") in set(args.source_id))
+    ]
+    expected_source_ids = {str(source.get("source_id") or "") for source in selected_sources if source.get("source_id")}
+    latest_source_ids = {str(checkpoint.get("source_id") or "") for checkpoint in latest if checkpoint.get("source_id")}
+    if not latest:
+        failures.append({"surface": "checkpoints", "missing": "selected source checkpoints"})
+    for source_id in sorted(expected_source_ids - latest_source_ids):
+        failures.append({"surface": "checkpoint", "source_id": source_id, "missing": "latest checkpoint"})
+
+    results = []
+    for checkpoint in latest:
+        run_id = str(checkpoint.get("run_id") or "")
+        if run_id:
+            audit = audit_run_artifacts(
+                eval_roots,
+                run_id,
+                probe_limit=probe_limit,
+                recall_k=recall_k,
+                mode=mode,
+                min_recall=min_recall,
+            )
+        else:
+            audit = {
+                "schema": "aoa_course_artifact_integrity_v1",
+                "status": "error",
+                "run_id": "",
+                "network_touched": False,
+                "failures": [{"surface": "run_id", "count": 1}],
+                "probes": {"evaluated_count": 0, "hit_count": 0, "recall_at_k": 0.0},
+                "integrity": {},
+            }
+        passed = checkpoint.get("status") == "ok" and audit.get("status") == "ok"
+        result = {
+            **_corpus_integrity_checkpoint_ref(checkpoint),
+            "passed": passed,
+            "audit": audit,
+        }
+        results.append(result)
+        if not passed:
+            failures.append(
+                {
+                    "surface": "source_artifacts",
+                    "source_id": checkpoint.get("source_id"),
+                    "checkpoint_status": checkpoint.get("status"),
+                    "failure_surfaces": [
+                        item.get("surface")
+                        for item in audit.get("failures", [])
+                        if isinstance(item, dict) and item.get("surface")
+                    ],
+                }
+            )
+
+    if not args.skip_prepare:
+        observed_platforms = {str(result.get("platform") or "") for result in results}
+        required_platforms = set(_list_of_strings(requirements.get("fixture_platforms")))
+        if not required_platforms.issubset(observed_platforms):
+            failures.append({"surface": "fixture_platforms", "missing": sorted(required_platforms - observed_platforms)})
+        minimum_sources = int(requirements.get("minimum_fixture_source_count") or 1)
+        if len(results) < minimum_sources:
+            failures.append({"surface": "fixture_sources", "expected_at_least": minimum_sources, "actual": len(results)})
+
+    evaluated_probes = sum(
+        int(result["audit"].get("probes", {}).get("evaluated_count") or 0)
+        for result in results
+        if isinstance(result.get("audit"), dict)
+    )
+    probe_hits = sum(
+        int(result["audit"].get("probes", {}).get("hit_count") or 0)
+        for result in results
+        if isinstance(result.get("audit"), dict)
+    )
+    exact_probe_hits = sum(
+        int(result["audit"].get("probes", {}).get("exact_hit_count") or 0)
+        for result in results
+        if isinstance(result.get("audit"), dict)
+    )
+    packet = {
+        "schema": "aoa_course_eval_corpus_integrity_v1",
+        "suite_id": suite.get("suite_id"),
+        "suite_path": str(suite_path),
+        "status": "ok" if not failures else "error",
+        "network_touched": bool(preparation.get("network_touched")),
+        "read_only": bool(args.skip_prepare),
+        "preparation": preparation,
+        "selection": {"platforms": args.platform or [], "source_ids": args.source_id or []},
+        "probe_contract": {"mode": mode, "limit_per_source": probe_limit, "k": recall_k, "min_recall_at_k": min_recall},
+        "metrics": {
+            "source_count": len(results),
+            "passed_source_count": sum(1 for result in results if result.get("passed")),
+            "failed_source_count": sum(1 for result in results if not result.get("passed")),
+            "platform_count": len({result.get("platform") for result in results if result.get("platform")}),
+            "evaluated_probe_count": evaluated_probes,
+            "recall_at_k": round(probe_hits / evaluated_probes, 6) if evaluated_probes else 0.0,
+            "place_grounded_recall_at_k": round(probe_hits / evaluated_probes, 6) if evaluated_probes else 0.0,
+            "exact_doc_recall_at_k": round(exact_probe_hits / evaluated_probes, 6) if evaluated_probes else 0.0,
+            "keyword_doc_count": sum(
+                int(result["audit"].get("counts", {}).get("keyword_doc_count") or 0)
+                for result in results
+                if isinstance(result.get("audit"), dict)
+            ),
+            "graph_node_count": sum(
+                int(result["audit"].get("counts", {}).get("graph_node_count") or 0)
+                for result in results
+                if isinstance(result.get("audit"), dict)
+            ),
+        },
+        "sources": results,
+        "failures": failures,
+    }
+    _emit(packet)
+    if temporary_storage is not None:
+        temporary_storage.cleanup()
+    return 0 if not failures else 1
+
+
+def _corpus_integrity_checkpoint_ref(checkpoint: dict[str, object]) -> dict[str, object]:
+    return {
+        "source_id": checkpoint.get("source_id"),
+        "platform": checkpoint.get("platform"),
+        "run_id": checkpoint.get("run_id"),
+        "updated_at": checkpoint.get("updated_at"),
+        "checkpoint_status": checkpoint.get("status"),
+    }
 
 
 def _latest_source_checkpoints(checkpoints: list[dict[str, object]]) -> list[dict[str, object]]:
