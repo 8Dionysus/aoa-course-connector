@@ -28,6 +28,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
+PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 ```
 
@@ -47,6 +48,14 @@ builds keyword/semantic indexes and graphs, then checks CLI answer, CLI
 lesson-context, MCP search, MCP answer, MCP lesson_context, and MCP
 evidence_report with source evidence, graph context, and answer `quality`
 readiness.
+
+`eval connected-portfolio` is the fixture-safe cross-source quality gate. It
+proves that GetCourse, Skillspace, and Stepik questions select the expected
+platform and native course path, that cross-run results are reranked by
+query/path alignment rather than incomparable run-local scores, and that an
+unrelated query is not reported as a confident match. Pass `--suite` with a
+gitignored runtime suite and `--skip-prepare` to apply the same contract to
+already connected operator sources without touching the network.
 
 `bootstrap fixture` is the shortest fresh-install route. It creates storage,
 materializes the starter fixture, builds keyword/semantic indexes and the graph,

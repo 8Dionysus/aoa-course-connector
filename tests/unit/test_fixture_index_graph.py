@@ -7,7 +7,14 @@ from aoa_course_connector.config import StorageRoots
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import build_keyword_index, build_semantic_index, tokenize
 from aoa_course_connector.ingest import materialize_fixture
-from aoa_course_connector.query import graph_neighbors, lesson_graph_context, query_hybrid_index, query_keyword_index, render_answer_packet
+from aoa_course_connector.query import (
+    graph_neighbors,
+    lesson_graph_context,
+    portfolio_rank_features,
+    query_hybrid_index,
+    query_keyword_index,
+    render_answer_packet,
+)
 from aoa_course_connector.storage import run_data_dir
 
 
@@ -283,6 +290,52 @@ def test_single_course_title_match_beats_cross_source_semantic_noise(tmp_path: P
     assert [result["course_title"] for result in hybrid_results] == ["Философия", "Telegram-бот на Python за вечер"]
     assert hybrid_results[0]["rank_features"]["place_matches"] == ["философия"]
     assert hybrid_results[0]["rank_features"]["place_boost"] > hybrid_results[1]["rank_features"]["place_boost"]
+
+
+def test_portfolio_rank_matches_compound_and_inflected_native_path_terms() -> None:
+    query = "как запустить онлайн-школу"
+    relevant = portfolio_rank_features(
+        query,
+        {
+            "path": ["Марафон Точка Старта", "Уроки", "Старт запуска вашей онлайн-школы"],
+            "text": "Первый урок о запуске онлайн-школы.",
+            "rank_score": 0.59,
+            "score_components": {"semantic": 0.12},
+            "semantic_provider": "local_hashing_v1",
+        },
+    )
+    noise = portfolio_rank_features(
+        query,
+        {
+            "path": ["Философия", "Мир и познание", "Пространство и время"],
+            "text": "Исторические формы понимания пространства и времени.",
+            "rank_score": 0.68,
+            "score_components": {"semantic": 0.33},
+            "semantic_provider": "local_hashing_v1",
+        },
+    )
+
+    assert relevant["query_term_count"] == 3
+    assert relevant["path_coverage"] == 1.0
+    assert relevant["lexical_coverage"] == 1.0
+    assert relevant["confidence"] == "high"
+    assert relevant["confident"] is True
+    assert relevant["portfolio_rank_score"] > noise["portfolio_rank_score"]
+    assert noise["confidence"] == "none"
+    assert noise["confident"] is False
+
+    false_prefix = portfolio_rank_features(
+        "как привязать Telegram к профилю",
+        {
+            "path": ["Telegram-бот", "Сообщения"],
+            "text": "Привет пользователю. Профилю назначен Telegram username.",
+            "rank_score": 0.74,
+            "score_components": {"semantic": 0.17},
+            "semantic_provider": "local_hashing_v1",
+        },
+    )
+    assert "привязать" not in false_prefix["lexical_matches"]
+    assert false_prefix["lexical_coverage"] < 1.0
 
 
 def test_graph_neighbors_include_lesson_context(tmp_path: Path) -> None:

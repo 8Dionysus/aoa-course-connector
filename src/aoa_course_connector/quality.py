@@ -144,5 +144,8 @@ def _top_result_summary(result: dict[str, Any]) -> dict[str, object]:
         "path": result.get("path"),
         "authority_tier": result.get("authority_tier"),
         "freshness_state": result.get("freshness_state"),
+        "score": result.get("score"),
         "rank_score": result.get("rank_score"),
+        "rank_features": result.get("rank_features"),
+        "semantic_provider": result.get("semantic_provider"),
     }

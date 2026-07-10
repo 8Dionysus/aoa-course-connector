@@ -24,7 +24,7 @@ from aoa_course_connector.calibration.connected_run import (
 )
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER
-from aoa_course_connector.query import freshness_report, graph_neighbors, query_index, render_answer_packet, render_lesson_context_packet
+from aoa_course_connector.query import freshness_report, graph_neighbors, portfolio_rank_features, query_index, render_answer_packet, render_lesson_context_packet
 from aoa_course_connector.readiness import connected_source_plan, live_preflight, semantic_provider_preflight
 from aoa_course_connector.refresh import refresh_query_cycle
 from aoa_course_connector.sources import PLATFORMS, load_registry
@@ -414,9 +414,14 @@ def tools_manifest() -> dict[str, object]:
     return {"schema": "aoa_course_mcp_tools_v1", "server": SERVER_NAME, "protocol_version": PROTOCOL_VERSION, "tools": TOOLS}
 
 
-def call_tool(name: str, arguments: dict[str, object] | None = None) -> dict[str, object]:
+def call_tool(
+    name: str,
+    arguments: dict[str, object] | None = None,
+    *,
+    roots: StorageRoots | None = None,
+) -> dict[str, object]:
     args = arguments or {}
-    roots = StorageRoots.from_env(find_repo_root())
+    roots = roots or StorageRoots.from_env(find_repo_root())
     run_id = str(args.get("run") or DEFAULT_RUN)
     if name == "list_sources":
         registry = load_registry(roots.data)
@@ -1071,14 +1076,15 @@ def _sources_answer_status(responses: list[dict[str, object]], blocked_sources: 
 
 
 def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, coverage_mode: str = "all-sources") -> dict[str, object]:
-    summaries = [_sources_answer_matrix_summary(packet) for packet in query_packets]
-    ready_count = sum(1 for summary in summaries if bool(summary.get("ready")))
+    summaries = [_sources_answer_matrix_summary(packet, coverage_mode=coverage_mode) for packet in query_packets]
+    ready_count = sum(1 for summary in summaries if bool(summary.get("source_scoped_ready")))
     evidence_ready_count = sum(1 for summary in summaries if int(summary.get("evidence_count_total") or 0) > 0)
     grounded_ready_count = sum(1 for summary in summaries if int(summary.get("grounded_response_count") or 0) > 0)
     response_count_total = sum(int(summary.get("response_count") or 0) for summary in summaries)
     evidence_count_total = sum(int(summary.get("evidence_count_total") or 0) for summary in summaries)
     result_count_total = sum(int(summary.get("result_count_total") or 0) for summary in summaries)
     grounded_response_count_total = sum(int(summary.get("grounded_response_count") or 0) for summary in summaries)
+    confident_query_count = sum(1 for summary in summaries if bool(summary.get("portfolio_confident")))
     blocked_source_count_total = sum(int(summary.get("blocked_source_count") or 0) for summary in summaries)
     failure_count_total = sum(int(summary.get("failure_count") or 0) for summary in summaries)
     source_scoped_ready = (
@@ -1111,6 +1117,9 @@ def _sources_answer_matrix_quality(query_packets: list[dict[str, object]], *, co
         "result_count_total": result_count_total,
         "evidence_count_total": evidence_count_total,
         "grounded_response_count_total": grounded_response_count_total,
+        "confident_query_count": confident_query_count,
+        "confidence_gap_query_count": len(query_packets) - confident_query_count,
+        "all_queries_have_confident_match": bool(query_packets) and confident_query_count == len(query_packets),
         "blocked_source_count_total": blocked_source_count_total,
         "failure_count_total": failure_count_total,
         "all_queries_have_responses": bool(query_packets) and all(int(summary.get("response_count") or 0) > 0 for summary in summaries),
@@ -1143,6 +1152,8 @@ def _sources_answer_matrix_summary(packet: dict[str, object], *, coverage_mode: 
     source_scoped_ready = bool(quality.get("ready"))
     portfolio_ready = grounded_response_count > 0 and blocked_source_count == 0 and failure_count == 0
     selected_ready = portfolio_ready if coverage_mode == "portfolio" else source_scoped_ready
+    top_result_refs = _sources_answer_matrix_top_result_refs(packet, grounded_only=coverage_mode == "portfolio")
+    portfolio_top_result = top_result_refs[0] if top_result_refs else {}
     return {
         "query": packet.get("query"),
         "status": "ok" if selected_ready else packet.get("status"),
@@ -1161,12 +1172,16 @@ def _sources_answer_matrix_summary(packet: dict[str, object], *, coverage_mode: 
         "all_grounded_responses_have_freshness": bool(quality.get("all_grounded_responses_have_freshness")),
         "platforms": quality.get("platforms", []),
         "source_ids": quality.get("source_ids", []),
-        "top_result_refs": _sources_answer_matrix_top_result_refs(packet, grounded_only=coverage_mode == "portfolio"),
+        "portfolio_top_result": portfolio_top_result,
+        "portfolio_confident": bool(portfolio_top_result.get("portfolio_confident")),
+        "portfolio_confidence": portfolio_top_result.get("portfolio_confidence") or "none",
+        "top_result_refs": top_result_refs,
     }
 
 
 def _sources_answer_matrix_top_result_refs(packet: dict[str, object], *, grounded_only: bool = False) -> list[dict[str, object]]:
     responses = packet.get("responses") if isinstance(packet.get("responses"), list) else []
+    query = str(packet.get("query") or "")
     refs: list[dict[str, object]] = []
     for response in responses:
         if not isinstance(response, dict):
@@ -1175,25 +1190,45 @@ def _sources_answer_matrix_top_result_refs(packet: dict[str, object], *, grounde
             continue
         answer_packet = response.get("answer_packet") if isinstance(response.get("answer_packet"), dict) else {}
         quality = answer_packet.get("quality") if isinstance(answer_packet.get("quality"), dict) else {}
-        top_result = quality.get("top_result") if isinstance(quality.get("top_result"), dict) else {}
-        ref = _compact_dict(
-            {
-                "source_id": response.get("source_id"),
-                "platform": response.get("platform"),
-                "connected_run_id": response.get("connected_run_id"),
-                "doc_id": top_result.get("doc_id"),
-                "path": top_result.get("path"),
-                "fetched_at": top_result.get("fetched_at"),
-                "freshness_state": top_result.get("freshness_state"),
-                "score": top_result.get("score"),
-                "rank_score": top_result.get("rank_score"),
-            }
-        )
-        if grounded_only and not ref.get("doc_id"):
-            continue
-        refs.append(ref)
+        results = answer_packet.get("results") if isinstance(answer_packet.get("results"), list) else []
+        result_candidates = [result for result in results if isinstance(result, dict)]
+        if not grounded_only:
+            result_candidates = result_candidates[:1]
+        if not result_candidates and isinstance(quality.get("top_result"), dict):
+            result_candidates = [quality["top_result"]]
+        for source_result_rank, top_result in enumerate(result_candidates, start=1):
+            portfolio_features = portfolio_rank_features(query, top_result) if query and top_result else {}
+            ref = _compact_dict(
+                {
+                    "source_id": response.get("source_id"),
+                    "platform": response.get("platform"),
+                    "connected_run_id": response.get("connected_run_id"),
+                    "source_result_rank": source_result_rank,
+                    "doc_id": top_result.get("doc_id"),
+                    "path": top_result.get("path"),
+                    "fetched_at": top_result.get("fetched_at"),
+                    "freshness_state": top_result.get("freshness_state"),
+                    "score": top_result.get("score"),
+                    "rank_score": top_result.get("rank_score"),
+                    "portfolio_rank_score": portfolio_features.get("portfolio_rank_score"),
+                    "portfolio_confidence": portfolio_features.get("confidence"),
+                    "portfolio_confident": portfolio_features.get("confident"),
+                    "portfolio_rank_features": portfolio_features,
+                }
+            )
+            if grounded_only and not ref.get("doc_id"):
+                continue
+            refs.append(ref)
     if grounded_only:
-        refs = sorted(refs, key=lambda ref: (float(ref.get("rank_score") or 0.0), float(ref.get("score") or 0.0)), reverse=True)
+        refs = sorted(
+            refs,
+            key=lambda ref: (
+                float(ref.get("portfolio_rank_score") or 0.0),
+                float(ref.get("rank_score") or 0.0),
+                float(ref.get("score") or 0.0),
+            ),
+            reverse=True,
+        )
     return refs
 
 

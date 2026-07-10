@@ -6,6 +6,7 @@ import argparse
 import json
 import shlex
 import sys
+import tempfile
 from pathlib import Path
 
 from aoa_course_connector.adapters import adapter_list
@@ -758,6 +759,10 @@ def build_parser() -> argparse.ArgumentParser:
     source_registry_query.add_argument("--min-source-count", type=int, default=1)
     source_registry_query.add_argument("--include-disabled", action="store_true")
     source_registry_query.set_defaults(func=cmd_eval_source_registry_query)
+    connected_portfolio = eval_sub.add_parser("connected-portfolio")
+    connected_portfolio.add_argument("--suite", type=Path)
+    connected_portfolio.add_argument("--skip-prepare", action="store_true")
+    connected_portfolio.set_defaults(func=cmd_eval_connected_portfolio)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("place-ranking").set_defaults(func=cmd_eval_place_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
@@ -2274,6 +2279,248 @@ def cmd_eval_source_registry_query(args: argparse.Namespace) -> int:
         }
     )
     return 0 if not failures else 1
+
+
+def cmd_eval_connected_portfolio(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    suite_path = args.suite or (repo_root / "evals" / "suites" / "connected_portfolio.json")
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    cases = [case for case in suite.get("cases", []) if isinstance(case, dict)] if isinstance(suite.get("cases"), list) else []
+    preparation_config = suite.get("preparation") if isinstance(suite.get("preparation"), dict) else {}
+    preparation_mode = "existing" if args.skip_prepare else str(preparation_config.get("mode") or "existing")
+    preparation: dict[str, object] = {"mode": preparation_mode, "network_touched": False}
+    preparation_failures: list[dict[str, object]] = []
+    temporary_storage: tempfile.TemporaryDirectory[str] | None = None
+    eval_roots = roots
+    if preparation_mode == "fixture":
+        roots.cache.mkdir(parents=True, exist_ok=True)
+        temporary_storage = tempfile.TemporaryDirectory(prefix="connected-portfolio-", dir=roots.cache)
+        temporary_root = Path(temporary_storage.name)
+        eval_roots = StorageRoots(
+            data=temporary_root / "data",
+            cache=temporary_root / "cache",
+            auth=temporary_root / "auth",
+            artifact=temporary_root / "artifacts",
+            mode="isolated_fixture_eval",
+        )
+        receipt = run_connected_calibration(
+            eval_roots,
+            run_id=str(preparation_config.get("connected_run") or "connected-portfolio-fixture"),
+            mode="fixture",
+            platforms=_list_of_strings(preparation_config.get("platforms")) or ["getcourse", "skillspace", "stepik"],
+            query=str(preparation_config.get("query") or "").strip() or None,
+            max_lessons=max(1, int(preparation_config.get("max_lessons") or 50)),
+            source_limit=int(preparation_config["source_limit"]) if preparation_config.get("source_limit") is not None else None,
+        )
+        preparation = {
+            "mode": "fixture",
+            "status": receipt.get("status"),
+            "connected_run_id": receipt.get("run_id"),
+            "platforms": receipt.get("platforms", []),
+            "stage_count": receipt.get("stage_count"),
+            "network_touched": bool(receipt.get("network_touched")),
+            "isolated_storage": True,
+        }
+        if receipt.get("status") != "ok" or receipt.get("network_touched") is not False:
+            preparation_failures.append(
+                {
+                    "surface": "preparation",
+                    "expected_status": "ok",
+                    "actual_status": receipt.get("status"),
+                    "network_touched": receipt.get("network_touched"),
+                }
+            )
+    elif preparation_mode != "existing":
+        preparation_failures.append({"surface": "preparation", "field": "mode", "expected": ["existing", "fixture"], "actual": preparation_mode})
+
+    selection = suite.get("selection") if isinstance(suite.get("selection"), dict) else {}
+    queries = _dedupe_cli_values([str(case.get("query") or "") for case in cases])
+    matrix_result = call_tool(
+        "sources_answer_matrix",
+        {
+            "queries": queries,
+            "platforms": _list_of_strings(selection.get("platforms")) or None,
+            "source_ids": _list_of_strings(selection.get("source_ids")) or None,
+            "kinds": _list_of_strings(selection.get("kinds")) or None,
+            "limit": max(1, int(selection.get("limit") or 5)),
+            "mode": str(selection.get("mode") or "hybrid"),
+            "coverage_mode": "portfolio",
+            "graph_limit": max(1, int(selection.get("graph_limit") or 12)),
+            "source_limit": max(1, int(selection.get("source_limit") or 10)),
+            "connected_run_limit": max(1, int(selection.get("connected_run_limit") or 5)),
+            "connected_receipt_limit": max(1, int(selection.get("connected_receipt_limit") or 50)),
+            "include_disabled": bool(selection.get("include_disabled")),
+            "include_source_refs": False,
+        },
+        roots=eval_roots,
+    )
+    matrix = matrix_result.get("sources_answer_matrix") if isinstance(matrix_result.get("sources_answer_matrix"), dict) else {}
+    summaries = matrix.get("query_summaries") if isinstance(matrix.get("query_summaries"), list) else []
+    summaries_by_query = {str(summary.get("query") or ""): summary for summary in summaries if isinstance(summary, dict)}
+    case_results = [_connected_portfolio_case_result(case, summaries_by_query.get(str(case.get("query") or ""), {})) for case in cases]
+    failures = [*preparation_failures]
+    if matrix.get("schema") != "aoa_course_sources_answer_matrix_v1":
+        failures.append({"surface": "sources_answer_matrix", "field": "schema", "expected": "aoa_course_sources_answer_matrix_v1", "actual": matrix.get("schema")})
+    if matrix.get("network_touched") is not False:
+        failures.append({"surface": "sources_answer_matrix", "field": "network_touched", "expected": False, "actual": matrix.get("network_touched")})
+    if matrix.get("source_refs_included") is not False:
+        failures.append({"surface": "sources_answer_matrix", "field": "source_refs_included", "expected": False, "actual": matrix.get("source_refs_included")})
+    if not cases:
+        failures.append({"surface": "suite", "missing": "cases"})
+    for result in case_results:
+        failures.extend(result.get("failures", []) if isinstance(result.get("failures"), list) else [])
+    metrics = _connected_portfolio_metrics(case_results)
+    packet = {
+        "schema": "aoa_course_eval_connected_portfolio_v1",
+        "suite_id": suite.get("suite_id"),
+        "suite_path": str(suite_path),
+        "status": "ok" if not failures else "error",
+        "network_touched": False,
+        "read_only": preparation_mode == "existing",
+        "preparation": preparation,
+        "selection": {
+            "platforms": _list_of_strings(selection.get("platforms")),
+            "source_ids": _list_of_strings(selection.get("source_ids")),
+            "kinds": _list_of_strings(selection.get("kinds")),
+            "mode": str(selection.get("mode") or "hybrid"),
+            "coverage_mode": "portfolio",
+        },
+        "query_count": len(queries),
+        "case_count": len(case_results),
+        "metrics": metrics,
+        "case_results": case_results,
+        "matrix": _sources_answer_matrix_summary(matrix_result),
+        "failures": failures,
+        "next_commands": [
+            f"aoa-course eval connected-portfolio --suite {shlex.quote(str(suite_path))}"
+            + (" --skip-prepare" if preparation_mode == "existing" else "")
+        ],
+    }
+    _emit(packet)
+    if temporary_storage is not None:
+        temporary_storage.cleanup()
+    return 0 if not failures else 1
+
+
+def _connected_portfolio_case_result(case: dict[str, object], summary: dict[str, object]) -> dict[str, object]:
+    query = str(case.get("query") or "")
+    case_type = str(case.get("case_type") or "positive")
+    refs = [ref for ref in summary.get("top_result_refs", []) if isinstance(ref, dict)] if isinstance(summary.get("top_result_refs"), list) else []
+    top = refs[0] if refs else {}
+    expect_no_confident_match = bool(case.get("expect_no_confident_match"))
+    expected_source_id = str(case.get("expected_top_source_id") or "")
+    expected_platform = str(case.get("expected_top_platform") or "")
+    expected_path_terms = _list_of_strings(case.get("expected_top_path_terms"))
+    expected_rank_at_most = max(1, int(case.get("expected_source_rank_at_most") or 1))
+    source_expectation = bool(expected_source_id or expected_platform)
+    expected_rank = next(
+        (
+            index
+            for index, ref in enumerate(refs, start=1)
+            if (not expected_source_id or str(ref.get("source_id") or "") == expected_source_id)
+            and (not expected_platform or str(ref.get("platform") or "") == expected_platform)
+        ),
+        0,
+    )
+    source_match = bool(expected_rank and expected_rank <= expected_rank_at_most) if (expected_source_id or expected_platform) else True
+    path_match = _path_value_contains_terms(top.get("path"), expected_path_terms)
+    top_confident = bool(top.get("portfolio_confident"))
+    failures: list[dict[str, object]] = []
+    context = {"query": query, "case_type": case_type}
+    if expect_no_confident_match:
+        if top_confident:
+            failures.append({**context, "field": "portfolio_confident", "expected": False, "actual": True, "top_result": _connected_portfolio_ref(top)})
+    else:
+        if not summary:
+            failures.append({**context, "missing": "query_summary"})
+        if not top:
+            failures.append({**context, "missing": "portfolio_top_result"})
+        if not source_match:
+            failures.append(
+                {
+                    **context,
+                    "field": "expected_source_rank",
+                    "expected_top_source_id": expected_source_id,
+                    "expected_top_platform": expected_platform,
+                    "expected_rank_at_most": expected_rank_at_most,
+                    "actual_rank": expected_rank,
+                    "top_result": _connected_portfolio_ref(top),
+                }
+            )
+        if expected_path_terms and not path_match:
+            failures.append({**context, "field": "top_path", "expected_contains": expected_path_terms, "actual": top.get("path")})
+        if case.get("require_confident", True) and not top_confident:
+            failures.append({**context, "field": "portfolio_confident", "expected": True, "actual": top_confident})
+        for field in _list_of_strings(case.get("required_top_fields")):
+            if not top.get(field):
+                failures.append({**context, "missing_top_field": field})
+    return {
+        "query": query,
+        "case_type": case_type,
+        "expect_no_confident_match": expect_no_confident_match,
+        "expected_source_rank": expected_rank,
+        "expected_rank_at_most": expected_rank_at_most,
+        "source_expectation": source_expectation,
+        "expected_path_term_count": len(expected_path_terms),
+        "source_match": source_match,
+        "path_match": path_match,
+        "portfolio_confident": top_confident,
+        "portfolio_confidence": top.get("portfolio_confidence") or "none",
+        "top_result": _connected_portfolio_ref(top),
+        "passed": not failures,
+        "failures": failures,
+    }
+
+
+def _connected_portfolio_ref(ref: dict[str, object]) -> dict[str, object]:
+    return {
+        key: ref.get(key)
+        for key in [
+            "source_id",
+            "platform",
+            "connected_run_id",
+            "source_result_rank",
+            "doc_id",
+            "path",
+            "fetched_at",
+            "freshness_state",
+            "rank_score",
+            "portfolio_rank_score",
+            "portfolio_confidence",
+            "portfolio_confident",
+            "portfolio_rank_features",
+        ]
+        if ref.get(key) is not None
+    }
+
+
+def _connected_portfolio_metrics(case_results: list[dict[str, object]]) -> dict[str, object]:
+    positive = [case for case in case_results if not bool(case.get("expect_no_confident_match"))]
+    negative = [case for case in case_results if bool(case.get("expect_no_confident_match"))]
+    source_cases = [case for case in positive if bool(case.get("source_expectation"))]
+    path_cases = [case for case in positive if int(case.get("expected_path_term_count") or 0) > 0]
+    return {
+        "case_count": len(case_results),
+        "passed_case_count": sum(1 for case in case_results if bool(case.get("passed"))),
+        "failed_case_count": sum(1 for case in case_results if not bool(case.get("passed"))),
+        "positive_case_count": len(positive),
+        "negative_case_count": len(negative),
+        "collision_case_count": sum(1 for case in case_results if case.get("case_type") == "collision"),
+        "top_1_source_accuracy": _ratio(sum(1 for case in source_cases if bool(case.get("source_match"))), len(source_cases)),
+        "top_1_path_accuracy": _ratio(sum(1 for case in path_cases if bool(case.get("path_match"))), len(path_cases)),
+        "positive_confidence_rate": _ratio(sum(1 for case in positive if bool(case.get("portfolio_confident"))), len(positive)),
+        "negative_abstention_rate": _ratio(sum(1 for case in negative if not bool(case.get("portfolio_confident"))), len(negative)),
+    }
+
+
+def _path_value_contains_terms(path: object, expected_terms: list[str]) -> bool:
+    if not expected_terms:
+        return True
+    if not isinstance(path, list):
+        return False
+    path_text = " ".join(str(part) for part in path).casefold()
+    return all(term.casefold() in path_text for term in expected_terms)
 
 
 def _dedupe_cli_values(values: list[str]) -> list[str]:

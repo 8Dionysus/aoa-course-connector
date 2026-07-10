@@ -17,6 +17,7 @@ Fixture-safe suites for local course connector behavior:
 - `authority_ranking.json`
 - `adapter_authority_metadata.json`
 - `live_calibration_packet.json`
+- `connected_portfolio.json`
 
 `answer-quality.suite.md` records the local suite note for the answer-quality
 contract. It is connector-local support evidence only; central proof doctrine,
@@ -43,3 +44,6 @@ browser-session transcript/caption extraction and retrieval.
 
 `live-calibration.suite.md` records the local suite note for fixture-safe live
 calibration packet construction from smoke and preflight reports.
+
+`connected-portfolio.suite.md` records the local suite note for expected
+cross-source Top-1 platform/path ranking and negative-query confidence.
