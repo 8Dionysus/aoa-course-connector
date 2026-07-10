@@ -60,7 +60,7 @@
   },
   "index_identity": {
     "artifact_kind": "source_surface_index",
-    "content_digest": "73260f7b3c547fdb20b7a16e05b1e234a83c494e577b29f6c4e6d5e22152f043",
+    "content_digest": "f59095c89dfddd0b67f928fa8a2350fd4947a8605f930becd317c2cb9fd633dd",
     "local_id": "index:repo-local:source-surfaces",
     "schema_ref": "aoa-kag:schemas/repo-local-kag-index.schema.json"
   },
@@ -288,7 +288,7 @@
         "content_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
         "git_ref": "git-index-source-tree",
         "id": "file:.connector-state/artifacts/.gitkeep:9accf75395",
-        "mime": "application/octet-stream",
+        "mime": "text/plain",
         "path": ".connector-state/artifacts/.gitkeep",
         "repo": "aoa-course-connector",
         "size_bytes": 1
@@ -375,7 +375,7 @@
         "content_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
         "git_ref": "git-index-source-tree",
         "id": "file:.connector-state/auth/.gitkeep:94b81ba9ef",
-        "mime": "application/octet-stream",
+        "mime": "text/plain",
         "path": ".connector-state/auth/.gitkeep",
         "repo": "aoa-course-connector",
         "size_bytes": 1
@@ -462,7 +462,7 @@
         "content_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
         "git_ref": "git-index-source-tree",
         "id": "file:.connector-state/cache/.gitkeep:ffb60a7310",
-        "mime": "application/octet-stream",
+        "mime": "text/plain",
         "path": ".connector-state/cache/.gitkeep",
         "repo": "aoa-course-connector",
         "size_bytes": 1
@@ -549,7 +549,7 @@
         "content_hash": "01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b",
         "git_ref": "git-index-source-tree",
         "id": "file:.connector-state/data/.gitkeep:c10ea2dd50",
-        "mime": "application/octet-stream",
+        "mime": "text/plain",
         "path": ".connector-state/data/.gitkeep",
         "repo": "aoa-course-connector",
         "size_bytes": 1
@@ -636,7 +636,7 @@
         "content_hash": "cda5d9ed0d9caf28ebadcfcb2b98fbe1d7a3364b87fedc3ed7f0bc529a8b17ea",
         "git_ref": "git-index-source-tree",
         "id": "file:.env.example:a3046da0d1",
-        "mime": "application/octet-stream",
+        "mime": "text/plain",
         "path": ".env.example",
         "repo": "aoa-course-connector",
         "size_bytes": 486
@@ -720,7 +720,7 @@
         "state": "current"
       },
       "identity": {
-        "content_hash": "dc081247e10407272eca2900cfe32e0b0d30a2880022c13c5fc824128a6bcab8",
+        "content_hash": "40b52fc3872de10db52f8304e6eac9201f065e869724d5d19a950a81c74089a7",
         "git_ref": "git-index-source-tree",
         "id": "file:.github/workflows/validate.yml:a5c0f08bc4",
         "mime": "application/yaml",
@@ -759,7 +759,7 @@
       },
       "signs": {
         "attestation_ref": "",
-        "digest": "dc081247e10407272eca2900cfe32e0b0d30a2880022c13c5fc824128a6bcab8",
+        "digest": "40b52fc3872de10db52f8304e6eac9201f065e869724d5d19a950a81c74089a7",
         "signature_ref": "",
         "verification_state": "digest-only"
       },
@@ -812,7 +812,7 @@
         "content_hash": "d9a8f8c31951a2b96993311fc43408572f63fcab2bea4c9e66db6bd1760be29b",
         "git_ref": "git-index-source-tree",
         "id": "file:.gitignore:bc37d034ba",
-        "mime": "application/octet-stream",
+        "mime": "text/plain",
         "path": ".gitignore",
         "repo": "aoa-course-connector",
         "size_bytes": 1023
@@ -11941,7 +11941,7 @@
         "content_hash": "2de551c27a9b26aecbceb374b7e75c3608e1a13af6a3d066960726e9499032cd",
         "git_ref": "git-index-source-tree",
         "id": "file:pyproject.toml:50c86b7ed8",
-        "mime": "application/octet-stream",
+        "mime": "application/toml",
         "path": "pyproject.toml",
         "repo": "aoa-course-connector",
         "size_bytes": 717
