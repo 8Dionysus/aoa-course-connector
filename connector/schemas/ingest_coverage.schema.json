@@ -1,0 +1,41 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "aoa_course_ingest_coverage.schema.json",
+  "title": "IngestCoverage",
+  "type": "object",
+  "required": [
+    "schema",
+    "platform",
+    "inventory_scope",
+    "status",
+    "complete_for_scope",
+    "inventory_exhausted",
+    "limits_applied",
+    "counts",
+    "gaps"
+  ],
+  "properties": {
+    "schema": {"const": "aoa_course_ingest_coverage_v1"},
+    "platform": {"type": "string"},
+    "inventory_scope": {"type": "string"},
+    "status": {"enum": ["complete", "bounded", "partial", "indeterminate"]},
+    "complete_for_scope": {"type": "boolean"},
+    "inventory_exhausted": {"type": "boolean"},
+    "limits_applied": {"type": "boolean"},
+    "counts": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}},
+    "gaps": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "count"],
+        "properties": {
+          "kind": {"type": "string"},
+          "count": {"type": "integer", "minimum": 1}
+        },
+        "additionalProperties": true
+      }
+    },
+    "enrichment": {"type": "object"}
+  },
+  "additionalProperties": true
+}

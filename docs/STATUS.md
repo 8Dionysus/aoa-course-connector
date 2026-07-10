@@ -16,6 +16,7 @@ PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public 
 PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
 PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
+PYTHONPATH=src python -m aoa_course_connector.cli eval ingest-coverage
 PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
 PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
 ```
@@ -95,6 +96,21 @@ This proves:
   `aoa_course_eval_connected_portfolio_v1`. Its public fixture suite checks
   GetCourse, Skillspace, Stepik, a cross-source collision, Top-1 native paths,
   source/freshness fields, and one negative query without network access.
+- Browser and Stepik raw payloads, materialization receipts, sync checkpoints,
+  connected query plans, and source catalogs carry
+  `aoa_course_ingest_coverage_v1`. Browser runs count the visible lesson
+  inventory before applying `max_lessons`; Stepik runs compare referenced and
+  fetched section/unit/lesson/step IDs and report `step_sources` separately as
+  optional enrichment.
+- Sync checkpoints carry `aoa_course_identity_continuity_v1`, comparing each
+  refresh with the previous normalized snapshot by canonical IDs while keeping
+  prior run artifacts intact. Bounded refresh removals are marked
+  `inconclusive_incomplete_ingest` instead of being mistaken for source
+  deletion.
+- CLI `eval ingest-coverage` proves complete fixture inventories for
+  GetCourse, Skillspace, and Stepik, stable refresh history, and a deliberate
+  bounded-browser probe. `--skip-prepare` applies the same read-only gate to
+  operator checkpoints.
 - CLI `eval source-registry-query` returns
   `aoa_course_eval_source_registry_query_v1`, a read-only gate over the current
   source registry that uses explicit operator queries or non-placeholder saved
@@ -437,6 +453,17 @@ This proves:
   `1.0`, Top-1 path accuracy `1.0`, positive confidence rate `1.0`, negative
   abstention rate `1.0`, and `network_touched: false`. The benchmark file and
   operator source ids remain under gitignored runtime artifact storage.
+- A fresh runtime-only completeness refresh has been exercised across the same
+  two GetCourse and four Stepik sources. `eval ingest-coverage --skip-prepare`
+  passed 6/6 sources with zero structural coverage gaps. The primary
+  GetCourse course exhausted 7/7 visible lessons; the four Stepik API trees
+  exhausted 21 sections, 173 lessons, and 1,428 steps with stable retention
+  `1.0`. One GetCourse source retained `0.990741` after a dynamic comment-id
+  change while preserving its previous snapshot. Stepik `step_sources`
+  enrichment remains explicitly bounded on all four sources after permission
+  errors, while ordinary block text, assignments, indexes, graphs, and evidence
+  remain complete. The 11-case connected-portfolio suite still passed with all
+  four quality rates `1.0` on the refreshed runs.
 - Operator-owned GetCourse live connected-run has been exercised locally with
   runtime-only artifacts: preflight, live sync, smoke, calibration packet,
   intake, CLI `calibration query`, and MCP `connected_run_query` returned `ok`;

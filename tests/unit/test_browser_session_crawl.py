@@ -33,8 +33,34 @@ def test_crawler_expands_getcourse_index_links() -> None:
     ]
     crawled = build_crawled_snapshot(fixture, platform="getcourse", max_lessons=1)
     assert crawled["crawl"]["discovered_lesson_count"] == 1
+    assert crawled["crawl"]["available_lesson_count"] == 2
+    assert crawled["crawl"]["truncated_lesson_count"] == 1
+    assert crawled["crawl"]["limit_reached"] is True
+    assert crawled["coverage"] == {
+        "schema": "aoa_course_ingest_coverage_v1",
+        "platform": "getcourse",
+        "inventory_scope": "captured_course_index",
+        "status": "bounded",
+        "complete_for_scope": False,
+        "inventory_exhausted": False,
+        "limits_applied": True,
+        "counts": {
+            "available_lesson_count": 2,
+            "selected_lesson_count": 1,
+            "included_lesson_count": 1,
+            "missing_lesson_page_count": 0,
+            "truncated_lesson_count": 1,
+        },
+        "gaps": [{"kind": "lesson_limit", "count": 1}],
+    }
     assert len(crawled["pages"]) == 2
     assert crawled["pages"][1]["title"] == "Bootloader recovery lesson"
+
+    complete = build_crawled_snapshot(fixture, platform="getcourse", max_lessons=10)
+    assert complete["coverage"]["status"] == "complete"
+    assert complete["coverage"]["complete_for_scope"] is True
+    assert complete["coverage"]["inventory_exhausted"] is True
+    assert complete["coverage"]["counts"]["truncated_lesson_count"] == 0
 
 
 def test_link_pattern_rejects_nonmatching_lesson_hints() -> None:

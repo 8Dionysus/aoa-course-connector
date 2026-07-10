@@ -208,6 +208,13 @@ def test_stepik_live_batches_full_course_and_fetches_step_sources(monkeypatch) -
     assert first_step["step_source"]["block"]["text"] == "<p>Source text 40</p>"
     assert ("sections", (10, 11), 2) in instances[0].calls
     assert ("step-sources", 40) in instances[0].calls
+    assert raw["coverage"]["schema"] == "aoa_course_ingest_coverage_v1"
+    assert raw["coverage"]["status"] == "complete"
+    assert raw["coverage"]["complete_for_scope"] is True
+    assert raw["coverage"]["inventory_exhausted"] is True
+    assert raw["coverage"]["counts"]["referenced_section_count"] == 2
+    assert raw["coverage"]["counts"]["fetched_section_count"] == 2
+    assert raw["coverage"]["enrichment"]["step_sources"]["status"] == "complete"
 
 
 def test_stepik_step_source_enrichment_is_bounded(monkeypatch) -> None:
@@ -261,6 +268,17 @@ def test_stepik_step_source_enrichment_is_bounded(monkeypatch) -> None:
     assert raw["limits"]["step_source_timeout"] == 0.5
     assert raw["diagnostics"]["step_source_attempt_count"] == 1
     assert raw["diagnostics"]["step_source_skipped_count"] == 2
+    assert raw["coverage"]["status"] == "complete"
+    assert raw["coverage"]["complete_for_scope"] is True
+    assert raw["coverage"]["enrichment"]["step_sources"] == {
+        "requested": True,
+        "status": "bounded",
+        "total_step_count": 3,
+        "attempted_count": 1,
+        "fetched_count": 1,
+        "error_count": 0,
+        "skipped_count": 2,
+    }
     assert [call for call in instances[0].calls if call[0] == "step-sources"] == [("step-sources", 40)]
 
 

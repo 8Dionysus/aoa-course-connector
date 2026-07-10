@@ -10,7 +10,7 @@ from pathlib import Path
 from typing import Any
 
 from aoa_course_connector.auth import browser_state_cookie_header
-from aoa_course_connector.adapters.stepik import fetch_stepik_course
+from aoa_course_connector.adapters.stepik import fetch_stepik_course, stepik_ingest_coverage
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.ingest.counts import bundle_content_counts
 from aoa_course_connector.normalize.stepik import normalize_stepik_raw
@@ -39,10 +39,11 @@ def materialize_stepik_fixture(
     raw = json.loads(raw_copy.read_text(encoding="utf-8"))
     if source:
         raw["source"] = _source_payload(source)
-        raw_copy.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
+    raw["coverage"] = stepik_ingest_coverage(raw)
+    raw_copy.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
     bundle = normalize_stepik_raw(raw, run_id=run_id, raw_ref=str(raw_copy))
     normalized_path = write_normalized_bundle(bundle, normalized_dir)
-    return _write_receipt(data_dir, run_id, "stepik_fixture", raw_copy, normalized_path, bundle, network_touched=False)
+    return _write_receipt(data_dir, run_id, "stepik_fixture", raw_copy, normalized_path, bundle, network_touched=False, coverage=raw["coverage"])
 
 
 def materialize_stepik_live(
@@ -88,7 +89,7 @@ def materialize_stepik_live(
     raw_path.write_text(json.dumps(raw, indent=2, sort_keys=True, ensure_ascii=True), encoding="utf-8")
     bundle = normalize_stepik_raw(raw, run_id=run_id, raw_ref=str(raw_path))
     normalized_path = write_normalized_bundle(bundle, normalized_dir)
-    return _write_receipt(data_dir, run_id, "stepik_live", raw_path, normalized_path, bundle, network_touched=True)
+    return _write_receipt(data_dir, run_id, "stepik_live", raw_path, normalized_path, bundle, network_touched=True, coverage=raw.get("coverage"))
 
 
 def _source_payload(source: dict[str, Any]) -> dict[str, object]:
@@ -101,7 +102,17 @@ def _source_payload(source: dict[str, Any]) -> dict[str, object]:
     }
 
 
-def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path, normalized_path: Path, bundle: dict[str, object], *, network_touched: bool) -> dict[str, object]:
+def _write_receipt(
+    data_dir: Path,
+    run_id: str,
+    source_mode: str,
+    raw_path: Path,
+    normalized_path: Path,
+    bundle: dict[str, object],
+    *,
+    network_touched: bool,
+    coverage: object = None,
+) -> dict[str, object]:
     counts = bundle_content_counts(bundle)
     receipt = {
         "schema": "aoa_course_stepik_materialize_receipt_v1",
@@ -115,6 +126,8 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
         "completed_at": _now(),
         "network_touched": network_touched,
     }
+    if isinstance(coverage, dict):
+        receipt["coverage"] = coverage
     receipt_path = data_dir / "stepik_materialize_receipt.json"
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
     receipt["receipt_path"] = str(receipt_path)

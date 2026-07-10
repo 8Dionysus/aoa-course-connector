@@ -155,6 +155,13 @@ For shell-side use, the equivalent local command is
 it returns the same `aoa_course_sources_answer_packet_v1` without requiring a
 manual `mcp call` JSON wrapper.
 
+`sync_status` exposes `coverage` and `identity_continuity` on new checkpoints.
+The same compact fields flow into sync entries in `list_sources` connected-run
+catalogs. Agents can therefore distinguish complete, bounded, and partial
+ingest, inspect optional enrichment gaps, and verify that a refresh retained
+canonical IDs and preserved its previous normalized snapshot without reading
+private raw captures.
+
 `connector_readiness` is the read-only whole-connector route audit. It returns
 `aoa_course_connector_readiness_v1` with install route files, storage roots,
 source registry counts, selected run readiness, source-registry query-ready

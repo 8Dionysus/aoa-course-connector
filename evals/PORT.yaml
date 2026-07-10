@@ -28,3 +28,4 @@ suites:
   - evals/suites/live_calibration_packet.json
   - evals/suites/retrieval_loop.json
   - evals/suites/connected_portfolio.json
+  - evals/suites/ingest_coverage.json

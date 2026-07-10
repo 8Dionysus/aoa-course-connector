@@ -763,6 +763,12 @@ def build_parser() -> argparse.ArgumentParser:
     connected_portfolio.add_argument("--suite", type=Path)
     connected_portfolio.add_argument("--skip-prepare", action="store_true")
     connected_portfolio.set_defaults(func=cmd_eval_connected_portfolio)
+    ingest_coverage = eval_sub.add_parser("ingest-coverage")
+    ingest_coverage.add_argument("--suite", type=Path)
+    ingest_coverage.add_argument("--skip-prepare", action="store_true")
+    ingest_coverage.add_argument("--platform", choices=["getcourse", "skillspace", "stepik"], action="append")
+    ingest_coverage.add_argument("--source-id", action="append")
+    ingest_coverage.set_defaults(func=cmd_eval_ingest_coverage)
     eval_sub.add_parser("freshness-ranking").set_defaults(func=cmd_eval_freshness_ranking)
     eval_sub.add_parser("place-ranking").set_defaults(func=cmd_eval_place_ranking)
     eval_sub.add_parser("authority-ranking").set_defaults(func=cmd_eval_authority_ranking)
@@ -2512,6 +2518,203 @@ def _connected_portfolio_metrics(case_results: list[dict[str, object]]) -> dict[
         "positive_confidence_rate": _ratio(sum(1 for case in positive if bool(case.get("portfolio_confident"))), len(positive)),
         "negative_abstention_rate": _ratio(sum(1 for case in negative if not bool(case.get("portfolio_confident"))), len(negative)),
     }
+
+
+def cmd_eval_ingest_coverage(args: argparse.Namespace) -> int:
+    repo_root = find_repo_root()
+    roots = StorageRoots.from_env(repo_root)
+    suite_path = args.suite or (repo_root / "evals" / "suites" / "ingest_coverage.json")
+    suite = json.loads(suite_path.read_text(encoding="utf-8"))
+    requirements = suite.get("requirements") if isinstance(suite.get("requirements"), dict) else {}
+    bounded_expectation = suite.get("bounded_probe") if isinstance(suite.get("bounded_probe"), dict) else {}
+    eval_roots = roots
+    temporary_storage: tempfile.TemporaryDirectory[str] | None = None
+    preparation: dict[str, object] = {"mode": "existing", "network_touched": False}
+    bounded_probe: dict[str, object] = {}
+    if not args.skip_prepare:
+        roots.cache.mkdir(parents=True, exist_ok=True)
+        temporary_storage = tempfile.TemporaryDirectory(prefix="ingest-coverage-", dir=roots.cache)
+        temporary_root = Path(temporary_storage.name)
+        eval_roots = StorageRoots(
+            data=temporary_root / "data",
+            cache=temporary_root / "cache",
+            auth=temporary_root / "auth",
+            artifact=temporary_root / "artifacts",
+            mode="isolated_ingest_coverage_eval",
+        )
+        connected = run_connected_calibration(eval_roots, run_id="ingest-coverage-fixture", mode="fixture")
+        preparation = {
+            "mode": "fixture",
+            "status": connected.get("status"),
+            "connected_run_id": connected.get("run_id"),
+            "network_touched": bool(connected.get("network_touched")),
+            "isolated_storage": True,
+        }
+        registry = load_registry(eval_roots.data)
+        bounded_platform = str(bounded_expectation.get("platform") or "getcourse")
+        bounded_source = next(
+            (
+                source
+                for source in registry.get("sources", [])
+                if isinstance(source, dict) and source.get("platform") == bounded_platform
+            ),
+            {},
+        )
+        bounded_receipt = sync_browser_fixture_sources(
+            eval_roots,
+            sync_run_id="ingest-coverage-bounded-probe",
+            platforms=[bounded_platform],
+            source_ids=[str(bounded_source.get("source_id") or "")],
+            max_lessons=max(1, int(bounded_expectation.get("max_lessons") or 1)),
+            source_limit=1,
+        )
+        bounded_checkpoint = next(
+            (item for item in bounded_receipt.get("synced_sources", []) if isinstance(item, dict)),
+            {},
+        )
+        bounded_probe = _ingest_coverage_checkpoint_ref(bounded_checkpoint)
+
+    status = load_sync_status(eval_roots)
+    checkpoints = [
+        item
+        for item in status.get("checkpoints", [])
+        if isinstance(item, dict)
+        and item.get("sync_run_id") != "ingest-coverage-bounded-probe"
+    ]
+    if args.platform:
+        wanted_platforms = set(args.platform)
+        checkpoints = [item for item in checkpoints if item.get("platform") in wanted_platforms]
+    if args.source_id:
+        wanted_source_ids = set(args.source_id)
+        checkpoints = [item for item in checkpoints if item.get("source_id") in wanted_source_ids]
+    latest = _latest_source_checkpoints(checkpoints)
+    failures: list[dict[str, object]] = []
+    if not args.skip_prepare and (preparation.get("status") != "ok" or preparation.get("network_touched") is not False):
+        failures.append(
+            {
+                "surface": "preparation",
+                "expected_status": "ok",
+                "actual_status": preparation.get("status"),
+                "network_touched": preparation.get("network_touched"),
+            }
+        )
+    if not latest:
+        failures.append({"surface": "checkpoints", "missing": "selected source checkpoints"})
+    registry = load_registry(eval_roots.data)
+    selected_registry_sources = [
+        source
+        for source in registry.get("sources", [])
+        if isinstance(source, dict)
+        and source.get("enabled", True)
+        and (not args.platform or source.get("platform") in set(args.platform))
+        and (not args.source_id or source.get("source_id") in set(args.source_id))
+    ]
+    expected_source_ids = {str(source.get("source_id") or "") for source in selected_registry_sources if source.get("source_id")}
+    latest_source_ids = {str(checkpoint.get("source_id") or "") for checkpoint in latest if checkpoint.get("source_id")}
+    for source_id in sorted(expected_source_ids - latest_source_ids):
+        failures.append({"surface": "checkpoint", "source_id": source_id, "missing": "latest checkpoint"})
+    checkpoint_results = []
+    for checkpoint in latest:
+        coverage = checkpoint.get("coverage") if isinstance(checkpoint.get("coverage"), dict) else {}
+        continuity = checkpoint.get("identity_continuity") if isinstance(checkpoint.get("identity_continuity"), dict) else {}
+        checkpoint_failures = []
+        if checkpoint.get("status") != "ok":
+            checkpoint_failures.append("checkpoint_status")
+        if coverage.get("schema") != str(requirements.get("coverage_schema") or "aoa_course_ingest_coverage_v1"):
+            checkpoint_failures.append("coverage")
+        if requirements.get("require_complete_for_scope", True) and coverage.get("complete_for_scope") is not True:
+            checkpoint_failures.append("complete_for_scope")
+        if requirements.get("require_inventory_exhausted", True) and coverage.get("inventory_exhausted") is not True:
+            checkpoint_failures.append("inventory_exhausted")
+        if continuity.get("schema") != "aoa_course_identity_continuity_v1":
+            checkpoint_failures.append("identity_continuity")
+        min_retention_rate = float(requirements.get("min_stable_retention_rate") or 0.5)
+        if int(continuity.get("previous_id_count") or 0) > 0 and float(continuity.get("stable_retention_rate") or 0.0) < min_retention_rate:
+            checkpoint_failures.append("unstable_identity_retention")
+        if requirements.get("require_removed_history_preserved", True) and int(continuity.get("removed_id_count") or 0) > 0 and continuity.get("history_preserved") is not True:
+            checkpoint_failures.append("removed_history_not_preserved")
+        result = {**_ingest_coverage_checkpoint_ref(checkpoint), "passed": not checkpoint_failures, "failure_fields": checkpoint_failures}
+        checkpoint_results.append(result)
+        if checkpoint_failures:
+            failures.append({"surface": "checkpoint", "source_id": checkpoint.get("source_id"), "fields": checkpoint_failures})
+    if not args.skip_prepare:
+        bounded_coverage = bounded_probe.get("coverage") if isinstance(bounded_probe.get("coverage"), dict) else {}
+        bounded_continuity = bounded_probe.get("identity_continuity") if isinstance(bounded_probe.get("identity_continuity"), dict) else {}
+        if bounded_coverage.get("status") != str(bounded_expectation.get("expected_status") or "bounded") or bounded_coverage.get("complete_for_scope") is not False:
+            failures.append({"surface": "bounded_probe", "missing": "bounded coverage detection"})
+        if bounded_continuity.get("removal_assessment") != str(bounded_expectation.get("expected_removal_assessment") or "inconclusive_incomplete_ingest"):
+            failures.append({"surface": "bounded_probe", "missing": "incomplete-ingest removal protection"})
+        observed_platforms = {str(result.get("platform") or "") for result in checkpoint_results}
+        required_platforms = set(_list_of_strings(requirements.get("fixture_platforms")))
+        if not required_platforms.issubset(observed_platforms):
+            failures.append({"surface": "fixture_platforms", "missing": sorted(required_platforms - observed_platforms)})
+        minimum_source_count = int(requirements.get("minimum_fixture_source_count") or 1)
+        if len(checkpoint_results) < minimum_source_count:
+            failures.append({"surface": "fixture_sources", "expected_at_least": minimum_source_count, "actual": len(checkpoint_results)})
+    packet = {
+        "schema": "aoa_course_eval_ingest_coverage_v1",
+        "suite_id": suite.get("suite_id"),
+        "suite_path": str(suite_path),
+        "status": "ok" if not failures else "error",
+        "network_touched": bool(preparation.get("network_touched")),
+        "read_only": bool(args.skip_prepare),
+        "preparation": preparation,
+        "selection": {"platforms": args.platform or [], "source_ids": args.source_id or []},
+        "metrics": {
+            "source_count": len(checkpoint_results),
+            "complete_source_count": sum(1 for result in checkpoint_results if result.get("passed")),
+            "coverage_gap_source_count": sum(1 for result in checkpoint_results if not result.get("passed")),
+            "platform_count": len({result.get("platform") for result in checkpoint_results if result.get("platform")}),
+            "changed_source_count": sum(
+                1
+                for result in checkpoint_results
+                if isinstance(result.get("identity_continuity"), dict)
+                and result["identity_continuity"].get("status") == "changed"
+            ),
+            "enrichment_gap_source_count": sum(
+                1
+                for result in checkpoint_results
+                if _ingest_coverage_enrichment_gap(result.get("coverage"))
+            ),
+        },
+        "checkpoints": checkpoint_results,
+        "bounded_probe": bounded_probe,
+        "failures": failures,
+    }
+    _emit(packet)
+    if temporary_storage is not None:
+        temporary_storage.cleanup()
+    return 0 if not failures else 1
+
+
+def _latest_source_checkpoints(checkpoints: list[dict[str, object]]) -> list[dict[str, object]]:
+    latest: dict[str, dict[str, object]] = {}
+    for checkpoint in sorted(checkpoints, key=lambda item: (str(item.get("updated_at") or ""), str(item.get("checkpoint_id") or ""))):
+        source_id = str(checkpoint.get("source_id") or "")
+        if source_id:
+            latest[source_id] = checkpoint
+    return [latest[source_id] for source_id in sorted(latest)]
+
+
+def _ingest_coverage_checkpoint_ref(checkpoint: dict[str, object]) -> dict[str, object]:
+    return {
+        "source_id": checkpoint.get("source_id"),
+        "platform": checkpoint.get("platform"),
+        "run_id": checkpoint.get("run_id"),
+        "updated_at": checkpoint.get("updated_at"),
+        "coverage": checkpoint.get("coverage") if isinstance(checkpoint.get("coverage"), dict) else {},
+        "identity_continuity": checkpoint.get("identity_continuity") if isinstance(checkpoint.get("identity_continuity"), dict) else {},
+    }
+
+
+def _ingest_coverage_enrichment_gap(coverage: object) -> bool:
+    if not isinstance(coverage, dict):
+        return False
+    enrichment = coverage.get("enrichment") if isinstance(coverage.get("enrichment"), dict) else {}
+    return any(
+        isinstance(item, dict) and item.get("status") in {"bounded", "partial", "unavailable"}
+        for item in enrichment.values()
+    )
 
 
 def _path_value_contains_terms(path: object, expected_terms: list[str]) -> bool:

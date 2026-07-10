@@ -8,7 +8,7 @@ from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
-from aoa_course_connector.adapters.browser import build_crawled_snapshot, caption_resource_key, caption_text_from_resource, discover_lesson_links, is_caption_asset, parse_html_snapshot, placeholder_lesson_page, resource_looks_like_caption
+from aoa_course_connector.adapters.browser import browser_ingest_coverage, build_crawled_snapshot, caption_resource_key, caption_text_from_resource, discover_lesson_link_inventory, is_caption_asset, parse_html_snapshot, placeholder_lesson_page, resource_looks_like_caption
 from aoa_course_connector.config import StorageRoots, find_repo_root
 from aoa_course_connector.ingest.counts import bundle_content_counts
 from aoa_course_connector.normalize import write_normalized_bundle
@@ -203,7 +203,14 @@ def crawl_browser_live(
         _extend_caption_resources(caption_resources, index_caption_resources)
         caption_resource_errors.extend(index_caption_errors)
         pages.append({"page_id": "course-index", "kind": "course_index", "url": index_url, "title": index_title, "html": index_html})
-        links = discover_lesson_links(index_html, index_url, platform=platform, max_lessons=max_lessons, link_pattern=link_pattern)
+        inventory = discover_lesson_link_inventory(
+            index_html,
+            index_url,
+            platform=platform,
+            max_lessons=max_lessons,
+            link_pattern=link_pattern,
+        )
+        links = inventory["links"]
         for order, link in enumerate(links, start=1):
             try:
                 page.goto(str(link["href"]), wait_until=wait_until)
@@ -249,15 +256,20 @@ def crawl_browser_live(
             "schema": "aoa_course_browser_crawl_v1",
             "mode": "course_tree_live",
             "max_lessons": max_lessons,
+            "available_lesson_count": int(inventory["available_lesson_count"]),
+            "selected_lesson_count": len(links),
             "discovered_lesson_count": len(links),
             "included_lesson_count": max(0, len(pages) - 1),
             "missing_lesson_page_count": len(fetch_errors),
+            "truncated_lesson_count": int(inventory["truncated_lesson_count"]),
+            "limit_reached": int(inventory["truncated_lesson_count"]) > 0,
             "link_pattern": link_pattern or "",
             "fetch_errors": fetch_errors,
             "caption_resource_count": len(caption_resources),
             "caption_resource_error_count": len(caption_resource_errors),
         },
     }
+    raw["coverage"] = browser_ingest_coverage(raw["crawl"], platform=platform)
     if caption_resources:
         raw["resources"] = caption_resources
     if caption_resource_errors:
@@ -328,6 +340,8 @@ def _write_receipt(data_dir: Path, run_id: str, source_mode: str, raw_path: Path
     }
     if isinstance(raw.get("crawl"), dict):
         receipt["crawl"] = raw["crawl"]
+    if isinstance(raw.get("coverage"), dict):
+        receipt["coverage"] = raw["coverage"]
     resources = raw.get("resources") if isinstance(raw.get("resources"), list) else []
     caption_errors = raw.get("caption_resource_errors") if isinstance(raw.get("caption_resource_errors"), list) else []
     parse_errors = _caption_resource_parse_errors(resources)

@@ -104,6 +104,13 @@ authority is `browser_course_index_link`, and their graph nodes retain the
 `discovered_not_fetched` or `fetch_error` freshness state so agents can ask for
 source refresh before treating them as complete course knowledge.
 
+Every crawled snapshot records the full visible lesson-link inventory before
+`max_lessons` is applied. `coverage.available_lesson_count`, selected,
+included, missing, and truncated counts make the bound explicit. A run is
+`complete` only when the captured index inventory is exhausted and every
+selected lesson page was fetched; limit truncation is `bounded`, while fetch
+gaps are `partial`.
+
 When a fetched browser lesson page is actually an access-denied, locked, gated,
 or prerequisite notice, the adapter keeps that as access-state evidence instead
 of treating the notice page as the lesson body. The normalized lesson carries

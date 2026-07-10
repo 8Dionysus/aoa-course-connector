@@ -1,0 +1,19 @@
+{
+  "schema": "aoa_course_ingest_coverage_eval_suite_v1",
+  "suite_id": "ingest-coverage",
+  "requirements": {
+    "fixture_platforms": ["getcourse", "skillspace", "stepik"],
+    "minimum_fixture_source_count": 3,
+    "coverage_schema": "aoa_course_ingest_coverage_v1",
+    "require_complete_for_scope": true,
+    "require_inventory_exhausted": true,
+    "min_stable_retention_rate": 0.8,
+    "require_removed_history_preserved": true
+  },
+  "bounded_probe": {
+    "platform": "getcourse",
+    "max_lessons": 1,
+    "expected_status": "bounded",
+    "expected_removal_assessment": "inconclusive_incomplete_ingest"
+  }
+}

@@ -46,16 +46,18 @@ def build_crawled_snapshot(
     index_page = first_page(pages, "course_index") or (pages[0] if pages else {})
     if not index_page:
         resolved["pages"] = []
-        resolved["crawl"] = _crawl_meta(max_lessons=max_lessons, discovered=0, included=0, missing=0, link_pattern=link_pattern)
+        resolved["crawl"] = _crawl_meta(max_lessons=max_lessons, available=0, selected=0, included=0, missing=0, link_pattern=link_pattern)
+        resolved["coverage"] = browser_ingest_coverage(resolved["crawl"], platform=str(platform or raw.get("platform") or ""))
         return resolved
     index_url = str(index_page.get("url") or raw.get("source", {}).get("source_ref") or "")
-    lesson_links = discover_lesson_links(
+    inventory = discover_lesson_link_inventory(
         str(index_page.get("html") or ""),
         index_url,
         platform=platform,
         max_lessons=max_lessons,
         link_pattern=link_pattern,
     )
+    lesson_links = inventory["links"]
     page_by_url = {_canonical_url(str(page.get("url") or "")): page for page in pages if page.get("url")}
     expanded_pages: list[dict[str, Any]] = [dict(index_page, kind="course_index")]
     missing = 0
@@ -77,11 +79,13 @@ def build_crawled_snapshot(
     resolved["pages"] = expanded_pages
     resolved["crawl"] = _crawl_meta(
         max_lessons=max_lessons,
-        discovered=len(lesson_links),
+        available=int(inventory["available_lesson_count"]),
+        selected=len(lesson_links),
         included=max(0, len(expanded_pages) - 1),
         missing=missing,
         link_pattern=link_pattern,
     )
+    resolved["coverage"] = browser_ingest_coverage(resolved["crawl"], platform=str(platform or raw.get("platform") or ""))
     return resolved
 
 
@@ -93,8 +97,23 @@ def discover_lesson_links(
     max_lessons: int = 20,
     link_pattern: str | None = None,
 ) -> list[dict[str, str]]:
-    if max_lessons <= 0:
-        return []
+    return discover_lesson_link_inventory(
+        html,
+        base_url,
+        platform=platform,
+        max_lessons=max_lessons,
+        link_pattern=link_pattern,
+    )["links"]
+
+
+def discover_lesson_link_inventory(
+    html: str,
+    base_url: str,
+    *,
+    platform: str | None = None,
+    max_lessons: int = 20,
+    link_pattern: str | None = None,
+) -> dict[str, object]:
     snapshot = parse_html_snapshot(html, base_url)
     candidates = list(snapshot.links)
     if str(platform or "").casefold() == "getcourse":
@@ -118,9 +137,13 @@ def discover_lesson_links(
                 "title": str(link.get("title") or ""),
             }
         )
-        if len(links) >= max_lessons:
-            break
-    return links
+    selected = links[: max(0, max_lessons)]
+    return {
+        "links": selected,
+        "available_lesson_count": len(links),
+        "selected_lesson_count": len(selected),
+        "truncated_lesson_count": max(0, len(links) - len(selected)),
+    }
 
 
 def is_lesson_link(link: dict[str, str], *, platform: str | None = None, link_pattern: str | None = None) -> bool:
@@ -174,15 +197,51 @@ def _embedded_getcourse_lesson_links(html: str, base_url: str) -> list[dict[str,
     return links
 
 
-def _crawl_meta(*, max_lessons: int, discovered: int, included: int, missing: int, link_pattern: str | None) -> dict[str, object]:
+def _crawl_meta(*, max_lessons: int, available: int, selected: int, included: int, missing: int, link_pattern: str | None) -> dict[str, object]:
+    truncated = max(0, available - selected)
     return {
         "schema": "aoa_course_browser_crawl_v1",
         "mode": "course_tree",
         "max_lessons": max_lessons,
-        "discovered_lesson_count": discovered,
+        "available_lesson_count": available,
+        "selected_lesson_count": selected,
+        "discovered_lesson_count": selected,
         "included_lesson_count": included,
         "missing_lesson_page_count": missing,
+        "truncated_lesson_count": truncated,
+        "limit_reached": truncated > 0,
         "link_pattern": link_pattern or "",
+    }
+
+
+def browser_ingest_coverage(crawl: dict[str, object], *, platform: str) -> dict[str, object]:
+    available = int(crawl.get("available_lesson_count") or crawl.get("discovered_lesson_count") or 0)
+    selected = int(crawl.get("selected_lesson_count") or crawl.get("discovered_lesson_count") or 0)
+    included = int(crawl.get("included_lesson_count") or 0)
+    missing = int(crawl.get("missing_lesson_page_count") or 0)
+    truncated = int(crawl.get("truncated_lesson_count") or max(0, available - selected))
+    gaps: list[dict[str, object]] = []
+    if truncated:
+        gaps.append({"kind": "lesson_limit", "count": truncated})
+    if missing:
+        gaps.append({"kind": "lesson_fetch", "count": missing})
+    status = "partial" if missing else "bounded" if truncated else "complete"
+    return {
+        "schema": "aoa_course_ingest_coverage_v1",
+        "platform": platform,
+        "inventory_scope": "captured_course_index",
+        "status": status,
+        "complete_for_scope": not gaps,
+        "inventory_exhausted": truncated == 0,
+        "limits_applied": truncated > 0,
+        "counts": {
+            "available_lesson_count": available,
+            "selected_lesson_count": selected,
+            "included_lesson_count": included,
+            "missing_lesson_page_count": missing,
+            "truncated_lesson_count": truncated,
+        },
+        "gaps": gaps,
     }
 
 

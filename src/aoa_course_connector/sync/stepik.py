@@ -193,6 +193,7 @@ def _checkpoint_from_materialized(
         semantic_index_path=semantic_index_path,
         graph_path=graph_path,
         stable_identity=normalized_identity_summary(str(materialized.get("normalized_path") or "")),
+        coverage=materialized.get("coverage") if isinstance(materialized.get("coverage"), dict) else None,
     )
     upsert_checkpoint(roots, checkpoint)
     return checkpoint

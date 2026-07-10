@@ -148,7 +148,7 @@ def fetch_stepik_course(
                 )
             units.append({"unit": unit, "lesson": lesson, "steps": steps})
         sections.append({"section": section, "units": units})
-    return {
+    raw = {
         "schema": "aoa_course_stepik_raw_v1",
         "fetched_at": _now(),
         "source": {
@@ -174,6 +174,131 @@ def fetch_stepik_course(
             "step_source_skipped_count": step_source_skipped_count,
         },
     }
+    raw["coverage"] = stepik_ingest_coverage(raw)
+    return raw
+
+
+def stepik_ingest_coverage(raw: dict[str, Any]) -> dict[str, object]:
+    course = raw.get("course") if isinstance(raw.get("course"), dict) else {}
+    sections = [item for item in raw.get("sections", []) if isinstance(item, dict)] if isinstance(raw.get("sections"), list) else []
+    limits = raw.get("limits") if isinstance(raw.get("limits"), dict) else {}
+    diagnostics = raw.get("diagnostics") if isinstance(raw.get("diagnostics"), dict) else {}
+
+    section_refs = _dedupe_ids(course.get("sections", []) if isinstance(course.get("sections"), list) else [])
+    selected_section_refs = _limited_ids(section_refs, _optional_int(limits.get("max_sections")))
+    fetched_section_ids = _object_ids([item.get("section") for item in sections])
+    unit_refs: list[int] = []
+    selected_unit_refs: list[int] = []
+    fetched_unit_ids: list[int] = []
+    lesson_refs: list[int] = []
+    fetched_lesson_ids: list[int] = []
+    step_refs: list[int] = []
+    selected_step_refs: list[int] = []
+    fetched_step_ids: list[int] = []
+    fetched_steps: list[dict[str, Any]] = []
+    for section_item in sections:
+        section = section_item.get("section") if isinstance(section_item.get("section"), dict) else {}
+        section_unit_refs = _dedupe_ids(section.get("units", []) if isinstance(section.get("units"), list) else [])
+        unit_refs.extend(section_unit_refs)
+        selected_units = _limited_ids(section_unit_refs, _optional_int(limits.get("max_units_per_section")))
+        selected_unit_refs.extend(selected_units)
+        units = [item for item in section_item.get("units", []) if isinstance(item, dict)] if isinstance(section_item.get("units"), list) else []
+        fetched_unit_ids.extend(_object_ids([item.get("unit") for item in units]))
+        for unit_item in units:
+            unit = unit_item.get("unit") if isinstance(unit_item.get("unit"), dict) else {}
+            lesson_id = _int_or_none(unit.get("lesson"))
+            if lesson_id is not None:
+                lesson_refs.append(lesson_id)
+            lesson = unit_item.get("lesson") if isinstance(unit_item.get("lesson"), dict) else {}
+            fetched_lesson_ids.extend(_object_ids([lesson]))
+            lesson_step_refs = _dedupe_ids(lesson.get("steps", []) if isinstance(lesson.get("steps"), list) else [])
+            step_refs.extend(lesson_step_refs)
+            selected_steps = _limited_ids(lesson_step_refs, _optional_int(limits.get("max_steps_per_lesson")))
+            selected_step_refs.extend(selected_steps)
+            steps = [item for item in unit_item.get("steps", []) if isinstance(item, dict)] if isinstance(unit_item.get("steps"), list) else []
+            fetched_steps.extend(steps)
+            fetched_step_ids.extend(_object_ids(steps))
+
+    counts = {
+        "referenced_section_count": len(set(section_refs)),
+        "selected_section_count": len(set(selected_section_refs)),
+        "fetched_section_count": len(set(fetched_section_ids)),
+        "referenced_unit_count": len(set(unit_refs)),
+        "selected_unit_count": len(set(selected_unit_refs)),
+        "fetched_unit_count": len(set(fetched_unit_ids)),
+        "referenced_lesson_count": len(set(lesson_refs)),
+        "fetched_lesson_count": len(set(fetched_lesson_ids)),
+        "referenced_step_count": len(set(step_refs)),
+        "selected_step_count": len(set(selected_step_refs)),
+        "fetched_step_count": len(set(fetched_step_ids)),
+    }
+    truncations = {
+        "section_limit": max(0, counts["referenced_section_count"] - counts["selected_section_count"]),
+        "unit_limit": max(0, counts["referenced_unit_count"] - counts["selected_unit_count"]),
+        "step_limit": max(0, counts["referenced_step_count"] - counts["selected_step_count"]),
+    }
+    missing = {
+        "section_fetch": max(0, counts["selected_section_count"] - counts["fetched_section_count"]),
+        "unit_fetch": max(0, counts["selected_unit_count"] - counts["fetched_unit_count"]),
+        "lesson_fetch": max(0, counts["referenced_lesson_count"] - counts["fetched_lesson_count"]),
+        "step_fetch": max(0, counts["selected_step_count"] - counts["fetched_step_count"]),
+    }
+    gaps = [{"kind": kind, "count": count} for kind, count in {**truncations, **missing}.items() if count]
+    truncated_count = sum(truncations.values())
+    missing_count = sum(missing.values())
+    enrichment = _step_source_coverage(fetched_steps, limits=limits, diagnostics=diagnostics)
+    return {
+        "schema": "aoa_course_ingest_coverage_v1",
+        "platform": "stepik",
+        "inventory_scope": "course_api_tree",
+        "status": "partial" if missing_count else "bounded" if truncated_count else "complete",
+        "complete_for_scope": not gaps,
+        "inventory_exhausted": truncated_count == 0,
+        "limits_applied": truncated_count > 0,
+        "counts": counts,
+        "gaps": gaps,
+        "enrichment": {"step_sources": enrichment},
+    }
+
+
+def _step_source_coverage(
+    steps: list[dict[str, Any]],
+    *,
+    limits: dict[str, Any],
+    diagnostics: dict[str, Any],
+) -> dict[str, object]:
+    requested = bool(limits.get("include_step_sources"))
+    fetched = sum(1 for step in steps if isinstance(step.get("step_source"), dict))
+    errors = sum(1 for step in steps if step.get("step_source_error"))
+    skipped = int(diagnostics.get("step_source_skipped_count") or sum(1 for step in steps if step.get("step_source_skipped")))
+    attempted = int(diagnostics.get("step_source_attempt_count") or (fetched + errors))
+    if not requested:
+        status = "not_requested"
+    elif not steps or fetched == len(steps):
+        status = "complete"
+    elif skipped:
+        status = "bounded"
+    elif errors and not fetched:
+        status = "unavailable"
+    else:
+        status = "partial"
+    return {
+        "requested": requested,
+        "status": status,
+        "total_step_count": len(steps),
+        "attempted_count": attempted,
+        "fetched_count": fetched,
+        "error_count": errors,
+        "skipped_count": skipped,
+    }
+
+
+def _object_ids(values: list[object]) -> list[int]:
+    return [item_id for item_id in (_int_or_none(value.get("id")) if isinstance(value, dict) else None for value in values) if item_id is not None]
+
+
+def _optional_int(value: object) -> int | None:
+    return None if value is None else int(value)
 
 
 def fetch_stepik_account_courses(

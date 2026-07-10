@@ -62,6 +62,10 @@ def test_stepik_fixture_sync_writes_checkpoints_and_artifacts(tmp_path: Path, mo
     assert materialize_receipt["content_counts"]["lesson_count"] == stable_identity["counts"]["lesson_ids"]
     assert materialize_receipt["content_counts"]["step_count"] == stable_identity["counts"]["step_ids"]
     assert materialize_receipt["content_counts"]["evidence_count"] == materialize_receipt["evidence_count"]
+    assert checkpoint["coverage"] == materialize_receipt["coverage"]
+    assert checkpoint["coverage"]["schema"] == "aoa_course_ingest_coverage_v1"
+    assert checkpoint["coverage"]["status"] == "complete"
+    assert checkpoint["coverage"]["complete_for_scope"] is True
     raw = json.loads(Path(str(checkpoint["cursor"])).read_text(encoding="utf-8"))
     assert raw["source"]["source_id"] == source["source_id"]
     assert raw["source"]["source_ref"] == "67"
@@ -156,6 +160,12 @@ def test_stepik_fixture_sync_preserves_stable_identity_across_refreshes(tmp_path
     assert first_checkpoint["stable_identity"]["fingerprint"] == second_checkpoint["stable_identity"]["fingerprint"]
     assert first_checkpoint["stable_identity"]["samples"] == second_checkpoint["stable_identity"]["samples"]
     assert first_checkpoint["stable_identity"]["counts"] == second_checkpoint["stable_identity"]["counts"]
+    assert first_checkpoint["identity_continuity"]["status"] == "initial"
+    assert second_checkpoint["identity_continuity"]["status"] == "stable"
+    assert second_checkpoint["identity_continuity"]["previous_run_id"] == first_checkpoint["run_id"]
+    assert second_checkpoint["identity_continuity"]["stable_retention_rate"] == 1.0
+    assert second_checkpoint["identity_continuity"]["added_id_count"] == 0
+    assert second_checkpoint["identity_continuity"]["removed_id_count"] == 0
 
     first_packet = render_answer_packet(storage, "Stepik public API evidence", run_id=str(first_checkpoint["run_id"]), mode="hybrid")
     second_packet = render_answer_packet(storage, "Stepik public API evidence", run_id=str(second_checkpoint["run_id"]), mode="hybrid")

@@ -41,6 +41,8 @@ def load_checkpoint_store(roots: StorageRoots) -> dict[str, object]:
 def upsert_checkpoint(roots: StorageRoots, checkpoint: dict[str, object]) -> dict[str, object]:
     data = load_checkpoint_store(roots)
     checkpoints = [item for item in data.get("checkpoints", []) if isinstance(item, dict)]
+    if checkpoint.get("status") == "ok" and checkpoint.get("normalized_path"):
+        checkpoint["identity_continuity"] = _identity_continuity(checkpoints, checkpoint)
     checkpoint_id = str(checkpoint["checkpoint_id"])
     checkpoint_sync_run_id = str(checkpoint.get("sync_run_id") or "")
     checkpoint_source_id = str(checkpoint.get("source_id") or "")
@@ -80,6 +82,7 @@ def make_checkpoint(
     graph_path: str = "",
     error: str = "",
     stable_identity: dict[str, object] | None = None,
+    coverage: dict[str, object] | None = None,
 ) -> dict[str, object]:
     source_id = str(source.get("source_id") or "")
     checkpoint = {
@@ -104,6 +107,8 @@ def make_checkpoint(
     }
     if stable_identity is not None:
         checkpoint["stable_identity"] = stable_identity
+    if coverage is not None:
+        checkpoint["coverage"] = coverage
     return checkpoint
 
 
@@ -118,8 +123,20 @@ def normalized_identity_summary(normalized_path: str | Path) -> dict[str, object
         bundle = json.loads(path.read_text(encoding="utf-8"))
     except Exception as exc:  # pragma: no cover - defensive status packet
         return _identity_unavailable("normalized_path_unreadable", error=str(exc))
-    buckets: dict[str, set[str]] = {name: set() for name in IDENTITY_BUCKETS}
+    buckets = _identity_buckets(bundle)
+    canonical = {bucket: sorted(values) for bucket, values in buckets.items()}
+    digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+    return {
+        "schema": IDENTITY_SCHEMA,
+        "available": True,
+        "fingerprint": f"sha256:{digest}",
+        "counts": {bucket: len(values) for bucket, values in canonical.items()},
+        "samples": {bucket: values[:IDENTITY_SAMPLE_LIMIT] for bucket, values in canonical.items() if values},
+    }
 
+
+def _identity_buckets(bundle: object) -> dict[str, set[str]]:
+    buckets: dict[str, set[str]] = {name: set() for name in IDENTITY_BUCKETS}
     source = bundle.get("source") if isinstance(bundle, dict) and isinstance(bundle.get("source"), dict) else {}
     _add_id(buckets, "source_ids", source.get("source_id"))
     courses = bundle.get("courses") if isinstance(bundle, dict) and isinstance(bundle.get("courses"), list) else []
@@ -141,15 +158,88 @@ def normalized_identity_summary(normalized_path: str | Path) -> dict[str, object
     for item in evidence:
         if isinstance(item, dict):
             _add_id(buckets, "evidence_ids", item.get("evidence_id"))
+    return buckets
 
-    canonical = {bucket: sorted(values) for bucket, values in buckets.items()}
-    digest = hashlib.sha256(json.dumps(canonical, sort_keys=True, separators=(",", ":")).encode("utf-8")).hexdigest()
+
+def _identity_continuity(checkpoints: list[dict[str, object]], checkpoint: dict[str, object]) -> dict[str, object]:
+    current_buckets = _identity_buckets_from_path(str(checkpoint.get("normalized_path") or ""))
+    current_ids = _stable_ids(current_buckets)
+    previous_candidates = [
+        item
+        for item in checkpoints
+        if item.get("status") == "ok"
+        and str(item.get("source_id") or "") == str(checkpoint.get("source_id") or "")
+        and str(item.get("checkpoint_id") or "") != str(checkpoint.get("checkpoint_id") or "")
+        and item.get("normalized_path")
+    ]
+    previous = sorted(previous_candidates, key=lambda item: (str(item.get("updated_at") or ""), str(item.get("checkpoint_id") or "")))[-1] if previous_candidates else None
+    if previous is None:
+        return {
+            "schema": "aoa_course_identity_continuity_v1",
+            "status": "initial",
+            "previous_run_id": "",
+            "stable_retention_rate": 1.0,
+            "previous_id_count": 0,
+            "current_id_count": len(current_ids),
+            "retained_id_count": 0,
+            "added_id_count": len(current_ids),
+            "removed_id_count": 0,
+            "history_preserved": True,
+            "removal_assessment": "none",
+            "bucket_deltas": {},
+        }
+    previous_buckets = _identity_buckets_from_path(str(previous.get("normalized_path") or ""))
+    previous_ids = _stable_ids(previous_buckets)
+    retained = current_ids & previous_ids
+    added = current_ids - previous_ids
+    removed = previous_ids - current_ids
+    current_coverage = checkpoint.get("coverage") if isinstance(checkpoint.get("coverage"), dict) else {}
+    complete_current = bool(current_coverage.get("complete_for_scope"))
+    bucket_deltas = {
+        bucket: {
+            "previous_count": len(previous_buckets.get(bucket, set())),
+            "current_count": len(current_buckets.get(bucket, set())),
+            "added_count": len(current_buckets.get(bucket, set()) - previous_buckets.get(bucket, set())),
+            "removed_count": len(previous_buckets.get(bucket, set()) - current_buckets.get(bucket, set())),
+        }
+        for bucket in IDENTITY_BUCKETS
+        if bucket != "evidence_ids"
+        and previous_buckets.get(bucket, set()) != current_buckets.get(bucket, set())
+    }
     return {
-        "schema": IDENTITY_SCHEMA,
-        "available": True,
-        "fingerprint": f"sha256:{digest}",
-        "counts": {bucket: len(values) for bucket, values in canonical.items()},
-        "samples": {bucket: values[:IDENTITY_SAMPLE_LIMIT] for bucket, values in canonical.items() if values},
+        "schema": "aoa_course_identity_continuity_v1",
+        "status": "stable" if not added and not removed else "changed",
+        "previous_checkpoint_id": previous.get("checkpoint_id"),
+        "previous_run_id": previous.get("run_id"),
+        "previous_updated_at": previous.get("updated_at"),
+        "stable_retention_rate": round(len(retained) / len(previous_ids), 6) if previous_ids else 1.0,
+        "previous_id_count": len(previous_ids),
+        "current_id_count": len(current_ids),
+        "retained_id_count": len(retained),
+        "added_id_count": len(added),
+        "removed_id_count": len(removed),
+        "history_preserved": Path(str(previous.get("normalized_path") or "")).is_file(),
+        "removal_assessment": "none" if not removed else "observed_complete_ingest" if complete_current else "inconclusive_incomplete_ingest",
+        "bucket_deltas": bucket_deltas,
+    }
+
+
+def _identity_buckets_from_path(path_text: str) -> dict[str, set[str]]:
+    path = Path(path_text)
+    if not path.is_file():
+        return {name: set() for name in IDENTITY_BUCKETS}
+    try:
+        return _identity_buckets(json.loads(path.read_text(encoding="utf-8")))
+    except Exception:
+        return {name: set() for name in IDENTITY_BUCKETS}
+
+
+def _stable_ids(buckets: dict[str, set[str]]) -> set[str]:
+    return {
+        f"{bucket}:{item_id}"
+        for bucket, values in buckets.items()
+        if bucket != "evidence_ids"
+        for item_id in values
     }
 
 

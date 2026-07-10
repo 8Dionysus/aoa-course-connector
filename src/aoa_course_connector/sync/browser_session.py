@@ -167,6 +167,8 @@ def _materialize_source_fixture(
     }
     if isinstance(crawled.get("crawl"), dict):
         receipt["crawl"] = crawled["crawl"]
+    if isinstance(crawled.get("coverage"), dict):
+        receipt["coverage"] = crawled["coverage"]
     receipt_path = data_dir / "browser_materialize_receipt.json"
     receipt_path.write_text(json.dumps(receipt, indent=2, sort_keys=True), encoding="utf-8")
     receipt["receipt_path"] = str(receipt_path)
@@ -201,6 +203,7 @@ def _checkpoint_from_materialized(
         semantic_index_path=semantic_index_path,
         graph_path=graph_path,
         stable_identity=normalized_identity_summary(str(materialized.get("normalized_path") or "")),
+        coverage=materialized.get("coverage") if isinstance(materialized.get("coverage"), dict) else None,
     )
     upsert_checkpoint(roots, checkpoint)
     return checkpoint

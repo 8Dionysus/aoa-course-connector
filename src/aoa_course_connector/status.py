@@ -594,6 +594,8 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
     answer_evidence_count = int(entry.get("answer_evidence_count") or 0)
     answer_ready = bool(entry.get("answer_ready"))
     stable_identity = entry.get("stable_identity")
+    coverage = entry.get("coverage") if isinstance(entry.get("coverage"), dict) else {}
+    identity_continuity = entry.get("identity_continuity") if isinstance(entry.get("identity_continuity"), dict) else {}
     content_counts = entry.get("content_counts") if isinstance(entry.get("content_counts"), dict) else None
     if content_counts is None and isinstance(stable_identity, dict):
         content_counts = _content_counts_from_stable_identity(stable_identity)
@@ -632,6 +634,10 @@ def _connected_query_run_ref(receipt: dict[str, object], path: Path, entry: dict
         payload["source_ref"] = entry.get("source_ref")
     if isinstance(stable_identity, dict) and stable_identity:
         payload["stable_identity"] = _compact_stable_identity(stable_identity)
+    if coverage:
+        payload["coverage"] = _compact_coverage(coverage)
+    if identity_continuity:
+        payload["identity_continuity"] = _compact_identity_continuity(identity_continuity)
     return {key: value for key, value in payload.items() if value not in (None, "")}
 
 
@@ -656,6 +662,8 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
         "evidence_report": _mcp_call_command("evidence_report", {"query": query, "run": run_id, "mode": mode}),
     }
     stable_identity = checkpoint.get("stable_identity") if isinstance(checkpoint.get("stable_identity"), dict) else {}
+    coverage = checkpoint.get("coverage") if isinstance(checkpoint.get("coverage"), dict) else {}
+    identity_continuity = checkpoint.get("identity_continuity") if isinstance(checkpoint.get("identity_continuity"), dict) else {}
     content_counts = _content_counts_from_stable_identity(stable_identity) or None
     payload = {
         "entry_source": "sync_checkpoint",
@@ -697,6 +705,10 @@ def _sync_query_run_ref(checkpoint: dict[str, object], *, include_source_refs: b
         payload["source_ref"] = checkpoint.get("source_ref")
     if isinstance(stable_identity, dict) and stable_identity:
         payload["stable_identity"] = _compact_stable_identity(stable_identity)
+    if coverage:
+        payload["coverage"] = _compact_coverage(coverage)
+    if identity_continuity:
+        payload["identity_continuity"] = _compact_identity_continuity(identity_continuity)
     return {key: value for key, value in payload.items() if value not in (None, "")}
 
 
@@ -722,6 +734,47 @@ def _compact_stable_identity(stable_identity: dict[str, object]) -> dict[str, ob
             "counts": stable_identity.get("counts"),
         }.items()
         if value is not None
+    }
+
+
+def _compact_coverage(coverage: dict[str, object]) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in {
+            "schema": coverage.get("schema"),
+            "platform": coverage.get("platform"),
+            "inventory_scope": coverage.get("inventory_scope"),
+            "status": coverage.get("status"),
+            "complete_for_scope": coverage.get("complete_for_scope"),
+            "inventory_exhausted": coverage.get("inventory_exhausted"),
+            "limits_applied": coverage.get("limits_applied"),
+            "counts": coverage.get("counts"),
+            "gaps": coverage.get("gaps"),
+            "enrichment": coverage.get("enrichment"),
+        }.items()
+        if value is not None
+    }
+
+
+def _compact_identity_continuity(continuity: dict[str, object]) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in continuity.items()
+        if key
+        in {
+            "schema",
+            "status",
+            "previous_run_id",
+            "stable_retention_rate",
+            "previous_id_count",
+            "current_id_count",
+            "retained_id_count",
+            "added_id_count",
+            "removed_id_count",
+            "history_preserved",
+            "removal_assessment",
+            "bucket_deltas",
+        }
     }
 
 
