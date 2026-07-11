@@ -1,0 +1,2918 @@
+{
+  "entries": [
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "agents",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "agent_route",
+      "id": "entity:file:.connector-state/agents.md:c48b09d1eb",
+      "label": ".connector-state/AGENTS.md",
+      "source_record_id": "file:.connector-state/agents.md:c48b09d1eb"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:.connector-state/readme.md:377f66e180",
+      "label": ".connector-state/README.md",
+      "source_record_id": "file:.connector-state/readme.md:377f66e180"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "directory_marker",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:.connector-state/artifacts/.gitkeep:9accf75395",
+      "label": ".connector-state/artifacts/.gitkeep",
+      "source_record_id": "file:.connector-state/artifacts/.gitkeep:9accf75395"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "directory_marker",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:.connector-state/auth/.gitkeep:94b81ba9ef",
+      "label": ".connector-state/auth/.gitkeep",
+      "source_record_id": "file:.connector-state/auth/.gitkeep:94b81ba9ef"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "directory_marker",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:.connector-state/cache/.gitkeep:ffb60a7310",
+      "label": ".connector-state/cache/.gitkeep",
+      "source_record_id": "file:.connector-state/cache/.gitkeep:ffb60a7310"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "directory_marker",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:.connector-state/data/.gitkeep:c10ea2dd50",
+      "label": ".connector-state/data/.gitkeep",
+      "source_record_id": "file:.connector-state/data/.gitkeep:c10ea2dd50"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:.env.example:a3046da0d1",
+      "label": ".env.example",
+      "source_record_id": "file:.env.example:a3046da0d1"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:.github/workflows/validate.yml:a5c0f08bc4",
+      "label": ".github/workflows/validate.yml",
+      "source_record_id": "file:.github/workflows/validate.yml:a5c0f08bc4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "owner_metadata",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "owner_surface",
+      "id": "entity:file:.gitignore:bc37d034ba",
+      "label": ".gitignore",
+      "source_record_id": "file:.gitignore:bc37d034ba"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "agents",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "agent_route",
+      "id": "entity:file:agents.md:a54ff182c7",
+      "label": "AGENTS.md",
+      "source_record_id": "file:agents.md:a54ff182c7"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "boundary",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:boundaries.md:22819d489e",
+      "label": "BOUNDARIES.md",
+      "source_record_id": "file:boundaries.md:22819d489e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "changelog",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:changelog.md:06572a96a5",
+      "label": "CHANGELOG.md",
+      "source_record_id": "file:changelog.md:06572a96a5"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:charter.md:91d16dd057",
+      "label": "CHARTER.md",
+      "source_record_id": "file:charter.md:91d16dd057"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:readme.md:b335630551",
+      "label": "README.md",
+      "source_record_id": "file:readme.md:b335630551"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "roadmap",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:roadmap.md:683343bdf9",
+      "label": "ROADMAP.md",
+      "source_record_id": "file:roadmap.md:683343bdf9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:connector/readme.md:5aa00cda8e",
+      "label": "connector/README.md",
+      "source_record_id": "file:connector/readme.md:5aa00cda8e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "source_policy",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:connector/source_policy.md:1ec0689ca4",
+      "label": "connector/SOURCE_POLICY.md",
+      "source_record_id": "file:connector/source_policy.md:1ec0689ca4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:connector/storage_policy.md:aef066cc09",
+      "label": "connector/STORAGE_POLICY.md",
+      "source_record_id": "file:connector/storage_policy.md:aef066cc09"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/browser/getcourse_catalog_snapshot.json:1067b6e814",
+      "label": "connector/fixtures/browser/getcourse_catalog_snapshot.json",
+      "source_record_id": "file:connector/fixtures/browser/getcourse_catalog_snapshot.json:1067b6e814"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/browser/getcourse_starter_snapshot.json:3ebb28ec2f",
+      "label": "connector/fixtures/browser/getcourse_starter_snapshot.json",
+      "source_record_id": "file:connector/fixtures/browser/getcourse_starter_snapshot.json:3ebb28ec2f"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/browser/skillspace_catalog_snapshot.json:23f031243e",
+      "label": "connector/fixtures/browser/skillspace_catalog_snapshot.json",
+      "source_record_id": "file:connector/fixtures/browser/skillspace_catalog_snapshot.json:23f031243e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/browser/skillspace_starter_snapshot.json:7d90234d1d",
+      "label": "connector/fixtures/browser/skillspace_starter_snapshot.json",
+      "source_record_id": "file:connector/fixtures/browser/skillspace_starter_snapshot.json:7d90234d1d"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/course/authority_conflict_course.json:5fd595a84f",
+      "label": "connector/fixtures/course/authority_conflict_course.json",
+      "source_record_id": "file:connector/fixtures/course/authority_conflict_course.json:5fd595a84f"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/course/freshness_conflict_course.json:5467c719dd",
+      "label": "connector/fixtures/course/freshness_conflict_course.json",
+      "source_record_id": "file:connector/fixtures/course/freshness_conflict_course.json:5467c719dd"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/course/place_conflict_course.json:2dd8ffa2da",
+      "label": "connector/fixtures/course/place_conflict_course.json",
+      "source_record_id": "file:connector/fixtures/course/place_conflict_course.json:2dd8ffa2da"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/course/starter_course.json:1dcb2011c0",
+      "label": "connector/fixtures/course/starter_course.json",
+      "source_record_id": "file:connector/fixtures/course/starter_course.json:1dcb2011c0"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/stepik/account_courses.json:215380d4df",
+      "label": "connector/fixtures/stepik/account_courses.json",
+      "source_record_id": "file:connector/fixtures/stepik/account_courses.json:215380d4df"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/fixtures/stepik/starter_stepik_course.json:70375f76a5",
+      "label": "connector/fixtures/stepik/starter_stepik_course.json",
+      "source_record_id": "file:connector/fixtures/stepik/starter_stepik_course.json:70375f76a5"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "manifest",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "manifest",
+      "id": "entity:file:connector/manifests/artifact_classes.yaml:702a5cec90",
+      "label": "connector/manifests/artifact_classes.yaml",
+      "source_record_id": "file:connector/manifests/artifact_classes.yaml:702a5cec90"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "manifest",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "manifest",
+      "id": "entity:file:connector/manifests/connector_manifest.yaml:747276e9b1",
+      "label": "connector/manifests/connector_manifest.yaml",
+      "source_record_id": "file:connector/manifests/connector_manifest.yaml:747276e9b1"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "manifest",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "manifest",
+      "id": "entity:file:connector/manifests/route_allowlist.yaml:1ba98f35b6",
+      "label": "connector/manifests/route_allowlist.yaml",
+      "source_record_id": "file:connector/manifests/route_allowlist.yaml:1ba98f35b6"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:connector/profiles/starter-course.yaml:9ad5548940",
+      "label": "connector/profiles/starter-course.yaml",
+      "source_record_id": "file:connector/profiles/starter-course.yaml:9ad5548940"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/answer_packet.schema.json:3886462d56",
+      "label": "connector/schemas/answer_packet.schema.json",
+      "source_record_id": "file:connector/schemas/answer_packet.schema.json:3886462d56"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/artifact_integrity.schema.json:7b8232dc26",
+      "label": "connector/schemas/artifact_integrity.schema.json",
+      "source_record_id": "file:connector/schemas/artifact_integrity.schema.json:7b8232dc26"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/asset.schema.json:efb73ac487",
+      "label": "connector/schemas/asset.schema.json",
+      "source_record_id": "file:connector/schemas/asset.schema.json:efb73ac487"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/assignment.schema.json:1ee8c3ae07",
+      "label": "connector/schemas/assignment.schema.json",
+      "source_record_id": "file:connector/schemas/assignment.schema.json:1ee8c3ae07"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/comment.schema.json:fb622d1145",
+      "label": "connector/schemas/comment.schema.json",
+      "source_record_id": "file:connector/schemas/comment.schema.json:fb622d1145"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/comment_thread.schema.json:42772775a4",
+      "label": "connector/schemas/comment_thread.schema.json",
+      "source_record_id": "file:connector/schemas/comment_thread.schema.json:42772775a4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/connection_profile.schema.json:f2cad053be",
+      "label": "connector/schemas/connection_profile.schema.json",
+      "source_record_id": "file:connector/schemas/connection_profile.schema.json:f2cad053be"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/course.schema.json:243fba8c01",
+      "label": "connector/schemas/course.schema.json",
+      "source_record_id": "file:connector/schemas/course.schema.json:243fba8c01"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/course_source.schema.json:ef48db089f",
+      "label": "connector/schemas/course_source.schema.json",
+      "source_record_id": "file:connector/schemas/course_source.schema.json:ef48db089f"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/entity.schema.json:2ab82e6e69",
+      "label": "connector/schemas/entity.schema.json",
+      "source_record_id": "file:connector/schemas/entity.schema.json:2ab82e6e69"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/evidence.schema.json:8ab74b7f01",
+      "label": "connector/schemas/evidence.schema.json",
+      "source_record_id": "file:connector/schemas/evidence.schema.json:8ab74b7f01"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/graph_edge.schema.json:7cdc761c31",
+      "label": "connector/schemas/graph_edge.schema.json",
+      "source_record_id": "file:connector/schemas/graph_edge.schema.json:7cdc761c31"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/graph_node.schema.json:1582c817b6",
+      "label": "connector/schemas/graph_node.schema.json",
+      "source_record_id": "file:connector/schemas/graph_node.schema.json:1582c817b6"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/index_manifest.schema.json:0bee62c710",
+      "label": "connector/schemas/index_manifest.schema.json",
+      "source_record_id": "file:connector/schemas/index_manifest.schema.json:0bee62c710"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/ingest_coverage.schema.json:1b907ea32c",
+      "label": "connector/schemas/ingest_coverage.schema.json",
+      "source_record_id": "file:connector/schemas/ingest_coverage.schema.json:1b907ea32c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/ingest_run.schema.json:58ef3e165c",
+      "label": "connector/schemas/ingest_run.schema.json",
+      "source_record_id": "file:connector/schemas/ingest_run.schema.json:58ef3e165c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/lesson.schema.json:5ecbdb2f2e",
+      "label": "connector/schemas/lesson.schema.json",
+      "source_record_id": "file:connector/schemas/lesson.schema.json:5ecbdb2f2e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/lesson_context_packet.schema.json:8cc7923930",
+      "label": "connector/schemas/lesson_context_packet.schema.json",
+      "source_record_id": "file:connector/schemas/lesson_context_packet.schema.json:8cc7923930"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/module.schema.json:e4b35dd2f9",
+      "label": "connector/schemas/module.schema.json",
+      "source_record_id": "file:connector/schemas/module.schema.json:e4b35dd2f9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/normalized_course_bundle.schema.json:143369e2ad",
+      "label": "connector/schemas/normalized_course_bundle.schema.json",
+      "source_record_id": "file:connector/schemas/normalized_course_bundle.schema.json:143369e2ad"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/progress.schema.json:2a1b17193b",
+      "label": "connector/schemas/progress.schema.json",
+      "source_record_id": "file:connector/schemas/progress.schema.json:2a1b17193b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/refresh_cycle.schema.json:23f730f505",
+      "label": "connector/schemas/refresh_cycle.schema.json",
+      "source_record_id": "file:connector/schemas/refresh_cycle.schema.json:23f730f505"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/source_registry.schema.json:9001d76afe",
+      "label": "connector/schemas/source_registry.schema.json",
+      "source_record_id": "file:connector/schemas/source_registry.schema.json:9001d76afe"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/step.schema.json:21e4efe5d7",
+      "label": "connector/schemas/step.schema.json",
+      "source_record_id": "file:connector/schemas/step.schema.json:21e4efe5d7"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/sync_checkpoint.schema.json:9789ccad2b",
+      "label": "connector/schemas/sync_checkpoint.schema.json",
+      "source_record_id": "file:connector/schemas/sync_checkpoint.schema.json:9789ccad2b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/topic.schema.json:c8d6066df4",
+      "label": "connector/schemas/topic.schema.json",
+      "source_record_id": "file:connector/schemas/topic.schema.json:c8d6066df4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "schema",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "contract",
+      "id": "entity:file:connector/schemas/transcript.schema.json:c2f1e5e1d0",
+      "label": "connector/schemas/transcript.schema.json",
+      "source_record_id": "file:connector/schemas/transcript.schema.json:c2f1e5e1d0"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/adapter_guide.md:560b895049",
+      "label": "docs/ADAPTER_GUIDE.md",
+      "source_record_id": "file:docs/adapter_guide.md:560b895049"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/agent_install_route.md:38c86ecaa7",
+      "label": "docs/AGENT_INSTALL_ROUTE.md",
+      "source_record_id": "file:docs/agent_install_route.md:38c86ecaa7"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/architecture.md:ff21b6b9a3",
+      "label": "docs/ARCHITECTURE.md",
+      "source_record_id": "file:docs/architecture.md:ff21b6b9a3"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/auth_session.md:78c58472e1",
+      "label": "docs/AUTH_SESSION.md",
+      "source_record_id": "file:docs/auth_session.md:78c58472e1"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/browser_session.md:7313a0dd40",
+      "label": "docs/BROWSER_SESSION.md",
+      "source_record_id": "file:docs/browser_session.md:7313a0dd40"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/clean_api_adapters.md:8b07e27ccb",
+      "label": "docs/CLEAN_API_ADAPTERS.md",
+      "source_record_id": "file:docs/clean_api_adapters.md:8b07e27ccb"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/cli_usage.md:d2aa184d2e",
+      "label": "docs/CLI_USAGE.md",
+      "source_record_id": "file:docs/cli_usage.md:d2aa184d2e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/getcourse.md:5ca7839e02",
+      "label": "docs/GETCOURSE.md",
+      "source_record_id": "file:docs/getcourse.md:5ca7839e02"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/graph_model.md:72ed1bbd50",
+      "label": "docs/GRAPH_MODEL.md",
+      "source_record_id": "file:docs/graph_model.md:72ed1bbd50"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/install.md:93adeedb62",
+      "label": "docs/INSTALL.md",
+      "source_record_id": "file:docs/install.md:93adeedb62"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/live_calibration.md:249a8cd2ff",
+      "label": "docs/LIVE_CALIBRATION.md",
+      "source_record_id": "file:docs/live_calibration.md:249a8cd2ff"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/mcp_usage.md:0826437b75",
+      "label": "docs/MCP_USAGE.md",
+      "source_record_id": "file:docs/mcp_usage.md:0826437b75"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/privacy_security.md:6dfeda1783",
+      "label": "docs/PRIVACY_SECURITY.md",
+      "source_record_id": "file:docs/privacy_security.md:6dfeda1783"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/query_model.md:dc059c6e17",
+      "label": "docs/QUERY_MODEL.md",
+      "source_record_id": "file:docs/query_model.md:dc059c6e17"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/runtime_contract.md:fa011f8c69",
+      "label": "docs/RUNTIME_CONTRACT.md",
+      "source_record_id": "file:docs/runtime_contract.md:fa011f8c69"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/skillspace.md:b7a72c7f1a",
+      "label": "docs/SKILLSPACE.md",
+      "source_record_id": "file:docs/skillspace.md:b7a72c7f1a"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/starter_proof.md:a06d166b7c",
+      "label": "docs/STARTER_PROOF.md",
+      "source_record_id": "file:docs/starter_proof.md:a06d166b7c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/status.md:88ecb7d5a7",
+      "label": "docs/STATUS.md",
+      "source_record_id": "file:docs/status.md:88ecb7d5a7"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/stepik.md:11732d86db",
+      "label": "docs/STEPIK.md",
+      "source_record_id": "file:docs/stepik.md:11732d86db"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/storage_contract.md:ce09b3ac49",
+      "label": "docs/STORAGE_CONTRACT.md",
+      "source_record_id": "file:docs/storage_contract.md:ce09b3ac49"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/troubleshooting.md:96160ca341",
+      "label": "docs/TROUBLESHOOTING.md",
+      "source_record_id": "file:docs/troubleshooting.md:96160ca341"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "decision",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "decision",
+      "id": "entity:file:docs/decisions/aoa-course-d-0001-course-knowledge-not-downloader.md:abca6407e7",
+      "label": "docs/decisions/AOA-COURSE-D-0001-course-knowledge-not-downloader.md",
+      "source_record_id": "file:docs/decisions/aoa-course-d-0001-course-knowledge-not-downloader.md:abca6407e7"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:docs/decisions/readme.md:e5ec0e7030",
+      "label": "docs/decisions/README.md",
+      "source_record_id": "file:docs/decisions/readme.md:e5ec0e7030"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "agents",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "agent_route",
+      "id": "entity:file:evals/agents.md:97b1e9d3cd",
+      "label": "evals/AGENTS.md",
+      "source_record_id": "file:evals/agents.md:97b1e9d3cd"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/port.yaml:b027c5aa6b",
+      "label": "evals/PORT.yaml",
+      "source_record_id": "file:evals/port.yaml:b027c5aa6b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/readme.md:a1a9eeb43d",
+      "label": "evals/README.md",
+      "source_record_id": "file:evals/readme.md:a1a9eeb43d"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/intake/readme.md:d27b56ff43",
+      "label": "evals/intake/README.md",
+      "source_record_id": "file:evals/intake/readme.md:d27b56ff43"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/reports/readme.md:ac5e016ca2",
+      "label": "evals/reports/README.md",
+      "source_record_id": "file:evals/reports/readme.md:ac5e016ca2"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/readme.md:8611332c6f",
+      "label": "evals/suites/README.md",
+      "source_record_id": "file:evals/suites/readme.md:8611332c6f"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/adapter-authority.suite.md:d630663029",
+      "label": "evals/suites/adapter-authority.suite.md",
+      "source_record_id": "file:evals/suites/adapter-authority.suite.md:d630663029"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/adapter_authority_metadata.json:fa4a8a7ad9",
+      "label": "evals/suites/adapter_authority_metadata.json",
+      "source_record_id": "file:evals/suites/adapter_authority_metadata.json:fa4a8a7ad9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/answer-quality.suite.md:40d9ac7c54",
+      "label": "evals/suites/answer-quality.suite.md",
+      "source_record_id": "file:evals/suites/answer-quality.suite.md:40d9ac7c54"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/answer_quality_packets.json:123773f29f",
+      "label": "evals/suites/answer_quality_packets.json",
+      "source_record_id": "file:evals/suites/answer_quality_packets.json:123773f29f"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/authority-ranking.suite.md:83b390db77",
+      "label": "evals/suites/authority-ranking.suite.md",
+      "source_record_id": "file:evals/suites/authority-ranking.suite.md:83b390db77"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/authority_ranking.json:08ee3d0b8c",
+      "label": "evals/suites/authority_ranking.json",
+      "source_record_id": "file:evals/suites/authority_ranking.json:08ee3d0b8c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/browser-transcripts.suite.md:43ad7e2403",
+      "label": "evals/suites/browser-transcripts.suite.md",
+      "source_record_id": "file:evals/suites/browser-transcripts.suite.md:43ad7e2403"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/browser_crawl_answer_packets.json:6d1615c4b6",
+      "label": "evals/suites/browser_crawl_answer_packets.json",
+      "source_record_id": "file:evals/suites/browser_crawl_answer_packets.json:6d1615c4b6"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/browser_discovery_sources.json:cb81b3e07b",
+      "label": "evals/suites/browser_discovery_sources.json",
+      "source_record_id": "file:evals/suites/browser_discovery_sources.json:cb81b3e07b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/browser_hard_adapter_answer_packets.json:60bae275c2",
+      "label": "evals/suites/browser_hard_adapter_answer_packets.json",
+      "source_record_id": "file:evals/suites/browser_hard_adapter_answer_packets.json:60bae275c2"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/browser_progress_comments_answer_packets.json:cb28b2e797",
+      "label": "evals/suites/browser_progress_comments_answer_packets.json",
+      "source_record_id": "file:evals/suites/browser_progress_comments_answer_packets.json:cb28b2e797"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/browser_sync_checkpoints.json:28ae43cff1",
+      "label": "evals/suites/browser_sync_checkpoints.json",
+      "source_record_id": "file:evals/suites/browser_sync_checkpoints.json:28ae43cff1"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/browser_transcripts_answer_packets.json:ef3655d40a",
+      "label": "evals/suites/browser_transcripts_answer_packets.json",
+      "source_record_id": "file:evals/suites/browser_transcripts_answer_packets.json:ef3655d40a"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/connected-portfolio.suite.md:5ce4e5ebd9",
+      "label": "evals/suites/connected-portfolio.suite.md",
+      "source_record_id": "file:evals/suites/connected-portfolio.suite.md:5ce4e5ebd9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/connected_portfolio.json:883316caee",
+      "label": "evals/suites/connected_portfolio.json",
+      "source_record_id": "file:evals/suites/connected_portfolio.json:883316caee"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/corpus-integrity.suite.md:6493cc65b2",
+      "label": "evals/suites/corpus-integrity.suite.md",
+      "source_record_id": "file:evals/suites/corpus-integrity.suite.md:6493cc65b2"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/corpus_integrity.json:519a4273cb",
+      "label": "evals/suites/corpus_integrity.json",
+      "source_record_id": "file:evals/suites/corpus_integrity.json:519a4273cb"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/freshness-ranking.suite.md:7d425a7eea",
+      "label": "evals/suites/freshness-ranking.suite.md",
+      "source_record_id": "file:evals/suites/freshness-ranking.suite.md:7d425a7eea"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/freshness_ranking.json:04031dc1fe",
+      "label": "evals/suites/freshness_ranking.json",
+      "source_record_id": "file:evals/suites/freshness_ranking.json:04031dc1fe"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/ingest-coverage.suite.md:846722f173",
+      "label": "evals/suites/ingest-coverage.suite.md",
+      "source_record_id": "file:evals/suites/ingest-coverage.suite.md:846722f173"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/ingest_coverage.json:06966f72a5",
+      "label": "evals/suites/ingest_coverage.json",
+      "source_record_id": "file:evals/suites/ingest_coverage.json:06966f72a5"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/live-calibration.suite.md:128fd3dbc4",
+      "label": "evals/suites/live-calibration.suite.md",
+      "source_record_id": "file:evals/suites/live-calibration.suite.md:128fd3dbc4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/live_calibration_packet.json:a16fd459d3",
+      "label": "evals/suites/live_calibration_packet.json",
+      "source_record_id": "file:evals/suites/live_calibration_packet.json:a16fd459d3"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/place-ranking.suite.md:59e00410d9",
+      "label": "evals/suites/place-ranking.suite.md",
+      "source_record_id": "file:evals/suites/place-ranking.suite.md:59e00410d9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/place_ranking.json:f45d3f6316",
+      "label": "evals/suites/place_ranking.json",
+      "source_record_id": "file:evals/suites/place_ranking.json:f45d3f6316"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "unknown_document",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:evals/suites/retrieval-loop.suite.md:649144ce7c",
+      "label": "evals/suites/retrieval-loop.suite.md",
+      "source_record_id": "file:evals/suites/retrieval-loop.suite.md:649144ce7c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/retrieval_loop.json:bce7e92d29",
+      "label": "evals/suites/retrieval_loop.json",
+      "source_record_id": "file:evals/suites/retrieval_loop.json:bce7e92d29"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/starter_course_answer_packets.json:8b922084df",
+      "label": "evals/suites/starter_course_answer_packets.json",
+      "source_record_id": "file:evals/suites/starter_course_answer_packets.json:8b922084df"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:evals/suites/stepik_clean_api_answer_packets.json:d74f9724fe",
+      "label": "evals/suites/stepik_clean_api_answer_packets.json",
+      "source_record_id": "file:evals/suites/stepik_clean_api_answer_packets.json:d74f9724fe"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "agents",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "agent_route",
+      "id": "entity:file:kag/agents.md:f80d68b85b",
+      "label": "kag/AGENTS.md",
+      "source_record_id": "file:kag/agents.md:f80d68b85b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "document",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "readme",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "document",
+      "id": "entity:file:kag/readme.md:213631cc86",
+      "label": "kag/README.md",
+      "source_record_id": "file:kag/readme.md:213631cc86"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "generated_readmodel"
+      },
+      "entity_kind": "readmodel",
+      "id": "entity:file:kag/edges/source_routes_to_storage_boundary.json:8c12cb4c11",
+      "label": "kag/edges/source_routes_to_storage_boundary.json",
+      "source_record_id": "file:kag/edges/source_routes_to_storage_boundary.json:8c12cb4c11"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "index",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "generated_readmodel"
+      },
+      "entity_kind": "readmodel",
+      "id": "entity:file:kag/indexes/source_inventory.json:1416e51205",
+      "label": "kag/indexes/source_inventory.json",
+      "source_record_id": "file:kag/indexes/source_inventory.json:1416e51205"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:kag/manifest.json:0d25d90d08",
+      "label": "kag/manifest.json",
+      "source_record_id": "file:kag/manifest.json:0d25d90d08"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:kag/nodes/source_home.json:a87a1f114c",
+      "label": "kag/nodes/source_home.json",
+      "source_record_id": "file:kag/nodes/source_home.json:a87a1f114c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "config",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:kag/nodes/storage_boundary.json:45dfb2e4b0",
+      "label": "kag/nodes/storage_boundary.json",
+      "source_record_id": "file:kag/nodes/storage_boundary.json:45dfb2e4b0"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "projection",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "generated_readmodel"
+      },
+      "entity_kind": "readmodel",
+      "id": "entity:file:kag/projections/source_return.json:1a2a306538",
+      "label": "kag/projections/source_return.json",
+      "source_record_id": "file:kag/projections/source_return.json:1a2a306538"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "receipt",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "receipt"
+      },
+      "entity_kind": "artifact",
+      "id": "entity:file:kag/receipts/validation_receipt.json:8e616be0cd",
+      "label": "kag/receipts/validation_receipt.json",
+      "source_record_id": "file:kag/receipts/validation_receipt.json:8e616be0cd"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "manifest",
+        "code_role": "none",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "manifest",
+      "id": "entity:file:pyproject.toml:50c86b7ed8",
+      "label": "pyproject.toml",
+      "source_record_id": "file:pyproject.toml:50c86b7ed8"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "validator",
+        "code_role": "validator",
+        "command_role": "validator",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:scripts/validate_connector.py:de39a47221",
+      "label": "scripts/validate_connector.py",
+      "source_record_id": "file:scripts/validate_connector.py:de39a47221"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "script",
+        "code_role": "entrypoint",
+        "command_role": "script",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:scripts/verify_agent_install_route.py:7a0ab3925d",
+      "label": "scripts/verify_agent_install_route.py",
+      "source_record_id": "file:scripts/verify_agent_install_route.py:7a0ab3925d"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/__init__.py:bd5d55eb32",
+      "label": "src/aoa_course_connector/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/__init__.py:bd5d55eb32"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/__init__.py:d0c8e056e9",
+      "label": "src/aoa_course_connector/adapters/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/__init__.py:d0c8e056e9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/browser/__init__.py:f350dba36f",
+      "label": "src/aoa_course_connector/adapters/browser/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/browser/__init__.py:f350dba36f"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/browser/audit.py:61111e6456",
+      "label": "src/aoa_course_connector/adapters/browser/audit.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/browser/audit.py:61111e6456"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/browser/captions.py:70dc66cb68",
+      "label": "src/aoa_course_connector/adapters/browser/captions.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/browser/captions.py:70dc66cb68"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/browser/crawl.py:ac2f19c041",
+      "label": "src/aoa_course_connector/adapters/browser/crawl.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/browser/crawl.py:ac2f19c041"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/browser/discovery.py:1587f6992b",
+      "label": "src/aoa_course_connector/adapters/browser/discovery.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/browser/discovery.py:1587f6992b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/browser/snapshot.py:24345015b3",
+      "label": "src/aoa_course_connector/adapters/browser/snapshot.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/browser/snapshot.py:24345015b3"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/stepik/__init__.py:274d23544e",
+      "label": "src/aoa_course_connector/adapters/stepik/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/stepik/__init__.py:274d23544e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/adapters/stepik/client.py:630764c6bb",
+      "label": "src/aoa_course_connector/adapters/stepik/client.py",
+      "source_record_id": "file:src/aoa_course_connector/adapters/stepik/client.py:630764c6bb"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/auth/__init__.py:a79251a36d",
+      "label": "src/aoa_course_connector/auth/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/auth/__init__.py:a79251a36d"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/auth/browser_state.py:7e6d2c276e",
+      "label": "src/aoa_course_connector/auth/browser_state.py",
+      "source_record_id": "file:src/aoa_course_connector/auth/browser_state.py:7e6d2c276e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/bootstrap.py:4461f91697",
+      "label": "src/aoa_course_connector/bootstrap.py",
+      "source_record_id": "file:src/aoa_course_connector/bootstrap.py:4461f91697"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/calibration/__init__.py:90d14e3b12",
+      "label": "src/aoa_course_connector/calibration/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/calibration/__init__.py:90d14e3b12"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/calibration/connected_run.py:0cc172a5c8",
+      "label": "src/aoa_course_connector/calibration/connected_run.py",
+      "source_record_id": "file:src/aoa_course_connector/calibration/connected_run.py:0cc172a5c8"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/cli.py:4d27ad45a3",
+      "label": "src/aoa_course_connector/cli.py",
+      "source_record_id": "file:src/aoa_course_connector/cli.py:4d27ad45a3"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/config.py:1b4ac20fdf",
+      "label": "src/aoa_course_connector/config.py",
+      "source_record_id": "file:src/aoa_course_connector/config.py:1b4ac20fdf"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/connection_profile.py:f4dcdda50d",
+      "label": "src/aoa_course_connector/connection_profile.py",
+      "source_record_id": "file:src/aoa_course_connector/connection_profile.py:f4dcdda50d"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/core/__init__.py:09a5a32820",
+      "label": "src/aoa_course_connector/core/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/core/__init__.py:09a5a32820"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/core/models.py:ec72e17a71",
+      "label": "src/aoa_course_connector/core/models.py",
+      "source_record_id": "file:src/aoa_course_connector/core/models.py:ec72e17a71"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/discover/__init__.py:39ea2c6cb1",
+      "label": "src/aoa_course_connector/discover/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/discover/__init__.py:39ea2c6cb1"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/discover/browser_session.py:b241f0b921",
+      "label": "src/aoa_course_connector/discover/browser_session.py",
+      "source_record_id": "file:src/aoa_course_connector/discover/browser_session.py:b241f0b921"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/discover/stepik.py:2fcb31c582",
+      "label": "src/aoa_course_connector/discover/stepik.py",
+      "source_record_id": "file:src/aoa_course_connector/discover/stepik.py:2fcb31c582"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/evidence/__init__.py:fcb6cccef4",
+      "label": "src/aoa_course_connector/evidence/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/evidence/__init__.py:fcb6cccef4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/graph/__init__.py:3746e6cfd2",
+      "label": "src/aoa_course_connector/graph/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/graph/__init__.py:3746e6cfd2"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/index/__init__.py:6937f510df",
+      "label": "src/aoa_course_connector/index/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/index/__init__.py:6937f510df"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/ingest/__init__.py:51ad507e03",
+      "label": "src/aoa_course_connector/ingest/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/ingest/__init__.py:51ad507e03"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/ingest/browser_session.py:8a115f1c50",
+      "label": "src/aoa_course_connector/ingest/browser_session.py",
+      "source_record_id": "file:src/aoa_course_connector/ingest/browser_session.py:8a115f1c50"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/ingest/counts.py:37950a9b41",
+      "label": "src/aoa_course_connector/ingest/counts.py",
+      "source_record_id": "file:src/aoa_course_connector/ingest/counts.py:37950a9b41"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/ingest/fixture.py:a217ac4d2e",
+      "label": "src/aoa_course_connector/ingest/fixture.py",
+      "source_record_id": "file:src/aoa_course_connector/ingest/fixture.py:a217ac4d2e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/ingest/stepik.py:9dd3d98ae5",
+      "label": "src/aoa_course_connector/ingest/stepik.py",
+      "source_record_id": "file:src/aoa_course_connector/ingest/stepik.py:9dd3d98ae5"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/integrity.py:afc15e3a46",
+      "label": "src/aoa_course_connector/integrity.py",
+      "source_record_id": "file:src/aoa_course_connector/integrity.py:afc15e3a46"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/mcp/__init__.py:e28d676eed",
+      "label": "src/aoa_course_connector/mcp/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/mcp/__init__.py:e28d676eed"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/mcp/server.py:f3837b1bf9",
+      "label": "src/aoa_course_connector/mcp/server.py",
+      "source_record_id": "file:src/aoa_course_connector/mcp/server.py:f3837b1bf9"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/normalize/__init__.py:31a4c4c51c",
+      "label": "src/aoa_course_connector/normalize/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/normalize/__init__.py:31a4c4c51c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/normalize/browser_session.py:efd2050ff4",
+      "label": "src/aoa_course_connector/normalize/browser_session.py",
+      "source_record_id": "file:src/aoa_course_connector/normalize/browser_session.py:efd2050ff4"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/normalize/stepik.py:f624f2b67a",
+      "label": "src/aoa_course_connector/normalize/stepik.py",
+      "source_record_id": "file:src/aoa_course_connector/normalize/stepik.py:f624f2b67a"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/quality.py:dec3e25c5b",
+      "label": "src/aoa_course_connector/quality.py",
+      "source_record_id": "file:src/aoa_course_connector/quality.py:dec3e25c5b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/query/__init__.py:f65413de9b",
+      "label": "src/aoa_course_connector/query/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/query/__init__.py:f65413de9b"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/readiness.py:780e855039",
+      "label": "src/aoa_course_connector/readiness.py",
+      "source_record_id": "file:src/aoa_course_connector/readiness.py:780e855039"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/refresh.py:23c7024ffe",
+      "label": "src/aoa_course_connector/refresh.py",
+      "source_record_id": "file:src/aoa_course_connector/refresh.py:23c7024ffe"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/smoke/__init__.py:bfbfc33918",
+      "label": "src/aoa_course_connector/smoke/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/smoke/__init__.py:bfbfc33918"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/smoke/answer_quality.py:b131253481",
+      "label": "src/aoa_course_connector/smoke/answer_quality.py",
+      "source_record_id": "file:src/aoa_course_connector/smoke/answer_quality.py:b131253481"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/smoke/browser_session.py:65bebb50ee",
+      "label": "src/aoa_course_connector/smoke/browser_session.py",
+      "source_record_id": "file:src/aoa_course_connector/smoke/browser_session.py:65bebb50ee"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/smoke/stepik.py:375aed4645",
+      "label": "src/aoa_course_connector/smoke/stepik.py",
+      "source_record_id": "file:src/aoa_course_connector/smoke/stepik.py:375aed4645"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/sources.py:f1a6247c65",
+      "label": "src/aoa_course_connector/sources.py",
+      "source_record_id": "file:src/aoa_course_connector/sources.py:f1a6247c65"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/status.py:d643b5b71e",
+      "label": "src/aoa_course_connector/status.py",
+      "source_record_id": "file:src/aoa_course_connector/status.py:d643b5b71e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/stepik_options.py:cbb2769db3",
+      "label": "src/aoa_course_connector/stepik_options.py",
+      "source_record_id": "file:src/aoa_course_connector/stepik_options.py:cbb2769db3"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/storage/__init__.py:8b4494f6ff",
+      "label": "src/aoa_course_connector/storage/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/storage/__init__.py:8b4494f6ff"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/sync/__init__.py:bab2bbc07e",
+      "label": "src/aoa_course_connector/sync/__init__.py",
+      "source_record_id": "file:src/aoa_course_connector/sync/__init__.py:bab2bbc07e"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/sync/browser_session.py:731b89a142",
+      "label": "src/aoa_course_connector/sync/browser_session.py",
+      "source_record_id": "file:src/aoa_course_connector/sync/browser_session.py:731b89a142"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/sync/checkpoints.py:34ec05c677",
+      "label": "src/aoa_course_connector/sync/checkpoints.py",
+      "source_record_id": "file:src/aoa_course_connector/sync/checkpoints.py:34ec05c677"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "source_code",
+        "code_role": "source_module",
+        "command_role": "none",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "code",
+      "id": "entity:file:src/aoa_course_connector/sync/stepik.py:086ed03939",
+      "label": "src/aoa_course_connector/sync/stepik.py",
+      "source_record_id": "file:src/aoa_course_connector/sync/stepik.py:086ed03939"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/contract/test_agent_install_route_verifier.py:950d609a49",
+      "label": "tests/contract/test_agent_install_route_verifier.py",
+      "source_record_id": "file:tests/contract/test_agent_install_route_verifier.py:950d609a49"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/contract/test_validator.py:d2f4ffcf08",
+      "label": "tests/contract/test_validator.py",
+      "source_record_id": "file:tests/contract/test_validator.py:d2f4ffcf08"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/integration/test_cli_smoke.py:523f64d634",
+      "label": "tests/integration/test_cli_smoke.py",
+      "source_record_id": "file:tests/integration/test_cli_smoke.py:523f64d634"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_answer_quality.py:3aeffe5959",
+      "label": "tests/unit/test_answer_quality.py",
+      "source_record_id": "file:tests/unit/test_answer_quality.py:3aeffe5959"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_artifact_integrity.py:76c45b78fc",
+      "label": "tests/unit/test_artifact_integrity.py",
+      "source_record_id": "file:tests/unit/test_artifact_integrity.py:76c45b78fc"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_browser_discovery.py:5a2296f098",
+      "label": "tests/unit/test_browser_discovery.py",
+      "source_record_id": "file:tests/unit/test_browser_discovery.py:5a2296f098"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_browser_session_adapters.py:37f65aa562",
+      "label": "tests/unit/test_browser_session_adapters.py",
+      "source_record_id": "file:tests/unit/test_browser_session_adapters.py:37f65aa562"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_browser_session_crawl.py:9690b7b1f6",
+      "label": "tests/unit/test_browser_session_crawl.py",
+      "source_record_id": "file:tests/unit/test_browser_session_crawl.py:9690b7b1f6"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_browser_smoke.py:2dd6d2edf7",
+      "label": "tests/unit/test_browser_smoke.py",
+      "source_record_id": "file:tests/unit/test_browser_smoke.py:2dd6d2edf7"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_browser_snapshot_audit.py:1cb7fd4401",
+      "label": "tests/unit/test_browser_snapshot_audit.py",
+      "source_record_id": "file:tests/unit/test_browser_snapshot_audit.py:1cb7fd4401"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_browser_sync.py:c32c1d1953",
+      "label": "tests/unit/test_browser_sync.py",
+      "source_record_id": "file:tests/unit/test_browser_sync.py:c32c1d1953"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_connected_calibration_run.py:6c68db7e4c",
+      "label": "tests/unit/test_connected_calibration_run.py",
+      "source_record_id": "file:tests/unit/test_connected_calibration_run.py:6c68db7e4c"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_fixture_index_graph.py:ae7f8a3c38",
+      "label": "tests/unit/test_fixture_index_graph.py",
+      "source_record_id": "file:tests/unit/test_fixture_index_graph.py:ae7f8a3c38"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_ingest_counts.py:9b116d2ac8",
+      "label": "tests/unit/test_ingest_counts.py",
+      "source_record_id": "file:tests/unit/test_ingest_counts.py:9b116d2ac8"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_live_calibration.py:cc96807383",
+      "label": "tests/unit/test_live_calibration.py",
+      "source_record_id": "file:tests/unit/test_live_calibration.py:cc96807383"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_live_preflight.py:26be63d683",
+      "label": "tests/unit/test_live_preflight.py",
+      "source_record_id": "file:tests/unit/test_live_preflight.py:26be63d683"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_semantic_index.py:1b96c5ddac",
+      "label": "tests/unit/test_semantic_index.py",
+      "source_record_id": "file:tests/unit/test_semantic_index.py:1b96c5ddac"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_sources_auth_mcp.py:9a802c6574",
+      "label": "tests/unit/test_sources_auth_mcp.py",
+      "source_record_id": "file:tests/unit/test_sources_auth_mcp.py:9a802c6574"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_stepik_adapter.py:69b56a5c3a",
+      "label": "tests/unit/test_stepik_adapter.py",
+      "source_record_id": "file:tests/unit/test_stepik_adapter.py:69b56a5c3a"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_stepik_discovery.py:db98cf53c8",
+      "label": "tests/unit/test_stepik_discovery.py",
+      "source_record_id": "file:tests/unit/test_stepik_discovery.py:db98cf53c8"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_stepik_smoke.py:3a32ad86c3",
+      "label": "tests/unit/test_stepik_smoke.py",
+      "source_record_id": "file:tests/unit/test_stepik_smoke.py:3a32ad86c3"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_stepik_sync.py:a546f3bc3d",
+      "label": "tests/unit/test_stepik_sync.py",
+      "source_record_id": "file:tests/unit/test_stepik_sync.py:a546f3bc3d"
+    },
+    {
+      "coordinates": {
+        "artifact_kind": "test",
+        "code_role": "test",
+        "command_role": "test",
+        "document_role": "none",
+        "mechanics_role": "none",
+        "surface_state": "authored_source"
+      },
+      "entity_kind": "command",
+      "id": "entity:file:tests/unit/test_storage_runtime_ids.py:8ad8002693",
+      "label": "tests/unit/test_storage_runtime_ids.py",
+      "source_record_id": "file:tests/unit/test_storage_runtime_ids.py:8ad8002693"
+    }
+  ],
+  "index_identity": {
+    "artifact_kind": "repository_entity_index",
+    "content_digest": "2e18ac0647249ecddff5efdfd989258c15369f31348757f63fa4e7aa2fe5c30a",
+    "index_kind": "entity",
+    "local_id": "index:repo-local:entities",
+    "schema_ref": "aoa-kag:schemas/repo-local-kag-repository-index.schema.json"
+  },
+  "registry_output": {
+    "consumer": "aoa-kag-mcp",
+    "resource_shape": "repo-local-entity-index",
+    "stable_fields": [
+      "id",
+      "entity_kind",
+      "source_record_id",
+      "coordinates"
+    ]
+  },
+  "repo": {
+    "git_ref": "git-index-source-tree",
+    "name": "aoa-course-connector",
+    "owner_type": "connector",
+    "root": "."
+  },
+  "schema_version": "aoa-repo-local-kag-repository-index-v1",
+  "source_index": {
+    "content_digest": "8ae5ab23698b47750dc7574e03fa1fb6809aecc4a81637c9106edddfcaeef144",
+    "local_id": "index:repo-local:source-surfaces",
+    "path": "kag/indexes/source_surface_index.json"
+  },
+  "summary": {
+    "entry_count": 205,
+    "kind_counts": {
+      "agent_route": 4,
+      "artifact": 40,
+      "code": 53,
+      "command": 25,
+      "contract": 27,
+      "decision": 1,
+      "document": 47,
+      "manifest": 4,
+      "owner_surface": 1,
+      "readmodel": 3
+    }
+  }
+}

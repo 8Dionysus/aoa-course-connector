@@ -1,0 +1,314 @@
+{
+  "entries": [
+    {
+      "event_kind": "workflow_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:0bad3f8ee37f88033fcb",
+      "observation_state": "declared",
+      "path": ".github/workflows/validate.yml",
+      "source_record_id": "file:.github/workflows/validate.yml:a5c0f08bc4"
+    },
+    {
+      "event_kind": "release_lane",
+      "event_role": "declaration",
+      "heading_ref": {
+        "anchor": "010-unreleased",
+        "level": 2,
+        "line": 3,
+        "ref": "CHANGELOG.md#010-unreleased",
+        "title": "0.1.0 - Unreleased"
+      },
+      "id": "event:repo:8986254c6d4bfb107575",
+      "observation_state": "declared",
+      "path": "CHANGELOG.md",
+      "source_record_id": "file:changelog.md:06572a96a5"
+    },
+    {
+      "event_kind": "decision_record",
+      "event_role": "declaration",
+      "heading_ref": null,
+      "id": "event:repo:4edd2be39031dc2c9078",
+      "observation_state": "declared",
+      "path": "docs/decisions/AOA-COURSE-D-0001-course-knowledge-not-downloader.md",
+      "source_record_id": "file:docs/decisions/aoa-course-d-0001-course-knowledge-not-downloader.md:abca6407e7"
+    },
+    {
+      "event_kind": "validation_receipt",
+      "event_role": "receipt",
+      "heading_ref": null,
+      "id": "event:repo:fd7e0c629051731905be",
+      "observation_state": "observed",
+      "path": "kag/receipts/validation_receipt.json",
+      "source_record_id": "file:kag/receipts/validation_receipt.json:8e616be0cd"
+    },
+    {
+      "event_kind": "validation_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:cad2e2d9d661d5a6dafd",
+      "observation_state": "declared",
+      "path": "scripts/validate_connector.py",
+      "source_record_id": "file:scripts/validate_connector.py:de39a47221"
+    },
+    {
+      "event_kind": "command_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:81978dc781642fbcbb7f",
+      "observation_state": "declared",
+      "path": "scripts/verify_agent_install_route.py",
+      "source_record_id": "file:scripts/verify_agent_install_route.py:7a0ab3925d"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:6e07cb662a91bd9bca12",
+      "observation_state": "declared",
+      "path": "tests/contract/test_agent_install_route_verifier.py",
+      "source_record_id": "file:tests/contract/test_agent_install_route_verifier.py:950d609a49"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:d87ed94199489c3af7e9",
+      "observation_state": "declared",
+      "path": "tests/contract/test_validator.py",
+      "source_record_id": "file:tests/contract/test_validator.py:d2f4ffcf08"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:1791b003b6773fd943ef",
+      "observation_state": "declared",
+      "path": "tests/integration/test_cli_smoke.py",
+      "source_record_id": "file:tests/integration/test_cli_smoke.py:523f64d634"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:ede038f5336d65018802",
+      "observation_state": "declared",
+      "path": "tests/unit/test_answer_quality.py",
+      "source_record_id": "file:tests/unit/test_answer_quality.py:3aeffe5959"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:2d60569ce6b5a21b04cb",
+      "observation_state": "declared",
+      "path": "tests/unit/test_artifact_integrity.py",
+      "source_record_id": "file:tests/unit/test_artifact_integrity.py:76c45b78fc"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:de04e250129290f2de18",
+      "observation_state": "declared",
+      "path": "tests/unit/test_browser_discovery.py",
+      "source_record_id": "file:tests/unit/test_browser_discovery.py:5a2296f098"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:2a5933457427e8e7e14e",
+      "observation_state": "declared",
+      "path": "tests/unit/test_browser_session_adapters.py",
+      "source_record_id": "file:tests/unit/test_browser_session_adapters.py:37f65aa562"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:cf34153edd545f199707",
+      "observation_state": "declared",
+      "path": "tests/unit/test_browser_session_crawl.py",
+      "source_record_id": "file:tests/unit/test_browser_session_crawl.py:9690b7b1f6"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:ee932859194daa508e0e",
+      "observation_state": "declared",
+      "path": "tests/unit/test_browser_smoke.py",
+      "source_record_id": "file:tests/unit/test_browser_smoke.py:2dd6d2edf7"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:72fe9eddda1d3cbaeb9d",
+      "observation_state": "declared",
+      "path": "tests/unit/test_browser_snapshot_audit.py",
+      "source_record_id": "file:tests/unit/test_browser_snapshot_audit.py:1cb7fd4401"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:089bcfd426defebf0865",
+      "observation_state": "declared",
+      "path": "tests/unit/test_browser_sync.py",
+      "source_record_id": "file:tests/unit/test_browser_sync.py:c32c1d1953"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:d2419aae814e8131ae9f",
+      "observation_state": "declared",
+      "path": "tests/unit/test_connected_calibration_run.py",
+      "source_record_id": "file:tests/unit/test_connected_calibration_run.py:6c68db7e4c"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:7d2e7c4a491cf756cec4",
+      "observation_state": "declared",
+      "path": "tests/unit/test_fixture_index_graph.py",
+      "source_record_id": "file:tests/unit/test_fixture_index_graph.py:ae7f8a3c38"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:ec5f6eb1be5502712595",
+      "observation_state": "declared",
+      "path": "tests/unit/test_ingest_counts.py",
+      "source_record_id": "file:tests/unit/test_ingest_counts.py:9b116d2ac8"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:d2744908040773e94e67",
+      "observation_state": "declared",
+      "path": "tests/unit/test_live_calibration.py",
+      "source_record_id": "file:tests/unit/test_live_calibration.py:cc96807383"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:dbe45665454c56dcf814",
+      "observation_state": "declared",
+      "path": "tests/unit/test_live_preflight.py",
+      "source_record_id": "file:tests/unit/test_live_preflight.py:26be63d683"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:41b6514ad33553e4f0fb",
+      "observation_state": "declared",
+      "path": "tests/unit/test_semantic_index.py",
+      "source_record_id": "file:tests/unit/test_semantic_index.py:1b96c5ddac"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:8a6f75ff581866f67f23",
+      "observation_state": "declared",
+      "path": "tests/unit/test_sources_auth_mcp.py",
+      "source_record_id": "file:tests/unit/test_sources_auth_mcp.py:9a802c6574"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:489facf05a3964614ee4",
+      "observation_state": "declared",
+      "path": "tests/unit/test_stepik_adapter.py",
+      "source_record_id": "file:tests/unit/test_stepik_adapter.py:69b56a5c3a"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:4f63e2c8f4c5f725136d",
+      "observation_state": "declared",
+      "path": "tests/unit/test_stepik_discovery.py",
+      "source_record_id": "file:tests/unit/test_stepik_discovery.py:db98cf53c8"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:76a832bafcb5bd048632",
+      "observation_state": "declared",
+      "path": "tests/unit/test_stepik_smoke.py",
+      "source_record_id": "file:tests/unit/test_stepik_smoke.py:3a32ad86c3"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:d5620b289875d7ac78c8",
+      "observation_state": "declared",
+      "path": "tests/unit/test_stepik_sync.py",
+      "source_record_id": "file:tests/unit/test_stepik_sync.py:a546f3bc3d"
+    },
+    {
+      "event_kind": "test_run",
+      "event_role": "producer",
+      "heading_ref": null,
+      "id": "event:repo:adbc58815bc16dd5f2ae",
+      "observation_state": "declared",
+      "path": "tests/unit/test_storage_runtime_ids.py",
+      "source_record_id": "file:tests/unit/test_storage_runtime_ids.py:8ad8002693"
+    }
+  ],
+  "index_identity": {
+    "artifact_kind": "repository_event_index",
+    "content_digest": "80a94f747a4c452f38008364be8b3371874fbaecc10a4835b434296120af99a5",
+    "index_kind": "event",
+    "local_id": "index:repo-local:events",
+    "schema_ref": "aoa-kag:schemas/repo-local-kag-repository-index.schema.json"
+  },
+  "registry_output": {
+    "consumer": "aoa-kag-mcp",
+    "resource_shape": "repo-local-event-index",
+    "stable_fields": [
+      "id",
+      "event_kind",
+      "event_role",
+      "source_record_id",
+      "path",
+      "heading_ref"
+    ]
+  },
+  "repo": {
+    "git_ref": "git-index-source-tree",
+    "name": "aoa-course-connector",
+    "owner_type": "connector",
+    "root": "."
+  },
+  "schema_version": "aoa-repo-local-kag-repository-index-v1",
+  "source_index": {
+    "content_digest": "8ae5ab23698b47750dc7574e03fa1fb6809aecc4a81637c9106edddfcaeef144",
+    "local_id": "index:repo-local:source-surfaces",
+    "path": "kag/indexes/source_surface_index.json"
+  },
+  "summary": {
+    "entry_count": 29,
+    "kind_counts": {
+      "command_run": 1,
+      "decision_record": 1,
+      "release_lane": 1,
+      "test_run": 23,
+      "validation_receipt": 1,
+      "validation_run": 1,
+      "workflow_run": 1
+    }
+  }
+}
