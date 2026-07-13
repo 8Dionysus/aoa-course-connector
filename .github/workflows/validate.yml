@@ -11,7 +11,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - name: Check repo-local KAG index family
-        uses: 8Dionysus/aoa-kag/.github/actions/repo-local-kag-index@474ba0ecaf29fd6f7025e2656b9249c0ac9790f6
+        uses: 8Dionysus/aoa-kag/.github/actions/repo-local-kag-index@da9f50a581645b2173b99dbf771a63d447ec2fec
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
