@@ -12,6 +12,9 @@ jobs:
       - uses: actions/checkout@v4
       - name: Check repo-local KAG index family
         uses: 8Dionysus/aoa-kag/.github/actions/repo-local-kag-index@da9f50a581645b2173b99dbf771a63d447ec2fec
+        with:
+          history-ref: ${{ github.event.pull_request.base.sha || github.event.before || format('{0}^', github.sha) }}
+          event-history-ref: ${{ github.event.pull_request.base.sha || github.event.before || format('{0}^', github.sha) }}
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
