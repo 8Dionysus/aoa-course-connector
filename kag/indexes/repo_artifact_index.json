@@ -7,7 +7,7 @@
     {"anchor_id":"aoa:aoa-course-connector:anchor:b0aafd2055df7bdf240998cd","artifact_kind":"directory_marker","content_hash":"01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b","id":"aoa:aoa-course-connector:artifact:ffb60a731046fa6ceb4e8ba0","lineage_path":".connector-state/cache/.gitkeep","mime":"text/plain","path":".connector-state/cache/.gitkeep","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:99e63d03dc7d85966ac59e52"},
     {"anchor_id":"aoa:aoa-course-connector:anchor:e21cb42137f86f349381cecd","artifact_kind":"directory_marker","content_hash":"01ba4719c80b6fe911b091a7c05124b64eeece964e09c058ef8f9805daca546b","id":"aoa:aoa-course-connector:artifact:c10ea2dd5030b4f0098fa68d","lineage_path":".connector-state/data/.gitkeep","mime":"text/plain","path":".connector-state/data/.gitkeep","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:10474b174c41e7a59cae171a"},
     {"anchor_id":"aoa:aoa-course-connector:anchor:cfac88c3ba0d7e382f76ff4d","artifact_kind":"config","content_hash":"cda5d9ed0d9caf28ebadcfcb2b98fbe1d7a3364b87fedc3ed7f0bc529a8b17ea","id":"aoa:aoa-course-connector:artifact:a3046da0d15a27e89f2afe63","lineage_path":".env.example","mime":"text/plain","path":".env.example","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:cbd9c74e4f89a42872a3ee1e"},
-    {"anchor_id":"aoa:aoa-course-connector:anchor:e52c38a27c0df263ec1e550f","artifact_kind":"config","content_hash":"146f85c817b58d8182fe911901c48a90dc709893b58e2e001f6023b0f2aba71d","id":"aoa:aoa-course-connector:artifact:a5c0f08bc43f53a0451cad4a","lineage_path":".github/workflows/validate.yml","mime":"application/yaml","path":".github/workflows/validate.yml","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:e6e56ae60806685a638867bc"},
+    {"anchor_id":"aoa:aoa-course-connector:anchor:e52c38a27c0df263ec1e550f","artifact_kind":"config","content_hash":"74897f3cc8dc13bf9054c8ad8ed3da8f35ef1e3e3897b29856894e5e35980ce0","id":"aoa:aoa-course-connector:artifact:a5c0f08bc43f53a0451cad4a","lineage_path":".github/workflows/validate.yml","mime":"application/yaml","path":".github/workflows/validate.yml","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:359be34f31a2d594a0b7e0d3"},
     {"anchor_id":"aoa:aoa-course-connector:anchor:3a3f319302637e4d3de070ce","artifact_kind":"owner_metadata","content_hash":"d9a8f8c31951a2b96993311fc43408572f63fcab2bea4c9e66db6bd1760be29b","id":"aoa:aoa-course-connector:artifact:bc37d034bad564583790a46f","lineage_path":".gitignore","mime":"text/plain","path":".gitignore","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:b56a13ee1ba30f6f01c6eb55"},
     {"anchor_id":"aoa:aoa-course-connector:anchor:36f8a903299d2d038016da12","artifact_kind":"document","content_hash":"0c8885c52e0f74be960e74b9ba0503bbb12fa8fd6718c91070131a0ab8a48a0d","id":"aoa:aoa-course-connector:artifact:a54ff182c7e8acf56acfd6e4","lineage_path":"AGENTS.md","mime":"text/markdown","path":"AGENTS.md","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:a23247fa625f255fbe2808bd"},
     {"anchor_id":"aoa:aoa-course-connector:anchor:a0a2c7289ae5cdd04398d54e","artifact_kind":"document","content_hash":"770d4cef51f1dc85eb29d76e7658ecd04b109adb8a62fa0c0358f8f71e5c8001","id":"aoa:aoa-course-connector:artifact:22819d489ee6bbea874f5a03","lineage_path":"BOUNDARIES.md","mime":"text/markdown","path":"BOUNDARIES.md","provenance_ref":"deterministic","surface_state":"authored_source","temporal_ref":"current","trust_ref":"deterministic","version_id":"aoa:aoa-course-connector:artifact-version:e02e4904067d177c6f230634"},
@@ -208,7 +208,7 @@
   ],
   "index_identity": {
     "artifact_kind": "repository_artifact_index",
-    "content_digest": "f88525bbcde3745f57f30edbb07cd42085afa0f4bd308535f5aaeb148c1b92b1",
+    "content_digest": "9ee6a19717baaf08a3004bf29f5535ea81d8a916cacf46dfbf54183316ba3808",
     "index_kind": "artifact",
     "local_id": "index:repo-local:artifacts",
     "schema_ref": "aoa-kag:schemas/repo-local-kag-repository-index.schema.json"
@@ -294,7 +294,7 @@
   },
   "schema_version": "aoa-repo-local-kag-repository-index-v2",
   "source_index": {
-    "content_digest": "2fa238d86a2f85c8a5c7f9a4562389b62a1380f37f609e9315d15bd48dbf24f9",
+    "content_digest": "869dc95547678216e191b1a0dfde870d4b2dfe196069726e87c21c7104d724ec",
     "local_id": "index:repo-local:source-surfaces",
     "path": "kag/indexes/source_surface_index.json"
   },
