@@ -1,171 +1,72 @@
-# Query Model
+# Query model
 
-A useful result must include:
+The query layer turns normalized course objects into source-backed ranked
+results, lesson context, answers, evidence, and refresh information. It does not
+replace the source or eval authority.
 
-- matched snippet;
-- course/module/lesson/step path;
-- source URL;
-- source id;
-- fetched timestamp;
-- platform;
-- evidence IDs;
-- freshness state;
-- authority tier;
-- base relevance `score`;
-- freshness/authority/provenance/intent adjusted `rank_score`.
-- refresh hint that tells an agent how to rebuild local artifacts and how to
-  preflight/sync the source when a connected live route exists.
+## Keyword and semantic retrieval
 
-Answers should be built from query results rather than free-floating summaries.
+Keyword retrieval uses a versioned BM25 contract with body-text document length,
+IDF, explicit scoring metadata, and content-aware query stop terms. Legacy
+term-frequency artifacts may remain readable but do not satisfy current corpus
+integrity.
 
-## Index Modes
+Semantic retrieval supports `local_hashing_v1` as the deterministic offline
+baseline and `http_json_v1` as an operator-configured provider adapter.
+Provider metadata is recorded as `provider_config`; token value material is
+never stored or logged. `semantic_search` and `hybrid_search` reuse the
+provider contract recorded by the index.
 
-- `keyword`: deterministic BM25 search over normalized course knowledge items.
-  The index records `k1`, `b`, average body-text length, per-document body-text
-  length, IDF formula, and query stop-term policy. Stop terms are dropped only
-  when the query also has content terms; an all-stop-term query remains
-  searchable. Indexes created before the BM25 contract remain readable through
-  `legacy_tf`, but must be rebuilt to pass artifact integrity.
-- `semantic`: sparse vector search using the semantic provider declared by the
-  index artifact. The default `local_hashing_v1` provider hashes text tokens,
-  title/path tokens, adjacent bigrams, kind, platform, and authority tier
-  features into normalized vectors. The optional `http_json_v1` provider calls
-  an operator-configured JSON embedding endpoint for both document indexing and
-  query vectors.
-- `hybrid`: combines normalized BM25 score, semantic vector score, lexical
-  coverage, native-path coverage, and an explicit multi-term full-alignment
-  signal while preserving the same evidence-bearing result shape. It retrieves
-  a deeper candidate pool before reranking. A semantic candidate without a
-  BM25 candidate receives an explicit `keyword_fallback` from independent
-  lexical coverage, so long common documents cannot erase a shorter exact
-  match merely through term frequency.
+## Hybrid rank
 
-## Ranking
+Hybrid rank preserves BM25, semantic similarity, lexical coverage, all-term
+coverage, native-path alignment, freshness, and authority contributions in
+`rank_score` and rank features. Machine ids do not count as human path
+breadcrumbs.
 
-`score` remains the raw match score for the selected mode. `rank_score` is the
-ordering score used for results. It applies small transparent boosts/penalties
-for freshness state, authority tier, and complete source provenance, so current
-or authoritative source-backed items can beat stale or lower-authority items
-when the underlying relevance is otherwise tied or close.
-Browser crawl links whose lesson pages were not fetched are still searchable,
-but they carry `freshness_state: discovered_not_fetched` or `fetch_error` and
-`authority_tier: discovered_link`, which pushes them below fetched lesson,
-transcript, and comment evidence.
-Fetched browser lesson pages that expose only an access-denied, locked, gated,
-or prerequisite notice carry `freshness_state: access_denied`,
-`authority_tier: access_notice`, and
-`source_authority: browser_access_denied`. Content queries keep those notices
-below visible lesson evidence, but access-intent queries such as unavailable,
-locked, or no-access questions receive a visible `intent_boost` so the answer
-can report the access state first.
+Freshness is evidence, not truth. `authority_tier` distinguishes official
+source, mentor, learner, and derived content without making the ranker a verdict
+engine.
 
-Each result exposes `rank_features`, including `freshness_state`,
-`freshness_boost`, `authority_tier`, `authority_boost`, `intent`,
-`intent_boost`, `provenance_boost`, and `provenance_complete`. Hybrid results
-also expose these factors in `score_components`, together with normalized
-`keyword`, `semantic`, `lexical_alignment`, `place_alignment`, and
-`full_lexical_alignment` contributions when available. Technical IDs and URLs
-inside stored paths are excluded from human path-alignment features.
+## Source identity and path
 
-Each result also exposes `refresh_hint`. This is read-only plan metadata, not
-a network action. It always includes `local_rebuild_commands` for
-`build-index`, `build-semantic-index`, and `build-graph` against the current
-run, plus `local_query_commands` for `answer`, `lesson-context`, and
-`evidence inspect` against the same run and query mode. For connected
-platforms (`getcourse`, `skillspace`, `stepik`) it also
-includes a bounded `preflight connected-plan` command. When the result's
-`source_id` matches the local source registry, `source_refresh.registry_match`
-is true and the hint includes a registry-driven live `sync` command scoped with
-`--source-id`, plus sync-status guidance. When the source is an `offline_export`
-or a registry match is missing, the hint says what is blocked instead of
-pretending a live refresh can safely run.
+Every result keeps source id, platform, course/module/lesson path, object kind,
+native id, fetched time, freshness, authority tier, and evidence refs. Equivalent
+objects from different sources or native paths remain distinct.
 
-Answer packets summarize these per-result hints in `refresh_report` with
-unique source counts, registry-match counts, local rebuild commands, local
-query commands, source commands, and `network_touched: false`.
+Place-grounded retrieval accepts the correct canonical course and lesson context
+when duplicate documents exist inside that place. Exact-document recall remains
+a separate diagnostic.
 
-Answer packets also include `quality`, an
-`aoa_course_answer_quality_summary_v1` proof-field summary. It reports
-`ready`, blockers, result/evidence counts, platform counts, provenance-complete
-coverage, refresh-hint coverage, and a compact top-result reference. Agents can
-use it as the first go/no-go signal before trusting or citing a retrieval
-packet.
+## Answer and context
 
-The `evidence_chain` is also proof-bearing. Each evidence item keeps the
-source URL/id, matched snippet, fetched timestamp, platform, path, freshness
-state, authority tier, rank score, rank features, source authority when
-available, and refresh hint, so agents can cite and refresh the exact result
-without reopening the full result list.
+Answer packets retain ranked results, evidence chain, quality summary, blockers,
+and `refresh_hint`. Lesson-context packets add bounded graph neighborhoods
+around the evidence lesson. Evidence reports preserve source identity,
+freshness, authority, and refresh information without opening raw content.
 
-`aoa-course refresh query` wraps this into an `aoa_course_refresh_cycle_v1`
-packet. Without `--execute`, it is a read-only plan: current answer packet,
-selected source-backed result, planned rebuild/query/source commands, refresh
-hint, and optional connected-source plan. With `--strategy fixture --execute`, it
-proves the full loop against safe registered fixture sources: source sync,
-checkpoint selection, keyword/semantic/graph rebuild, refreshed answer packet,
-and a source-id comparison. Live execution is gated behind
-`--strategy live --execute --allow-network`.
+Cross-source queries keep one answer and evidence chain per source. Portfolio
+coverage can establish that at least one selected source answers a question,
+but it cannot turn an unrelated source into a failure or merge sources into one
+authority.
 
-Authority tiers are deterministic local signals derived from normalized item
-shape and safe metadata: `official_lesson`, `official_assignment`,
-`instructor_comment`, `mentor_comment`, `learner_comment`, `transcript`,
-`asset_metadata`, `access_notice`, `progress_metadata`,
-`discussion_comment`, or `unknown`.
-When adapters provide explicit `authority_tier`, `authority_label`, `role`, or
-`source_authority` metadata, the index preserves those adapter-derived signals
-before falling back to kind/label heuristics.
+## Refresh
 
-The local semantic index is the portable baseline, not a claim that a clone has
-external model credentials configured. External providers must keep this
-contract stable: source-backed snippets, path, URL, fetched timestamp, evidence
-IDs, source id, freshness, authority tier, rank features, and score components
-remain visible.
+A refresh plan returns `aoa_course_refresh_cycle_v1` with
+`registry_match`, source posture, local rebuild steps, and source-aware next
+actions. Planning is no-network. Execution uses the source registry and writes a
+new checkpoint rather than overwriting previous evidence.
 
-`http_json_v1` stores endpoint/model metadata and the token environment variable
-name in `provider_config`, but never stores the token value. The query route
-reads the semantic index provider and uses the same provider for query
-vectorization, so MCP `semantic_search` and `hybrid_search` stay in the same
-vector space as the indexed course documents.
+Incomplete or bounded ingest keeps removals inconclusive. `refresh_hint` never
+authorizes a network call by itself.
 
-`aoa-course eval answer-quality` checks this shape for fixture-safe starter,
-Stepik, and GetCourse runs: top-result source identity, path, snippet terms,
-freshness timestamps, authority/rank proof fields, evidence fields, and answer
-`quality` readiness must all survive retrieval.
-`aoa-course eval freshness-ranking` checks the ranking-specific conflict case:
-with equal base relevance, current evidence must rank above stale evidence.
-`aoa-course eval authority-ranking` checks the ranking-specific authority cases:
-official lesson text must rank above learner comments, and mentor comments must
-rank above learner comments when base relevance is tied.
-`aoa-course eval adapter-authority` checks that adapter-derived authority
-metadata from browser-session and Stepik fixtures survives normalization,
-indexing, and query packets.
-`aoa-course eval corpus-integrity` checks cross-artifact coverage, validates the
-BM25 scoring contract, and runs deterministic exact/place-grounded Recall@K
-probes from normalized objects. Place grounding accepts the exact document,
-its native place ID, or the same normalized course/module/lesson hierarchy;
-exact-document recall remains a separate diagnostic for duplicate records.
+## Integrity and eval boundary
 
-Commands:
+Corpus integrity compares canonical objects with indexes, vectors, postings,
+graph, evidence, and deterministic retrieval probes. Local answer, freshness,
+authority, and portfolio suites test connector behavior. None of these surfaces
+owns central proof or a course-content verdict.
 
-```bash
-aoa-course build-semantic-index --run starter-fixture
-aoa-course preflight semantic-provider --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --require-ready
-aoa-course build-semantic-index --run starter-fixture --provider http_json_v1 --embedding-endpoint "http://127.0.0.1:8000/embeddings" --embedding-model "local-course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN
-aoa-course query "bootloader rollback" --run starter-fixture --mode semantic
-aoa-course answer "bootloader rollback" --run starter-fixture --mode hybrid
-aoa-course evidence inspect "bootloader rollback" --run starter-fixture --mode hybrid
-aoa-course refresh query "bootloader rollback" --run starter-fixture --mode hybrid
-aoa-course refresh query "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid --strategy fixture --execute --sync-run stepik-refresh-cycle
-aoa-course materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
-aoa-course build-index --run freshness-ranking-fixture
-aoa-course build-semantic-index --run freshness-ranking-fixture
-aoa-course eval freshness-ranking
-aoa-course materialize fixture --run authority-ranking-fixture --fixture connector/fixtures/course/authority_conflict_course.json
-aoa-course build-index --run authority-ranking-fixture
-aoa-course build-semantic-index --run authority-ranking-fixture
-aoa-course eval authority-ranking
-aoa-course eval adapter-authority
-aoa-course eval corpus-integrity
-aoa-course mcp call semantic_search '{"query":"rollback","run":"starter-fixture"}'
-aoa-course mcp call hybrid_search '{"query":"rollback","run":"starter-fixture"}'
-```
+Exact query syntax belongs to the CLI parser and MCP tool schemas. Executable
+proof lives in tests, the verifier, and CI rather than in Markdown command
+blocks.

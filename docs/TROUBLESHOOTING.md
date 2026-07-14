@@ -1,54 +1,20 @@
-# Troubleshooting
+# Troubleshooting boundaries
 
-Run:
+Troubleshooting starts from the structured packet that owns the failing state,
+not from a copied command recipe.
 
-```bash
-aoa-course doctor
-aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration
-aoa-course readiness --run starter-fixture
-aoa-course storage status --measure
-python scripts/validate_connector.py
-```
+| Symptom | Inspect | Meaning |
+| --- | --- | --- |
+| Missing normalized bundle | ingest receipt and storage roots | materialization has not produced owner data |
+| Empty or stale keyword/semantic result | index metadata, freshness, provider contract | rebuild or provider calibration may be needed |
+| Missing graph context | graph metadata and canonical object inventory | graph projection is absent or incomplete |
+| Browser source blocked | host-specific auth inspection and preflight | state is missing, expired, or mismatched |
+| Bounded coverage | source coverage counts and gaps | inventory was intentionally not exhausted |
+| Apparent removals after bounded refresh | identity continuity | removal is inconclusive, not source deletion |
+| Partial connected run | stage failures and repair lanes | one bounded repair route remains |
+| MCP call error | structuredContent and server stderr | inspect the tool-owned error without exposing secrets |
+| Stats value unknown | fixture inventory and adapter coverage | the declared population is incomplete or malformed |
 
-`readiness` is read-only and does not touch the network. Check
-`operational_ready`, `connected_live_ready`, `lanes`, and `next_commands` before
-rerunning lower-level sync, index, graph, or MCP commands.
-
-If `readiness` reports missing starter artifacts or a missing default
-connected-run receipt, rerun `bootstrap fixture`. The command is fixture-only,
-does not use secrets, proves GetCourse/Skillspace/Stepik fixture routes by
-default, and writes only local runtime state.
-
-If query returns no results, rebuild:
-
-```bash
-aoa-course materialize fixture --run starter-fixture
-aoa-course build-index --run starter-fixture
-aoa-course build-graph --run starter-fixture
-```
-
-If a live browser route cannot read a connected account, inspect the local
-storage state before rerunning discovery or sync:
-
-```bash
-aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --expect-origin-contains "school.example"
-```
-
-If the status is `missing`, `empty`, or `mismatch`, rerun
-`auth capture-browser-state` and log in with the same account that can view the
-course pages.
-
-For a combined source/auth readiness report that does not touch the network:
-
-```bash
-aoa-course preflight live --platform getcourse \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --expect-origin school.example
-```
-
-For Stepik authenticated routes:
-
-```bash
-aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN
-```
+Exact recovery syntax belongs to the CLI parser and packet-provided next action,
+while the root `AGENTS.md` names the bounded validation route. Do not paste
+private payloads into issues, docs, evals, or stats artifacts.

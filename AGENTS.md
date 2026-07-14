@@ -7,7 +7,8 @@ Root route card for `aoa-course-connector`.
 This repository owns the course-platform member of the AoA connector family:
 source policy, course schemas, adapter contracts, authorized-session ingestion,
 normalization, local indexes, graph packets, answer packets, MCP surface, and
-local evals.
+local evals. Its root `stats/` port owns bounded measurements over
+connector-authored source and materialization evidence.
 
 It is public method and code, not a course data dump.
 
@@ -23,138 +24,37 @@ It is public method and code, not a course data dump.
   captions/transcripts, and evidence; do not make DRM bypass connector behavior.
 - Runtime/MCP deployment belongs in `abyss-stack`; this repo owns connector
   logic and an independently runnable MCP server package.
+- Shared statistical grammar and cross-owner composition belong to
+  `aoa-stats`; local stats cannot claim eval, readiness, runtime, or source
+  authority.
+
+## Read Before Editing
+
+1. `CHARTER.md`, `BOUNDARIES.md`, and the relevant design document under
+   `docs/`.
+2. `connector/SOURCE_POLICY.md` and `connector/STORAGE_POLICY.md` for source or
+   storage changes.
+3. The nearest nested `AGENTS.md` for `.connector-state/`, `evals/`, `kag/`, or
+   `stats/`.
+4. The executable owner: CLI parser and implementation, validator, test, or CI
+   workflow relevant to the change.
 
 ## Validation
 
-Run from the repository root:
+Exact command syntax belongs to the executable CLI, scripts, tests, and CI
+workflow. Ordinary Markdown explains behavior and links to those owners; it
+does not duplicate command catalogs.
+
+Use this bounded operator route from the repository root:
 
 ```bash
 python scripts/validate_connector.py
 PYTHONPATH=src python -m pytest -q
 PYTHONPATH=src python -m aoa_course_connector.cli doctor
-PYTHONPATH=src python -m aoa_course_connector.cli bootstrap fixture --run starter-fixture --connected-run connected-calibration
-PYTHONPATH=src python -m aoa_course_connector.cli readiness --run starter-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli connect profile --name operator-live --getcourse-url "https://school.example/teach/control/stream" --skillspace-url "https://academy.example/course/demo" --stepik-course-id 67 --run connected-live-calibration --query "course-specific question" --include-step-sources --max-step-sources all --step-source-timeout 0.5 --semantic-provider http_json_v1 --embedding-endpoint "https://embed.example/v1" --embedding-model "course-embedding" --embedding-token-env AOA_COURSE_EMBEDDING_TOKEN --write "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-PYTHONPATH=src python -m aoa_course_connector.cli connect inspect "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-PYTHONPATH=src python -m aoa_course_connector.cli connect status "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-PYTHONPATH=src python -m aoa_course_connector.cli connect apply "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json"
-PYTHONPATH=src python -m aoa_course_connector.cli connect run "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/connections/operator-live.connection-profile.json" --platform getcourse
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connection_profile_inspect '{"profile_path":"'${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}'/connections/operator-live.connection-profile.json"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connection_profile_status '{"profile_path":"'${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}'/connections/operator-live.connection-profile.json"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connection_profile_run_plan '{"profile_path":"'${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}'/connections/operator-live.connection-profile.json","platform":"getcourse"}'
-PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run starter-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run starter-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run starter-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --help
-PYTHONPATH=src python -m aoa_course_connector.cli preflight semantic-provider --run starter-fixture --require-ready
-PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run starter-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader unlock rollback"
-PYTHONPATH=src python -m aoa_course_connector.cli answer "bootloader rollback" --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli lesson-context "bootloader rollback" --mode hybrid --graph-limit 12
-PYTHONPATH=src python -m aoa_course_connector.cli refresh query "bootloader rollback" --run starter-fixture --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-fixture --run stepik-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli materialize stepik-live --help
-PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --from-fixture --run stepik-account-discovery-fixture --register --source-limit 1
-PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform stepik
-PYTHONPATH=src python -m aoa_course_connector.cli auth import-firefox-state stepik account --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --expect-origin-contains stepik.org
-PYTHONPATH=src python -m aoa_course_connector.cli auth capture-browser-state stepik account --login-url "https://stepik.org/users/me" --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --expect-origin-contains stepik.org
-PYTHONPATH=src python -m aoa_course_connector.cli discover stepik-account --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --register --max-pages 5
-PYTHONPATH=src python -m aoa_course_connector.cli discover stepik 67 --register --title "Stepik course 67"
-PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-fixture --run stepik-sync-fixture --build-artifacts
-PYTHONPATH=src python -m aoa_course_connector.cli sync stepik-live --state-file "${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/stepik/account.storage-state.json" --source-id "source:stepik:..." --build-artifacts
-PYTHONPATH=src python -m aoa_course_connector.cli sync status --run stepik-sync-fixture --platform stepik
-PYTHONPATH=src python -m aoa_course_connector.cli eval ingest-coverage
-PYTHONPATH=src python -m aoa_course_connector.cli eval corpus-integrity
-PYTHONPATH=src python -m aoa_course_connector.cli eval stepik-sync
-PYTHONPATH=src python -m aoa_course_connector.cli smoke stepik-fixture 67 --run stepik-smoke-fixture --query "Stepik public API evidence"
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run stepik-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run stepik-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run stepik-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval clean-api
-PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register
-PYTHONPATH=src python -m aoa_course_connector.cli discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register
-PYTHONPATH=src python -m aoa_course_connector.cli sources list
-PYTHONPATH=src python -m aoa_course_connector.cli sources answer "Stepik public API evidence" --platform stepik --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli sources answer-matrix --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli eval source-registry-query --query "Stepik public API evidence" --query "canonical course objects" --platform stepik --kind smoke --mode hybrid
-PYTHONPATH=src python -m aoa_course_connector.cli eval connected-portfolio
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call list_sources '{"include_source_refs":false,"connected_run_limit":2}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call source_answer '{"source_id":"source:stepik:...","query":"Stepik public API evidence"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call sources_answer '{"platforms":["stepik"],"query":"Stepik public API evidence"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call sources_answer_matrix '{"platforms":["stepik"],"queries":["Stepik public API evidence","canonical course objects"],"mode":"hybrid"}'
-PYTHONPATH=src python -m aoa_course_connector.cli eval browser-discovery
-PYTHONPATH=src python -m aoa_course_connector.cli sync browser-fixture --run browser-sync-fixture --build-artifacts
-PYTHONPATH=src python -m aoa_course_connector.cli sync status --run browser-sync-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval browser-sync
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call sync_status '{"sync_run":"browser-sync-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval answer-quality
-PYTHONPATH=src python -m aoa_course_connector.cli eval retrieval-loop
-PYTHONPATH=src python -m aoa_course_connector.cli eval install-route
 python scripts/verify_agent_install_route.py --skip-pytest
-PYTHONPATH=src python -m aoa_course_connector.cli answer "sidecar caption safe mode recovery logs" --run getcourse-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run freshness-ranking-fixture --fixture connector/fixtures/course/freshness_conflict_course.json
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run freshness-ranking-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run freshness-ranking-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval freshness-ranking
-PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run place-ranking-fixture --fixture connector/fixtures/course/place_conflict_course.json
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run place-ranking-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run place-ranking-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval place-ranking
-PYTHONPATH=src python -m aoa_course_connector.cli materialize fixture --run authority-ranking-fixture --fixture connector/fixtures/course/authority_conflict_course.json
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run authority-ranking-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-semantic-index --run authority-ranking-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval authority-ranking
-PYTHONPATH=src python -m aoa_course_connector.cli materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli answer "sidecar subtitle ANR tombstone evidence" --run skillspace-browser-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval browser-hard-adapters
-PYTHONPATH=src python -m aoa_course_connector.cli eval adapter-authority
-PYTHONPATH=src python -m aoa_course_connector.cli eval browser-progress-comments
-PYTHONPATH=src python -m aoa_course_connector.cli eval browser-transcripts
-PYTHONPATH=src python -m aoa_course_connector.cli eval semantic-index
-PYTHONPATH=src python -m aoa_course_connector.cli eval live-calibration
-PYTHONPATH=src python -m aoa_course_connector.cli calibration status --run connected-calibration
-PYTHONPATH=src python -m aoa_course_connector.cli calibration connected-run --mode fixture --run connected-fixture-proof
-PYTHONPATH=src python -m aoa_course_connector.cli calibration status --run connected-fixture-proof
-PYTHONPATH=src python -m aoa_course_connector.cli calibration query --run connected-fixture-proof --kind smoke
-PYTHONPATH=src python -m aoa_course_connector.cli calibration query-matrix --run connected-fixture-proof --kind smoke --query "GetCourse bootloader rollback evidence" --query "Skillspace logcat bugreport evidence" --query "Stepik public API evidence"
-PYTHONPATH=src python -m aoa_course_connector.cli calibration build --help
-PYTHONPATH=src python -m aoa_course_connector.cli calibration intake --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/live-calibration-fixture/calibration/live_calibration_packet.json" --run live-calibration-intake
-PYTHONPATH=src python -m aoa_course_connector.cli auth plan-browser-state getcourse https://school.example
-PYTHONPATH=src python -m aoa_course_connector.cli preflight live --platform getcourse
-PYTHONPATH=src python -m aoa_course_connector.cli preflight connected-plan --live-scope bounded
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call live_preflight '{}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"live_scope":"bounded"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_source_plan '{"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run '{"run":"mcp-connected-fixture","mode":"fixture","platforms":["stepik"],"query":"Stepik public API evidence"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_query '{"run":"mcp-connected-fixture","kinds":["smoke"]}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call semantic_provider_preflight '{"run":"starter-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call browser_snapshot_audit '{"snapshot_path":"connector/fixtures/browser/getcourse_starter_snapshot.json","platform":"getcourse"}'
-PYTHONPATH=src python -m aoa_course_connector.cli readiness --platform getcourse --query "course-specific question" --link-pattern "*/lessons/*" --max-lessons 7 --max-pages 3 --max-sources 4 --live-scope bounded
-PYTHONPATH=src python -m aoa_course_connector.cli inspect browser-snapshot connector/fixtures/browser/getcourse_starter_snapshot.json --platform getcourse --require-ready
-PYTHONPATH=src python -m aoa_course_connector.cli smoke browser-fixture --platform getcourse --run getcourse-browser-smoke-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run getcourse-browser-crawl-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run getcourse-browser-crawl-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli crawl browser-fixture --platform skillspace --run skillspace-browser-crawl-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-index --run skillspace-browser-crawl-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli build-graph --run skillspace-browser-crawl-fixture
-PYTHONPATH=src python -m aoa_course_connector.cli eval browser-crawl
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call graph_neighbors '{"node_id":"lesson:starter:unlock-risk","run":"starter-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call freshness_report '{"run":"starter-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call answer '{"query":"bootloader rollback","run":"starter-fixture","mode":"hybrid"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call evidence_report '{"query":"rollback","run":"starter-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call refresh_plan '{"query":"rollback","run":"starter-fixture","mode":"hybrid"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_status '{"run":"connected-fixture-proof"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_query '{"run":"connected-fixture-proof","kinds":["smoke"],"entry_limit":2}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connected_run_query_matrix '{"run":"connected-fixture-proof","kinds":["smoke"],"queries":["GetCourse bootloader rollback evidence","Skillspace logcat bugreport evidence","Stepik public API evidence"],"entry_limit":3}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call connector_readiness '{"runs":["starter-fixture"],"platforms":["stepik"],"live_scope":"full-course","include_step_sources":true,"max_step_sources":"all","step_source_timeout":0.5}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call ingest_status '{"run":"starter-fixture"}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp call artifact_integrity '{"run":"starter-fixture","probe_limit":12,"recall_k":5}'
-PYTHONPATH=src python -m aoa_course_connector.cli mcp tools
-printf '%s\n' '{"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-11-25","capabilities":{},"clientInfo":{"name":"local-agent","version":"0"}}}' '{"jsonrpc":"2.0","id":2,"method":"tools/list"}' | PYTHONPATH=src python -m aoa_course_connector.mcp.server
+AOA_STATS_ROOT=/path/to/aoa-stats python scripts/validate_local_stats_port.py
 ```
+
+The CI workflow owns the exhaustive fixture/eval command matrix. The CLI
+parser owns subcommand syntax; inspect it with `aoa-course --help` and the
+relevant nested `--help` route rather than copying commands into docs.

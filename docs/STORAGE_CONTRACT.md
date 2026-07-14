@@ -1,21 +1,18 @@
-# Storage Contract
+# Storage contract
 
-Generated connector state is rebuildable and private unless explicitly exported
-by the operator.
+Mutable connector state is external to the authored repository.
 
-The repo-local default `.connector-state` is only for small smoke runs. Real
-course bases should use external roots:
+- `AOA_COURSE_DATA_ROOT` owns raw and normalized run data.
+- `AOA_COURSE_CACHE_ROOT` owns rebuildable caches and indexes.
+- `AOA_COURSE_AUTH_ROOT` owns credentials and browser-session state.
+- `AOA_COURSE_ARTIFACT_ROOT` owns receipts, reports, connection profiles, and
+  calibration artifacts.
+- `AOA_COURSE_INSTANCE_ROOT` may provide one parent for all four roots.
 
-```bash
-AOA_COURSE_DATA_ROOT
-AOA_COURSE_CACHE_ROOT
-AOA_COURSE_AUTH_ROOT
-AOA_COURSE_ARTIFACT_ROOT
-```
+Repository fixtures are small public method examples. They are not a fallback
+location for live data. Portable packets may reference external paths but must
+not copy private content or secret values into Git.
 
-Stable objects should be rebuildable from raw or normalized artifacts.
-
-Runtime ids such as `--run`, `--sync-run`, and discovery run names are portable
-storage slugs, not filesystem paths. Use 1-160 letters, digits, dots,
-underscores, or hyphens, starting with a letter or digit. The connector rejects
-path-like ids before writing run, discovery, or sync artifacts.
+The executable storage status and fresh-install verifier own path resolution
+checks. Runtime deployment and host storage lifecycle belong to
+`abyss-stack` and `abyss-machine`.
