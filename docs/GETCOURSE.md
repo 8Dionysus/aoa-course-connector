@@ -1,122 +1,33 @@
-# GetCourse Notes
+# GetCourse adapter
 
-GetCourse is a priority hard adapter.
+GetCourse is a browser-session hard adapter over the shared course connector
+pipeline. It uses only pages available to the connected operator account and
+does not bypass platform authorization.
 
-Expected route:
+## Discovery and crawl
 
-- browser-session auth state under `AOA_COURSE_AUTH_ROOT`;
-- discover visible trainings/courses;
-- discover lesson groups and lessons;
-- extract lesson title, text blocks, attachments metadata, available captions or
-  transcripts, comments when visible, and source URLs;
-- record media as asset metadata unless permitted resolution is explicitly
-  enabled.
+Account catalogs may expose course entrypoints through standard links or
+GetCourse-specific embedded routes. Discovery follows bounded catalog
+pagination and retains the native course URL as evidence.
 
-The connector should not depend on media download to deliver useful knowledge.
+Course crawl recognizes GetCourse lesson routes, records the complete visible
+lesson inventory before limits, and preserves module/title hints. Missing lesson
+pages become explicit `discovered_not_fetched` evidence.
 
-## Current Working Route
+## Content
 
-`aoa-course-connector` supports GetCourse through the shared browser-session
-discovery, snapshot, and course-tree crawl adapters. Fixture proofs cover
-paginated catalog receipts, visible course progress, visible discussion
-comments, visible transcripts, and caption sidecars from `<track>` resources:
+Accessible lesson pages may provide text, assets, assignments, visible progress,
+mentor or learner comments, transcript blocks, and caption sidecars. Author role
+and browser-source authority survive normalization and ranking.
 
-```bash
-aoa-course discover browser-fixture --platform getcourse --run getcourse-browser-discovery-fixture --register --max-sources 50
-aoa-course sources list
-aoa-course sync browser-fixture --run browser-sync-fixture --platform getcourse --source-id "source:getcourse:..." --build-artifacts
-aoa-course sync status --run browser-sync-fixture --platform getcourse
+Access-denied, prerequisite, or locked pages remain blocked evidence and do not
+supply normal lesson body text.
 
-aoa-course materialize browser-fixture --platform getcourse --run getcourse-browser-fixture
-aoa-course build-index --run getcourse-browser-fixture
-aoa-course build-graph --run getcourse-browser-fixture
-aoa-course answer "GetCourse bootloader rollback evidence" --run getcourse-browser-fixture
-aoa-course answer "mentor anti-rollback vendor boot" --run getcourse-browser-fixture
-aoa-course answer "transcript excerpt vendor boot recovery plan" --run getcourse-browser-fixture
-aoa-course answer "sidecar caption safe mode recovery logs" --run getcourse-browser-fixture
-aoa-course eval browser-progress-comments
-aoa-course eval browser-transcripts
+## Authorization
 
-aoa-course crawl browser-fixture --platform getcourse --run getcourse-browser-crawl-fixture --max-lessons 20
-aoa-course build-index --run getcourse-browser-crawl-fixture
-aoa-course build-graph --run getcourse-browser-crawl-fixture
-aoa-course answer "GetCourse bootloader rollback evidence" --run getcourse-browser-crawl-fixture
-```
+Each registered school host requires matching local browser state.
+Host-mismatched or expired state remains blocked in preflight. Live discovery,
+crawl, sync, and smoke require an explicit network gate.
 
-For live operator-owned pages, use `discover browser-live` or
-`crawl browser-live` with a local Playwright storage-state file under
-`AOA_COURSE_AUTH_ROOT`. Start discovery from a visible stream/catalog page, then
-crawl the selected course entrypoint:
-
-```bash
-aoa-course auth import-firefox-state getcourse "https://school.example" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --expect-origin-contains "school.example"
-
-aoa-course auth capture-browser-state getcourse "https://school.example" \
-  --login-url "https://school.example/cms/system/login" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --expect-origin-contains "school.example"
-
-aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --expect-origin-contains "school.example"
-
-aoa-course discover browser-live "https://school.example/teach/control/stream" \
-  --platform getcourse \
-  --run getcourse-live-discovery \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --register \
-  --max-sources 50 \
-  --max-pages 5
-
-aoa-course discover browser-live "https://school.example/c/s/index" \
-  --platform getcourse \
-  --run getcourse-live-chatium-discovery \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --register \
-  --max-sources 50 \
-  --max-pages 5
-
-aoa-course crawl browser-live "https://school.example/teach/control/stream" \
-  --platform getcourse \
-  --run getcourse-live-crawl \
-  --source-id "source:getcourse:..." \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --max-lessons 50
-
-aoa-course sync browser-live \
-  --run getcourse-live-sync \
-  --platform getcourse \
-  --source-id "source:getcourse:..." \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --max-lessons 50 \
-  --build-artifacts
-
-aoa-course smoke browser-live \
-  --platform getcourse \
-  --run getcourse-live-smoke \
-  --source-id "source:getcourse:..." \
-  --catalog-url "https://school.example/teach/control/stream" \
-  --course-url "https://school.example/teach/control/stream/view/id/201" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --query "course-specific question"
-```
-
-Some GetCourse student catalogs render training cards through the
-Chatium/app-proxy route instead of plain `<a href>` links. Live discovery
-captures those JSON catalog payloads and registers `training/<id>` blocks as
-canonical `/teach/control/stream/view/id/<id>` browser-session sources.
-
-Pass the registered `--source-id` (or use the exact registered course URL so the
-CLI can resolve it from the local registry) when running live crawl, materialize,
-or smoke commands directly. This preserves the registry-backed source id in
-normalized bundles, answer evidence, and refresh hints, so agents can refresh
-the original course source instead of registering individual lesson URLs.
-
-GetCourse may return a lesson-shaped page whose visible content is only an
-access-denied or prerequisite notice. The connector preserves that state as
-`access_denied`/`access_notice` evidence with
-`source_authority: browser_access_denied`, lowers graph confidence for the
-lesson edge, and avoids indexing prerequisite boilerplate as official lesson
-content. This lets agents answer whether the connected account can currently
-see a lesson without confusing a locked-page notice for the lesson itself.
+Fixtures and example hosts prove adapter method only. Private pages, state,
+normalized content, indexes, graphs, and reports remain outside Git.

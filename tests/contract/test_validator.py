@@ -23,40 +23,31 @@ def test_connector_validator_passes() -> None:
     assert result.returncode == 0, result.stdout + result.stderr
 
 
-def test_agent_install_route_rejects_platform_narrowed_bootstrap() -> None:
+def test_markdown_hygiene_rejects_command_fence_outside_agents(tmp_path: Path) -> None:
     validator = load_validator_module()
+    (tmp_path / "README.md").write_text(
+        "# Readme\n\n```bash\npython scripts/validate_connector.py\n```\n",
+        encoding="utf-8",
+    )
+    (tmp_path / "AGENTS.md").write_text(
+        "# AGENTS.md\n\n```bash\npython scripts/validate_connector.py\n```\n",
+        encoding="utf-8",
+    )
     errors: list[str] = []
 
-    validator._check_agent_install_route_commands(
-        "\n".join(
-            [
-                "Run `aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration --platform stepik`.",
-                "Run `aoa-course readiness --run starter-fixture` and inspect `connector_readiness`.",
-            ]
-        ),
-        errors,
-    )
+    validator._check_markdown_command_hygiene(tmp_path, errors)
 
-    assert "Agent install route missing exact fixture bootstrap command" in errors
-    assert "Agent install route must not narrow fixture bootstrap plan with --platform" in errors
+    assert errors == ["command block outside AGENTS.md: README.md:3"]
 
 
-def test_agent_install_route_rejects_platform_before_required_bootstrap_args() -> None:
+def test_markdown_hygiene_rejects_unterminated_fence(tmp_path: Path) -> None:
     validator = load_validator_module()
+    (tmp_path / "docs.md").write_text("# Broken\n\n```json\n{}\n", encoding="utf-8")
     errors: list[str] = []
 
-    validator._check_agent_install_route_commands(
-        "\n".join(
-            [
-                "Run `aoa-course bootstrap fixture --platform stepik --run starter-fixture --connected-run connected-calibration`.",
-                "Run `aoa-course readiness --run starter-fixture` and inspect `connector_readiness`.",
-            ]
-        ),
-        errors,
-    )
+    validator._check_markdown_command_hygiene(tmp_path, errors)
 
-    assert "Agent install route missing exact fixture bootstrap command" in errors
-    assert "Agent install route must not narrow fixture bootstrap plan with --platform" in errors
+    assert errors == ["unterminated Markdown fence: docs.md:3"]
 
 
 def test_kag_provider_validator_reports_non_list_record_classes(monkeypatch) -> None:

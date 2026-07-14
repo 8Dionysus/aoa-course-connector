@@ -5,15 +5,17 @@ from __future__ import annotations
 
 import json
 import re
-import shlex
 import sys
 from pathlib import Path
 
 
-BOOTSTRAP_FIXTURE_INSTALL_COMMAND = "aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration"
-PLATFORM_NARROWED_BOOTSTRAP_ERROR = "Agent install route must not narrow fixture bootstrap plan with --platform"
-COMMAND_SPAN_RE = re.compile(r"`([^`\n]+)`")
 PUBLIC_STATUS_GETCOURSE_SOURCE_ID_RE = re.compile(r"source:getcourse:[0-9a-f]{10,}")
+COMMAND_FENCE_LANGUAGES = {"bash", "sh", "shell", "console", "terminal", "powershell", "cmd"}
+COMMAND_LINE_RE = re.compile(
+    r"^\s*(?:\$\s+|(?:PYTHONPATH|AOA_[A-Z0-9_]+)=|python(?:3)?\s+|pytest(?:\s|$)|"
+    r"aoa-course(?:\s|$)|pip(?:3)?\s+|uv\s+|git\s+|printf\s+|export\s+)",
+    re.IGNORECASE,
+)
 
 REQUIRED_FILES = [
     "AGENTS.md",
@@ -136,7 +138,13 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/sync/checkpoints.py",
     "src/aoa_course_connector/sync/stepik.py",
     "scripts/validate_connector.py",
+    "scripts/validate_local_stats_port.py",
     "scripts/verify_agent_install_route.py",
+    "stats/AGENTS.md",
+    "stats/README.md",
+    "stats/port.manifest.json",
+    "stats/packets/public-fixture-structural-materialization-ratio.reference.json",
+    "tests/unit/test_local_stats_port.py",
 ]
 
 REQUIRED_DIRS = [
@@ -175,6 +183,8 @@ REQUIRED_DIRS = [
     "kag/nodes",
     "kag/projections",
     "kag/receipts",
+    "stats",
+    "stats/packets",
 ]
 
 REQUIRED_SCHEMAS = [
@@ -251,39 +261,6 @@ KAG_RECORD_FILES = {
 KAG_REQUIRED_RECORD_CLASSES = set(KAG_RECORD_FILES)
 
 
-def _documented_commands(text: str) -> list[str]:
-    commands = [match.strip() for match in COMMAND_SPAN_RE.findall(text)]
-    commands.extend(line.strip() for line in text.splitlines() if line.strip().startswith("aoa-course "))
-    return commands
-
-
-def _has_exact_documented_command(text: str, command: str) -> bool:
-    return command in _documented_commands(text)
-
-
-def _command_tokens(command: str) -> list[str]:
-    try:
-        return shlex.split(command)
-    except ValueError:
-        return command.split()
-
-
-def _is_fixture_bootstrap_command(command: str) -> bool:
-    tokens = _command_tokens(command)
-    return tokens[:3] == ["aoa-course", "bootstrap", "fixture"]
-
-
-def _check_agent_install_route_commands(agent_install_raw: str, errors: list[str]) -> None:
-    if "aoa-course readiness --run starter-fixture" not in agent_install_raw or "connector_readiness" not in agent_install_raw:
-        errors.append("Agent install route missing connector readiness check")
-    if not _has_exact_documented_command(agent_install_raw, BOOTSTRAP_FIXTURE_INSTALL_COMMAND):
-        errors.append("Agent install route missing exact fixture bootstrap command")
-    for command in _documented_commands(agent_install_raw):
-        if _is_fixture_bootstrap_command(command) and "--platform" in _command_tokens(command):
-            if PLATFORM_NARROWED_BOOTSTRAP_ERROR not in errors:
-                errors.append(PLATFORM_NARROWED_BOOTSTRAP_ERROR)
-
-
 def main() -> int:
     repo_root = Path(__file__).resolve().parents[1]
     errors: list[str] = []
@@ -300,7 +277,12 @@ def main() -> int:
             errors.append(f"missing schema: connector/schemas/{name}")
         else:
             _load_json(path, errors)
-    for path in [*repo_root.glob("connector/fixtures/**/*.json"), *repo_root.glob("evals/suites/**/*.json"), *repo_root.glob("kag/**/*.json")]:
+    for path in [
+        *repo_root.glob("connector/fixtures/**/*.json"),
+        *repo_root.glob("evals/suites/**/*.json"),
+        *repo_root.glob("kag/**/*.json"),
+        *repo_root.glob("stats/**/*.json"),
+    ]:
         _load_json(path, errors)
     gitignore = (repo_root / ".gitignore").read_text(encoding="utf-8") if (repo_root / ".gitignore").exists() else ""
     env_example = (repo_root / ".env.example").read_text(encoding="utf-8") if (repo_root / ".env.example").exists() else ""
@@ -328,6 +310,7 @@ def main() -> int:
         if path.is_dir() and rel_parts and rel_parts[0] in FORBIDDEN_HEAVY_ROOTS and not _is_allowed_kag_indexes(rel_parts):
             errors.append(f"forbidden generated/private directory exists inside repository: {path.relative_to(repo_root)}")
     _check_kag_provider(repo_root, errors)
+    _check_markdown_command_hygiene(repo_root, errors)
     _check_text(repo_root, errors, warnings)
     payload = {
         "schema": "aoa_course_connector_validation_v1",
@@ -488,6 +471,40 @@ def _check_source_refs(repo_root: Path, rel: str, source_refs: object, errors: l
             errors.append(f"KAG record {rel} source_ref missing local file: {path}")
 
 
+def _check_markdown_command_hygiene(repo_root: Path, errors: list[str]) -> None:
+    """Keep executable command blocks in their owners or an applicable AGENTS route."""
+
+    for path in sorted(repo_root.rglob("*.md")):
+        if path.name == "AGENTS.md" or ".git" in path.parts or ".deps" in path.parts:
+            continue
+        relative = path.relative_to(repo_root)
+        fence_marker = ""
+        fence_language = ""
+        fence_start = 0
+        body: list[str] = []
+        for line_number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), start=1):
+            stripped = line.lstrip()
+            if not fence_marker:
+                if stripped.startswith("```") or stripped.startswith("~~~"):
+                    fence_marker = stripped[:3]
+                    fence_language = stripped[3:].strip().casefold().split(maxsplit=1)[0] if stripped[3:].strip() else ""
+                    fence_start = line_number
+                    body = []
+                continue
+            if stripped.startswith(fence_marker):
+                command_block = fence_language in COMMAND_FENCE_LANGUAGES or any(COMMAND_LINE_RE.match(item) for item in body)
+                if command_block:
+                    errors.append(f"command block outside AGENTS.md: {relative}:{fence_start}")
+                fence_marker = ""
+                fence_language = ""
+                fence_start = 0
+                body = []
+            else:
+                body.append(line)
+        if fence_marker:
+            errors.append(f"unterminated Markdown fence: {relative}:{fence_start}")
+
+
 def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None:
     agents = (repo_root / "AGENTS.md").read_text(encoding="utf-8")
     source_policy = (repo_root / "connector" / "SOURCE_POLICY.md").read_text(encoding="utf-8").casefold()
@@ -498,7 +515,6 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     agent_install_raw = (repo_root / "docs" / "AGENT_INSTALL_ROUTE.md").read_text(encoding="utf-8")
     status_doc_raw = (repo_root / "docs" / "STATUS.md").read_text(encoding="utf-8")
     readiness_raw = (repo_root / "src" / "aoa_course_connector" / "readiness.py").read_text(encoding="utf-8")
-    cli_raw = (repo_root / "src" / "aoa_course_connector" / "cli.py").read_text(encoding="utf-8")
     connection_profile_raw = (repo_root / "src" / "aoa_course_connector" / "connection_profile.py").read_text(encoding="utf-8")
     status_raw = (repo_root / "src" / "aoa_course_connector" / "status.py").read_text(encoding="utf-8")
     mcp_server_raw = (repo_root / "src" / "aoa_course_connector" / "mcp" / "server.py").read_text(encoding="utf-8")
@@ -510,29 +526,22 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     architecture_doc = (repo_root / "docs" / "ARCHITECTURE.md").read_text(encoding="utf-8").casefold()
     clean_api_doc = (repo_root / "docs" / "CLEAN_API_ADAPTERS.md").read_text(encoding="utf-8").casefold()
     mcp = (repo_root / "docs" / "MCP_USAGE.md").read_text(encoding="utf-8")
-    if "build-semantic-index --run stepik-fixture" not in agents:
-        errors.append("AGENTS route missing Stepik semantic index build before hybrid answer-quality eval")
     if PUBLIC_STATUS_GETCOURSE_SOURCE_ID_RE.search(status_doc_raw):
         errors.append("docs/STATUS.md must not expose deterministic runtime-only GetCourse source IDs")
-    if "build-semantic-index --help" not in agents:
-        errors.append("AGENTS route missing semantic provider option help check")
-    if "eval live-calibration" not in agents or "calibration build" not in agents or "calibration intake" not in agents or "calibration connected-run" not in agents or "calibration status" not in agents or "calibration query" not in agents:
-        errors.append("AGENTS route missing live calibration packet/intake validation")
     for line in agents.splitlines():
         if "calibration connected-run --mode live" in line and "--allow-network" in line:
             errors.append("AGENTS validation must not require live connected-run --allow-network")
-    portable_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
-    fixture_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/live-calibration-fixture/calibration/live_calibration_packet.json"
-    if fixture_packet_path not in agents:
-        errors.append("AGENTS route missing portable fixture live-calibration packet path")
-    for label, text in [
-        ("README live calibration route", readme_raw),
-        ("CLI usage live calibration route", cli_usage_raw),
+    for token in [
+        "scripts/validate_connector.py",
+        "pytest",
+        "verify_agent_install_route.py",
+        "validate_local_stats_port.py",
+        "executable cli",
+        "ci workflow",
     ]:
-        if portable_packet_path not in text:
-            errors.append(f"{label} missing portable connected-live-calibration packet path")
-    if "calibration connected-run --mode fixture" not in agent_install_raw or "calibration connected-run --mode live --allow-network" not in agent_install_raw or "connected_run_query" not in agent_install_raw:
-        errors.append("Agent install route missing executable connected-run plan")
+        if token not in agents.casefold():
+            errors.append(f"AGENTS route missing bounded executable owner token: {token}")
+    portable_packet_path = "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/calibration/live_calibration_packet.json"
     if "ARTIFACT_ROOT_EXPR" not in readiness_raw or "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}" not in readiness_raw:
         errors.append("Connected-source plan code missing portable artifact root expression")
     if "runs/{calibration_run}/calibration/live_calibration_packet.json" not in readiness_raw:
@@ -543,34 +552,20 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
     for token in ["state_file_candidates", "_host_state_file_candidates", "source_id_flags"]:
         if token not in readiness_raw:
             errors.append(f"Readiness code missing per-host auth candidate token: {token}")
-    if "preflight connected-plan --live-scope bounded" not in agents or "connected_source_plan" not in agents:
-        errors.append("AGENTS route missing connected-source launch plan validation")
-    if "mcp call live_preflight '{}'" not in agents or "connected_source_plan '{\"live_scope\":\"bounded\"}'" not in agents:
-        errors.append("AGENTS route missing default all-priority MCP connected-source validation")
-    if "readiness --run starter-fixture" not in agents or "connector_readiness" not in agents:
-        errors.append("AGENTS route missing connector readiness validation")
-    if "connect profile --name operator-live" not in agents or "connect inspect" not in agents or "connect status" not in agents or "connect apply" not in agents:
-        errors.append("AGENTS route missing connection profile validation")
-    if "mcp call connection_profile_inspect" not in agents:
-        errors.append("AGENTS route missing MCP connection_profile_inspect validation")
-    if "mcp call connection_profile_status" not in agents:
-        errors.append("AGENTS route missing MCP connection_profile_status validation")
-    if "bootstrap fixture --run starter-fixture --connected-run connected-calibration" not in agents:
-        errors.append("AGENTS route missing fixture bootstrap validation")
-    if "aoa-course connect profile" not in agent_install_raw or "aoa_course_connection_profile_v1" not in agent_install_raw or "connection_profile_inspect" not in agent_install_raw or "connection_profile_status" not in agent_install_raw or "aoa_course_connection_profile_status_v1" not in agent_install_raw:
-        errors.append("Agent install route missing connection profile plan")
-    if "--expect-origin-contains" not in agent_install_raw or "expected_origin_matched" not in agent_install_raw:
-        errors.append("Agent install route missing capture expected-origin plan")
-    _check_agent_install_route_commands(agent_install_raw, errors)
-    if "refresh query" not in agents or "refresh_plan" not in agents:
-        errors.append("AGENTS route missing refresh query/refresh_plan validation")
-    if "eval browser-transcripts" not in agents:
-        errors.append("AGENTS route missing browser transcript/caption eval")
-    if "preflight semantic-provider --run starter-fixture --require-ready" not in agents:
-        errors.append("AGENTS route missing semantic provider preflight validation")
-    for token in ["mcp call graph_neighbors", "mcp call freshness_report", "mcp call evidence_report", "mcp call connected_run", "mcp call connected_run_status", "mcp call connected_run_query", "mcp call ingest_status", "mcp call semantic_provider_preflight"]:
-        if token not in agents:
-            errors.append(f"AGENTS route missing MCP evidence/graph token: {token}")
+    for token in [
+        "scripts/verify_agent_install_route.py",
+        "install-like",
+        "network_touched: false",
+        "aoa_course_connection_profile_v1",
+        "aoa_course_connection_profile_status_v1",
+        "token values",
+        "matching source host",
+        "explicit network gate",
+        "connected-run",
+        "aoa-evals",
+    ]:
+        if token not in agent_install_raw:
+            errors.append(f"Agent install route missing boundary token: {token}")
     for token in ["getcourse", "skillspace", "coursera", "teachable", "thinkific", "kajabi", "browser_session", "api_token", "offline_export", "drm", "authorized", "write actions"]:
         if token not in source_policy:
             errors.append(f"source policy missing boundary token: {token}")
@@ -617,38 +612,46 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
                 errors.append(f"{label} missing connection profile token: {token}")
     query_doc = (repo_root / "docs" / "QUERY_MODEL.md").read_text(encoding="utf-8").casefold()
     for token in [
-        "build-semantic-index",
         "semantic",
         "hybrid",
         "local_hashing_v1",
         "http_json_v1",
         "provider_config",
-        "embedding-token-env",
         "token value",
         "semantic_search",
         "hybrid_search",
         "source id",
-        "answer-quality",
         "rank_score",
-        "freshness-ranking",
-        "authority-ranking",
-        "adapter-authority",
+        "freshness",
         "authority_tier",
         "refresh_hint",
-        "refresh_report",
-        "refresh query",
         "aoa_course_refresh_cycle_v1",
-        "local_rebuild_commands",
-        "preflight connected-plan",
         "registry_match",
-        "--source-id",
     ]:
         if token not in query_doc:
             errors.append(f"Query model doc missing token: {token}")
     cli_usage_doc = (repo_root / "docs" / "CLI_USAGE.md").read_text(encoding="utf-8").casefold()
-    for token in ["sync stepik-fixture", "sync browser-fixture", "--source-id", "source_ids", "selected_source_ids", "--expect-origin-contains", "expected_origin_matched", "large source registry", "calibration connected-run", "calibration query", "aoa_course_connected_run_query_packet_v1", "mcp call connected_run", "mcp_tool_call", "mcp_command", "connected_run_plan", "calibration status", "repair_lanes", "partial connected-run", "fixture bootstrap", "--mode fixture", "--allow-network", "--link-pattern", "--max-lessons", "--max-pages", "--max-sources", "--live-scope", "--include-step-sources", "bootstrap fixture", "aoa_course_fixture_bootstrap_receipt_v1", "getcourse, skillspace, and stepik", "cover getcourse, skillspace, and stepik together", "readiness --run starter-fixture", "preflight semantic-provider", "semantic_provider_preflight", "aoa_course_semantic_provider_preflight_v1", "embedding_token_env", "token_env_present", "token_value_logged", "aoa_course_connector_readiness_v1", "operational_ready", "connected_live_ready", "semantic_provider_ready"]:
+    for token in [
+        "source registry",
+        "source_ids",
+        "selected_source_ids",
+        "connected run",
+        "aoa_course_connected_run_query_packet_v1",
+        "connected_run_plan",
+        "repair_lanes",
+        "network gate",
+        "fixture bootstrap",
+        "aoa_course_fixture_bootstrap_receipt_v1",
+        "getcourse, skillspace, and stepik",
+        "semantic provider",
+        "aoa_course_semantic_provider_preflight_v1",
+        "token_value_logged",
+        "aoa_course_connector_readiness_v1",
+        "operational_ready",
+        "connected_live_ready",
+    ]:
         if token not in cli_usage_doc:
-            errors.append(f"CLI usage doc missing source-scoped sync token: {token}")
+            errors.append(f"CLI usage doc missing semantic route token: {token}")
     verifier_raw = (repo_root / "scripts" / "verify_agent_install_route.py").read_text(encoding="utf-8")
     if "connector_readiness" not in verifier_raw or "connected_source_plan" not in verifier_raw:
         errors.append("Agent install verifier missing connector readiness/plan route")
@@ -741,21 +744,11 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
         "lesson_context",
         "evidence_report",
         "connected_run_plan",
-        "link-pattern",
         "account.storage-state.json",
-        "preflight connected-plan",
-        "calibration connected-run",
         "connected_run_status",
-        "allow-network",
-        "live-scope bounded",
         "full-course",
-        "include-step-sources",
-        "calibration build",
-        "calibration intake",
-        "eval live-calibration",
-        "smoke browser-live",
-        "smoke stepik-live",
-        "preflight live",
+        "step-source",
+        "network gate",
         "connected_source_plan",
         "do not commit",
         "raw_paths_are_local_runtime_state",
@@ -770,65 +763,51 @@ def _check_text(repo_root: Path, errors: list[str], warnings: list[str]) -> None
             errors.append(f"Live calibration doc missing token: {token}")
     stepik_doc = (repo_root / "docs" / "STEPIK.md").read_text(encoding="utf-8").casefold()
     for token in [
-        "stepik-live",
-        "stepik-fixture",
+        "fixture",
+        "live",
         "course -> sections -> units -> lessons -> steps",
         "stepik_api_token",
-        "--full-course",
-        "--batch-size",
-        "--include-step-sources",
+        "full-course",
+        "batch",
+        "step-source",
         "ids[]",
         "meta.has_next",
-        "discover stepik",
-        "discover stepik-account",
         "account discovery",
-        "preflight live",
-        "preflight connected-plan",
-        "live-scope bounded",
-        "sync stepik-fixture",
-        "sync stepik-live",
-        "sync status --run stepik-sync-fixture --platform stepik",
+        "preflight",
+        "bounded",
+        "sync",
+        "checkpoint",
         "public_api",
-        "sync-ready without `stepik_api_token`",
+        "sync-ready",
         "inactive or deleted enrollments",
-        "smoke stepik-fixture",
-        "smoke stepik-live",
+        "smoke",
         "aoa_course_stepik_smoke_report_v1",
     ]:
         if token not in stepik_doc:
             errors.append(f"Stepik doc missing token: {token}")
     browser_doc = (repo_root / "docs" / "BROWSER_SESSION.md").read_text(encoding="utf-8").casefold()
     for token in [
-        "browser-fixture",
-        "browser-snapshot",
-        "browser-live",
-        "crawl browser-fixture",
-        "crawl browser-live",
-        "discover browser-fixture",
-        "discover browser-live",
-        "sync browser-fixture",
-        "sync browser-live",
-        "smoke browser-fixture",
-        "smoke browser-snapshot",
-        "smoke browser-live",
-        "browser-transcripts",
+        "fixture",
+        "snapshot",
+        "live",
+        "crawl",
+        "discovery",
+        "sync",
+        "smoke",
         "transcript/caption",
         "caption sidecar",
         "resources[]",
         "transcript_count",
-        "preflight live",
-        "preflight connected-plan",
-        "live-scope bounded",
+        "preflight",
+        "bounded",
         "source_ids",
-        "sync status",
-        "--register",
         "checkpoint",
         "progress",
         "comments",
         "pagination",
-        "max-lessons",
-        "max-sources",
-        "max-pages",
+        "lesson bound",
+        "source bound",
+        "page bound",
         "getcourse",
         "skillspace",
         "playwright",

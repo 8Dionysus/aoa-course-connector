@@ -9,4 +9,5 @@ The repository should grow toward:
 - normalized course schemas independent of platform quirks;
 - local indexes and graphs that remain rebuildable;
 - query packets with precise lesson evidence;
+- bounded owner-local statistics over source and materialization evidence;
 - install and MCP routes that a fresh agent can follow.

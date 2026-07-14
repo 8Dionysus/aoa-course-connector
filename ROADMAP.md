@@ -77,6 +77,8 @@
   contract, including collision-only result guardrails.
 - Document GetCourse and Skillspace hard-adapter strategy.
 - Keep storage portable and safe for public clones.
+- Keep the root `stats/` port aligned with adapter-owned structural coverage
+  while preserving its reference-only and non-verdict authority ceiling.
 
 ## Next
 

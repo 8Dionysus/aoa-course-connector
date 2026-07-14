@@ -1,239 +1,73 @@
-# Live Calibration
+# Live calibration boundary
 
-Live calibration is the bridge between fixture-safe connector proof and
-operator-connected course sources. It turns smoke and preflight reports into one
-small calibration packet that an agent can inspect before choosing deeper live
-sync, selector repair, ranking calibration, or eval-intake work.
+Live calibration connects operator-authorized source evidence to bounded local
+repair and eval-intake decisions. It does not make private source data public,
+and it does not own central proof.
 
-The packet schema is `aoa_course_live_calibration_packet_v1`.
+## Packet topology
 
-## Fixture-Safe Check
+The read-only planner emits `aoa_course_connected_source_plan_v1`. It contains
+source readiness, `source_selection`, `execution_options`, auth candidates,
+portable artifact routes, `query_plan`, and a `connected_run_plan`. The same
+plan has CLI and MCP representations, including `mcp_commands` and the
+structured `connected_source_plan` result.
 
-Run the local suite first. It uses safe GetCourse, Skillspace, and Stepik
-fixtures and writes a calibration packet under `AOA_COURSE_ARTIFACT_ROOT`:
+A connected execution emits
+`aoa_course_connected_calibration_run_receipt_v1`. Status inspection emits
+`aoa_course_connected_calibration_run_status_v1` through
+`connected_run_status`. Source-backed follow-up
+retrieval emits `aoa_course_connected_run_query_packet_v1` through
+`connected_run_query`, retaining answer, `lesson_context`,
+`evidence_report`, freshness, authority, and graph context.
 
-```bash
-aoa-course eval live-calibration
-```
+Calibration summary emits `aoa_course_live_calibration_packet_v1`. Intake
+emits `aoa_course_live_calibration_intake_v1` and bounded `repair_lanes`.
+These packets remain evidence, not verdicts.
 
-This is repo-local support evidence only. `aoa-evals` keeps central verdict,
-scoring, regression, and proof-doctrine authority.
+## Fixture before live
 
-## Connected-Source Route
+Fixture calibration exercises GetCourse, Skillspace, and Stepik source
+selection, sync, smoke, packet build, intake, status, and query shapes with
+`network_touched: false`. It is the first proof because it can be repeated
+without credentials or private content.
 
-Run `preflight live` before any connected smoke. Preflight is read-only and does
-not touch the network.
+Live execution is a separate state. It requires selected-source readiness and
+an explicit network gate. Full-course Stepik scope and optional step-source
+enrichment are deliberate expansions, not defaults.
 
-For agents, start with the combined read-only plan:
+## Browser authorization
 
-```bash
-aoa-course preflight connected-plan \
-  --live-scope bounded \
-  --query "course-specific question" \
-  --link-pattern "*/lessons/*"
-```
+Browser sources require local host-matched state such as
+`account.storage-state.json`. The plan reports per-host import, capture, and
+inspection candidates without embedding cookie values. A ready subset may
+proceed while unrelated blocked sources remain visible.
 
-The `aoa_course_connected_source_plan_v1` packet embeds the live preflight
-result and lists exact commands for preflight report capture, auth/source
-unblocking, live sync, per-source smoke reports, `calibration build`, and a
-`connected_run_plan` for `calibration connected-run --mode live
---allow-network`. It is the safest first plan when connected-source state is
-unknown. Its default platform set covers GetCourse, Skillspace, and Stepik
-together, and its default `bounded` scope keeps Stepik live sync/smoke under
-smoke limits. Pass `--platform` only to narrow a diagnostic run; switch to
-`--live-scope full-course --include-step-sources` only for an explicit
-operator-selected full-course calibration. For browser-session sources,
-`--link-pattern` is optional and narrows the course/lesson URL glob used by
-generated live sync, smoke, and connected-run commands.
+## Runtime artifacts
 
-For GetCourse and Skillspace, inspect `browser_auth_plans` before running
-any live browser command. The plan packet groups source readiness by host,
-shows the storage-state file, and gives the auth capture, redacted inspect, and
-recheck commands required before the plan will emit browser live sync/smoke
-commands.
-
-For a one-command executable proof of the same contract, run the fixture-safe
-connected calibration route:
-
-```bash
-aoa-course calibration connected-run --mode fixture --run connected-fixture-proof
-aoa-course calibration status --run connected-fixture-proof
-```
-
-It writes an `aoa_course_connected_calibration_run_receipt_v1` under
-`${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/connected/`,
-plus smoke reports, a connected-source plan, a calibration packet, and a
-calibration intake report. Fixture mode does not touch the network.
-
-After reviewing `preflight connected-plan` and confirming local auth/source
-readiness, the same route can execute selected live sources only with an
-explicit network gate. Prefer the plan's ready `connected_run_plan` command
-because it preserves the same platforms, source ids, query, live scope, and
-browser `--link-pattern` selected during preflight:
-
-When the plan covers several platforms, unrelated missing credentials should
-not freeze the ready sources. A `partial` connected plan may expose
-`connected_run_plan.ready: true` with `scope: ready_subset`; that command is
-limited to ready platform/source ids and keeps the remaining blockers in the
-same packet. Treat top-level `ready: false` as "not every selected platform is
-ready", not as "no safe live action exists".
-
-```bash
-aoa-course calibration connected-run \
-  --mode live \
-  --platform stepik \
-  --allow-network \
-  --live-scope bounded \
-  --source-limit 1 \
-  --run connected-stepik-live-calibration
-```
-
-Live connected-run receipts are runtime evidence and must stay out of Git.
-For GetCourse and Skillspace live runs, `calibration connected-run` uses the
-same default browser storage-state path checked by preflight,
-`${AOA_COURSE_AUTH_ROOT:-.connector-state/auth}/<platform>/account.storage-state.json`,
-unless `--state-file` is supplied.
-The bounded public Stepik route has been field-smoked with this command shape:
-the resulting local receipt and calibration packet were `ok`, contained answer
-evidence and timestamps, and kept raw payloads and secret values out of the
-packet. Treat that as route proof, not a guarantee that every authenticated or
-full-course Stepik source behaves the same.
-
-After any connected run, use `calibration status --run <run>` or MCP
-`connected_run_status` to read the receipt summary without executing network
-work. The `aoa_course_connected_calibration_run_status_v1` status packet
-includes `source_selection`, stage summaries, packet quality, privacy flags,
-failures, `repair_lanes`, next steps, runtime artifact paths,
-`execution_options`, and `query_plan` entries for the sync/smoke runs that
-already have local indexes, graphs, answer packets, selected `query_mode`, CLI
-`query`, `answer`, `sources answer`, and `lesson-context` commands, and
-`mcp_commands` for MCP `source_answer`, `search`, `answer`, `lesson_context`,
-and `evidence_report` plans.
-Then use `calibration query --run <run>` or MCP `connected_run_query` to execute
-that query plan against the local artifacts. The returned
-`aoa_course_connected_run_query_packet_v1` includes source-backed
-`answer_packet`, `lesson_context`, `evidence_report`, freshness and authority
-summaries, graph context status, and blockers without touching the network.
-Smoke entries can reuse their saved query; sync entries should pass an explicit
-`--query`/`query`.
-For broader retrieval proof, use `calibration query-matrix --run <run> --query
-... --query ...` or MCP `connected_run_query_matrix`. The matrix keeps one
-`aoa_course_connected_run_query_packet_v1` per question and adds an aggregate
-`aoa_course_connected_run_query_matrix_v1` quality block, so a live receipt can
-be checked against several course-specific questions without repeating browser
-or API sync.
-It also includes `snapshot_audit`, a compact
-`aoa_course_connected_snapshot_audit_status_v1` block with browser smoke audit
-coverage, failure counts, filtered `browser_snapshot_diagnostics` repair lanes,
-and next commands.
-`repair_lanes` turn partial runs into concrete network gate, source readiness,
-source selection, sync, smoke/selector, or packet-intake follow-up commands.
-`execution_options` records the course-specific query, browser `link_pattern`,
-source limit, Stepik enrichment budget, and live traversal limits used for the
-run, so later selector or retrieval work can tell how broad the calibration
-actually was. Stepik preflight and rerun commands emitted by those repair lanes
-carry the same enrichment flags.
-
-```bash
-aoa-course preflight live --platform getcourse --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json"
-aoa-course preflight live --platform stepik --stepik-token-env STEPIK_API_TOKEN > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-preflight.json"
-```
-
-Then run bounded smoke commands against sources the connected account is allowed
-to view. Redirect reports into runtime artifact storage, not into Git:
-
-```bash
-aoa-course smoke browser-live \
-  --platform getcourse \
-  --run getcourse-live-smoke \
-  --catalog-url "https://school.example/teach/control/stream" \
-  --course-url "https://school.example/teach/control/stream/view/id/201" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/getcourse/account.storage-state.json" \
-  --query "course-specific question" \
-  > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json"
-
-aoa-course smoke stepik-live 67 \
-  --run stepik-live-smoke \
-  --query "course-specific question" \
-  > "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json"
-```
-
-Build the packet from the reports:
-
-```bash
-aoa-course calibration build \
-  --run connected-live-calibration \
-  --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-live-smoke.json" \
-  --report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-live-smoke.json" \
-  --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/getcourse-preflight.json" \
-  --preflight-report "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/stepik-preflight.json"
-```
-
-`calibration build` writes
+Connected receipts live below
+`${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/connected/`.
+Calibration packets live below
 `${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/calibration/live_calibration_packet.json`.
-Do not commit live packets, raw smoke reports, browser state, private snapshots,
-tokens, cookies, raw API payloads, or course pages.
+These are local runtime paths, not repository artifacts.
 
-Turn a packet into a local repair/eval-intake plan:
+Packets carry `raw_paths_are_local_runtime_state` and
+`contains_secret_values` privacy assertions. They may summarize platform,
+source mode, stage status, counts, and bounded paths, but they do not contain
+cookies, tokens, raw API payloads, or course pages. Do not commit them.
 
-```bash
-aoa-course calibration intake \
-  --run connected-live-calibration-intake \
-  --packet "${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/connected-live-calibration/calibration/live_calibration_packet.json"
-```
+## Transcript and caption health
 
-`calibration intake` writes an `aoa_course_live_calibration_intake_v1` artifact at
-`${AOA_COURSE_ARTIFACT_ROOT:-.connector-state/artifacts}/runs/<run>/calibration/live_calibration_intake.json`.
-It classifies packet failures into repair lanes such as privacy guard,
-caption/transcript collection, course/evidence extraction, retrieval quality,
-or readiness preflight. It also suggests repo-local `evals/intake/*.md`
-candidates, but those are pressure notes only; `aoa-evals` owns promotion,
-scoring, regression meaning, and central verdicts.
+Browser summaries preserve `transcript_count_total`,
+`caption_sidecar_count_total`, `caption_resource_error_count_total`, and
+`browser_reports_with_transcripts`. A missing or unparseable sidecar remains a
+repair signal. Counts do not replace source evidence or answer quality.
 
-## Packet Meaning
+## Repair lanes
 
-The packet summarizes report health without embedding raw private payloads:
+A partial connected run keeps its successful and failed stages separate.
+`repair_lanes` classify network gate, source authorization, selected-source
+scope, sync, smoke/selector, artifact, answer, or intake pressure. They carry
+minimal local follow-up and safe evidence requirements.
 
-- `platforms`, `source_modes`, `report_count`, and `preflight_count` show the
-  covered adapter routes.
-- `quality.transcript_count_total`, `quality.caption_sidecar_count_total`, and
-  `quality.transcript_source_authority_counts` show whether browser smoke found
-  visible transcript/caption text and caption sidecars.
-- `quality.browser_reports_with_transcripts` shows how many browser smoke
-  reports produced at least one canonical transcript object.
-- `quality.snapshot_audit_count_total`,
-  `quality.browser_reports_with_snapshot_audit`, and
-  `quality.all_snapshot_audits_ok` show whether browser smoke reports carried
-  privacy-safe snapshot diagnostics for their raw catalog/course captures.
-- `quality.caption_resource_error_count_total` must stay `0`; any non-zero
-  value means a visible caption sidecar was present but could not be collected
-  or parsed cleanly.
-- `quality.answer_result_count_total` and
-  `quality.answer_evidence_count_total` show whether answer checks found
-  source-backed evidence.
-- `quality.all_answered_reports_have_evidence` and
-  `quality.all_answered_reports_have_timestamps` must stay true for useful
-  connected-source plan.
-- `privacy.raw_paths_are_local_runtime_state` must stay true.
-- `privacy.contains_raw_payloads` and `privacy.contains_secret_values` must
-  stay false.
-
-If a smoke report has no lessons, no evidence, no answer chain, caption-resource
-errors, snapshot-audit failures, a missing privacy guard, or a secret-like
-marker, packet `status` becomes `partial` and the `failures` list tells the
-next agent what to repair.
-Run `calibration intake` against such packets before selector or query repairs
-so the failure is routed to a concrete lane and fixture/eval follow-up.
-
-## Next Work From A Packet
-
-Use a successful packet to decide the next bounded field task:
-
-- expand a live sync from smoke limits to an operator-selected full course;
-- repair GetCourse or Skillspace selectors for real themes found in smoke;
-- repair protected or unusual caption sidecar collection when
-  `caption_resource_error_count_total` is non-zero;
-- calibrate Stepik source enrichment and account discovery on authenticated
-  courses;
-- capture new local eval pressure when a recurring failure appears, without
-  promoting local reports into central proof.
+Calibration intake may propose a fixture or local eval candidate. Scoring,
+promotion, verdict, and proof doctrine remain owned by `aoa-evals`.

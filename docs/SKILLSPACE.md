@@ -1,92 +1,26 @@
-# Skillspace Notes
+# Skillspace adapter
 
-Skillspace is a priority hard adapter.
+Skillspace is a browser-session hard adapter that reuses the shared discovery,
+crawl, normalization, evidence, retrieval, graph, and calibration pipeline.
 
-Expected route:
+## Discovery and crawl
 
-- browser-session auth state under `AOA_COURSE_AUTH_ROOT`;
-- discover available courses from the connected account;
-- extract module/lesson hierarchy and lesson page content;
-- preserve assignment, progress, comment, and asset metadata when visible;
-- store evidence for every normalized object.
+The adapter extracts course entrypoints from accessible account pages and
+follows bounded catalog pagination. Course indexes expose a visible lesson
+population before crawl limits are applied. Missing pages are represented as
+unfetched evidence rather than full lessons.
 
-Skillspace public API coverage appears limited for full course-content export, so
-the first live route should be browser-session discovery.
+## Content
 
-## Current Working Route
+Accessible pages may yield lesson text, assets, assignments, visible progress,
+comments, transcript/caption blocks, and caption sidecars. Native course and
+lesson paths remain attached to every normalized and indexed object.
 
-`aoa-course-connector` supports Skillspace through the shared browser-session
-discovery, snapshot, and course-tree crawl adapters. Fixture proofs cover
-paginated catalog receipts, visible course progress, visible discussion
-comments, visible captions, and subtitle sidecars from `<track>` resources:
+## Authorization and privacy
 
-```bash
-aoa-course discover browser-fixture --platform skillspace --run skillspace-browser-discovery-fixture --register --max-sources 50
-aoa-course sources list
-aoa-course sync browser-fixture --run browser-sync-fixture --platform skillspace --source-id "source:skillspace:..." --build-artifacts
-aoa-course sync status --run browser-sync-fixture --platform skillspace
+A registered Skillspace source is live-ready only when the selected local
+browser state matches its host. Live work requires explicit network
+authorization. Fixture and snapshot routes remain no-network.
 
-aoa-course materialize browser-fixture --platform skillspace --run skillspace-browser-fixture
-aoa-course build-index --run skillspace-browser-fixture
-aoa-course build-graph --run skillspace-browser-fixture
-aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-fixture
-aoa-course answer "timestamp window reproduction step" --run skillspace-browser-fixture
-aoa-course answer "caption bugreport timeline" --run skillspace-browser-fixture
-aoa-course answer "sidecar subtitle ANR tombstone evidence" --run skillspace-browser-fixture
-aoa-course eval browser-progress-comments
-aoa-course eval browser-transcripts
-
-aoa-course crawl browser-fixture --platform skillspace --run skillspace-browser-crawl-fixture --max-lessons 20
-aoa-course build-index --run skillspace-browser-crawl-fixture
-aoa-course build-graph --run skillspace-browser-crawl-fixture
-aoa-course answer "Skillspace logcat bugreport evidence" --run skillspace-browser-crawl-fixture
-```
-
-For live operator-owned pages, use `discover browser-live` or
-`crawl browser-live` with a local Playwright storage-state file under
-`AOA_COURSE_AUTH_ROOT`. Start discovery from a visible course catalog page, then
-crawl the selected course entrypoint:
-
-```bash
-aoa-course auth import-firefox-state skillspace "https://academy.example" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --expect-origin-contains "academy.example"
-
-aoa-course auth capture-browser-state skillspace "https://academy.example" \
-  --login-url "https://academy.example/login" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --expect-origin-contains "academy.example"
-
-aoa-course auth inspect-browser-state "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --expect-origin-contains "academy.example"
-
-aoa-course discover browser-live "https://academy.example/courses" \
-  --platform skillspace \
-  --run skillspace-live-discovery \
-  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --register \
-  --max-sources 50 \
-  --max-pages 5
-
-aoa-course crawl browser-live "https://academy.example/course/mobile-debugging" \
-  --platform skillspace \
-  --run skillspace-live-crawl \
-  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --max-lessons 50
-
-aoa-course sync browser-live \
-  --run skillspace-live-sync \
-  --platform skillspace \
-  --source-id "source:skillspace:..." \
-  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --max-lessons 50 \
-  --build-artifacts
-
-aoa-course smoke browser-live \
-  --platform skillspace \
-  --run skillspace-live-smoke \
-  --catalog-url "https://academy.example/courses" \
-  --course-url "https://academy.example/course/mobile-debugging" \
-  --state-file "$AOA_COURSE_AUTH_ROOT/skillspace/account.storage-state.json" \
-  --query "course-specific question"
-```
+Credentials, browser state, paid/private HTML, raw captures, normalized private
+content, indexes, graphs, vectors, and runtime reports never belong in Git.

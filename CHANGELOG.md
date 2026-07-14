@@ -2,6 +2,13 @@
 
 ## 0.1.0 - Unreleased
 
+- Added a root `stats/` port with a public reference-only `9 / 9` structural
+  materialization ratio across the canonical GetCourse, Skillspace, and Stepik
+  starter fixtures, centrally validated by `aoa-stats` without inheriting eval,
+  readiness, live-source, or runtime authority.
+- Moved executable command and validation authority back to the CLI, scripts,
+  tests, CI workflow, and bounded `AGENTS.md` routes; ordinary Markdown now
+  carries durable semantics instead of duplicate command catalogs.
 - Replaced raw term-frequency keyword ordering with a versioned BM25 contract,
   body-text length normalization, IDF, content-aware query stop-term handling,
   legacy-index read compatibility, and corpus-integrity validation.

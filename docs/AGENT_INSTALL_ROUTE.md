@@ -1,142 +1,79 @@
-# Agent Install Route
+# Agent install route
 
-1. Clone the repository.
-1. Create a Python 3.11+ environment.
-1. Install `.[dev]` for tests and CLI smoke checks.
-1. Configure `AOA_COURSE_*` roots or `AOA_COURSE_INSTANCE_ROOT`.
-1. Run `aoa-course doctor`.
-1. Run `aoa-course bootstrap fixture --run starter-fixture --connected-run connected-calibration`
-   to create the local starter bundle, keyword/semantic indexes, graph, and
-   default GetCourse/Skillspace/Stepik fixture connected-run receipt without
-   network access.
-1. Run `aoa-course readiness --run starter-fixture` to get the read-only
-   install/source/run/MCP audit and its next commands.
-1. Run `aoa-course eval install-route` to prove the fresh-agent route end to
-   end: docs, storage, bootstrap, readiness, CLI answer, MCP answer,
-   CLI/MCP source-scoped `sources_answer`, connected-run status, query-plan
-   entries, `connected_run_query` retrieval, and source registry without
-   touching the network.
-1. For the full public-repo verifier, run
-   `python scripts/verify_agent_install_route.py --skip-pytest`. It copies the
-   repository to a temporary install-like workspace, executes the offline route,
-   checks MCP stdio, and requires direct CLI `sources answer`, MCP `answer`,
-   fixture-safe MCP `connected_run`, MCP `connected_run_query`, and MCP
-   `sources_answer` packets.
-1. When operator source refs are available, run `aoa-course connect profile`
-    with real GetCourse/Skillspace URLs, Stepik course ids, state-file paths,
-    and semantic-provider settings, then run `connect inspect` and `connect
-    apply`. The profile is `aoa_course_connection_profile_v1`; it is runtime
-    artifact state under `AOA_COURSE_ARTIFACT_ROOT`, does not store token
-    values, and `apply` mutates only the local source registry. MCP agents can
-    inspect it through `connection_profile_inspect`. Browser-auth sections
-    include `auth import-firefox-state` when the source host is known, then
-    capture and inspect fallback commands. Run `connect status` or MCP
-    `connection_profile_status` to get the compact
-    `aoa_course_connection_profile_status_v1` go/no-go packet before any
-    `calibration connected-run --mode live --allow-network` command. Use
-    `connect run <profile> --platform <platform>` for the no-network executable
-    profile plan, then add `--allow-network` only after the selected
-    platform/source is ready. For Stepik enrichment, carry the same
-    `include_step_sources`, `max_step_sources`, and `step_source_timeout`
-    values through the profile, readiness, MCP plan, and final connected run.
-1. Run the offline starter proof.
-1. Run `preflight semantic-provider --run starter-fixture --require-ready`,
-   then build the semantic index with `build-semantic-index` and run at least
-   one `--mode hybrid` answer to prove the vector contract. For
-   `http_json_v1`, run the same preflight with `--embedding-endpoint`,
-   `--embedding-model`, and `--embedding-token-env`; it must report
-   `token_env_present` without printing the token value before the first
-   network-touching semantic build.
-1. Register a Stepik course with `discover stepik 67 --register`, then run
-   `sync stepik-fixture --source-id "<registered-source-id>" --build-artifacts`
-   to prove source-scoped clean API checkpoints without network access.
-1. Run `discover stepik-account --from-fixture --register --source-limit 1` to
-   prove connected-account course discovery can write Stepik sources without
-   live credentials.
-1. Run `preflight live --platform stepik` to prove the live readiness report
-    is safe and read-only even before an operator provides `STEPIK_API_TOKEN`.
-    Registered `public_api` Stepik sources can be sync-ready without a token;
-    account discovery and token-gated sources still require the token.
-1. Run `smoke stepik-fixture 67` to prove the combined clean API registration,
-   sync, keyword/semantic/graph, answer, and privacy-safe report route.
-1. Run browser fixture discovery with `--register` to prove the local source
-   registry route.
-1. After starter, Stepik fixture, and GetCourse browser fixture artifacts are
-    built, run `eval answer-quality` to prove top-result path, source id,
-    freshness, snippet, and evidence-field quality.
-1. Run MCP calls for `connector_readiness`, `connection_profile_inspect`,
-    `connection_profile_status`, `connection_profile_run_plan`,
-    `semantic_provider_preflight`, `connected_run`, `graph_neighbors`, `freshness_report`,
-    `answer`, `evidence_report`, and `refresh_plan` against `starter-fixture` to prove
-    agents can inspect connector readiness, profile readiness, selected
-    profile run plans, execute the fixture connected route, graph neighborhoods, full answer packets, source
-    evidence/freshness, and plan a refresh cycle
-    without shelling into lower-level CLI internals.
-1. After a registry-backed Stepik fixture sync, run `refresh query
-    "Stepik public API evidence" --run "<checkpoint-run-id>" --mode hybrid
-    --strategy fixture --execute` to prove the agent refresh loop can sync,
-    select the new checkpoint run, rebuild indexes/graphs, and re-answer from
-    refreshed evidence without live credentials.
-1. Run the freshness conflict fixture and `eval freshness-ranking` to prove
-    current material ranks above stale material when base relevance is tied.
-1. Run the authority conflict fixture and `eval authority-ranking` to prove
-    official lessons and mentor comments rank above learner comments when base
-    relevance is tied.
-1. After Stepik, GetCourse, and Skillspace fixture indexes are built, run
-    `eval adapter-authority` to prove adapter-derived authority metadata reaches
-    normalized objects and query packets.
-1. Run `eval browser-transcripts` to prove visible GetCourse/Skillspace
-    transcript and caption text becomes canonical transcript objects and
-    source-backed answer evidence.
-1. Run `eval live-calibration` to prove the fixture-safe calibration packet for
-    GetCourse, Skillspace, and Stepik smoke reports before collecting connected
-    account reports.
-1. Run `calibration connected-run --mode fixture --run connected-fixture-proof`
-    to prove source-registry sync, smoke reports, connected plan, calibration
-    packet, intake, and one connected run receipt without touching live sources.
-1. Run `calibration query --run connected-fixture-proof --kind smoke` or MCP
-    `connected_run_query` to prove the connected receipt produces source-backed
-    answer, lesson context, evidence report, freshness, authority, and graph
-    context packets with `network_touched: false`.
-1. Run `calibration query-matrix --run connected-fixture-proof --kind smoke
-    --query ... --query ...` or MCP `connected_run_query_matrix` to prove the
-    same connected receipt can answer several course-specific questions from
-    local indexes and graphs without repeating live source access.
-1. Before live browser sources, run `auth plan-browser-state`, capture the
-    local Playwright state with `auth capture-browser-state`, and verify it with
-    `auth inspect-browser-state`. The plan/capture commands should carry
-    `--expect-origin-contains`; the capture receipt must show
-    `expected_origin_matched: true` before discovery or sync.
-1. Run `preflight live --platform getcourse` or
-    `preflight live --platform skillspace` to inspect source registry and
-    redacted browser-state readiness before live discovery or sync.
-1. Confirm browser preflight marks only sources whose host matches the saved
-    storage state as sync-ready.
-1. Run `preflight connected-plan --live-scope bounded` to produce the redacted
-    setup/sync/smoke/calibration plan with portable runtime artifact paths and
-    a `connected_run_plan`.
-    If top-level status is `partial`, still inspect `connected_run_plan`: a
-    `ready` plan with `scope: ready_subset` is an executable route for the
-    already-authorized platform/source ids, while the same packet keeps the
-    unready platform blockers visible.
-1. In a large registry, add `--source-id "<registered-source-id>"` to
-    `preflight live`, `preflight connected-plan`, or `readiness` when preparing
-    one selected source. MCP uses `source_ids`; the scoped plan should show the
-    same ids in `source_registry.selected_source_ids` and
-    `connected_run_plan.source_ids`.
-    Use MCP `list_sources` first when the agent needs the configured-source
-    catalog before choosing those ids; pass `include_source_refs:false` when
-    counts and ids are enough. If the selected source already has
-    `latest_connected_runs[]`, prefer the attached CLI `sources answer`
-    command, or MCP `source_answer` with that `source_id`, for a direct
-    answer/context/evidence packet before planning another live run. Use the
-    attached lower-level `answer`, `lesson_context`, or `evidence_report`
-    commands only when the agent intentionally wants the run id route. When the
-    question should be checked across several ready sources, use CLI
-    `sources answer` or MCP `sources_answer` with `source_ids` or `platforms` so
-    each source keeps its own evidence chain and quality state.
-1. Run the plan's exact
-    `calibration connected-run --mode live --allow-network` plan only after
-    the connected plan shows the selected sources are ready.
-1. Add live sources only after auth-state and storage roots are local and
-    ignored by Git.
+This document describes the states and boundaries of a fresh agent install. It
+does not duplicate the executable command sequence. The authoritative route is
+implemented by `scripts/verify_agent_install_route.py`; the bounded operator
+entrypoint is in the root `AGENTS.md`, and exact CLI syntax is owned by the
+`aoa-course` parser.
+
+## Offline baseline
+
+A fresh install starts in isolated storage and must be able to create the
+starter normalized bundle, keyword and semantic indexes, graph, and the default
+GetCourse, Skillspace, and Stepik fixture connected-run receipt without network
+access. The resulting readiness packet must distinguish local operational
+readiness from connected-live readiness.
+
+The executable verifier copies the repository to a temporary install-like
+workspace and checks repository validation, compilation, doctor output,
+fixture bootstrap, readiness, install-route eval, CLI retrieval, MCP stdio,
+source-scoped retrieval, connected-run status and query packets, and the source
+registry. Every fixture path must report `network_touched: false`.
+
+## Connection profiles
+
+Operator source refs, auth-state paths, live-scope choices, semantic-provider
+settings, and selected course ids belong in a runtime
+`aoa_course_connection_profile_v1` under `AOA_COURSE_ARTIFACT_ROOT`. Profiles
+must never contain token values. Inspection and status surfaces expose a
+redacted `aoa_course_connection_profile_status_v1` before a live run can be
+considered.
+
+Applying a profile mutates only the local source registry. A profile run plan
+remains no-network until the operator explicitly authorizes the selected live
+route. Browser sections prefer a host-matched imported Firefox state when one
+is already available and otherwise expose capture and inspection routes.
+
+## Source readiness
+
+The connector preserves the distinction between:
+
+- fixture or example sources, which prove installation and adapter shape;
+- registered public sources, which may be usable without account credentials;
+- authenticated sources, which require local token or browser-state evidence;
+- selected ready subsets, which may proceed while unrelated blocked sources
+  remain visible;
+- live execution, which requires an explicit network gate.
+
+Browser storage state is usable only for the matching source host. Stepik
+public API course access and account-level discovery have different credential
+requirements. Optional Stepik step-source enrichment keeps its own bounds and
+does not silently widen a course sync.
+
+## Retrieval and calibration
+
+The fixture baseline proves that normalized content can be built into local
+indexes and graphs and returned as source-backed answers, lesson context,
+evidence, freshness, authority, and refresh information. Source-scoped and
+cross-source queries retain separate evidence chains instead of collapsing
+their authority.
+
+Connected-source plans preserve selected source ids, platform scope, crawl and
+pagination bounds, Stepik enrichment limits, query plan, portable artifact
+paths, and both CLI and MCP representations. Fixture connected runs exercise
+the same receipt and query shapes without network access. Live connected runs
+are permitted only after the selected sources are ready and the network gate is
+explicit.
+
+Calibration intake converts a partial packet into local repair lanes and eval
+intake candidates without taking proof authority from `aoa-evals`. Prior run
+artifacts remain available so bounded refreshes are not mistaken for source
+deletion.
+
+## Completion evidence
+
+The install route is complete only when the executable verifier succeeds from
+its fresh temporary copy, all returned fixture packets remain no-network and
+secret-free, direct CLI and MCP retrieval agree on source identity, and the
+temporary workspace is removed. Narrative documentation is not evidence that
+the route ran.
