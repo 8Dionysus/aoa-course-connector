@@ -106,7 +106,7 @@ REQUIRED_FILES = [
     "kag/README.md",
     "kag/edges/source_routes_to_storage_boundary.json",
     "kag/indexes/source_inventory.json",
-    "kag/indexes/source_surface_index.json",
+    "kag/indexes/index_family.manifest.json",
     "kag/manifest.json",
     "kag/nodes/source_home.json",
     "kag/nodes/storage_boundary.json",
@@ -235,6 +235,9 @@ REQUIRED_GITIGNORE = [
     "*.cookies.json",
     "!kag/indexes/",
     "!kag/indexes/*.json",
+    "!kag/indexes/shards/",
+    "!kag/indexes/shards/**/",
+    "!kag/indexes/shards/**/*.jsonl",
 ]
 
 FORBIDDEN_HEAVY_ROOTS = {"data", "cache", "auth", "artifacts", "raw", "indexes", "vectors", "graphs", "exports"}
