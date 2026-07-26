@@ -1,0 +1,17 @@
+{
+  "allowed_bytes": 3525142,
+  "allowed_tracked_bytes": 5114386,
+  "approved_by": "repository-owner",
+  "base_ref": "346254a134f6f7dd14c6edc0a519a2681d8813a9",
+  "changed_generated_bytes": 3525142,
+  "changed_generated_files": 189,
+  "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0017-portable-content-addressed-repository-family.md",
+  "default_limit_bytes": 1048576,
+  "head_family_digest": "b1bbd8ae10466f62bae6a7c25d0179cf3be4965d79cd6806d84d7330368a3685",
+  "reason": "Generate owner-driven Course release scenarios with explicit post-commit repository-event coverage.",
+  "repo": "aoa-course-connector",
+  "schema_version": "aoa-repo-local-kag-budget-receipt-v1",
+  "scope": "generated_delta",
+  "tracked_bytes": 5114386,
+  "tracked_bytes_max": 6291456
+}
