@@ -1,25 +1,8 @@
 # Suites
 
-Fixture-safe suites for local course connector behavior:
-
-- `starter_course_answer_packets.json`
-- `stepik_clean_api_answer_packets.json`
-- `browser_hard_adapter_answer_packets.json`
-- `browser_progress_comments_answer_packets.json`
-- `browser_transcripts_answer_packets.json`
-- `browser_discovery_sources.json`
-- `browser_sync_checkpoints.json`
-- `browser_crawl_answer_packets.json`
-- `retrieval_loop.json`
-- `answer_quality_packets.json`
-- `freshness_ranking.json`
-- `place_ranking.json`
-- `authority_ranking.json`
-- `adapter_authority_metadata.json`
-- `live_calibration_packet.json`
-- `connected_portfolio.json`
-- `ingest_coverage.json`
-- `corpus_integrity.json`
+`evals/registry.json` is the owner-local inventory for fixture-safe suites,
+their capabilities, and their direct execution routes. `evals/PORT.yaml`
+publishes that registry to local-port consumers.
 
 `answer-quality.suite.md` records the local suite note for the answer-quality
 contract. It is connector-local support evidence only; central proof doctrine,

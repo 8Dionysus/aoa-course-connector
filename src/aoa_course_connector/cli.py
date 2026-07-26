@@ -51,6 +51,7 @@ from aoa_course_connector.discover import (
     discover_stepik_account_fixture as discover_stepik_account_fixture_route,
     discover_stepik_account_live as discover_stepik_account_live_route,
 )
+from aoa_course_connector.eval_registry import load_eval_registry, suite_by_id
 from aoa_course_connector.graph import build_graph
 from aoa_course_connector.index import HTTP_JSON_PROVIDER, LOCAL_HASHING_PROVIDER, build_keyword_index, build_semantic_index
 from aoa_course_connector.ingest import (
@@ -735,6 +736,10 @@ def build_parser() -> argparse.ArgumentParser:
 
     eval_parser = sub.add_parser("eval")
     eval_sub = eval_parser.add_subparsers(dest="eval_command", required=True)
+    eval_sub.add_parser("list").set_defaults(func=cmd_eval_list)
+    eval_run = eval_sub.add_parser("run")
+    eval_run.add_argument("suite_id")
+    eval_run.set_defaults(func=cmd_eval_run)
     eval_sub.add_parser("install-route").set_defaults(func=cmd_eval_install_route)
     eval_sub.add_parser("answer-packets").set_defaults(func=cmd_eval_answer_packets)
     eval_sub.add_parser("answer-quality").set_defaults(func=cmd_eval_answer_quality)
@@ -803,6 +808,29 @@ def build_parser() -> argparse.ArgumentParser:
     mcp_call.add_argument("arguments", nargs="?", default="{}")
     mcp_call.set_defaults(func=cmd_mcp_call)
     return parser
+
+
+def cmd_eval_list(_args: argparse.Namespace) -> int:
+    registry = load_eval_registry(find_repo_root())
+    _emit(
+        {
+            "schema": "aoa_course_eval_registry_list_v1",
+            "owner_repo": registry["owner_repo"],
+            "suite_count": len(registry["suites"]),
+            "suites": registry["suites"],
+        }
+    )
+    return 0
+
+
+def cmd_eval_run(args: argparse.Namespace) -> int:
+    registry = load_eval_registry(find_repo_root())
+    suite = suite_by_id(registry, args.suite_id)
+    route = suite["execution"]["argv"]
+    routed_args = build_parser().parse_args(route)
+    if routed_args.command != "eval" or routed_args.func in {cmd_eval_list, cmd_eval_run}:
+        raise ValueError(f"evals/registry.json: unsafe execution route for {args.suite_id}")
+    return int(routed_args.func(routed_args))
 
 
 def cmd_doctor(_args: argparse.Namespace) -> int:

@@ -5,6 +5,10 @@ pressure for `aoa-course-connector`, but it is not the central proof owner.
 `aoa-evals` owns central verdicts, scoring, regression meaning, proof doctrine,
 promotion, and central bundle adoption.
 
+`PORT.yaml` routes discovery to the owner-local `registry.json`. The registry
+is the only suite inventory; the CLI lists it and dispatches its direct case
+bodies without copying suite membership into documentation.
+
 Local evals prove the starter retrieval loop:
 
 `fixture -> normalize -> index -> graph -> answer packet with evidence`
