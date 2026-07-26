@@ -825,7 +825,18 @@ def cmd_eval_list(_args: argparse.Namespace) -> int:
 
 def cmd_eval_run(args: argparse.Namespace) -> int:
     registry = load_eval_registry(find_repo_root())
-    suite = suite_by_id(registry, args.suite_id)
+    try:
+        suite = suite_by_id(registry, args.suite_id)
+    except ValueError as exc:
+        _emit(
+            {
+                "schema": "aoa_course_eval_run_v1",
+                "status": "error",
+                "suite_id": args.suite_id,
+                "error": str(exc),
+            }
+        )
+        return 2
     route = suite["execution"]["argv"]
     routed_args = build_parser().parse_args(route)
     if routed_args.command != "eval" or routed_args.func in {cmd_eval_list, cmd_eval_run}:

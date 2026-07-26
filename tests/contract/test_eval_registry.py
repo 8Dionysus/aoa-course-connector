@@ -55,6 +55,15 @@ def test_owner_registry_enumerates_all_active_suites() -> None:
     assert "suite_registry: evals/registry.json" in (REPO_ROOT / "evals/PORT.yaml").read_text(encoding="utf-8")
 
 
+def test_connector_required_files_do_not_duplicate_suite_inventory() -> None:
+    from validate_connector import REQUIRED_FILES
+
+    registry = load_eval_registry(REPO_ROOT)
+    registered_paths = {entry["path"] for entry in registry["suites"]}
+
+    assert registered_paths.isdisjoint(REQUIRED_FILES)
+
+
 def test_registry_rejects_deleted_declared_suite(tmp_path: Path) -> None:
     registry = _fixture_registry(tmp_path)
     (tmp_path / "evals/suites/alpha.json").unlink()
@@ -130,6 +139,23 @@ def test_port_route_dispatches_the_registered_direct_case_body(monkeypatch) -> N
 
     assert cli.main(["eval", "run", "corpus-integrity"]) == 0
     assert calls == ["corpus-integrity"]
+
+
+def test_port_route_reports_unknown_suite_without_traceback(monkeypatch, capsys) -> None:
+    monkeypatch.setattr(
+        cli,
+        "load_eval_registry",
+        lambda _root: {"owner_repo": "aoa-course-connector", "suites": []},
+    )
+
+    assert cli.main(["eval", "run", "does-not-exist"]) == 2
+    payload = json.loads(capsys.readouterr().out)
+    assert payload == {
+        "error": "evals/registry.json: unknown suite_id does-not-exist",
+        "schema": "aoa_course_eval_run_v1",
+        "status": "error",
+        "suite_id": "does-not-exist",
+    }
 
 
 def test_owner_validator_rejects_non_eval_execution_route(tmp_path: Path) -> None:
