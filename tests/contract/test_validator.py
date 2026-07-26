@@ -50,6 +50,28 @@ def test_markdown_hygiene_rejects_unterminated_fence(tmp_path: Path) -> None:
     assert errors == ["unterminated Markdown fence: docs.md:3"]
 
 
+def test_release_workflow_rejects_missing_delegation_and_reauthored_commands(
+    tmp_path: Path,
+) -> None:
+    validator = load_validator_module()
+    workflow = tmp_path / ".github" / "workflows" / "validate.yml"
+    workflow.parent.mkdir(parents=True)
+    workflow.write_text(
+        "- run: aoa-course doctor\n"
+        "- run: python scripts/verify_agent_install_route.py --skip-pytest\n",
+        encoding="utf-8",
+    )
+    errors: list[str] = []
+
+    validator._check_release_scenario_workflow(tmp_path, errors)
+
+    assert errors == [
+        "validation workflow must delegate exactly once to the release scenario runner",
+        "validation workflow must not reauthor release scenarios",
+        "installed-route proof belongs to the release scenario plan",
+    ]
+
+
 def test_kag_provider_validator_reports_non_list_record_classes(monkeypatch) -> None:
     validator = load_validator_module()
     original_read_json = validator._read_json

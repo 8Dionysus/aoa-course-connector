@@ -8,6 +8,11 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
+
+from aoa_course_connector.cli import build_parser, cmd_eval_list, cmd_eval_run
+from aoa_course_connector.eval_registry import REGISTRY_PATH, validate_eval_registry
+
 
 PUBLIC_STATUS_GETCOURSE_SOURCE_ID_RE = re.compile(r"source:getcourse:[0-9a-f]{10,}")
 COMMAND_FENCE_LANGUAGES = {"bash", "sh", "shell", "console", "terminal", "powershell", "cmd"}
@@ -71,37 +76,21 @@ REQUIRED_FILES = [
     "docs/decisions/AOA-COURSE-D-0001-course-knowledge-not-downloader.md",
     "evals/AGENTS.md",
     "evals/PORT.yaml",
+    "evals/registry.json",
     "evals/README.md",
     "evals/intake/README.md",
     "evals/reports/README.md",
     "evals/suites/README.md",
     "evals/suites/retrieval-loop.suite.md",
-    "evals/suites/retrieval_loop.json",
     "evals/suites/answer-quality.suite.md",
-    "evals/suites/answer_quality_packets.json",
     "evals/suites/freshness-ranking.suite.md",
-    "evals/suites/freshness_ranking.json",
     "evals/suites/authority-ranking.suite.md",
-    "evals/suites/authority_ranking.json",
     "evals/suites/adapter-authority.suite.md",
-    "evals/suites/adapter_authority_metadata.json",
     "evals/suites/live-calibration.suite.md",
-    "evals/suites/live_calibration_packet.json",
     "evals/suites/connected-portfolio.suite.md",
-    "evals/suites/connected_portfolio.json",
     "evals/suites/ingest-coverage.suite.md",
-    "evals/suites/ingest_coverage.json",
     "evals/suites/corpus-integrity.suite.md",
-    "evals/suites/corpus_integrity.json",
     "evals/suites/browser-transcripts.suite.md",
-    "evals/suites/browser_transcripts_answer_packets.json",
-    "evals/suites/starter_course_answer_packets.json",
-    "evals/suites/browser_hard_adapter_answer_packets.json",
-    "evals/suites/browser_progress_comments_answer_packets.json",
-    "evals/suites/browser_crawl_answer_packets.json",
-    "evals/suites/browser_discovery_sources.json",
-    "evals/suites/browser_sync_checkpoints.json",
-    "evals/suites/stepik_clean_api_answer_packets.json",
     "kag/AGENTS.md",
     "kag/README.md",
     "kag/edges/source_routes_to_storage_boundary.json",
@@ -114,6 +103,7 @@ REQUIRED_FILES = [
     "kag/receipts/validation_receipt.json",
     "src/aoa_course_connector/bootstrap.py",
     "src/aoa_course_connector/cli.py",
+    "src/aoa_course_connector/eval_registry.py",
     "src/aoa_course_connector/connection_profile.py",
     "src/aoa_course_connector/calibration/__init__.py",
     "src/aoa_course_connector/adapters/browser/crawl.py",
@@ -139,12 +129,14 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/sync/stepik.py",
     "scripts/validate_connector.py",
     "scripts/validate_local_stats_port.py",
+    "scripts/run_release_scenarios.py",
     "scripts/verify_agent_install_route.py",
     "stats/AGENTS.md",
     "stats/README.md",
     "stats/port.manifest.json",
     "stats/packets/public-fixture-structural-materialization-ratio.reference.json",
     "tests/unit/test_local_stats_port.py",
+    "tests/contract/test_release_scenarios.py",
 ]
 
 REQUIRED_DIRS = [
@@ -313,7 +305,9 @@ def main() -> int:
         if path.is_dir() and rel_parts and rel_parts[0] in FORBIDDEN_HEAVY_ROOTS and not _is_allowed_kag_indexes(rel_parts):
             errors.append(f"forbidden generated/private directory exists inside repository: {path.relative_to(repo_root)}")
     _check_kag_provider(repo_root, errors)
+    _check_eval_registry(repo_root, errors)
     _check_markdown_command_hygiene(repo_root, errors)
+    _check_release_scenario_workflow(repo_root, errors)
     _check_text(repo_root, errors, warnings)
     payload = {
         "schema": "aoa_course_connector_validation_v1",
@@ -365,6 +359,52 @@ def _tracked_files(repo_root: Path, errors: list[str]) -> list[str]:
         errors.append(f"unable to list tracked files: {exc}")
         return []
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _check_release_scenario_workflow(
+    repo_root: Path,
+    errors: list[str],
+) -> None:
+    workflow_path = repo_root / ".github" / "workflows" / "validate.yml"
+    workflow = (
+        workflow_path.read_text(encoding="utf-8")
+        if workflow_path.is_file()
+        else ""
+    )
+    runner = "python scripts/run_release_scenarios.py"
+    if workflow.count(runner) != 1:
+        errors.append(
+            "validation workflow must delegate exactly once to the release scenario runner"
+        )
+    if re.search(r"^\s*-\s+run:\s+aoa-course(?:\s|$)", workflow, re.MULTILINE):
+        errors.append("validation workflow must not reauthor release scenarios")
+    if re.search(
+        r"^\s*-\s+run:\s+python scripts/verify_agent_install_route\.py(?:\s|$)",
+        workflow,
+        re.MULTILINE,
+    ):
+        errors.append("installed-route proof belongs to the release scenario plan")
+
+
+def _check_eval_registry(repo_root: Path, errors: list[str]) -> None:
+    port_path = repo_root / "evals/PORT.yaml"
+    port_text = port_path.read_text(encoding="utf-8") if port_path.is_file() else ""
+    if "suite_registry: evals/registry.json" not in port_text:
+        errors.append("evals/PORT.yaml must route suite_registry to evals/registry.json")
+    payload = _read_json(repo_root / REGISTRY_PATH, errors)
+
+    def validate_route(argv: list[str]) -> str | None:
+        try:
+            args = build_parser().parse_args(argv)
+        except SystemExit:
+            return f"execution route is not accepted by the CLI parser: {' '.join(argv)}"
+        if getattr(args, "func", None) in {cmd_eval_list, cmd_eval_run}:
+            return f"execution route must select a direct suite case body: {' '.join(argv)}"
+        if getattr(args, "command", None) != "eval":
+            return f"execution route must stay under aoa-course eval: {' '.join(argv)}"
+        return None
+
+    errors.extend(validate_eval_registry(repo_root, payload, validate_route))
 
 
 def _check_kag_provider(repo_root: Path, errors: list[str]) -> None:

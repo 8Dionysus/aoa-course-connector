@@ -1050,6 +1050,15 @@ def test_cli_corpus_integrity_eval_proves_all_fixture_artifacts_and_recall(tmp_p
     assert not (tmp_path / "data/sources/course_sources.json").exists()
 
 
+def test_cli_port_route_runs_corpus_integrity_case_body(tmp_path: Path) -> None:
+    result = run_cli(tmp_path, "eval", "run", "corpus-integrity")
+
+    assert result["schema"] == "aoa_course_eval_corpus_integrity_v1"
+    assert result["suite_id"] == "corpus-integrity"
+    assert result["status"] == "ok"
+    assert result["metrics"]["recall_at_k"] == 1.0
+
+
 def test_cli_corpus_integrity_eval_rejects_newer_failed_checkpoint(tmp_path: Path) -> None:
     source = run_cli(
         tmp_path,

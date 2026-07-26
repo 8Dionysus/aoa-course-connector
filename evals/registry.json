@@ -1,0 +1,132 @@
+{
+  "schema_version": "aoa_course_eval_registry_v1",
+  "owner_repo": "aoa-course-connector",
+  "suites": [
+    {
+      "suite_id": "starter-course-answer-packets",
+      "path": "evals/suites/starter_course_answer_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "starter-course-answer-packets",
+      "execution": {"argv": ["eval", "answer-packets"]}
+    },
+    {
+      "suite_id": "stepik-clean-api-answer-packets",
+      "path": "evals/suites/stepik_clean_api_answer_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "stepik-clean-api-answer-packets",
+      "execution": {"argv": ["eval", "clean-api"]}
+    },
+    {
+      "suite_id": "browser-hard-adapter-answer-packets",
+      "path": "evals/suites/browser_hard_adapter_answer_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "browser-hard-adapter-answer-packets",
+      "execution": {"argv": ["eval", "browser-hard-adapters"]}
+    },
+    {
+      "suite_id": "browser-progress-comments-answer-packets",
+      "path": "evals/suites/browser_progress_comments_answer_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "browser-progress-comments-answer-packets",
+      "execution": {"argv": ["eval", "browser-progress-comments"]}
+    },
+    {
+      "suite_id": "browser-transcripts-answer-packets",
+      "path": "evals/suites/browser_transcripts_answer_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "browser-transcripts-answer-packets",
+      "execution": {"argv": ["eval", "browser-transcripts"]}
+    },
+    {
+      "suite_id": "browser-discovery-sources",
+      "path": "evals/suites/browser_discovery_sources.json",
+      "owner": "aoa-course-connector",
+      "capability": "browser-discovery-sources",
+      "execution": {"argv": ["eval", "browser-discovery"]}
+    },
+    {
+      "suite_id": "browser-sync-checkpoints",
+      "path": "evals/suites/browser_sync_checkpoints.json",
+      "owner": "aoa-course-connector",
+      "capability": "browser-sync-checkpoints",
+      "execution": {"argv": ["eval", "browser-sync"]}
+    },
+    {
+      "suite_id": "browser-crawl-answer-packets",
+      "path": "evals/suites/browser_crawl_answer_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "browser-crawl-answer-packets",
+      "execution": {"argv": ["eval", "browser-crawl"]}
+    },
+    {
+      "suite_id": "answer-quality-packets",
+      "path": "evals/suites/answer_quality_packets.json",
+      "owner": "aoa-course-connector",
+      "capability": "answer-quality-packets",
+      "execution": {"argv": ["eval", "answer-quality"]}
+    },
+    {
+      "suite_id": "freshness-ranking",
+      "path": "evals/suites/freshness_ranking.json",
+      "owner": "aoa-course-connector",
+      "capability": "freshness-ranking",
+      "execution": {"argv": ["eval", "freshness-ranking"]}
+    },
+    {
+      "suite_id": "place-ranking",
+      "path": "evals/suites/place_ranking.json",
+      "owner": "aoa-course-connector",
+      "capability": "place-ranking",
+      "execution": {"argv": ["eval", "place-ranking"]}
+    },
+    {
+      "suite_id": "authority-ranking",
+      "path": "evals/suites/authority_ranking.json",
+      "owner": "aoa-course-connector",
+      "capability": "authority-ranking",
+      "execution": {"argv": ["eval", "authority-ranking"]}
+    },
+    {
+      "suite_id": "adapter-authority",
+      "path": "evals/suites/adapter_authority_metadata.json",
+      "owner": "aoa-course-connector",
+      "capability": "adapter-authority",
+      "execution": {"argv": ["eval", "adapter-authority"]}
+    },
+    {
+      "suite_id": "live-calibration",
+      "path": "evals/suites/live_calibration_packet.json",
+      "owner": "aoa-course-connector",
+      "capability": "live-calibration",
+      "execution": {"argv": ["eval", "live-calibration"]}
+    },
+    {
+      "suite_id": "retrieval-loop",
+      "path": "evals/suites/retrieval_loop.json",
+      "owner": "aoa-course-connector",
+      "capability": "retrieval-loop",
+      "execution": {"argv": ["eval", "retrieval-loop"]}
+    },
+    {
+      "suite_id": "connected-portfolio",
+      "path": "evals/suites/connected_portfolio.json",
+      "owner": "aoa-course-connector",
+      "capability": "connected-portfolio",
+      "execution": {"argv": ["eval", "connected-portfolio"]}
+    },
+    {
+      "suite_id": "ingest-coverage",
+      "path": "evals/suites/ingest_coverage.json",
+      "owner": "aoa-course-connector",
+      "capability": "ingest-coverage",
+      "execution": {"argv": ["eval", "ingest-coverage"]}
+    },
+    {
+      "suite_id": "corpus-integrity",
+      "path": "evals/suites/corpus_integrity.json",
+      "owner": "aoa-course-connector",
+      "capability": "corpus-integrity",
+      "execution": {"argv": ["eval", "corpus-integrity"]}
+    }
+  ]
+}
