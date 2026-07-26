@@ -146,12 +146,14 @@ REQUIRED_FILES = [
     "src/aoa_course_connector/sync/stepik.py",
     "scripts/validate_connector.py",
     "scripts/validate_local_stats_port.py",
+    "scripts/run_release_scenarios.py",
     "scripts/verify_agent_install_route.py",
     "stats/AGENTS.md",
     "stats/README.md",
     "stats/port.manifest.json",
     "stats/packets/public-fixture-structural-materialization-ratio.reference.json",
     "tests/unit/test_local_stats_port.py",
+    "tests/contract/test_release_scenarios.py",
 ]
 
 REQUIRED_DIRS = [
@@ -322,6 +324,7 @@ def main() -> int:
     _check_kag_provider(repo_root, errors)
     _check_eval_registry(repo_root, errors)
     _check_markdown_command_hygiene(repo_root, errors)
+    _check_release_scenario_workflow(repo_root, errors)
     _check_text(repo_root, errors, warnings)
     payload = {
         "schema": "aoa_course_connector_validation_v1",
@@ -373,6 +376,31 @@ def _tracked_files(repo_root: Path, errors: list[str]) -> list[str]:
         errors.append(f"unable to list tracked files: {exc}")
         return []
     return [line.strip() for line in result.stdout.splitlines() if line.strip()]
+
+
+def _check_release_scenario_workflow(
+    repo_root: Path,
+    errors: list[str],
+) -> None:
+    workflow_path = repo_root / ".github" / "workflows" / "validate.yml"
+    workflow = (
+        workflow_path.read_text(encoding="utf-8")
+        if workflow_path.is_file()
+        else ""
+    )
+    runner = "python scripts/run_release_scenarios.py"
+    if workflow.count(runner) != 1:
+        errors.append(
+            "validation workflow must delegate exactly once to the release scenario runner"
+        )
+    if re.search(r"^\s*-\s+run:\s+aoa-course(?:\s|$)", workflow, re.MULTILINE):
+        errors.append("validation workflow must not reauthor release scenarios")
+    if re.search(
+        r"^\s*-\s+run:\s+python scripts/verify_agent_install_route\.py(?:\s|$)",
+        workflow,
+        re.MULTILINE,
+    ):
+        errors.append("installed-route proof belongs to the release scenario plan")
 
 
 def _check_eval_registry(repo_root: Path, errors: list[str]) -> None:
