@@ -1,0 +1,17 @@
+{
+  "allowed_bytes": 2104851,
+  "allowed_tracked_bytes": 5119917,
+  "approved_by": "repository-owner",
+  "base_ref": "3f322cbd5c874744f29039b560044641862a7822",
+  "changed_generated_bytes": 2104851,
+  "changed_generated_files": 106,
+  "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0017-portable-content-addressed-repository-family.md",
+  "default_limit_bytes": 1048576,
+  "head_family_digest": "c7ea1e97f3312399089fddec948bcb3ade60656f102850dfd26bbfb4d1f5c1fd",
+  "reason": "Explicit Course MCP owner-root contract and regression coverage",
+  "repo": "aoa-course-connector",
+  "schema_version": "aoa-repo-local-kag-budget-receipt-v1",
+  "scope": "generated_delta",
+  "tracked_bytes": 5119917,
+  "tracked_bytes_max": 6291456
+}
