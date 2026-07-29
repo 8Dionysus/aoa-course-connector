@@ -434,9 +434,11 @@ def call_tool(
     arguments: dict[str, object] | None = None,
     *,
     roots: StorageRoots | None = None,
+    repo_root: Path | None = None,
 ) -> dict[str, object]:
     args = arguments or {}
-    roots = roots or StorageRoots.from_env(find_repo_root())
+    selected_repo_root = (repo_root or find_repo_root()).resolve()
+    roots = roots or StorageRoots.from_env(selected_repo_root)
     run_id = str(args.get("run") or DEFAULT_RUN)
     if name == "list_sources":
         registry = load_registry(roots.data)
@@ -462,7 +464,11 @@ def call_tool(
     if name == "sources_answer_matrix":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "sources_answer_matrix": _call_sources_answer_matrix(roots, args)}
     if name == "connector_readiness":
-        return _call_connector_readiness(roots, args)
+        return _call_connector_readiness(
+            roots,
+            args,
+            repo_root=selected_repo_root,
+        )
     if name == "ingest_status":
         return ingest_status(roots, run_id)
     if name == "artifact_integrity":
@@ -489,7 +495,14 @@ def call_tool(
     if name == "semantic_provider_preflight":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "preflight": _call_semantic_provider_preflight(roots, args)}
     if name == "browser_snapshot_audit":
-        return {"schema": "aoa_course_mcp_result_v1", "tool": name, "audit": _call_browser_snapshot_audit(args)}
+        return {
+            "schema": "aoa_course_mcp_result_v1",
+            "tool": name,
+            "audit": _call_browser_snapshot_audit(
+                args,
+                repo_root=selected_repo_root,
+            ),
+        }
     if name == "connected_run":
         return {"schema": "aoa_course_mcp_result_v1", "tool": name, "connected_run": _call_connected_run(roots, args)}
     if name == "connected_run_status":
@@ -1492,7 +1505,12 @@ def _call_live_preflight(roots: StorageRoots, args: dict[str, object]) -> dict[s
     )
 
 
-def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> dict[str, object]:
+def _call_connector_readiness(
+    roots: StorageRoots,
+    args: dict[str, object],
+    *,
+    repo_root: Path,
+) -> dict[str, object]:
     run_values = args.get("runs")
     if run_values is None:
         runs = None
@@ -1505,7 +1523,7 @@ def _call_connector_readiness(roots: StorageRoots, args: dict[str, object]) -> d
     if state_file is not None and not isinstance(state_file, str):
         raise ValueError("connector_readiness state_file must be a string")
     return connector_readiness(
-        find_repo_root(),
+        repo_root,
         roots,
         runs=runs,
         platforms=platforms,
@@ -1611,13 +1629,17 @@ def _call_semantic_provider_preflight(roots: StorageRoots, args: dict[str, objec
     )
 
 
-def _call_browser_snapshot_audit(args: dict[str, object]) -> dict[str, object]:
+def _call_browser_snapshot_audit(
+    args: dict[str, object],
+    *,
+    repo_root: Path,
+) -> dict[str, object]:
     snapshot_path = args.get("snapshot_path")
     if not isinstance(snapshot_path, str) or not snapshot_path:
         raise ValueError("browser_snapshot_audit snapshot_path must be a non-empty string")
     path = Path(snapshot_path).expanduser()
     if not path.is_absolute():
-        path = find_repo_root() / path
+        path = repo_root / path
     platform = args.get("platform")
     if platform is not None and not isinstance(platform, str):
         raise ValueError("browser_snapshot_audit platform must be a string")

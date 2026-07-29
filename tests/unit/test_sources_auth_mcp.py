@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import json
-import os
 import sqlite3
 import sys
 import types
@@ -2384,6 +2383,32 @@ def test_connector_readiness_uses_selected_connected_run_in_remediation(tmp_path
         for command in readiness["next_commands"]
     )
     assert not any("--connected-run connected-calibration" in command for command in readiness["next_commands"])
+
+
+def test_connector_readiness_uses_explicit_owner_root_outside_owner_cwd(
+    tmp_path: Path,
+    monkeypatch,
+) -> None:
+    repo_root = find_repo_root()
+    storage = StorageRoots(
+        data=tmp_path / "data",
+        cache=tmp_path / "cache",
+        auth=tmp_path / "auth",
+        artifact=tmp_path / "artifacts",
+        mode="test",
+    )
+    monkeypatch.chdir(tmp_path)
+
+    readiness = call_tool(
+        "connector_readiness",
+        {},
+        roots=storage,
+        repo_root=repo_root,
+    )
+
+    assert readiness["repo"]["root"] == str(repo_root)
+    assert readiness["repo"]["missing_route_files"] == []
+    assert readiness["lanes"]["repo_route_ready"] is True
 
 
 def test_connector_readiness_surfaces_partial_connected_run_repair_lanes(tmp_path: Path, monkeypatch) -> None:
