@@ -1,10 +1,15 @@
 {
   "schema_version": "aoa_course_connector_release_manifest_v1",
   "repository": "8Dionysus/aoa-course-connector",
-  "version": "0.1.0",
-  "tag": "v0.1.0",
+  "version": "0.1.1",
+  "tag": "v0.1.1",
   "canonical_changelog": "CHANGELOG.md",
-  "reconciliation_ledger": "docs/RELEASE_RECONCILIATION_0.1.0.md",
+  "reconciliation_ledger": "docs/RELEASE_RECONCILIATION_0.1.1.md",
+  "previous_release": {
+    "version": "0.1.0",
+    "tag": "v0.1.0",
+    "commit": "181abe0e11a96f45c4b465ef10282ff35480c3da"
+  },
   "version_sources": [
     "pyproject.toml",
     "src/aoa_course_connector/__init__.py",

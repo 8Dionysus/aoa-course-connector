@@ -8,10 +8,19 @@ manifest, reconciliation ledger, and GitHub source Release.
 
 ## Release identity
 
-The first release is version `0.1.0` with tag `v0.1.0`. The canonical release
-body is the dated `0.1.0` section of `CHANGELOG.md`; the reconciliation ledger
-is `docs/RELEASE_RECONCILIATION_0.1.0.md`; the machine-readable identity is
-`release/release-manifest.json`.
+The first release was version `0.1.0` with tag `v0.1.0`. For every release,
+the target version, tag, canonical changelog, reconciliation ledger, provider
+pins, and previous-release identity are declared by
+`release/release-manifest.json`. The canonical release body is the dated
+section named by that manifest, and the reconciliation ledger is the matching
+`docs/RELEASE_RECONCILIATION_<version>.md` source surface.
+
+The manifest-driven route is intentionally sequential: a stable target must
+use the exact `v<version>` tag, identify the immediately preceding stable
+release, prove that the previous tag still resolves to its declared commit,
+and prove that the current source contains that commit. The target tag and
+Release must be absent before publication. Existing releases are never moved,
+deleted, or rewritten; a correction is a new reviewed release.
 
 The version must agree in `pyproject.toml`, the package initializer, the MCP
 server, and the changelog. A release is source-only: there is no PyPI or
@@ -36,10 +45,11 @@ opened as a pull request from a clean worktree based on current `origin/main`.
 
 After required GitHub checks pass, merge through GitHub and fast-forward a
 clean local `main`. Re-run all owner gates and the route's dry-run on the
-exact landed `main` commit. Only then create `v0.1.0` on that exact commit and
-create the GitHub Release from the canonical changelog section. The
-postpublish route must verify tag-to-commit identity, stable/latest marker,
-exact Release body, asset state, and clean local main.
+exact landed `main` commit. Only then create the manifest-declared
+`v<version>` on that exact commit and create the GitHub Release from the
+canonical changelog section. The postpublish route must verify tag-to-commit
+identity, stable/latest marker, exact Release body, asset state, and clean
+local main.
 
 A failed gate is repaired on the release-prep branch and re-verified. A
 published source release is not undone by deleting a tag; a correction uses a
@@ -50,7 +60,8 @@ by itself prove runtime health, central proof, or human acceptance.
 
 The executable route is `scripts/release.py`. Its `preflight`, `dry-run`,
 `publish --confirm`, and `postpublish` actions are the authoritative syntax;
-this document intentionally does not duplicate shell command blocks. The
-publish action uses the GitHub API/CLI so a local SSH configuration problem
-cannot silently cause a non-exact tag, while GitHub remains the publication
-authority.
+the route reads the target identity from the manifest and accepts an explicit
+`--manifest` path for isolated checks. This document intentionally does not
+duplicate shell command blocks. The publish action uses the GitHub API/CLI so
+a local SSH configuration problem cannot silently cause a non-exact tag,
+while GitHub remains the publication authority.
