@@ -1,5 +1,47 @@
 # Changelog
 
+## 0.1.2 - 2026-08-23
+
+### Release boundary
+
+This corrective patch release revalidates the Course connector against the
+exact published `aoa-stats v0.2.1` provider and updates the owner manifest and
+workflow to carry that immutable provider identity. `v0.1.1` remains
+immutable at its original lightweight tag and landed commit.
+
+### Changed
+
+- Updated `release/release-manifest.json` and the owner release law from
+  `aoa-stats v0.2.0` / `dc608fd5...` to the stable published
+  `aoa-stats v0.2.1` / `339ecb2db22ac4552fa88756b650896ebbff5b56`.
+- Updated `.github/workflows/validate.yml` to check out and validate the exact
+  published `aoa-stats v0.2.1` commit; the repo-local KAG action remains the
+  separately owned helper pin from #186.
+- Synchronized the package, MCP server, changelog, and manifest markers to
+  `0.1.2`, with the MCP protocol, local stats measurement contract, source
+  boundary, and storage contract unchanged.
+
+### Compatibility and migration
+
+- `v0.1.1` is preserved as the immediately preceding stable release. Course
+  consumers should use `v0.1.2` and its exact landed commit/tag identity when
+  they require current `aoa-stats v0.2.1` validation.
+- The exact local stats-port revalidation passes against the published
+  `aoa-stats` commit. The Course release remains a GitHub source Release with
+  no package-registry publication and no release assets.
+
+### Validation and limitations
+
+- The release reconciliation ledger records the provider transition, file
+  changes, exact source and release identity, and separate artifact/runtime
+  claim limits. Owner validators, local stats-port and install-route checks,
+  tests, fixture-safe release scenarios, compile checks, provider verification,
+  exact-main dry-run, and postpublish checks remain the authoritative routes.
+- This source release does not claim artifact admission, deployment,
+  activation, runtime health, live-source coverage, corpus completeness,
+  package publication, central eval proof, shared stats authority, or human
+  acceptance.
+
 ## 0.1.1 - 2026-08-22
 
 ### Release boundary
