@@ -1,5 +1,49 @@
 # Changelog
 
+## 0.1.3 - 2026-08-23
+
+### Release boundary
+
+This corrective patch release revalidates the Course connector against the
+final published provider chain: `aoa-kag v0.5.2` at
+`8136d3eb629da28cea1206d13a8f1df52ee14739` and `aoa-stats v0.2.2` at
+`f119805cda69b3edeb2a4c5e407368d70e68650d`. The immediately preceding
+`v0.1.2` source Release and tag remain immutable.
+
+### Changed
+
+- Updated `release/release-manifest.json` and the owner release law to bind
+  the exact published KAG and stats provider successors.
+- Updated `.github/workflows/validate.yml` to check out the exact published
+  `aoa-stats v0.2.2` commit. The repo-local KAG workflow action remains the
+  separately declared helper pin `6a79e62c7d20b6b11406dee78f409ada4a51bb3f`.
+- Regenerated the owner-local KAG portable v3 family through the separately
+  pinned repo-local action snapshot `6a79e62c7d20b6b11406dee78f409ada4a51bb3f`
+  after the authored release surfaces changed; the KAG provider release pin
+  remains independently bound to `v0.5.2`.
+- Synchronized package, MCP server, changelog, and manifest markers to
+  `0.1.3`; connector method, schemas, MCP protocol, storage boundary, and
+  local stats measurement contract are unchanged.
+
+### Compatibility and migration
+
+- Consumers requiring the current provider chain should use `v0.1.3` and its
+  exact landed commit/tag identity.
+- The Course publication remains a GitHub source Release with no package
+  registry publication and no release assets.
+
+### Validation and limitations
+
+- The reconciliation ledger and execution report bind the exact source,
+  provider, generated-family, CI, merge, tag, Release, artifact, and
+  non-claim boundaries.
+- The Course artifact class remains `none`/not claimed; the KAG owner-family
+  artifact is agent-admissible while release-consumer/public intents remain
+  manual-review-required under the host-managed trust-root boundary.
+- This source release does not claim deployment, activation, runtime health,
+  live-source coverage, corpus completeness, central proof, shared stats
+  authority, or human acceptance.
+
 ## 0.1.2 - 2026-08-23
 
 ### Release boundary

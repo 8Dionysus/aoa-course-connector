@@ -1,0 +1,17 @@
+{
+  "allowed_bytes": 950377,
+  "allowed_tracked_bytes": 5276963,
+  "approved_by": "repository-owner",
+  "base_ref": "b22d83bfd000d28ee621b576d9a8caf1684a787b",
+  "changed_generated_bytes": 950377,
+  "changed_generated_files": 41,
+  "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0017-portable-content-addressed-repository-family.md",
+  "default_limit_bytes": 1048576,
+  "head_family_digest": "ad998d593d3cef99ef1610c387e6d805ee4a97e9dcf85f0218c408d8767dd141",
+  "reason": "Owner-reviewed exact-current KAG provider revalidation preserves the separately pinned repository action snapshot.",
+  "repo": "aoa-course-connector",
+  "schema_version": "aoa-repo-local-kag-budget-receipt-v1",
+  "scope": "generated_delta",
+  "tracked_bytes": 5276963,
+  "tracked_bytes_max": 6291456
+}

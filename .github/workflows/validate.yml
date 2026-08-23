@@ -23,8 +23,8 @@ jobs:
       - uses: actions/checkout@v4
         with:
           repository: 8Dionysus/aoa-stats
-          # aoa-stats v0.2.1 exact published tag target.
-          ref: 339ecb2db22ac4552fa88756b650896ebbff5b56
+          # aoa-stats v0.2.2 exact published tag target.
+          ref: f119805cda69b3edeb2a4c5e407368d70e68650d
           path: .deps/aoa-stats
       - run: python -m pip install --upgrade pip
       - run: python -m pip install -e ".[dev]"
