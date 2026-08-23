@@ -17,8 +17,10 @@ final published provider chain: `aoa-kag v0.5.2` at
 - Updated `.github/workflows/validate.yml` to check out the exact published
   `aoa-stats v0.2.2` commit. The repo-local KAG workflow action remains the
   separately declared helper pin `6a79e62c7d20b6b11406dee78f409ada4a51bb3f`.
-- Regenerated the owner-local KAG portable family through the exact published
-  KAG owner builder after the authored release surfaces changed.
+- Regenerated the owner-local KAG portable v3 family through the separately
+  pinned repo-local action snapshot `6a79e62c7d20b6b11406dee78f409ada4a51bb3f`
+  after the authored release surfaces changed; the KAG provider release pin
+  remains independently bound to `v0.5.2`.
 - Synchronized package, MCP server, changelog, and manifest markers to
   `0.1.3`; connector method, schemas, MCP protocol, storage boundary, and
   local stats measurement contract are unchanged.
