@@ -1,14 +1,14 @@
 {
   "schema_version": "aoa_course_connector_release_manifest_v1",
   "repository": "8Dionysus/aoa-course-connector",
-  "version": "0.1.1",
-  "tag": "v0.1.1",
+  "version": "0.1.2",
+  "tag": "v0.1.2",
   "canonical_changelog": "CHANGELOG.md",
-  "reconciliation_ledger": "docs/RELEASE_RECONCILIATION_0.1.1.md",
+  "reconciliation_ledger": "docs/RELEASE_RECONCILIATION_0.1.2.md",
   "previous_release": {
-    "version": "0.1.0",
-    "tag": "v0.1.0",
-    "commit": "181abe0e11a96f45c4b465ef10282ff35480c3da"
+    "version": "0.1.1",
+    "tag": "v0.1.1",
+    "commit": "73288a6de89782e4ec5c38d7e050a2ace2c1175c"
   },
   "version_sources": [
     "pyproject.toml",
@@ -24,8 +24,8 @@
     },
     {
       "repository": "8Dionysus/aoa-stats",
-      "tag": "v0.2.0",
-      "commit": "dc608fd5de3fcaf0301f356c9efd52e2bdd350ce"
+      "tag": "v0.2.1",
+      "commit": "339ecb2db22ac4552fa88756b650896ebbff5b56"
     }
   ],
   "workflow_pins": {
@@ -34,8 +34,8 @@
       "role": "accepted repo-local GitHub Action helper from #186"
     },
     "aoa_stats_checkout": {
-      "tag": "v0.2.0",
-      "ref": "dc608fd5de3fcaf0301f356c9efd52e2bdd350ce"
+      "tag": "v0.2.1",
+      "ref": "339ecb2db22ac4552fa88756b650896ebbff5b56"
     }
   },
   "publication": {

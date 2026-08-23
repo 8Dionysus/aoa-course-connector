@@ -30,9 +30,9 @@ decision explicitly changes the manifest and release law.
 ## Provider-before-consumer gate
 
 Before a Course release, resolve and verify the exact stable published tags
-`aoa-kag@v0.5.0` and `aoa-stats@v0.2.0` against the commits in the release
+`aoa-kag@v0.5.0` and `aoa-stats@v0.2.1` against the commits in the release
 manifest. The direct `aoa-stats` workflow checkout must use the exact
-`v0.2.0` target commit. The repo-local KAG workflow action is a distinct
+`v0.2.1` target commit. The repo-local KAG workflow action is a distinct
 accepted helper pin from #186 and is checked independently.
 
 ## Required sequence

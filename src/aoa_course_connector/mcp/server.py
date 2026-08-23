@@ -40,7 +40,7 @@ from aoa_course_connector.sync import load_sync_status
 
 
 SERVER_NAME = "aoa-course-connector-mcp"
-SERVER_VERSION = "0.1.1"
+SERVER_VERSION = "0.1.2"
 PROTOCOL_VERSION = "2025-11-25"
 DEFAULT_RUN = "starter-fixture"
 DEFAULT_CONNECTED_RUN = "connected-calibration"
