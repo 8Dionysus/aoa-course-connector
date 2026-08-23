@@ -1,5 +1,61 @@
 # Changelog
 
+## 0.1.1 - 2026-08-22
+
+### Release boundary
+
+This corrective patch release covers the post-`v0.1.0` owner change that
+landed in PR #188. It repairs the GitHub CLI compatibility of the official
+postpublish audit, refreshes the generated portable KAG consumer family, and
+puts the next source release on an explicit, repeatable target identity.
+`v0.1.0` remains immutable at its original landed commit.
+
+### Changed
+
+- Evolved `scripts/release.py` from a one-shot `0.1.0` route into a
+  manifest-driven sequence that reads the target version/tag, canonical notes,
+  provider pins, and previous-release identity from
+  `release/release-manifest.json`.
+- Added continuity gates for sequential releases: the previous stable tag
+  must resolve to its declared commit and the current source must contain that
+  release before a new target can be published.
+- Added a dedicated `docs/RELEASE_RECONCILIATION_0.1.1.md` ledger covering the
+  complete `v0.1.0` to current-main slice, including PR #188's generated KAG
+  changes and the distinction between authored tooling and derived consumers.
+- Synchronized the package, MCP server, changelog, and release manifest
+  markers to `0.1.1`; the MCP protocol version and provider release pins are
+  unchanged.
+
+### Fixed
+
+- Completed the postpublish CLI compatibility repair from PR #188 by using
+  only GitHub CLI-supported release-list fields, so the official audit can
+  inspect latest status without relying on the unsupported `url` field.
+- Refreshed the portable KAG family against the exact `v0.1.0` landed base so
+  generated consumers represent the repaired release route and current source
+  snapshot.
+
+### Compatibility and migration
+
+- `v0.1.0` is preserved and is the immediately preceding stable release;
+  consumers of this source release should use `v0.1.1` and its exact landed
+  commit/tag identity.
+- This remains a GitHub source Release with no package-registry publication
+  and no release assets. The MCP protocol, provider tags, public source
+  boundary, and local storage contract are unchanged.
+
+### Validation and limitations
+
+- The release ledger records the exact first-parent, pull-request, file-level,
+  provider, generated-family, and non-claim boundaries for this corrective
+  slice. Owner validators, local stats-port and install-route checks, tests,
+  fixture-safe release scenarios, compile checks, provider verification,
+  artifact/trust review, exact-main dry-run, and postpublish checks remain the
+  authoritative evidence routes.
+- This source release does not claim deployment, activation, runtime health,
+  live-source coverage, package publication, signed artifact admission,
+  central eval proof, shared stats authority, or human acceptance.
+
 ## 0.1.0 - 2026-08-22
 
 ### Release boundary
