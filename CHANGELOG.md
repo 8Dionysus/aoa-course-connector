@@ -17,6 +17,9 @@ immutable at its original lightweight tag and landed commit.
 - Updated `.github/workflows/validate.yml` to check out and validate the exact
   published `aoa-stats v0.2.1` commit; the repo-local KAG action remains the
   separately owned helper pin from #186.
+- Regenerated the owner-local KAG portable family with the pinned owner
+  generator after the release surfaces changed; no authored KAG source
+  semantics or sibling repository were changed.
 - Synchronized the package, MCP server, changelog, and manifest markers to
   `0.1.2`, with the MCP protocol, local stats measurement contract, source
   boundary, and storage contract unchanged.

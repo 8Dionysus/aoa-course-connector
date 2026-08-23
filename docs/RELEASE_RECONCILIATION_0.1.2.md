@@ -46,11 +46,13 @@ repository is included.
 | `src/aoa_course_connector/mcp/server.py` | version-bearing source | Synchronizes the MCP server version to `0.1.2`; protocol version is unchanged. |
 | `CHANGELOG.md` | authored release narrative | Records the compatibility correction, migration posture, validation route, and bounded non-claims. |
 | `docs/RELEASE_RECONCILIATION_0.1.2.md` | authored evidence ledger | Accounts for the provider transition and release-boundary surfaces. |
+| `kag/indexes/index_family.manifest.json` and `kag/indexes/shards/` | generated owner-local projection | Refreshes the portable KAG family with the pinned owner generator after release-surface changes; it carries no new authored KAG meaning. |
 
-No connector adapter, schema, local measurement contract, fixture, KAG
-generated family, or runtime/private storage surface is changed by this
-correction. The old `docs/RELEASE_RECONCILIATION_0.1.1.md` remains historical
-and is not rewritten.
+No connector adapter, schema, local measurement contract, fixture, or
+runtime/private storage surface is changed by this correction. The generated
+KAG family is refreshed only as a deterministic projection of the changed
+public source tree. The old `docs/RELEASE_RECONCILIATION_0.1.1.md` remains
+historical and is not rewritten.
 
 ## 4. Exact provider-before-consumer evidence
 
@@ -98,6 +100,8 @@ The final execution report binds the exact results for:
 - CLI doctor and install-route verifier;
 - local stats-port validation against `aoa-stats@339ecb2d...`;
 - fixture-safe release scenarios and compile checks;
+- pinned repo-local KAG sentinel, full parity, family contract, and
+  compatibility assembly;
 - exact provider/release manifest and workflow preflight;
 - GitHub PR checks, merge, exact landed main synchronization, dry-run;
 - immutable lightweight tag and GitHub Release publication; and
