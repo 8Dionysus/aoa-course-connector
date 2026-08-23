@@ -1,0 +1,17 @@
+{
+  "allowed_bytes": 1434305,
+  "allowed_tracked_bytes": 5191185,
+  "approved_by": "repository-owner",
+  "base_ref": "d9f414cc51ae60c0d78a3bbbb176ecac179afeac",
+  "changed_generated_bytes": 1434305,
+  "changed_generated_files": 75,
+  "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0017-portable-content-addressed-repository-family.md",
+  "default_limit_bytes": 1048576,
+  "head_family_digest": "2efd30112a9566206dc9fb43bc848b3f21c8d10701a8001f518941f108be5778",
+  "reason": "v0.1.0 first public source release: synchronize the portable KAG family with the exact release-prep source snapshot",
+  "repo": "aoa-course-connector",
+  "schema_version": "aoa-repo-local-kag-budget-receipt-v1",
+  "scope": "generated_delta",
+  "tracked_bytes": 5191185,
+  "tracked_bytes_max": 6291456
+}
