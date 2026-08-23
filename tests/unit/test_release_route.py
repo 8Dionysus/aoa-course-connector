@@ -118,3 +118,27 @@ def test_release_route_requires_previous_release_for_later_patch(tmp_path: Path)
     module.check_manifest(tmp_path, config, errors, {})
 
     assert "release manifest must identify the previous stable release for sequential releases" in errors
+
+
+def test_current_provider_contract_keeps_release_and_action_identities_separate() -> None:
+    manifest = json.loads((REPO_ROOT / "release/release-manifest.json").read_text(encoding="utf-8"))
+    providers = {item["repository"]: item for item in manifest["provider_prerequisites"]}
+    workflow_pins = manifest["workflow_pins"]
+
+    assert providers["8Dionysus/aoa-kag"] == {
+        "repository": "8Dionysus/aoa-kag",
+        "tag": "v0.5.2",
+        "commit": "8136d3eb629da28cea1206d13a8f1df52ee14739",
+    }
+    assert providers["8Dionysus/aoa-stats"] == {
+        "repository": "8Dionysus/aoa-stats",
+        "tag": "v0.2.2",
+        "commit": "f119805cda69b3edeb2a4c5e407368d70e68650d",
+    }
+    assert workflow_pins["aoa_stats_checkout"] == {
+        "tag": "v0.2.2",
+        "ref": "f119805cda69b3edeb2a4c5e407368d70e68650d",
+    }
+    action_ref = workflow_pins["aoa_kag_repo_local_action"]["ref"]
+    assert action_ref == "6a79e62c7d20b6b11406dee78f409ada4a51bb3f"
+    assert action_ref != providers["8Dionysus/aoa-kag"]["commit"]

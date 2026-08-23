@@ -1,0 +1,38 @@
+{
+  "policy": {
+    "committed_lru_lfu": "forbidden",
+    "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0039-tiered-content-addressed-kag-distribution.md",
+    "deterministic": true,
+    "owner_qualified": true
+  },
+  "profile_identity": {
+    "artifact_kind": "repo_local_kag_hot_profile",
+    "content_digest": "sha256:fd659a53577873bb3ddec6127ea85655a26e5dd0e1c80fc4552ca8962c31e6d9",
+    "corpus_digest": "sha256:f86ed40628f06e0d5946affa7899e56dadd269526d41dc7b32f0ca9a63f6ec1b",
+    "local_id": "profile:repo-local:kag-git-hot",
+    "schema_ref": "aoa-kag:schemas/repo-local-kag-hot-profile.schema.json"
+  },
+  "repo": {
+    "git_ref": "git-index-source-tree",
+    "name": "aoa-course-connector",
+    "namespace": "aoa:aoa-course-connector",
+    "owner_type": "connector",
+    "root": "."
+  },
+  "schema_version": "aoa-repo-local-kag-hot-profile-v1",
+  "selection": {
+    "automatic_merge_or_eviction": "forbidden",
+    "include_record_kinds": [
+      "source",
+      "source_chunk"
+    ],
+    "mode": "record-kind-allowlist",
+    "purpose": [
+      "bootstrap",
+      "discovery",
+      "audit",
+      "owner_return"
+    ],
+    "runtime_frequency_inputs": "forbidden"
+  }
+}
