@@ -24,8 +24,8 @@
     },
     {
       "repository": "8Dionysus/aoa-stats",
-      "tag": "v0.2.0",
-      "commit": "dc608fd5de3fcaf0301f356c9efd52e2bdd350ce"
+      "tag": "v0.2.1",
+      "commit": "339ecb2db22ac4552fa88756b650896ebbff5b56"
     }
   ],
   "workflow_pins": {
@@ -34,8 +34,8 @@
       "role": "accepted repo-local GitHub Action helper from #186"
     },
     "aoa_stats_checkout": {
-      "tag": "v0.2.0",
-      "ref": "dc608fd5de3fcaf0301f356c9efd52e2bdd350ce"
+      "tag": "v0.2.1",
+      "ref": "339ecb2db22ac4552fa88756b650896ebbff5b56"
     }
   },
   "publication": {
