@@ -1,6 +1,73 @@
 # Changelog
 
-## 0.1.0 - Unreleased
+## 0.1.0 - 2026-08-22
+
+### Release boundary
+
+This is the first public source release of `aoa-course-connector`. It
+packages the repository's existing offline-first course ingestion, retrieval,
+evidence, MCP, evaluation, KAG, and reference-only statistics surfaces under
+one reviewed release boundary. The complete first-parent, merged-PR, and
+side-commit reconciliation is recorded in
+`docs/RELEASE_RECONCILIATION_0.1.0.md`.
+
+### Added
+
+- Added an owner-local release manifest and an executable release route that
+  check version markers, exact provider release identities, the clean landed
+  main commit, canonical notes, tag identity, and post-publication state.
+- Added a complete release reconciliation ledger so generated KAG churn,
+  duplicate or internal history, merged pull requests, and non-first-parent
+  commits remain accounted for without turning the human changelog into a
+  commit dump.
+
+### Changed
+
+- Adopted the portable KAG index family and its compatibility contract from
+  #183, while retaining the generated repository KAG surfaces as source-owned
+  release inputs.
+- Made Course owner-root and release/evaluation scenario ownership explicit
+  in #184 and #185; ambient working-directory and sibling-owner assumptions
+  are not part of the public contract.
+- Pinned the direct `aoa-stats` validation checkout to the exact commit behind
+  published `aoa-stats@v0.2.0` and recorded published `aoa-kag@v0.5.0` in the
+  release manifest. The repo-local KAG GitHub Action remains pinned to the
+  accepted helper commit from #186 because that action pin is a separate
+  workflow dependency, not a claim that the provider tag is absent.
+- Completed #186's accepted aoa-kag owner-family DAG action pin and generated
+  refresh as part of the release boundary; the landed workflow source is the
+  authority where an earlier PR description differed.
+
+### Compatibility and migration
+
+- Existing public version markers remain synchronized at `0.1.0` in
+  `pyproject.toml`, `src/aoa_course_connector/__init__.py`, and the MCP
+  server, with protocol version `2025-11-25` unchanged.
+- Consumers should use the explicit Course owner root and the documented
+  install route. No package-registry ABI, schema version, or runtime
+  deployment migration is implied by this source release.
+
+### Security, deployment, and recovery boundaries
+
+- The public surface continues to exclude credentials, cookies, private raw
+  payloads, indexes, vectors, media, and operator storage. Browser and API
+  live routes remain gated and redacted.
+- Publication is a GitHub source Release with no package-registry artifact or
+  release assets. Runtime deployment, activation, health, observability, and
+  rollback remain owned by `abyss-stack`; correcting this source release does
+  not authorize deleting a published tag.
+
+### Validation and limitations
+
+- The owner validator, local stats-port validator, install-route verifier,
+  full unit/contract tests, release scenarios, compile check, exact provider
+  release checks, artifact/trust policy review, release dry-run, and
+  post-publication audit are recorded in the execution report and ledger.
+- This release does not claim live-source coverage, corpus completeness,
+  runtime health or activation, package publication, signed package
+  attestation, central eval verdict, shared stats authority, or human
+  acceptance. Fixture-safe evidence and reference-only structural stats keep
+  those claims explicitly bounded.
 
 - Added a root `stats/` port with a public reference-only `9 / 9` structural
   materialization ratio across the canonical GetCourse, Skillspace, and Stepik
