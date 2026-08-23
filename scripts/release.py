@@ -292,7 +292,7 @@ def postpublish(root: Path, expected_commit: str) -> int:
     notes = changelog_notes(root)
     body = release.get("body") if isinstance(release, dict) else None
     stable = isinstance(release, dict) and not release.get("draft") and not release.get("prerelease")
-    latest_rows = json.loads(gh(root, "release", "list", "--repo", REPOSITORY, "--limit", "20", "--json", "tagName,isLatest,isDraft,isPrerelease,publishedAt,url"))
+    latest_rows = json.loads(gh(root, "release", "list", "--repo", REPOSITORY, "--limit", "20", "--json", "tagName,isLatest,isDraft,isPrerelease,publishedAt"))
     latest = next((row for row in latest_rows if row.get("tagName") == TAG), None)
     checks["postpublish"] = {
         "tag_commit": resolved,
