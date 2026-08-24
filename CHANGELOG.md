@@ -1,5 +1,24 @@
 # Changelog
 
+## [Unreleased]
+
+### Changed
+
+- Records the separate KAG action ABI in current source: the executable
+  `repo-local-kag-index` action remains pinned to immutable
+  `6a79e62c7d20b6b11406dee78f409ada4a51bb3f`, while the provider body remains
+  pinned to immutable `f46f146cc79a26fa81ad0f400b9c5774df293e57`.
+- Adds an executable manifest/workflow parity guard and a durable Course
+  decision. This repair does not create, move, or rewrite a tag or Release;
+  the published `v0.1.0` narrative remains historical evidence.
+
+### Validation
+
+- The compatibility test asserts both exact refs, their role labels, and
+  intentional inequality. The owner action gate, provider source validation,
+  artifact admission, runtime, proof, delivery, closure, and acceptance remain
+  separate claims.
+
 ## 0.1.0 - 2026-08-23
 
 ### Consolidated release boundary
