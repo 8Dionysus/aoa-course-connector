@@ -1,0 +1,17 @@
+{
+  "allowed_bytes": 961227,
+  "allowed_tracked_bytes": 5303124,
+  "approved_by": "repository-owner",
+  "base_ref": "add164d53ae4e8ea62fcb91dd8a32dd87a654bb3",
+  "changed_generated_bytes": 961227,
+  "changed_generated_files": 46,
+  "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0017-portable-content-addressed-repository-family.md",
+  "default_limit_bytes": 1048576,
+  "head_family_digest": "c3ee04b0321bd4bf3b7c73b03c191d94ea4d1f7b595d499c7acb2ecb302f3921",
+  "reason": "Post-audit currentness repair: explicit owner-family regeneration for KAG action ABI evidence",
+  "repo": "aoa-course-connector",
+  "schema_version": "aoa-repo-local-kag-budget-receipt-v1",
+  "scope": "generated_delta",
+  "tracked_bytes": 5303124,
+  "tracked_bytes_max": 6291456
+}
