@@ -1,6 +1,40 @@
 # Changelog
 
-## 0.1.3 - 2026-08-23
+## 0.1.0 - 2026-08-23
+
+### Consolidated release boundary
+
+This is the single canonical Course source release for the 2026-08-23
+campaign. It consolidates the four same-day campaign Releases and tags into
+one v0.1.0 release identity without discarding their source bodies,
+tag-scoped changelog material, merged pull requests, first-parent commits,
+contracts, generated-family changes, validation notes, limitations, or
+non-claims. The line-level conservation ledger is committed at
+docs/RELEASE_RECONCILIATION_0.1.0.md and retained as a machine-readable
+task artifact beside the campaign evidence.
+
+The historical campaign sections below are intentionally retained as source
+material. Their old version and provider names describe the superseded
+campaign states; the final provider and publication identity for this
+consolidated release is stated separately below.
+
+### Final provider and publication identity
+
+- The consumer is bound to the exact final published aoa-kag v0.5.0
+  provider at commit f46f146cc79a26fa81ad0f400b9c5774df293e57, after the
+  provider cleanup handoff, report, wake receipt, and recovered exact-holder
+  closure were independently checked.
+- The direct validation dependency is bound to the exact final published
+  aoa-stats v0.2.0 provider at commit
+  88ff38b1b38eef939f2c5b4541cbe8363a05fc8d. The repo-local KAG workflow
+  action remains the distinct accepted helper pin
+  6a79e62c7d20b6b11406dee78f409ada4a51bb3f.
+- This consolidated source release is a GitHub source Release with no
+  package-registry publication and no assets. The exact landed-main commit,
+  tag object, Release body equality, latest marker, and preserved
+  pre-campaign refs are recorded in the execution report.
+
+### Historical campaign record: v0.1.3
 
 ### Release boundary
 
@@ -44,7 +78,7 @@ final published provider chain: `aoa-kag v0.5.2` at
   live-source coverage, corpus completeness, central proof, shared stats
   authority, or human acceptance.
 
-## 0.1.2 - 2026-08-23
+### Historical campaign record: v0.1.2
 
 ### Release boundary
 
@@ -89,7 +123,7 @@ immutable at its original lightweight tag and landed commit.
   package publication, central eval proof, shared stats authority, or human
   acceptance.
 
-## 0.1.1 - 2026-08-22
+### Historical campaign record: v0.1.1
 
 ### Release boundary
 
@@ -145,7 +179,7 @@ puts the next source release on an explicit, repeatable target identity.
   live-source coverage, package publication, signed artifact admission,
   central eval proof, shared stats authority, or human acceptance.
 
-## 0.1.0 - 2026-08-22
+### Historical campaign record: v0.1.0
 
 ### Release boundary
 
@@ -412,3 +446,27 @@ side-commit reconciliation is recorded in
 - Expanded MCP `ingest_status` into a read-only run readiness packet with
   normalized counts, receipt summaries, index/semantic/graph metadata, and next
   commands.
+
+### Reconciliation and preservation
+
+- The release cleanup removes only the four same-day Release objects and tag
+  refs listed in immutable pre-cleanup truth, after the owner PR, required
+  CI, exact landed-main gates, and final provider identity are verified.
+  Pre-campaign refs and historical campaign evidence remain preserved.
+- The reconciliation ledger maps every line of every superseded Release body
+  and every tag-scoped CHANGELOG.md snapshot, every merged PR, every
+  first-parent commit, and all material capability, schema, ABI, owner,
+  routing, security, privacy, operator, generated, validation, limitation,
+  and non-claim information to retained material, a fuller combined item,
+  or an explicit duplicate/internal/generated classification.
+
+### Validation and claim boundaries
+
+- The owner source, CI, merge, provider identity, cleanup, exact tag/Release
+  publication, body equality, latest marker, asset state, and ref-preservation
+  checks are separate evidence claims in the execution report.
+- This source release does not claim package publication, artifact admission,
+  deployment, activation, runtime health, observability, rollback,
+  live-source coverage, corpus completeness, central eval verdict, shared
+  stats authority, transport delivery, master acceptance, or human
+  acceptance.

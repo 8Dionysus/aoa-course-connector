@@ -8,19 +8,21 @@ manifest, reconciliation ledger, and GitHub source Release.
 
 ## Release identity
 
-The first release was version `0.1.0` with tag `v0.1.0`. For every release,
-the target version, tag, canonical changelog, reconciliation ledger, provider
+The canonical campaign release is version `0.1.0` with tag `v0.1.0`. The
+target version, tag, canonical changelog, reconciliation ledger, provider
 pins, and previous-release identity are declared by
 `release/release-manifest.json`. The canonical release body is the dated
 section named by that manifest, and the reconciliation ledger is the matching
 `docs/RELEASE_RECONCILIATION_<version>.md` source surface.
 
-The manifest-driven route is intentionally sequential: a stable target must
-use the exact `v<version>` tag, identify the immediately preceding stable
-release, prove that the previous tag still resolves to its declared commit,
-and prove that the current source contains that commit. The target tag and
-Release must be absent before publication. Existing releases are never moved,
-deleted, or rewritten; a correction is a new reviewed release.
+The manifest-driven route is intentionally exact. Ordinary sequential
+releases identify the immediately preceding stable release and prove that the
+previous tag still resolves to its declared commit. This bounded cleanup is
+the explicit exception: after the owner PR, CI, landed-main gates, and
+immutable pre-cleanup truth have been verified, only the same-day campaign
+Release objects and tag refs enumerated in that truth may be removed before
+publishing the single consolidated `v0.1.0`. No pre-campaign ref may be moved,
+deleted, or rewritten.
 
 The version must agree in `pyproject.toml`, the package initializer, the MCP
 server, and the changelog. A release is source-only: there is no PyPI or
@@ -29,12 +31,12 @@ decision explicitly changes the manifest and release law.
 
 ## Provider-before-consumer gate
 
-Before a Course release, resolve and verify the exact stable published tags
-`aoa-kag@v0.5.2` and `aoa-stats@v0.2.2` against the commits in the release
-manifest. The direct `aoa-stats` workflow checkout must use the exact
-`v0.2.2` target commit. The repo-local KAG workflow action is a distinct
-accepted helper pin from #186 and is checked independently; it must not be
-replaced with the KAG provider release identity.
+Before the consolidated Course release, resolve and verify the exact final
+published tags `aoa-kag@v0.5.0` and `aoa-stats@v0.2.0` against the commits in
+the release manifest. The direct `aoa-stats` workflow checkout must use the
+exact `v0.2.0` target commit. The repo-local KAG workflow action is a
+distinct accepted helper pin from #186 and is checked independently; it must
+not be replaced with the KAG provider release identity.
 
 ## Required sequence
 
@@ -46,16 +48,19 @@ opened as a pull request from a clean worktree based on current `origin/main`.
 
 After required GitHub checks pass, merge through GitHub and fast-forward a
 clean local `main`. Re-run all owner gates and the route's dry-run on the
-exact landed `main` commit. Only then create the manifest-declared
-`v<version>` on that exact commit and create the GitHub Release from the
-canonical changelog section. The postpublish route must verify tag-to-commit
-identity, stable/latest marker, exact Release body, asset state, and clean
-local main.
+exact landed `main` commit. For this campaign cleanup, independently recheck
+the four immutable pre-cleanup Release/tag targets and delete only those
+targets. Only then create the manifest-declared `v0.1.0` on the exact landed
+commit and create the GitHub Release from the canonical changelog section.
+The postpublish route must verify tag-to-commit identity, stable/latest
+marker, exact Release body, asset state, preserved pre-campaign refs, and
+clean local main.
 
-A failed gate is repaired on the release-prep branch and re-verified. A
-published source release is not undone by deleting a tag; a correction uses a
-new reviewed release. CI, a tag, a Release, or a delivery receipt does not
-by itself prove runtime health, central proof, or human acceptance.
+A failed gate is repaired on the release-prep branch and re-verified. Outside
+the explicitly bounded campaign cleanup above, a published source release is
+not undone by deleting a tag; a correction uses a new reviewed release. CI, a
+tag, a Release, or a delivery receipt does not by itself prove runtime
+health, central proof, or human acceptance.
 
 ## Owner-local route
 
