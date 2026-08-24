@@ -42,7 +42,7 @@ def _manifest(version: str = "0.1.1") -> dict[str, object]:
             {
                 "repository": "8Dionysus/aoa-kag",
                 "tag": "v0.5.0",
-                "commit": "813a7f69dc96ec031dad9b897a6991792cc48b7a",
+        "commit": "f46f146cc79a26fa81ad0f400b9c5774df293e57",
             }
         ],
         "workflow_pins": {
@@ -127,17 +127,17 @@ def test_current_provider_contract_keeps_release_and_action_identities_separate(
 
     assert providers["8Dionysus/aoa-kag"] == {
         "repository": "8Dionysus/aoa-kag",
-        "tag": "v0.5.2",
-        "commit": "8136d3eb629da28cea1206d13a8f1df52ee14739",
+        "tag": "v0.5.0",
+        "commit": "f46f146cc79a26fa81ad0f400b9c5774df293e57",
     }
     assert providers["8Dionysus/aoa-stats"] == {
         "repository": "8Dionysus/aoa-stats",
-        "tag": "v0.2.2",
-        "commit": "f119805cda69b3edeb2a4c5e407368d70e68650d",
+        "tag": "v0.2.0",
+        "commit": "88ff38b1b38eef939f2c5b4541cbe8363a05fc8d",
     }
     assert workflow_pins["aoa_stats_checkout"] == {
-        "tag": "v0.2.2",
-        "ref": "f119805cda69b3edeb2a4c5e407368d70e68650d",
+        "tag": "v0.2.0",
+        "ref": "88ff38b1b38eef939f2c5b4541cbe8363a05fc8d",
     }
     action_ref = workflow_pins["aoa_kag_repo_local_action"]["ref"]
     assert action_ref == "6a79e62c7d20b6b11406dee78f409ada4a51bb3f"

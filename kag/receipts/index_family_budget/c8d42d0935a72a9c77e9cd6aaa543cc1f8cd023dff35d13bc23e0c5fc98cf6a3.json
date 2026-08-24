@@ -1,0 +1,17 @@
+{
+  "allowed_bytes": 1331873,
+  "allowed_tracked_bytes": 5285229,
+  "approved_by": "repository-owner",
+  "base_ref": "3628f8adaf055e8d5ce8dcd790f1427baec837a8",
+  "changed_generated_bytes": 1331873,
+  "changed_generated_files": 54,
+  "decision_ref": "aoa-kag:docs/decisions/AOA-KAG-D-0017-portable-content-addressed-repository-family.md",
+  "default_limit_bytes": 1048576,
+  "head_family_digest": "c8d42d0935a72a9c77e9cd6aaa543cc1f8cd023dff35d13bc23e0c5fc98cf6a3",
+  "reason": "Consolidate the four same-day campaign releases into one v0.1.0 while retaining the complete human changelog and reconciliation ledger; generated family drift is the owner-prescribed derived projection.",
+  "repo": "aoa-course-connector",
+  "schema_version": "aoa-repo-local-kag-budget-receipt-v1",
+  "scope": "generated_delta",
+  "tracked_bytes": 5285229,
+  "tracked_bytes_max": 6291456
+}

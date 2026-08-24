@@ -1,11 +1,12 @@
 # Release 0.1.0 Reconciliation Ledger
 
 This ledger is committed with the release-prep change and was reconciled from
-the fresh `origin/main` snapshot `d9f414cc51ae60c0d78a3bbbb176ecac179afeac`
-on 2026-08-22. It preserves the Wave-1 first-parent, merged-PR, and
-non-first-parent ledgers as an owner-local audit artifact. The human-first
-release narrative remains in `CHANGELOG.md`; rows below are evidence and
-classification, not a commit-dump substitute for that narrative.
+the fresh `origin/main` snapshot
+`3628f8adaf055e8d5ce8dcd790f1427baec837a8` after resume attempt-2. It
+preserves the complete first-parent, merged-PR, and non-first-parent ledgers
+through the pre-cleanup current main as an owner-local audit artifact. The
+human-first release narrative remains in `CHANGELOG.md`; rows below are
+evidence and classification, not a commit-dump substitute for that narrative.
 
 ## 10. First-Parent Reconciliation
 
@@ -210,10 +211,28 @@ Every first-parent commit in the root-to-current range is listed. Merge commits 
 
 Exact command used: `git log --first-parent --format='%H%x09%ad%x09%s' --date=iso-strict main`.
 
+### Post-snapshot first-parent extension
+
+The original 194-row Wave-1 table above ends at the immutable pre-campaign
+snapshot `d9f414cc51ae60c0d78a3bbbb176ecac179afeac`. The following five
+first-parent commits are the live post-snapshot release campaign history and
+are retained rather than being treated as disposable release churn.
+
+| Order | Date | Commit | Classification | Subject |
+|---:|---|---|---|---|
+| 1 | 2026-08-23 | `3628f8adaf055e8d5ce8dcd790f1427baec837a8` | changelog-worthy | Align Course release with exact KAG and stats providers (#191) |
+| 2 | 2026-08-23 | `b22d83bfd000d28ee621b576d9a8caf1684a787b` | changelog-worthy | Align Course release with aoa-stats v0.2.1 (#190) |
+| 3 | 2026-08-22 | `73288a6de89782e4ec5c38d7e050a2ace2c1175c` | changelog-worthy | Prepare corrective source release v0.1.1 (#189) |
+| 4 | 2026-08-22 | `4e6703fd9dd63a75670cade7342c7f5ceba126c2` | changelog-worthy | Fix release postpublish compatibility (#188) |
+| 5 | 2026-08-22 | `181abe0e11a96f45c4b465ef10282ff35480c3da` | changelog-worthy | Prepare aoa-course-connector v0.1.0 source release (#187) |
+
 
 ## 11. Merged-PR Reconciliation Ledger
 
-All 186 PRs are merged. Each PR is classified below as a separate changelog item, generated churn, duplicate, internal/noise, or a contract/documentation item that remains part of the release audit. PR titles and URLs are from live GitHub at observation.
+All 191 PRs are merged. Each PR is classified below as a separate changelog
+item, generated churn, duplicate, internal/noise, or a contract/documentation
+item that remains part of the release audit. PR titles and URLs are from live
+GitHub at observation.
 
 | PR | Merge SHA | Merged at | Classification | Title | URL |
 |---:|---|---|---|---|---|
@@ -404,6 +423,16 @@ All 186 PRs are merged. Each PR is classified below as a separate changelog item
 | 185 | `5a5219ef027df029313fc527c71a8764cfbd193e` | 2026-07-29T06:10:00Z | changelog-worthy | Require an explicit Course owner root for MCP | https://github.com/8Dionysus/aoa-course-connector/pull/185 |
 | 186 | `d9f414cc51ae60c0d78a3bbbb176ecac179afeac` | 2026-08-10T21:49:13Z | changelog-worthy | Pin accepted aoa-kag owner-family DAG | https://github.com/8Dionysus/aoa-course-connector/pull/186 |
 
+### Post-snapshot merged-PR extension
+
+| PR | Merge SHA | Merged at | Classification | Title | URL |
+|---:|---|---|---|---|---|
+| 187 | `181abe0e11a96f45c4b465ef10282ff35480c3da` | 2026-08-23T04:13:46Z | changelog-worthy | Prepare v0.1.0 source release | https://github.com/8Dionysus/aoa-course-connector/pull/187 |
+| 188 | `4e6703fd9dd63a75670cade7342c7f5ceba126c2` | 2026-08-23T04:28:02Z | changelog-worthy | Fix release postpublish check for installed gh CLI | https://github.com/8Dionysus/aoa-course-connector/pull/188 |
+| 189 | `73288a6de89782e4ec5c38d7e050a2ace2c1175c` | 2026-08-23T05:12:32Z | changelog-worthy | Prepare corrective source release v0.1.1 | https://github.com/8Dionysus/aoa-course-connector/pull/189 |
+| 190 | `b22d83bfd000d28ee621b576d9a8caf1684a787b` | 2026-08-23T11:40:20Z | changelog-worthy | Align Course release with aoa-stats v0.2.1 | https://github.com/8Dionysus/aoa-course-connector/pull/190 |
+| 191 | `3628f8adaf055e8d5ce8dcd790f1427baec837a8` | 2026-08-23T18:50:54Z | changelog-worthy | Align Course release with exact KAG and stats providers | https://github.com/8Dionysus/aoa-course-connector/pull/191 |
+
 Review of the four release-boundary PRs:
 
 - **#183** is a separate changelog-worthy artifact/consumer contract. Its large generated diff is not noise because the portable family, digest, compatibility view, and CI admission behavior changed.
@@ -486,17 +515,50 @@ The following 64 commits are reachable from current main but not on its first-pa
 Exact command used to establish the full side set: `git log --format='%H%x09%ad%x09%s' --date=iso-strict main` minus the hashes returned by `git log --first-parent ... main`.
 
 
-## 13. Dependency reconciliation for the published release
+## 13. Dependency reconciliation for the consolidated release
 
-The provider-before-consumer gate was rechecked after Wave 1. The exact
-stable published provider tags resolve as follows:
+The provider-before-consumer gate was independently rechecked after the exact
+provider handoff/report/wake/closure became available. The final published
+provider tags resolve as follows:
 
 | Provider | Published tag | Resolved commit | Consumer surface |
 |---|---|---|---|
-| `8Dionysus/aoa-kag` | `v0.5.0` | `813a7f69dc96ec031dad9b897a6991792cc48b7a` | repo-local KAG action and owner-family admission |
-| `8Dionysus/aoa-stats` | `v0.2.0` | `dc608fd5de3fcaf0301f356c9efd52e2bdd350ce` | direct validation checkout and local stats-port contract |
+| `8Dionysus/aoa-kag` | `v0.5.0` | `f46f146cc79a26fa81ad0f400b9c5774df293e57` | exact final provider release and owner-family admission |
+| `8Dionysus/aoa-stats` | `v0.2.0` | `88ff38b1b38eef939f2c5b4541cbe8363a05fc8d` | exact final validation checkout and local stats-port contract |
 
 The KAG action ref in the workflow remains `6a79e62c7d20b6b11406dee78f409ada4a51bb3f`, the accepted helper pin from landed #186. It is not substituted for the provider release tag; the distinction is recorded in the manifest and changelog. No `aoa-session-memory` ref, tag, Release, or archived `aoa-routing`/`abyss-stack_old` surface was touched.
+
+The pre-cleanup campaign states remain historical evidence: Course tags
+`v0.1.0` through `v0.1.3` previously carried provider pins
+`aoa-kag v0.5.0@813a7f69`, `aoa-stats v0.2.0@dc608fd5`,
+`aoa-stats v0.2.1@339ecb2d`, and
+`aoa-kag v0.5.2@8136d3eb`/`aoa-stats v0.2.2@f119805c`. Those pins are
+not silently dropped; the final consumer is intentionally rebound to the
+exact final provider identities above.
+
+## 14. Campaign-release content conservation
+
+Immutable pre-cleanup truth records four same-day Releases and four
+tag-scoped `CHANGELOG.md` snapshots. Their exact ids, tags, publication
+times, body digests, changelog digests, line counts, and no-asset state are
+retained in the machine ledger
+`/srv/abyss-machine/tmp/ai/release-campaign-goal-01a008db-20260821/release-cleanup/course-consolidate-v010-content-ledger/final-content-conservation-ledger.json`.
+
+| Tag | Release id | Published at | Body lines / SHA-256 | Tag-scoped CHANGELOG lines / SHA-256 |
+|---|---:|---|---:|---:|
+| `v0.1.0` | 375112726 | 2026-08-23T04:18:24Z | 265 / `4774570053158a9483b734164b15f5807a41e54f4f054e777ebf52b6aca5b5f5` | 269 / `1e3a94a7fee26ad8685766e4c5534c41637ec977898fe53eed3b0e9d5bc1e2db` |
+| `v0.1.1` | 375121307 | 2026-08-23T05:15:26Z | 53 / `45eafcf6020a55f4e4ffd6789852737c7413890184712c1ef41657ecedb10461` | 325 / `3a2179a79f581b134f35f23ab84e3d7a0d067e97fdd0baa1d39a19dfc8a8f00e` |
+| `v0.1.2` | 375195165 | 2026-08-23T11:44:59Z | 42 / `1ec6216cafeb7e92374e672e536dd6f477c6d50867d4b29a705250eebbca30c0` | 370 / `bf68efcb7edbf945e0f4a2333e69be83ba84059b38b14634fc6a841a26939698` |
+| `v0.1.3` | 375297354 | 2026-08-23T18:53:47Z | 41 / `79c2cd918efe754d6bd7ec9f17733c0402bd83aebc6848f4cff9e2acbb277978` | 414 / `ec80b8cecedb8c332b8a76e584ecd73bf7b2d5dee72fb4f07aaf0b9132fc586a` |
+
+Every line record in the machine ledger retains the original source text and
+line digest. Release-body lines are included in the single dated canonical
+section through the four historical campaign records; cumulative
+tag-scoped lines are mapped to their fuller latest snapshot or explicitly
+classified as duplicate header/cumulative material. The same ledger covers
+all 191 merged PRs, the complete first-parent spine, the 64 non-first-parent
+side commits, and the capability/schema/ABI/owner/routing/security/privacy/
+operator/generated/validation/limitation/non-claim classifications.
 
 The independent `abyss-stack` consumer, central `aoa-evals` proof, shared
 `aoa-stats` federation, and human acceptance remain downstream owner
